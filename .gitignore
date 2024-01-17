@@ -1,17 +1,9 @@
 # cellranger arc output logs
-#code/Cellranger_arc_slurm_version/slurm*.err
-#code/Cellranger_arc_slurm_version/slurm*.out
+#code/cellranger/cellranger*.err
+#code/cellranger/cellranger*.out
 
 # Log files for cellranger-arc pipeline
-#code/Cellranger_arc_slurm_version/__*.mro
-#code/Cellranger_arc_slurm_version/run_out_files/
-
-# slurm logs
 #code/logs/
-#code/03_preprocessing_GEX/logs/
-#code/04_preprocessing_ATAC/logs/
-#code/05_DimRed_GEX_ATAC/logs/
-#code/06_Diff_expr_genes/logs/
 
 # Cellranger-arc raw data symbolic links
 raw-data/path_atac
