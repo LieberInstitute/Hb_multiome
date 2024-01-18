@@ -1,0 +1,6 @@
+fastqs,sample,library_type
+/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ/GEX/1C-Hb-KDM, 1C-Hb-KDM-Hb, Gene Expression
+/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ/ATAC/1A_Hb_KDM-1, 1A_Hb_KDM, Chromatin Accessibility
+/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ/ATAC/1A_Hb_KDM-2, 1A_Hb_KDM, Chromatin Accessibility
+/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ/ATAC/1A_Hb_KDM-3, 1A_Hb_KDM, Chromatin Accessibility
+/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ/ATAC/1A_Hb_KDM-4, 1A_Hb_KDM, Chromatin Accessibility
