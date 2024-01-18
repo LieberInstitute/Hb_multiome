@@ -1,9 +1,9 @@
 # cellranger arc output logs
-#code/cellranger/cellranger*.err
-#code/cellranger/cellranger*.out
-
-# Log files for cellranger-arc pipeline
-#code/logs/
+code/cellranger/logs/
+coe/cellranger/tmp/
+code/cellranger/cellranger*.err
+code/cellranger/cellranger*.out
+code/logs/
 
 # Cellranger-arc raw data symbolic links
 raw-data/path_atac
@@ -11,16 +11,17 @@ raw-data/path_snrna
 raw-data/FASTQ/
 
 # Here lived the results of the cellranger-count pipeline  
-processed-data/cellrangerARC2.0.2/
+processed-data/cellrangerARC/
+
+# Nextflow for cellranger-arc
+Nextflow/
+
+
 
 # Seurat objects with chromatine data RDS objects
 #processed-data/03_QCs_preprocessing_GEX_ATAC/*.rds
-#processed-data/04_QCs_preprocessing_ATAC/*_GEX_ATAC.rds
-#processed-data/06_Diff_expr_genes/*_gene_markers.rds
-
 # Temporal directories
 #plots/03_QCs_preprocessing_GEX_ATAC/tmp/
-#plots/04_QCs_preprocessing_ATAC/individual_plots_tmp/
 #processed-data/03_QCs_preprocessing_GEX_ATAC/tmp/
 #processed-data/04_QCs_preprocessing_ATAC/tmp/
 
