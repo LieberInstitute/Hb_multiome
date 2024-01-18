@@ -33,6 +33,7 @@ if (!file.exists(file.path(main_dir, sub_dir))){ dir.create(file.path(main_dir, 
 # Fastq relative paths to create the soft links
 snRNAseq_path <- here('raw-data/path_snrna/')
 file_list <- list.files(path=snRNAseq_path, pattern=".*Hb.*\\.fastq\\.gz", full.names=FALSE, recursive = FALSE)
+# equivalent command in linux: $ ls path_snrna/ | grep .*Hb.*\\.fastq\\.gz
 file_list
 # > file_list
 # [1] "37---1C-Hb-KDM-Hb_S17_L001_R1_001.fastq.gz"
