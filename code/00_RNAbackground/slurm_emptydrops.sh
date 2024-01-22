@@ -36,10 +36,9 @@ module load R
 module list
 
 echo "== This is the script =="
-Rscript 02_empty_droplets_stats_loop.R $id
+Rscript 00_empty_droplets_stats_loop.R $id
 echo "== End of Job =="
 
-## This script was made using JHPCE 3.0 SLURM Cluster
-## Available from http://xxxx
-## CSC. Aug 14th, 2023
+## Script for SLURM
+## CSC. Jan 18th, 2024
 
