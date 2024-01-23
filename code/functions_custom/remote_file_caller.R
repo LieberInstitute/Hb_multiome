@@ -77,7 +77,7 @@ get_filtered_barcode_mtx <- function(s_experiment_name) {
     #       @s_experiment_name         experiment name to be used to look for the raw barcode mtx
     
     # experiment name must to exist
-    # if(!(s_experiment_name %in% lst_experiments)) stop("Experiment name does not match any declared experiment.")
+   #if(!(s_experiment_name %in% lst_experiments)) stop("Experiment name does not match any declared experiment.")
 
     # These are the new Habenula samples (LIEBER 2024)
     if (s_experiment_name == 'S1_Hb_KDM' || s_experiment_name == 'S2_Hb_KDM') {
@@ -93,9 +93,9 @@ get_filtered_barcode_mtx <- function(s_experiment_name) {
     }
     
     base_path <- paste0(base_path, s_experiment_name,"/outs")
-    s_featured_bc_mtx <- here(base_path, "raw_feature_bc_matrix.h5" )
+    s_featured_bc_mtx <- here(base_path, "filtered_feature_bc_matrix.h5" )
     message('Filtered barcode matrix H5 found: ', s_featured_bc_mtx)
-    
+
     return(s_featured_bc_mtx)
     
 }
