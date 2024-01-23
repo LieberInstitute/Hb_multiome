@@ -91,7 +91,6 @@ get_seurat_obj <- function(seuratName, s_bc_mtx, s_tissue, s_meta, b_additional_
     meta_tmp = c('atac_peak_region_fragments','atac_fragments')
     meta = metadata[meta_tmp]
     print(head(meta, n = 3))
-    message('Meta data loaded successfully')
     
     seur_obj <- CreateSeuratObject(
         counts = rna_counts,
@@ -100,13 +99,8 @@ get_seurat_obj <- function(seuratName, s_bc_mtx, s_tissue, s_meta, b_additional_
         meta.data = meta
     )
     
-    message('Meta-data attached to Seurat successfully')
-    print(colnames(seur_obj))
-        
-    #UpdateSeuratObject(seur_obj)
-    #print(seur_obj)
-    message('Seurat assay completed successfully')
-    
+    message('Meta-data attached successfully')
+
     # Ensure seurat_obj is a Seurat object
     if (!("Seurat" %in% class(seur_obj))) { stop("Seurat object not found") } 
     #Layers(SeuratOBJ[["RNA"]])
@@ -143,7 +137,7 @@ get_seurat_obj <- function(seuratName, s_bc_mtx, s_tissue, s_meta, b_additional_
     #     message('Additional largest genes by cell features attached successfully')
     # }  
     
-    print(head(SeuratOBJ, n = 3))
+    message('Seurat completed successfully!')
     return(seur_obj) 
 }
 
@@ -237,6 +231,7 @@ tryCatch( {
     mtx_stats<-cbind(mtx_stats,sample)
     # convert to table
     tab_stats <- as.table(mtx_stats)
+    print(tab_stats)
 
     return(tab_stats) }
     , error = function(e) {print('An error ocurred. Verify you have an GEX object active') })
