@@ -83,14 +83,14 @@ get_seurat_obj <- function(seuratName, s_bc_mtx, s_tissue, s_meta, b_additional_
     # filtered bc mtx
     mtx <- Read10X_h5(s_bc_mtx)             # Returns a sparse matrix with rows and columns labeled
     rna_counts <- mtx$`Gene Expression`
+    print(head(rna_counts, n = 3))
     message('GEX counts loaded successfully')
 
     metadata <- read.csv(file = s_meta, header = TRUE, row.names = 1)
-
     # subset specific fields in the meta data df
     meta_tmp = c('atac_peak_region_fragments','atac_fragments')
     meta = metadata[meta_tmp]
-    #print(head(meta, n = 3))
+    print(head(meta, n = 3))
     message('Meta data loaded successfully')
     
     seur_obj <- CreateSeuratObject(
@@ -100,8 +100,8 @@ get_seurat_obj <- function(seuratName, s_bc_mtx, s_tissue, s_meta, b_additional_
         meta.data = meta
     )
     
-    #message('Meta-data attached to Seurat successfully')
-    head(seur_obj, n=3)
+    message('Meta-data attached to Seurat successfully')
+    print(colnames(seur_obj))
         
     #UpdateSeuratObject(seur_obj)
     #print(seur_obj)
@@ -143,6 +143,7 @@ get_seurat_obj <- function(seuratName, s_bc_mtx, s_tissue, s_meta, b_additional_
     #     message('Additional largest genes by cell features attached successfully')
     # }  
     
+    print(head(SeuratOBJ, n = 3))
     return(seur_obj) 
 }
 
