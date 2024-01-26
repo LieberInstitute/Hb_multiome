@@ -8,7 +8,7 @@
 ## Pre-processed/subset functions. CS 08/06/2023
 ########################################################################
 
-get_preprocessed_subset <- function(seurat_obj, nCountRNA_h, nCountRNA_l, mito_p, nCount_ATAC_h, nCount_ATAC_l, nucleosome_grp, tss_s) {
+get_preprocessed_subset <- function(seurat_obj, nCountRNA_h, nCountRNA_l, mito_p, nCount_ATAC_h, nCount_ATAC_l, nucleosome_grp, tss_s=0) {
     # This function subsets a Seurat object with chromatin data attached 
     #       @seurat_obj         string with the name to be assigned to the Seurat object
     #       @nCountRNA_h        higher number of genes per cell to kept
@@ -23,17 +23,32 @@ get_preprocessed_subset <- function(seurat_obj, nCountRNA_h, nCountRNA_l, mito_p
     if(!("Seurat" %in% class(seurat_obj))) stop("Seurat object should be a Seurat object")
     
     # Check if required slots exist
-    required_slots <- c('nCount_RNA', 'nFeature_RNA', 'percent.mt', 'nucleosome_group', 'high.tss')
+    if (tss_s>0) {
+        required_slots <- c('nCount_RNA', 'nFeature_RNA', 'percent.mt', 'nucleosome_group', 'high.tss')
+    } else {
+        required_slots <- c('nCount_RNA', 'nFeature_RNA', 'percent.mt', 'nucleosome_group')
+    }
+    #required_slots <- c('nCount_RNA', 'nFeature_RNA', 'percent.mt', 'nucleosome_group', 'high.tss')
     if(any(!required_slots %in% names(seurat_obj@meta.data))) 
-        stop("Seurat object should have the slots: nCount_RNA, nFeature_RNA, and percent.mt, nucleosome_group, high.tss")
+        stop("Seurat object should have required slots: nCount_RNA, nFeature_RNA, and percent.mt, nucleosome_group, high.tss")
     
     # Subset Seurat obj with chromatin data based on the given thresholds 
     # i.e: nCount_ATAC < 7e4 & nCount_ATAC > 5e3 & nCount_RNA < 25000 & nCount_RNA > 1000 & percent.mt < 20
-    seurat_obj.subset <- subset(x = seurat_obj, subset = (nCount_RNA < nCountRNA_h & nCount_RNA > nCountRNA_l & percent.mt < mito_p) &
-                 (nCount_ATAC < nCount_ATAC_h & nCount_ATAC > nCount_ATAC_l) &
-                 (nucleosome_group < nucleosome_grp & TSS.enrichment > tss_s)
-    )
-
+    if (tss_s==0) {
+        seurat_obj.subset <- subset(x = seurat_obj, 
+                                    subset = (nCount_RNA < nCountRNA_h & nCount_RNA > nCountRNA_l & 
+                                                  percent.mt < mito_p) 
+                                    & (nCount_ATAC < nCount_ATAC_h & nCount_ATAC > nCount_ATAC_l) 
+                                    & (nucleosome_group < nucleosome_grp))       
+    } else {
+        seurat_obj.subset <- subset(x = seurat_obj, 
+                                    subset = (nCount_RNA < nCountRNA_h & nCount_RNA > nCountRNA_l & 
+                                                  percent.mt < mito_p) 
+                                    & (nCount_ATAC < nCount_ATAC_h & nCount_ATAC > nCount_ATAC_l) 
+                                    & (nucleosome_group < nucleosome_grp)
+                                    & (TSS.enrichment > tss_s))
+    }
+    
     message('Process completed successfully')
     
     # Return the filtered Seurat object
