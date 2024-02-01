@@ -50,7 +50,7 @@ date
 ## Run CellRanger
 cellranger-arc count --id=${SAMPLE} \
     --reference=/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0 \
-    --libraries=/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/code/cellranger/libraries_S2_Hb_KDM.csv \
+    --libraries=/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/code/cellranger/libraries_${SAMPLE}.csv \
     --localcores=8 \
     --localmem=128
 
