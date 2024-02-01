@@ -94,10 +94,10 @@ message('Parsing ', length(markers.custom), ' cell-types levels')
 #     slice_head(n = 10)
 # head(top10_DGE_clust)
 # 
-# # get a vector wit all marker genes 
-# gm_lst <- as.vector(as.list(markers.custom))
-# #gm_lst <- as.vector(markers.custom)
-# names(gm_lst[1])
+# get a vector wit all marker genes
+gm_lst <- as.vector(as.list(markers.custom))
+#gm_lst <- as.vector(markers.custom)
+names(gm_lst[1])
 # 
 # # # testing vector levels
 # i_pos <- 0
