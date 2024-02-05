@@ -44,7 +44,8 @@ source(here("code/functions_custom", "remote_file_caller.R"))       # Call funct
 source(here("code/functions_custom", "remote_seurat_functions.R"))  # Call functions to create and handle Seurat object
 source(here("code/functions_custom", "remote_signac_functions.R"))  # Call functions to create Signac object
 source(here("code/functions_custom", "remote_plot_functions.R"))    # Call to plot GEX assay
-source(here("code/functions_custom", "remote_filtering_functions.R"))   # Call functions to subset the Seurat object
+source(here("code/functions_custom", "remote_plot_functions_ATAC.R"))       # Call to plot ATAC assay
+source(here("code/functions_custom", "remote_filtering_functions.R"))       # Call functions to subset the Seurat object
 
 # Function to plot GEX QCs 
 plot_GEX_QCs <- function(SeuratO, sample_name) {    
@@ -298,10 +299,11 @@ for (S in lst_seurats) {
         # Add blacklist ratio and fraction of reads in peaks
         SeuratOBJ$pct_reads_in_peaks <- SeuratOBJ$atac_peak_region_fragments / SeuratOBJ$atac_fragments * 100
         SeuratOBJ$blacklist_ratio <- SeuratOBJ$blacklist_fraction / SeuratOBJ$atac_peak_region_fragments
-
         # Plot Peaks in black ratio and ATAC main feature scoreds
-        p1_BlackR <- VlnPlot(SeuratOBJ, features = c("pct_reads_in_peaks","blacklist_ratio"), ncol = 2)
-        p1_ATAC <- VlnPlot(SeuratOBJ, features = c("nCount_ATAC", "nFeature_ATAC", "nucleosome_signal", "TSS.enrichment"), ncol = 4)
+        p1_BlackR <- get_Vplots_blackR_ATAC(SeuratOBJ)
+        #p1_BlackR <- VlnPlot(SeuratOBJ, features = c("pct_reads_in_peaks","blacklist_ratio"), ncol = 2)
+        #p1_ATAC <- VlnPlot(SeuratOBJ, features = c("nCount_ATAC", "nFeature_ATAC", "nucleosome_signal", "TSS.enrichment"), ncol = 4)
+        p1_ATAC <- get_Vplots_main_ATAC(SeuratOBJ)
         
         png_file_NS <- paste0(base_name,'_Fragment_Distribution_grp.png')
         png_file_BlackR <- paste0(base_name,'_reads_in_peaks.png')
@@ -310,7 +312,7 @@ for (S in lst_seurats) {
         png_name <- here('plots/01_preprocessing_QC', png_file_NS)
         ggsave(p1_NS, filename = png_name, height = 4, width = 4)
         png_name <- here('plots/01_preprocessing_QC', png_file_BlackR)
-        ggsave(p1_BlackR, filename = png_name, height = 4, width = 4)
+        ggsave(p1_BlackR, filename = png_name, height = 4, width = 5)
         png_name <- here('plots/01_preprocessing_QC', png_file_ATAC)
         ggsave(p1_ATAC, filename = png_name, height = 4, width = 7)
   
