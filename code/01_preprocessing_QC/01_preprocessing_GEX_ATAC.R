@@ -7,6 +7,10 @@
 ##
 ## Input: Truncated H5, meta-data.cvs and fragments.tvs
 ## Output: rds Seurat objects and plots
+##
+## NOTES: 
+## For a ~10k cells cellranger dataset it is recommended ~40G free mem to process the TSS() ATAC score.  Without storing the base-resolution matrix of integration counts at each site you can use less memory, but does not allow plotting the accessibility profile at the TSS.
+## For slurm env: $srun --pty --mem=40GB --x11 bash
 ########################################################################
 
 library(Seurat)                                 # 4.9.9.9045 2023-05-17 [1] Github (satijalab/seurat@7d1094c)
@@ -101,7 +105,6 @@ plot_GEX_QCs <- function(SeuratO, sample_name) {
 sample_tmp <- commandArgs(trailingOnly = TRUE)
 #sample_tmp <- args[1]
 # testing
-#sample_tmp <- 'I_am_an_error_file,dog'  # testing error file and tissue
 #sample_tmp <- 'S1_Hb_KDM,human'  # testing HUMAN tissue
 #sample_tmp <- 'S2_Hb_KDM,human'  # testing HUMAN tissue
 #sample_tmp <- '2_HPC_KDM,human'  # testing HUMAN tissue
@@ -125,13 +128,12 @@ if (b_get_filtered_GEX) {
 }
 
 # Create attac and get quality control measures
-b_get_ATAC <- TRUE
 b_get_ATAC_QC <- TRUE
 
 
 ########  ################################################# ######## 
 ########  1.  Create a Seurat object containing the RNA     
-########      Recommended 30G of free_mem to 3k-10k cells 
+########      Recommended 40G of free_mem to 3k-10k cells 
 ########  ################################################# ######## 
 
 # Read filtered barcode matrix, meta-data and fragment file names from cellranger-ARC
@@ -165,8 +167,8 @@ saveRDS(SeuratOBJ, file = rds_name)
 
 # Before QC any assay
 if (b_get_GEX_plots) { 
-    tmp_name <- paste0(s_sample, '_None_QC')
-    plot_GEX_QCs(SeuratOBJ, tmp_name)
+    base_name <- paste0(s_sample, '_None_QC')
+    plot_GEX_QCs(SeuratOBJ, base_name)
 }
     
 ########  ################################################# ######## 
@@ -176,6 +178,7 @@ if (b_get_GEX_plots) {
 ########  ################################################# ######## 
 
 
+# Create a second Seurat filtered by custom method of 1) probabilities or 2) SD
 if (b_get_filtered_GEX) {
     # Preferred method 1. filter by probabilities
     
@@ -184,101 +187,206 @@ if (b_get_filtered_GEX) {
 
     if (i_filtering_method==1) {
         # filter by probabilities: M1
-        SeuratOBJ.filtered.M1 <- get_seurat_GEX_filteringM1p(SeuratOBJ, FALSE)
-        # Some stats and plot correlation 
-        get_basic_stats_GEX(SeuratOBJ.filtered.M1, s_tissue)
-        df_genes_per_cell <- as.data.frame(SeuratOBJ.filtered.M1[[]])
-        
+        SeuratOBJ.filtered <- get_seurat_GEX_filteringM1p(SeuratOBJ, FALSE)
     } else {    
-
         # filter by SD: M2
-        SeuratOBJ.filtered.M2 <- get_seurat_GEX_filteringM2sd(SeuratOBJ, FALSE)
-        # Some stats and plot correlation 
-        get_basic_stats_GEX(SeuratOBJ.filtered.M2, s_tissue)
-        df_genes_per_cell <- as.data.frame(SeuratOBJ.filtered.M2[[]])
+        SeuratOBJ.filtered <- get_seurat_GEX_filteringM2sd(SeuratOBJ, FALSE)
     }
-
-    # Plot correlation between genes and number of UMIs to visualize strong presence of cells with low numbers of genes/UMIs
-    p1 <- get_plt_UMIS_genes_MT_geomlm(df_genes_per_cell, 500, 500) #+
-    # plot_annotation(paste0(s_sample,': Genes/UMIs correlation based on method1')) &
-    #     plot_annotation(tag_levels = '1') &
-    #     theme(plot.tag = element_text(color = "blue", size = 10)) 
-    p1
-    stitle <- paste0(s_sample,'corr_filteredM',i_filtering_method,'.png')
-    plt_name <- here('plots/01_preprocessing_QC', stitle)  
-    ggsave(p1, filename = plt_name)
     
+    # Some stats and plot correlation 
+    get_basic_stats_GEX(SeuratOBJ.filtered, s_tissue)
+    df_genes_per_cell <- as.data.frame(SeuratOBJ.filtered[[]])
+    # Plot correlation between genes and number of UMIs to visualize strong presence of cells with low numbers of genes/UMIs
+    p1 <- get_plt_UMIS_genes_MT_geomlm(df_genes_per_cell, 500, 500)
+    png_file <- paste0(s_sample,'_corr_filteredM',i_filtering_method,'.png')
+    png_name <- here('plots/01_preprocessing_QC', png_file)  
+    ggsave(p1, filename = png_name, height = 4, width = 4)
+    message('UMI/Counts by MT plot saved!')
+    
+    # Create a list of Seurat Objects to attach ATAC assay and process by QC
+    lst_seurats <- c(SeuratOBJ, SeuratOBJ.filtered)
+
+} else {
+    # Only one Seurat Onb available
+    lst_seurats <- c(SeuratOBJ)    
 }
 
 message('Seurat filtered successfully!')
-message(paste0('Saving new Seurat filtered.'))
-rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample,'filteredM',i_filtering_method,'.rds'))
-saveRDS(SeuratOBJ, file = rds_name)
+# message(paste0('Saving new Seurat filtered.'))
+# rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample,'filteredM',i_filtering_method,'.rds'))
+# saveRDS(SeuratOBJ.filtered, file = rds_name)
 
 
 ########  ################################################# ############ 
-########  4. Create ATAC assay and attache it to Seurat object     ##### 
+########  4. Create ATAC assay and attach it to Seurat object     ##### 
 ########  ################################################# ############ 
 
-if (b_get_ATAC) {     
+# Validate or Load Seurat object from disk if available
+#SeuratOBJ <- load_seurat_obj(SeuratOBJ, s_seurat_name) 
+#head(SeuratOBJ, n = 3)
 
-    # Validate or Load Seurat object from disk if available
-    #SeuratOBJ <- load_seurat_obj(SeuratOBJ, s_seurat_name) 
-    #head(SeuratOBJ, n = 3)
+# General use: Create gene annotations for hg38 and extract gene annotations from EnsDb
+annotations <- GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86)
+# show(annotations) / # View(head(annotations,n=5)) /# names(genomeStyles('Homo_sapiens'))
+seqlevelsStyle(annotations) <- "UCSC"
+length(extractSeqlevelsByGroup(species = 'Homo_sapiens', style = 'UCSC', group = 'all')) #group: sex, auto, circular
+genome(annotations) <- "hg38"
+# names(mcols(annotations))
+#[1] "tx_id"        "gene_name"    "gene_id"      "gene_biotype" "type"   
+
+# Parse a list of Seurat objects  
+for (S in lst_seurats) {
+
+    message('Processing ATAC for sample ', s_sample)
     
-    # General use: Create gene annotations for hg38 and extract gene annotations from EnsDb
-    annotations <- GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86)
-    # show(annotations) / # View(head(annotations,n=5)) /# names(genomeStyles('Homo_sapiens'))
-    seqlevelsStyle(annotations) <- "UCSC"
-    length(extractSeqlevelsByGroup(species = 'Homo_sapiens', style = 'UCSC', group = 'all')) #group: sex, auto, circular
-    genome(annotations) <- "hg38"
-    
-    # Create the chromatin assay with annotations and attach it to the seurat object 
+    # Create the chromatin assay with annotations and attach it to the Seurat object 
     start.time = Sys.time()
-    SeuratOBJ <- get_create_atac_objs(SeuratOBJ, 
-                                      s_bc_mtx, s_frag_namefile, 
-                                      annotations, TRUE) 
+    SeuratOBJ <- get_create_atac_objs(S, s_bc_mtx, s_frag_namefile, annotations, TRUE) 
     end.time = Sys.time()
     print(end.time - start.time)        # 15s / 40G free_mem / 3k Cells / Object.size 806.2 Mb
-                                        # 38s / 40G free_mem / 10k cells / 
+    # 38s / 40G free_mem / 10k cells / 
     SeuratOBJ@meta.data$`orig.ident`[1]
     #f_InspectSeurat(SeuratOBJ)
     # get_basic_stats_ATAC(SeuratOBJ)
-    # ATAC counts loaded successfully
-    # ATAC counts annotation attached successfully
-    # Computing hash
-    # Checking for 9816 cell barcodes
-    # Chromatin assay completed successfully
-    # ChromatinAssay data with 64288 features for 9816 cells
-    # Variable features: 0 
-    # Genome: 
-    #     Annotation present: TRUE 
-    # Motifs present: FALSE 
-    # Fragment files: 1 
     
+    ####### Evaluate chromatin assay #######
+    # Build base-name for plots and rds objects
     if (b_get_filtered_GEX) {
-        # Preferred method 1. filter by probabilities
-        SeuratOBJ.filtered.M1 <- get_create_atac_objs(SeuratOBJ.filtered.M1, 
-                                          s_bc_mtx, s_frag_namefile, 
-                                          annotations, TRUE) 
-        # ATAC counts loaded successfully
-        # ATAC counts annotation attached successfully
-        # Computing hash
-        # Checking for 9816 cell barcodes
-        # Chromatin assay completed successfully
-        # ChromatinAssay data with 64288 features for 9816 cells
-        # Variable features: 0 
-        # Genome: 
-        #     Annotation present: TRUE 
-        # Motifs present: FALSE 
-        # Fragment files: 1 
-    }    
+        base_name <- paste0(s_sample, '_M', i_filtering_method,'_QC')
+    } else {            
+        base_name <- paste0(s_sample, '_None_QC')
+    } 
+    
+    if (b_get_ATAC_QC) {
+        # Calculate Nucleosome Signal
+        
+        DefaultAssay(SeuratOBJ) <- "ATAC"
 
+        # Calculate the strength of the nucleosome signal per cell
+        SeuratOBJ <- NucleosomeSignal(SeuratOBJ)
+        SeuratOBJ$nucleosome_group <- ifelse(SeuratOBJ$nucleosome_signal > 4, 'NS > 4', 'NS < 4')
+        p1_NS <- FragmentHistogram(object = SeuratOBJ, group.by = 'nucleosome_group')
+        #head(SeuratOBJ, n = 3) 
+
+        # Calculate the "Transcription Start Site (TSS)" enrichment score
+        tryCatch( {
+            # Important NOTES: https://github.com/stuart-lab/signac/issues/374 
+            #           1. Some times jumps an issue of ** memory allocation ** when "fast=FALSE", FALSE argument is mandatory to
+            #              compute the TSS enrichment scores and visualize with TSSPlot(). You need more memory
+            #           2. Error in `colnames<-`(`*tmp*`, value = seq_len(length.out = region.width) -  : attempt to set 'colnames' ...
+            #              This is a vague message that would happen if no fragments are found in the set of TSS regions. 
+            #              You could double-checking that the correct gene annotations is being used or you have a low ATAC quality. 
+            
+            SeuratOBJ <- TSSEnrichment(SeuratOBJ, fast = TRUE) 
+            # Group by cells with TSS enrichment scores in two groups.
+            SeuratOBJ$high.tss <- ifelse(SeuratOBJ$TSS.enrichment > 2, 'High', 'Low')
+            #colnames(SeuratOBJ@meta.data)
+            p1_TSS <- TSSPlot(SeuratOBJ, group.by = 'high.tss') + NoLegend()
+            png_file_TSS <- paste0(base_name,'_TSS.png')
+            png_name <- here('plots/01_preprocessing_QC', png_file_TSS)
+            ggsave(p1_TSS, filename = png_name, height = 4, width = 4)
+            
+        }
+        , error = function(e) { print('An error occurred. Check the annotation or you probably have ATAC quality loss.') } )
+        
+        # Add blacklist ratio and fraction of reads in peaks
+        SeuratOBJ$blacklist_fraction <- FractionCountsInRegion(
+            object = SeuratOBJ,
+            assay = 'ATAC',
+            regions = blacklist_hg38
+        )
+        # Add blacklist ratio and fraction of reads in peaks
+        SeuratOBJ$pct_reads_in_peaks <- SeuratOBJ$atac_peak_region_fragments / SeuratOBJ$atac_fragments * 100
+        SeuratOBJ$blacklist_ratio <- SeuratOBJ$blacklist_fraction / SeuratOBJ$atac_peak_region_fragments
+
+        # Plot Peaks in black ratio and ATAC main feature scoreds
+        p1_BlackR <- VlnPlot(SeuratOBJ, features = c("pct_reads_in_peaks","blacklist_ratio"), ncol = 2)
+        p1_ATAC <- VlnPlot(SeuratOBJ, features = c("nCount_ATAC", "nFeature_ATAC", "nucleosome_signal", "TSS.enrichment"), ncol = 4)
+        
+        png_file_NS <- paste0(base_name,'_Fragment_Distribution_grp.png')
+        png_file_BlackR <- paste0(base_name,'_reads_in_peaks.png')
+        png_file_ATAC <- paste0(base_name,'_ATAC_QCs.png')
+        
+        png_name <- here('plots/01_preprocessing_QC', png_file_NS)
+        ggsave(p1_NS, filename = png_name, height = 4, width = 4)
+        png_name <- here('plots/01_preprocessing_QC', png_file_BlackR)
+        ggsave(p1_BlackR, filename = png_name, height = 4, width = 4)
+        png_name <- here('plots/01_preprocessing_QC', png_file_ATAC)
+        ggsave(p1_ATAC, filename = png_name, height = 4, width = 7)
+  
+        message('ATAC QCs plots saved!')  
+    
+    }
+    # Save RDS Object
+    rds_name <- here('processed-data/01_preprocessing_QC', paste0(base_name,'_ATAC.rds'))
+    saveRDS(SeuratOBJ, file = rds_name)
+    message('ATAC RDS object saved!')     
 }
 
 
+
+# if (b_get_ATAC) {     
+# 
+#     # Validate or Load Seurat object from disk if available
+#     #SeuratOBJ <- load_seurat_obj(SeuratOBJ, s_seurat_name) 
+#     #head(SeuratOBJ, n = 3)
+#     
+#     # General use: Create gene annotations for hg38 and extract gene annotations from EnsDb
+#     annotations <- GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86)
+#     # show(annotations) / # View(head(annotations,n=5)) /# names(genomeStyles('Homo_sapiens'))
+#     seqlevelsStyle(annotations) <- "UCSC"
+#     length(extractSeqlevelsByGroup(species = 'Homo_sapiens', style = 'UCSC', group = 'all')) #group: sex, auto, circular
+#     genome(annotations) <- "hg38"
+#     
+#     # names(mcols(annotations))
+#     #[1] "tx_id"        "gene_name"    "gene_id"      "gene_biotype" "type"   
+#     
+#     # Create the chromatin assay with annotations and attach it to the seurat object 
+#     start.time = Sys.time()
+#     SeuratOBJ <- get_create_atac_objs(SeuratOBJ, 
+#                                       s_bc_mtx, s_frag_namefile, 
+#                                       annotations, TRUE) 
+#     end.time = Sys.time()
+#     print(end.time - start.time)        # 15s / 40G free_mem / 3k Cells / Object.size 806.2 Mb
+#                                         # 38s / 40G free_mem / 10k cells / 
+#     SeuratOBJ@meta.data$`orig.ident`[1]
+#     #f_InspectSeurat(SeuratOBJ)
+#     # get_basic_stats_ATAC(SeuratOBJ)
+#     # ATAC counts loaded successfully
+#     # ATAC counts annotation attached successfully
+#     # Computing hash
+#     # Checking for 9816 cell barcodes
+#     # Chromatin assay completed successfully
+#     # ChromatinAssay data with 64288 features for 9816 cells
+#     # Variable features: 0 
+#     # Genome: 
+#     #     Annotation present: TRUE 
+#     # Motifs present: FALSE 
+#     # Fragment files: 1 
+#     
+#     if (b_get_filtered_GEX) {
+#         # Preferred method 1. filter by probabilities
+#         SeuratOBJ.filtered <- get_create_atac_objs(SeuratOBJ.filtered, 
+#                                           s_bc_mtx, s_frag_namefile, 
+#                                           annotations, TRUE) 
+#         # ATAC counts loaded successfully
+#         # ATAC counts annotation attached successfully
+#         # Computing hash
+#         # Checking for 9816 cell barcodes
+#         # Chromatin assay completed successfully
+#         # ChromatinAssay data with 64288 features for 9816 cells
+#         # Variable features: 0 
+#         # Genome: 
+#         #     Annotation present: TRUE 
+#         # Motifs present: FALSE 
+#         # Fragment files: 1 
+#     }    
+# 
+# }
+
+
     
-message('ATAC attached successfully!')
+# message('ATAC attached successfully!')
 
 
 
@@ -296,157 +404,104 @@ message('ATAC attached successfully!')
 
 # Evaluate chromatin assay
 
-if (b_get_filtered_GEX) {
+# if (b_get_ATAC_QC) {
+# 
+#     if (b_get_filtered_GEX) {
+#         
+#         # Calculate Nucleosome Signal and TSS Scores 
+#         
+#         DefaultAssay(SeuratOBJ.filtered) <- "ATAC"
+#         
+#         # Preferred method 1. filter by probabilities
+#         SeuratOBJ.filtered <- NucleosomeSignal(SeuratOBJ.filtered)
+#         SeuratOBJ.filtered$nucleosome_group <- ifelse(SeuratOBJ.filtered$nucleosome_signal > 4, 'NS > 4', 'NS < 4')
+#         p1 <- FragmentHistogram(object = SeuratOBJ.filtered, group.by = 'nucleosome_group')
+#         base_name <- paste0(s_sample, '_M1_QC')
+#         png_file <- paste0(base_name,'_Fragment_Distribution_grp.png')
+#         png_name <- here('plots/01_preprocessing_QC', png_file)  
+#         ggsave(p1, filename = png_name, height = 4, width = 4)
+#         message('Fragments Distribution plot saved!')    
+#         head(SeuratOBJ.filtered, n = 3)    
+#         
+#     } else {
+#         
+#         DefaultAssay(SeuratOBJ) <- "ATAC"
+#         
+#         # Calculate the strength of the nucleosome signal per cell
+#         SeuratOBJ <- NucleosomeSignal(SeuratOBJ)
+#         SeuratOBJ$nucleosome_group <- ifelse(SeuratOBJ$nucleosome_signal > 4, 'NS > 4', 'NS < 4')
+#         p1 <- FragmentHistogram(object = SeuratOBJ, group.by = 'nucleosome_group')
+#         base_name <- paste0(s_sample, '_None_QC')
+#         png_file <- paste0(base_name,'_Fragment_Distribution_grp.png')
+#         png_name <- here('plots/01_preprocessing_QC', png_file)  
+#         ggsave(p1, filename = png_name, height = 4, width = 4)
+#         message('Fragments Distribution plot saved!')        
+#         head(SeuratOBJ, n = 3) 
+#         
+#     }
+# 
+# }
     
-    DefaultAssay(SeuratOBJ.filtered.M1) <- "ATAC"
-    
-    # Preferred method 1. filter by probabilities
-    SeuratOBJ.filtered.M1 <- NucleosomeSignal(SeuratOBJ.filtered.M1)
-    SeuratOBJ.filtered.M1$nucleosome_group <- ifelse(SeuratOBJ.filtered.M1$nucleosome_signal > 4, 'NS > 4', 'NS < 4')
-    p1 <- FragmentHistogram(object = SeuratOBJ.filtered.M1, group.by = 'nucleosome_group')
-    tmp_name <- paste0(s_sample, '_M1_QC')
-    png_file <- paste0(tmp_name,'_Fragment_Distribution_grp.pdf')
-    png_name <- here('plots/01_preprocessing_QC', png_file)  
-    ggsave(p1, filename = png_name, height = 4, width = 4)
-    message('Fragments Distribution plot saved!')    
+# if (b_get_ATAC_QC) {
+# 
+# 
+#     
+#     head(SeuratOBJ, n = 3)
+#     
+#     # Calculate the "Transcription Start Site (TSS)" enrichment score for each cell, as defined by ENCODE.
+#     tryCatch( {
+#         
+#         # Important NOTES: https://github.com/stuart-lab/signac/issues/374 
+#         #           1. Some times jumps an issue of ** memory allocation ** when "fast=FALSE", FALSE argument is mandatory to
+#         #              compute the TSS enrichment scores and visualize with TSSPlot(). You need more memory
+#         #           2. Error in `colnames<-`(`*tmp*`, value = seq_len(length.out = region.width) -  : attempt to set 'colnames' ...
+#         #              This is a vague message that would happen if no fragments are found in the set of TSS regions. 
+#         #              You could double-checking that the correct gene annotations is being used or you have a low ATAC quality. 
+#         
+#         SeuratOBJ <- TSSEnrichment(SeuratOBJ, fast = TRUE)
+#         SeuratOBJ <- TSSEnrichment(SeuratOBJ, fast = FALSE, verbose = TRUE)
+#         # Note
+#         # Group by cells with TSS enrichment scores in two groups.
+#         SeuratOBJ$high.tss <- ifelse(SeuratOBJ$TSS.enrichment > 2, 'High', 'Low')
+#         #colnames(SeuratOBJ@meta.data)
+#         TSSPlot(SeuratOBJ, group.by = 'high.tss') + NoLegend()
+#     }
+#     , error = function(e) {print('An error occurred. Check the annotation or you probably have ATAC quality loss.') })
+#     
+#     # Add blacklist ratio and fraction of reads in peaks
+#     SeuratOBJ$blacklist_fraction <- FractionCountsInRegion(
+#         object = SeuratOBJ,
+#         assay = 'ATAC',
+#         regions = blacklist_hg38
+#     )
+#     # Add blacklist ratio and fraction of reads in peaks
+#     SeuratOBJ$pct_reads_in_peaks <- SeuratOBJ$atac_peak_region_fragments / SeuratOBJ$atac_fragments * 100
+#     SeuratOBJ$blacklist_ratio <- SeuratOBJ$blacklist_fraction / SeuratOBJ$atac_peak_region_fragments
+#     # Plot reads in black ratio
+#     
+#     p1 <- VlnPlot(SeuratOBJ, features = c("pct_reads_in_peaks","blacklist_ratio"), ncol = 2)
+#     base_name <- paste0(s_sample, '_None_QC')
+#     png_file <- paste0(base_name,'_reads_in_peaks.pdf')
+#     png_name <- here('plots/01_preprocessing_QC', png_file)  
+#     ggsave(p1, filename = png_name, height = 4, width = 4)
+#     message('Black ratio reads in peaks plot saved!')  
+#     
+#     p1 <- VlnPlot(SeuratOBJ, features = c("nCount_ATAC", "nFeature_ATAC", "nucleosome_signal", "TSS.enrichment"), ncol = 4)
+#     base_name <- paste0(s_sample, '_None_QC')
+#     png_file <- paste0(base_name,'_ATAC.png')
+#     png_name <- here('plots/01_preprocessing_QC', png_file)  
+#     ggsave(p1, filename = png_name, height = 4, width = 7)
+#     message('ATAC quality general plots saved!')  
+#     
+# }
 
-} else {  
-
-#if (b_get_ATAC_QC) {
-
-    DefaultAssay(SeuratOBJ) <- "ATAC"
-    
-    # Calculate fragment size distribution
-    #FragmentHistogram(object = SeuratOBJ)
-    
-    # Calculate the strength of the nucleosome signal per cell
-    SeuratOBJ <- NucleosomeSignal(SeuratOBJ)
-    head(SeuratOBJ, n = 3)
-    
-    # Group by cells with high or low nucleosome signal strength. 
-    SeuratOBJ$nucleosome_group <- ifelse(SeuratOBJ$nucleosome_signal > 4, 'NS > 4', 'NS < 4')
-    p1 <- FragmentHistogram(object = SeuratOBJ, group.by = 'nucleosome_group')
-    tmp_name <- paste0(s_sample, '_None_QC')
-    png_file <- paste0(tmp_name,'_Fragment_Distribution_grp.pdf')
-    png_name <- here('plots/01_preprocessing_QC', png_file)  
-    ggsave(p1, filename = png_name, height = 4, width = 4)
-    message('Fragments Distribution plot saved!')    
-    
-    head(SeuratOBJ, n = 3)
-    
-    # Calculate the "Transcription Start Site (TSS)" enrichment score for each cell, as defined by ENCODE.
-    tryCatch( {
-        
-        # Important NOTES: https://github.com/stuart-lab/signac/issues/374 
-        #           1. Some times jumps an issue of ** memory allocation ** when "fast=FALSE", FALSE argument is mandatory to
-        #              compute the TSS enrichment scores and visualize with TSSPlot(). You need more memory
-        #           2. Error in `colnames<-`(`*tmp*`, value = seq_len(length.out = region.width) -  : attempt to set 'colnames' ...
-        #              This is a vague message that would happen if no fragments are found in the set of TSS regions. 
-        #              You could double-checking that the correct gene annotations is being used or you have a low ATAC quality. 
-        
-        SeuratOBJ <- TSSEnrichment(SeuratOBJ, fast = FALSE)
-        # Note
-        # Group by cells with TSS enrichment scores in two groups.
-        SeuratOBJ$high.tss <- ifelse(SeuratOBJ$TSS.enrichment > 2, 'High', 'Low')
-        #colnames(SeuratOBJ@meta.data)
-        TSSPlot(SeuratOBJ, group.by = 'high.tss') + NoLegend()
-    }
-    , error = function(e) {print('An error occurred. Check the annotation or you probably have ATAC quality loss.') })
-    
-    # Add blacklist ratio and fraction of reads in peaks
-    SeuratOBJ$blacklist_fraction <- FractionCountsInRegion(
-        object = SeuratOBJ,
-        assay = 'ATAC',
-        regions = blacklist_hg38
-    )
-    # Add blacklist ratio and fraction of reads in peaks
-    SeuratOBJ$pct_reads_in_peaks <- SeuratOBJ$atac_peak_region_fragments / SeuratOBJ$atac_fragments * 100
-    SeuratOBJ$blacklist_ratio <- SeuratOBJ$blacklist_fraction / SeuratOBJ$atac_peak_region_fragments
-    # Plot reads in black ratio
-    
-    p1 <- VlnPlot(SeuratOBJ, features = c("pct_reads_in_peaks","blacklist_ratio"), ncol = 2)
-    tmp_name <- paste0(s_sample, '_None_QC')
-    png_file <- paste0(tmp_name,'_reads_in_peaks.pdf')
-    png_name <- here('plots/01_preprocessing_QC', png_file)  
-    ggsave(p1, filename = png_name, height = 4, width = 4)
-    message('Black ratio reads in peaks plot saved!')  
-    
-    p1 <- VlnPlot(SeuratOBJ, features = c("nCount_ATAC", "nFeature_ATAC", "nucleosome_signal", "TSS.enrichment"), ncol = 4)
-    tmp_name <- paste0(s_sample, '_None_QC')
-    png_file <- paste0(tmp_name,'_ATAC.png')
-    png_name <- here('plots/01_preprocessing_QC', png_file)  
-    ggsave(p1, filename = png_name, height = 4, width = 7)
-    message('ATAC quality general plots saved!')  
-    
-}
-
-message('ATAC quality processed successfully!')
-message(paste0('Saving new Seurat with ATAC attached'))
-rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample,'filteredM',i_filtering_method,'_ATAC.rds'))
-saveRDS(SeuratOBJ, file = rds_name)
+# message('ATAC quality processed successfully!')
+# message(paste0('Saving new Seurat with ATAC attached'))
+# rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample,'filteredM',i_filtering_method,'_ATAC.rds'))
+# saveRDS(SeuratOBJ, file = rds_name)
 
 
-# Subset Seurat object 
-#       source(here("code/functions_custom", "remote_filtering_functions.R"))   # Call functions to subset the Seurat object
-#       functions_custom/remote_filtering_functions.R    
-#       name: get_preprocessed_subset
-
-# filter out low quality cells
-hCount_RNA <- 25000
-lCount_RNA <- 1000
-hCount_ATAC <- 100000
-lCount_ATAC <- 1000
-mito_perc <- 10
-ns <- 2
-TSS.enrichment <- 1  # opt
-
-# i.e: nCount_ATAC < 7e4 & nCount_ATAC > 5e3 & nCount_RNA < 25000 & nCount_RNA > 1000 & percent.mt < 20
-#head(SeuratOBJ, n=3)
-#SeuratOBJ_QCed <- get_preprocessed_subset(SeuratOBJ, hCount_RNA, lCount_RNA, mito_perc, 
-#                                          hCount_ATAC, lCount_ATAC, nucleosome_grp)
-
-####### After QC the assay by conventional standard
-seurat_obj.subset <- subset(
-    x = SeuratOBJ,
-    subset = nCount_ATAC < 100000 &
-        nCount_RNA < 25000 &
-        nCount_ATAC > 1000 &
-        nCount_RNA > 1000 &
-        nucleosome_signal < 2 #& TSS.enrichment > 1
-)
-
-if (b_get_GEX_plots) { 
-    tmp_name <- paste0(s_sample, '_QCed')
-    DefaultAssay(seurat_obj.subset) <- "RNA"
-    plot_GEX_QCs(seurat_obj.subset, tmp_name)
-}
-message('Multiome quality processed successfully!')
-message(paste0('Saving new Seurat with standard quality'))
-rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample,'_QCed_Std.rds'))
-saveRDS(seurat_obj.subset, file = rds_name)
-
-####### After QC the assay with M1 method 
-seurat_obj.subset2 <- subset(
-    x = SeuratOBJ.filtered.M1,
-    subset = nCount_ATAC < 100000 &
-        nCount_RNA < 25000 &
-        nCount_ATAC > 1000 &
-        nCount_RNA > 1000 &
-        nucleosome_signal < 2 #& TSS.enrichment > 1
-)
-
-if (b_get_GEX_plots) { 
-    tmp_name <- paste0(s_sample, '_M1_QCed')
-    DefaultAssay(seurat_obj.subset2) <- "RNA"
-    plot_GEX_QCs(seurat_obj.subset2, tmp_name)
-}
-message('Multiome quality processed successfully!')
-message(paste0('Saving new Seurat with M1 standard quality'))
-rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample,'_M1_QCed_Std.rds'))
-saveRDS(seurat_obj.subset2 , file = rds_name)
-
-
-
+# Chunk of code to filter by conventional standar and custom profile moved to: 01b_preprocessing_GEX_ATAC.R script
 
 
 ############ Reproducibility information ####################
