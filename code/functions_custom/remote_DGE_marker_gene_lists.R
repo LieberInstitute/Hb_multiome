@@ -56,3 +56,17 @@ get_bukola_markers_genes_Hb <- function() {
     
 }
 
+
+get_Top50r_markers_genes_Hb <- function() {
+    
+    # Load the Bukola/Louise's marker gene list based on Habenula from Human Brain
+    
+    ## read our gene markers (those found in our clusters)
+    s_file_name <- here('data', 'sfigu_top_50_MarkerGenes_Table.xlsx')
+    
+    gene_markers <- as.data.frame(read.csv(s_file_name, header = TRUE))
+    
+    
+    return(gene_markers)
+    
+}
