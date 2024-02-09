@@ -7,6 +7,15 @@
 ## 
 ########################################################################
 
+# load libraries
+library(tidyverse)
+library(dplyr)
+library(here)
+library(readxl)
+
+here::here()
+
+
 
 get_erik_markers_genes_HPC <- function() {
     
@@ -59,14 +68,36 @@ get_bukola_markers_genes_Hb <- function() {
 
 get_Top50r_markers_genes_Hb <- function() {
     
-    # Load the Bukola/Louise's marker gene list based on Habenula from Human Brain
+    ## Load the Top 50 marker gene for habenula from Human Brain
+   
+    ## read top50 by ratio gene marker list
+    s_path_name <- here('data', 'sfigu_top_50_MarkerGenes_Table.xlsx')
+    Hb_gene_markers <- as.data.frame(read_excel(s_path_name, na = "---")) #sheet = "data"
+    #f <-  c('LHb, MHb') 
+    ## Note: cellType.target is the column you want to use. That is the "target" cell type that the data corresponds to, 
+    ## the second cellType is the second highest non-target cell type (so the cell type we are comparing the target cell type to)
     
-    ## read our gene markers (those found in our clusters)
-    s_file_name <- here('data', 'sfigu_top_50_MarkerGenes_Table.xlsx')
+    top50_LHb_genes_byratio <- Hb_gene_markers %>% 
+        dplyr::arrange(cellType.target) %>% 
+        select(c(cellType.target, rank_ratio, Symbol, log.p.value), 1) %>%   #, starts_with(f)
+        dplyr::filter((cellType.target == 'LHb')) #| (cellType.target == 'MHb') %>%
+        #slice_head(n = 50)
     
-    gene_markers <- as.data.frame(read.csv(s_file_name, header = TRUE))
+    top50_MHb_genes_byratio <- Hb_gene_markers %>% 
+        dplyr::arrange(cellType.target) %>% 
+        select(c(cellType.target, rank_ratio, Symbol, log.p.value), 1) %>%
+        dplyr::filter((cellType.target == 'MHb')) #| (cellType.target == 'MHb') %>%
     
+    #nrow(top50_LHb_genes_byratio)
+    #tail(top50_LHb_genes_byratio, n=5)
     
-    return(gene_markers)
+    if ( (nrow(top50_LHb_genes_byratio) > 0) &  (nrow(top50_MHb_genes_byratio) > 0) ) {
+        markers.custom = list(
+            'LHb' = top50_LHb_genes_byratio$Symbol, # 'GRIN1','MAP2'),
+            'MHb' = top50_MHb_genes_byratio$Symbol # 'SLC17A8'),
+        )
+    }
+    
+    return(markers.custom)
     
 }
