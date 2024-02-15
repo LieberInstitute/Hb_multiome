@@ -93,10 +93,42 @@ get_Top50r_markers_genes_Hb <- function() {
     
     if ( (nrow(top50_LHb_genes_byratio) > 0) &  (nrow(top50_MHb_genes_byratio) > 0) ) {
         markers.custom = list(
-            'LHb' = top50_LHb_genes_byratio$Symbol, # 'GRIN1','MAP2'),
-            'MHb' = top50_MHb_genes_byratio$Symbol # 'SLC17A8'),
+            'LHb_putative' = top50_LHb_genes_byratio$Symbol, # 'GRIN1','MAP2'),
+            'MHb_putative' = top50_MHb_genes_byratio$Symbol # 'SLC17A8'),
         )
     }
+    
+    return(markers.custom)
+    
+}
+
+
+get_erik_and_Hb_markers_genes <- function() {
+    
+    # Join Erik's marker gene list (HPC) with putative Hb custom marker gene list (Top50r)
+    
+    markersTop50 <- get_Top50r_markers_genes_Hb()
+    MHb_putative = c(markersTop50$MHb_putative)
+    LHb_putative = c(markersTop50$LHb_putative)
+    
+    markers.custom = list(
+        'neuron' = c('SYT1', 'SNAP25'), #'SNAP25', 'GRIN1','MAP2'),
+        'excitatory_neuron' = c('SLC17A6', 'SLC17A7'), # 'SLC17A8'),
+        'inhibitory_neuron' = c('GAD1', 'GAD2'), #'SLC32A1'),
+        'mediodorsal thalamus'= c('EPHA4','PDYN', 'LYPD6B', 'LYPD6', 'S1PR1', 'GBX2', 'RAMP3', 'COX6A2', 'SLITRK6', 'DGAT2'),
+        'Hb neuron specific'= c('POU2F2','POU4F1','GPR151','CALB2'),#,'GPR151','POU4F1','STMN2','CALB2','NR4A2','VAV2','LPAR1'),
+        'MHB neuron specific' = c('TAC1','CHAT','CHRNB4'),#'TAC3','SLC17A7'
+        'LHB neuron specific' = c('HTR2C','MMRN1'),#'RFTN1'
+        'oligodendrocyte' = c('MOBP', 'MBP'), # 'PLP1'),
+        'oligodendrocyte_precursor' = c('PDGFRA', 'VCAN'), # 'CSPG4', 'GPR17'),
+        'microglia' = c('C3', 'CSF1R'), #'C3'),
+        'astrocyte' = c('GFAP', 'AQP4'),
+        "Endo/CP" = c("TTR", "FOLR1", "FLT1", "CLDN5"),
+        'MHb_putative' = MHb_putative,
+        'LHb_putative' = LHb_putative
+    )
+    
+    markers.custom
     
     return(markers.custom)
     
