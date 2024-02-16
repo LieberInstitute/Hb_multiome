@@ -32,10 +32,10 @@ source(here("code/functions_custom", "remote_DGE_marker_gene_lists.R"))       # 
 # We have access to 3 gene markers lists:
 
 # Erik and Top50r putative marker genes merged
-#markers.custom <- get_erik_and_Hb_markers_genes()          # merged lists
-#prefix_name <- 'all_gm'                                    # prefix to save matched markers found in the clusters
-markers.custom <- get_bukola_markers_genes_Hb()           # Bukola lists
-prefix_name <- 'erik_gm'  
+markers.custom <- get_erik_and_Hb_markers_genes()          # merged lists
+prefix_name <- 'all_gm'                                    # prefix to save matched markers found in the clusters
+#markers.custom <- get_bukola_markers_genes_Hb()           # Bukola lists
+#prefix_name <- 'erik_gm'  
 #markers.custom <- get_Top50r_markers_genes_Hb()           # Top50r lists (putative Hb)
 #prefix_name <- 'Top50r_gm'  
 
