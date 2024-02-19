@@ -58,42 +58,56 @@ if (!dir.exists(here("processed-data/05_DiffExpr_Clustering/"))) {
 # Load Seurat pre-existing object from disk
 seurat_name <- 'S1_Hb_KDM'
 seurat_obj <- readRDS(here('processed-data/01_preprocessing_QC', paste0(seurat_name, '.rds')))
-head(seurat_obj, n = 3)
+# head(seurat_obj, n = 3)
+# > head(seurat_obj, n = 3)
+# orig.ident atac_peak_region_fragments atac_fragments
+# AAACAGCCAAATTGCT-1  S1_Hb_KDM                        334           2229
+# AAACAGCCAGCTTACA-1  S1_Hb_KDM                       2548          12449
+# AAACAGCCAGGTCCTG-1  S1_Hb_KDM                       1698          11085
+
+# View cell identities, get summary table
+#Idents(seurat_obj)
+table(Idents(seurat_obj))
+head(seurat_obj[[]], n=3)
 
 # Gene Expression RNA assay
 assay <- seurat_obj[["RNA"]]
-typeof(assay)
+# Assay data with 36601 features for 8178 cells
+# First 10 features:
+#     MIR1302-2HG, FAM138A, OR4F5, AL627309.1, AL627309.3, AL627309.2,
+# AL627309.5, AL627309.4, AP006222.2, AL732372.1 
+typeof(assay)   #S4
+## Cells and feature names
+#Cells(assay)       #colnames(assay)
+## feature names
+#rownames(assay)    #Features(assay)
+
+Layers(assay)
+# [1] "counts" "data" 
+
 # get counts matrix from either the old or newer formats of assay
-counts <- counts_matrix_from_assay(assay)   # S4, dfCMatrix
+counts <- seurat_obj[["RNA"]]$counts
+#counts <- counts_matrix_from_assay(assay)   # S4, dfCMatrix
 str(counts)
 head(counts)
-counts@Dimnames
-counts@i
+#counts@Dimnames
+#counts@i
 
 
-mat <- Matrix(counts, sparse = TRUE)
-dim(mat)     # [1] 8178    2
-typeof(mat)
-b = as(mat, "Matrix")
-typeof(b)
-matT <- head(t(b))
+######### Extract information of clusters for the given sample. #########
 
-plot(matT)
-
-
-# Extract number of clusters for the given sample
 path_cellranger_clusters_df <- here(paste0('processed-data/cellrangerARC/', seurat_name, '/outs/analysis/clustering/gex/graphclust'),
                                     'clusters.csv')
 cellranger_clusters <- as.data.frame(read.csv(path_cellranger_clusters_df, header = TRUE))
 cellr_clusters <- unique(cellranger_clusters['Cluster'])
-clusters <- cellr_clusters[['Cluster']]
+clusters <- sort(cellr_clusters[['Cluster']])
 
 dim(cellranger_clusters)
-head(cellranger_clusters, 5)
+colnames(cellr_clusters)
 # > dim(cellranger_clusters)
 # [1] 8178    2
 # > head(cellranger_clusters, 5)
-# Barcode Cluster
+#       Barcode           Cluster
 # 1 AAACAGCCAAATTGCT-1       5
 # 2 AAACAGCCAGCTTACA-1       7
 # 3 AAACAGCCAGGTCCTG-1       5
@@ -103,290 +117,71 @@ head(cellranger_clusters, 5)
 
 
 
+######### Access individual/small groups of variables. #########
+
+feature <- c("SNAP25")
+#features <- c("AQP4", "GFAP", 'SYT1', 'RNASE1')
+counts_subseted <- FetchData(object = seurat_obj, vars = feature, layer = "counts")
+dim(counts_subseted)
+head(counts_subseted)   # data.frame
+colnames(counts_subseted)
+# assigning new names to the columns of the data frame 
+counts_subseted <- cbind(newColName = rownames(counts_subseted), counts_subseted)
+rownames(counts_subseted) <- NULL
+colnames(counts_subseted) <- c('Barcode',feature) 
+# add ident 
+counts_subseted$ident <- seurat_name
+
+head(counts_subseted)  
+# Barcode AQP4     ident
+# 1 AAACAGCCAAATTGCT-1    0 S1_Hb_KDM
+# 2 AAACAGCCAGCTTACA-1    0 S1_Hb_KDM
+# 3 AAACAGCCAGGTCCTG-1    0 S1_Hb_KDM
+# 4 AAACAGCCAGTTAAAG-1    0 S1_Hb_KDM
+# 5 AAACAGCCATAGACTT-1    0 S1_Hb_KDM
+# 6 AAACATGCATCCCTCA-1    0 S1_Hb_KDM
+
+
+# Join counts with clusters by barcode
+cellranger_counts_clusters <- counts_subseted %>%
+    inner_join(cellranger_clusters) %>%
+    group_by(Cluster)
+head(cellranger_counts_clusters, n=3)
+# Barcode               AQP4 ident     Cluster
+# <chr>                 <dbl> <chr>       <int>
+# 1 AAACAGCCAAATTGCT-1     0 S1_Hb_KDM       5
+# 2 AAACAGCCAGCTTACA-1     0 S1_Hb_KDM       7
+# 3 AAACAGCCAGGTCCTG-1     0 S1_Hb_KDM       5
+
+
+# Format data for plotting 
+as.character(clusters)
+cellranger_counts_clusters
+cellranger_counts_clusters$Cluster <- as.character(cellranger_counts_clusters$Cluster)
+head(cellranger_counts_clusters)
+# # Groups:   Cluster [2]
+# Barcode             AQP4 ident     Cluster
+# <chr>              <dbl> <chr>       <int>
+# 1 AAACAGCCAAATTGCT-1     0 S1_Hb_KDM       5
+# 2 AAACAGCCAGCTTACA-1     0 S1_Hb_KDM       7
+# 3 AAACAGCCAGGTCCTG-1     0 S1_Hb_KDM       5
+
+# plot composed violin with boxplot log-scaled
+
+p <- cellranger_counts_clusters %>%
+    mutate(Cluster = fct_reorder(Cluster, get(feature))) %>%
+    mutate(Cluster = factor(Cluster, levels=c(as.character(clusters)))) %>%
+    ggplot(aes(fill=ident, y=get(feature), x=Cluster)) + 
+    geom_violin(aes(fill = factor(Cluster))) +
+    geom_boxplot(width=0.1, color="grey", alpha=0.2)
+
+p & scale_y_log10() &
+    theme_classic() &
+    theme(legend.position = 'none', draw_quantiles = NULL) & 
+    labs(title = paste(seurat_name,': ',feature), x = 'Clusters', y ='log10(Gene-Expression)')
 
 
 
-
-##################################################################
-###########  USE Cell RangerARC with LOUPE Browser
-###########  Require at least one projection on the data 
-##################################################################
-
-
-s_sample <- paste0(seurat_name,'_fast')
-
-luope_obj <- create_loupe_from_seurat(seurat_obj, force = TRUE)
-# 2024/02/15 18:08:29 extracting matrix, clusters, and projections
-# 2024/02/15 18:08:29 selected assay: RNA
-# 2024/02/15 18:08:29 selected clusters: active_cluster orig.ident RNA_snn_res.0.5 seurat_clusters
-# 2024/02/15 18:08:29 selected projections: umap
-# 2024/02/15 18:08:29 validating count matrix
-# 2024/02/15 18:08:34 validating clusters
-# 2024/02/15 18:08:34 validating projections
-# 2024/02/15 18:08:34 creating temporary hdf5 file: /tmp/RtmpaaRqKy/file948a022e22760.h5
-# 2024/02/15 18:08:44 invoking louper executable
-# 2024/02/15 18:08:44 running command: "/users/csoto/R/4.3/loupeR/exec/louper create --input='/tmp/RtmpaaRqKy/file948a022e22760.h5' --output='converted.cloupe'"
-# 2024/02/15 18:08:44 validating input file: /tmp/RtmpaaRqKy/file948a022e22760.h5
-# 2024/02/15 18:08:46 initializing loupe file: /tmp/587188988.cloupe
-# 2024/02/15 18:08:46 converting count matrix
-# 2024/02/15 18:09:13 converting projections
-# 2024/02/15 18:09:13 converting clusters
-# 2024/02/15 18:09:14 finished loupe file: /tmp/587188988.cloupe
-# 2024/02/15 18:09:14 copying loupe file to: converted.cloupe
-
-# Use the function create_loupe if you need more control in the clusters and projections that included in the Loupe file
-
-
-# convert the count matrix, clusters, and projections into a Loupe file
-create_loupe(
-    counts,
-    clusters = select_clusters(seurat_obj),
-    projections = select_projections(seurat_obj)
-)
-
-
-
-VlnPlot(seurat_obj, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
-seurat_obj <- NormalizeData(seurat_obj, normalization.method = "LogNormalize", scale.factor = 10000)
-seurat_obj <- FindVariableFeatures(seurat_obj, selection.method = "vst", nfeatures = 2000)
-
-# # Identify the 10 most highly variable genes
-# top10 <- head(VariableFeatures(seurat_obj), 10)
-# 
-# # plot variable features with and without labels
-# plot1 <- VariableFeaturePlot(seurat_obj)
-# plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
-# plot1 + plot2
-
-
-
-
-
-
-##################################################################
-###########  USE Seurat with minimum step to reproduce object 
-###########  Follow standard Serurat Pipeline
-##################################################################
-
-
-all.genes <- rownames(seurat_obj)
-seurat_obj <- ScaleData(seurat_obj, features = all.genes)
-seurat_obj <- RunPCA(seurat_obj, features = VariableFeatures(object = seurat_obj))
-DimPlot(seurat_obj)
-DimHeatmap(seurat_obj)
-
-seurat_obj <- FindNeighbors(seurat_obj, dims = 1:10)
-seurat_obj <- FindClusters(seurat_obj, resolution = 0.5)
-# Look at cluster IDs of the first 5 cells
-head(Idents(seurat_obj), 5)
-
-seurat_obj <- RunUMAP(seurat_obj, dims = 1:10)
-
-## Finding differentially expressed features (cluster biomarkers)
-seurat_obj.markers <- FindAllMarkers(seurat_obj, only.pos = TRUE)
-seurat_obj.markers %>%
-    group_by(cluster) %>%
-    dplyr::filter(avg_log2FC > 1)
-head(seurat_obj.markers, n = 5)
-# > head(seurat_obj.markers, n = 5)
-# p_val avg_log2FC pct.1 pct.2 p_val_adj cluster      gene
-# RNASE1        0   2.825883 0.647 0.100         0       0    RNASE1
-# LINC01608     0   2.779178 0.459 0.049         0       0 LINC01608
-# PPP1R14A      0   2.693094 0.680 0.114         0       0  PPP1R14A
-# DBNDD2        0   2.609827 0.806 0.180         0       0    DBNDD2
-# QDPR          0   2.583904 0.812 0.226         0       0      QDPR
-
-message('Seurat object created successfully!')
-message('Saving Seurat ...')
-#rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample,'.rds'))
-#saveRDS(seurat_obj, file = rds_name)
-
-# Load Seurat object from disk if available
-seurat_name <- 'S1_Hb_KDM_fast'
-seurat_obj <- readRDS(here('processed-data/01_preprocessing_QC', seurat_name, '.rds'))
-head(seurat_obj, n = 3)
-
-## ploting features
-
-features <- c("AQP4", "GFAP", 'SYT1', 'RNASE1')
-
-VlnPlot(seurat_obj, features = features)
-
-RidgePlot(seurat_obj, features = features, ncol = 2) #slot = 'counts', log = TRUE; Default layer='data'
-RidgePlot(seurat_obj, features = 'PC_30') #
-
-
-# this plot raw counts as well
-VlnPlot(seurat_obj, features = features, slot = 'counts', log = TRUE, ncol = 2)
-#VlnPlots(eurat_obj, features = features, split.by = 'groups')
-
-FeaturePlot(seurat_obj, features = features, slot = "counts")
-
-new.cluster.ids <- c('0',"1", "2", "3", "4", "5", "6", "7", "Putative Hb", "9", '10')
-names(new.cluster.ids) <- levels(seurat_obj)
-seurat_obj <- RenameIdents(seurat_obj, new.cluster.ids)
-DimPlot(seurat_obj, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
-
-str(seurat_obj)
-
-
-
-
-
-
-
-
-
-#############################           Initials        ################################
-############################# Pickup a Marker gene list ################################
-
-# We have access to 3 gene markers lists:
-
-# Erik and Top50r putative marker genes merged
-#markers.custom <- get_erik_and_Hb_markers_genes()          # merged lists
-#prefix_name <- 'all_gm'                                    # prefix to save matched markers found in the clusters
-markers.custom <- get_bukola_markers_genes_Hb()           # Bukola lists
-prefix_name <- 'erik_gm'  
-#markers.custom <- get_Top50r_markers_genes_Hb()           # Top50r lists (putative Hb)
-#prefix_name <- 'Top50r_gm'  
-
-# str(markers.custom)
-# List of 14
-# $ neuron                   : chr [1:2] "SYT1" "SNAP25"
-# $ excitatory_neuron        : chr [1:2] "SLC17A6" "SLC17A7"
-# $ inhibitory_neuron        : chr [1:2] "GAD1" "GAD2"
-# $ mediodorsal thalamus     : chr [1:10] "EPHA4" "PDYN" "LYPD6B" "LYPD6" ...
-# $ Hb neuron specific       : chr [1:4] "POU2F2" "POU4F1" "GPR151" "CALB2"
-# $ MHB neuron specific      : chr [1:3] "TAC1" "CHAT" "CHRNB4"
-# $ LHB neuron specific      : chr [1:2] "HTR2C" "MMRN1"
-# $ oligodendrocyte          : chr [1:2] "MOBP" "MBP"
-# $ oligodendrocyte_precursor: chr [1:2] "PDGFRA" "VCAN"
-# $ microglia                : chr [1:2] "C3" "CSF1R"
-# $ astrocyte                : chr [1:2] "GFAP" "AQP4"
-# $ Endo/CP                  : chr [1:4] "TTR" "FOLR1" "FLT1" "CLDN5"
-# $ MHb_putative             : chr [1:50] "CHAT" "LINC01307" "NEUROD1" "CHRNB4" ...
-# $ LHb_putative             : chr [1:50] "HTR4" "BVES" "NRP1" "HTR2C" ...
-
-
-markers.custom$MHb_putative
-# [1] "CHAT"       "LINC01307"  "NEUROD1"    "CHRNB4"     "LINC02143" 
-# [6] "AC114321.1" "AC104170.1" "AC079760.2" "AC024610.2" "AC022382.2"
-# ...
-
-# # markers manually added for testing functions 
-# new_gm <- c('AQP4', 'MT-ND2')
-# markers.custom$MHb <- append(markers.custom$MHb, new_gm)
-# markers.custom$MHb 
-
-# set the number of top DGE rows to consider for looking gene markers in the cellranger-arc clusters
-n_match_slice <- 20   #10
-prefix_name <- paste0(prefix_name, n_match_slice, '.csv')
-
-#############################  Set the DGE list to parse  ################################
-
-## commandArgs scans the arguments which have been supplied when the current R script was invoked (from shell sh)
-sample_tmp <- commandArgs(trailingOnly = TRUE)
-#sample_tmp <- args[1]
-# testing
-#sample_tmp <- 'S1_Hb_KDM,human'  # testing HUMAN tissue
-#sample_tmp <- 'S2_Hb_KDM,human'  # testing HUMAN tissue
-#sample_tmp <- '2_HPC_KDM,human'  # testing HUMAN tissue
-#sample_tmp <- '2_HPC_KDM,human'  # testing HUMAN tissue
-sample_data = unlist(strsplit(sample_tmp,","))
-
-s_sample <- sample_data[[1]]
-s_tissue <- sample_data[[2]]
-message('Processing sample: ',s_sample, ' from ', s_tissue, ' tissue.')
-
-
-
-#############################  DGE gene lists from cellranger-arc ################################
-
-# Extract number of clusters for the given sample
-path_cellranger_clusters_df <- here(paste0('processed-data/cellrangerARC/', s_sample, '/outs/analysis/clustering/gex/graphclust'),
-                                 'clusters.csv')
-cellranger_clusters <- as.data.frame(read.csv(path_cellranger_clusters_df, header = TRUE))
-cellr_clusters <- unique(cellranger_clusters['Cluster'])
-clusters <- cellr_clusters[['Cluster']]
-
-message('Looking gene markers for ', length(clusters), ' clusters for sample ', s_sample)
-
-# Extract DGE genes for all clusters for the given sample
-# Read path to cellranger-arc DGE clusters
-path_cellranger_DGE_clust_df <- here(paste0('processed-data/cellrangerARC/', s_sample, '/outs/analysis/clustering/gex/graphclust'),
-                                    'differential_expression.csv')
-path_cellranger_DGE_clust_df      # ~/Hb_multiome/processed-data/cellrangerARC/S1_Hb_KDM/outs/analysis/clustering/graphclust/differential_expression.csv"
-cellr_clusters <- as.data.frame(read.csv(path_cellranger_DGE_clust_df, header = TRUE))
-head(cellr_clusters[1:5], n=3)
-# Feature.ID Feature.Name Cluster.1.Mean.Counts Cluster.1.Log2.fold.change
-# 1 ENSG00000243485  MIR1302-2HG                     0                   7.110087
-# 2 ENSG00000237613      FAM138A                     0                   7.110087
-# 3 ENSG00000186092        OR4F5                     0                   7.110087
-# Cluster.1.Adjusted.p.value
-# 1                          1
-# 2                          1
-# 3                          1
-
-
-#levels/categories of cell-types
-message('Parsing ', length(markers.custom), ' cell types for ', length(clusters) ,' clusters in sample ', s_sample)
-#Parsing 14 cell-types for clusters in sample S1_Hb_KDM
-
-
-####### Parse the 10/20 DGE genes from GEX cluster against the marker genes list provided ####### 
-
-clusters <- sort(clusters)
-
-# empty df to save cell-types matched 
-all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("Feature.ID", "Feature.Name", "Cluster.Adjusted.p.value", "cell-type", "cluster"))
-
-#names(marker.custom_lsts)
-
-
-# parse the clusters of the given sample
-for (clust in clusters) {
-
-    # Read cluster x and extract the 10 ten most relevant genes
-    Cluster_number <- paste0('Cluster.',clust,'.')
-    f <-  paste0(Cluster_number,'Adjusted.p.value')
-
-    top_DGE_clust <- cellr_clusters %>% 
-        dplyr::arrange(get(f)) %>% #select(c(Feature.ID, Feature.Name, f)) %>%
-        select(c(Feature.ID, Feature.Name), 1, starts_with(f)) %>%
-        dplyr::filter(get(f) < 0.05) %>%
-        slice_head(n = n_match_slice)
-    
-    # Parse each gene in the top10 list against the marker gene list provided 
-    if ( nrow(top_DGE_clust) > 0 ) {
-        
-        # get a vector wit all marker genes
-        gm_lst <- as.vector(as.list(markers.custom))
-        #names(gm_lst[1])
-        i_pos <- 0      # reset gene-marker list position
-        
-        for ( gm in gm_lst ) {
-
-            i_pos <- i_pos+1                        # to extract cell type position
-            cell_type <- names(gm_lst[i_pos])       # to extract cell type name
-
-            # Match top10genes with the marker genes for the cell-type x 
-            gene_match <- top_DGE_clust %>% filter_all(any_vars(. %in% gm))
-            print(gene_match)
-            
-            # add matched genes to a dataframe
-            if ( nrow(gene_match) > 0 ) {
-                # rename column to allow rbind
-                names(gene_match)[names(gene_match) == f ] <- "Cluster.Adjusted.p.value"
-                gene_match['cell-type']  <- cell_type
-                gene_match['cluster']  <- clust
-                all_gene_match <- rbind(all_gene_match, gene_match)
-            }
-            
-        }
-        
-    }
-    
-} 
 
 # save the matched genes for the corresponding sample 
 #all_gene_match
