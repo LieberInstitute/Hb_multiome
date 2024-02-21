@@ -58,12 +58,41 @@ if (!dir.exists(here("plots/05_DiffExpr_Clustering/"))) {
 ##################################################################
 
 
+######### Select a specific set of genes to plot #########
+
+source(here("code/functions_custom", "remote_DGE_marker_gene_lists.R"))       # Call functions to read paths
+# We have access to 3 gene markers lists:
+
+# Erik and Top50r putative marker genes merged
+#markers.custom <- get_erik_and_Hb_markers_genes()          # merged lists
+#prefix_name <- 'all_gm'                                    # prefix to save matched markers found in the clusters
+markers.custom <- get_bukola_markers_genes_Hb()           # Bukola lists
+prefix_name <- 'erik_gm'  
+#markers.custom <- get_Top50r_markers_genes_Hb()           # Top50r lists (putative Hb)
+#prefix_name <- 'Top50r_gm'
+# str(markers.custom)
+# List of 13
+# $ neuron                   : chr [1:2] "SYT1" "SNAP25"
+# $ excitatory_neuron        : chr [1:2] "SLC17A6" "SLC17A7"
+# $ inhibitory_neuron        : chr [1:2] "GAD1" "GAD2"
+# $ mediodorsal thalamus     : chr [1:11] "EPHA4" "PDYN" "LYPD6B" "LYPD6" ...
+# $ Pf/PVT                   : chr [1:2] "INHBA" "NPTXR"
+# $ Hb neuron specific       : chr [1:2] "POU4F1" "GPR151"
+# $ MHB neuron specific      : chr [1:4] "TAC1" "CHAT" "CHRNB4" "TAC3"
+# $ LHB neuron specific      : chr [1:3] "HTR2C" "MMRN1" "ANO3"
+# $ oligodendrocyte          : chr [1:2] "MOBP" "MBP"
+# $ oligodendrocyte_precursor: chr [1:2] "PDGFRA" "VCAN"
+# $ microglia                : chr [1:2] "C3" "CSF1R"
+# $ astrocyte                : chr [1:2] "GFAP" "AQP4"
+# $ Endo/CP                  : chr [1:4] "TTR" "FOLR1" "FLT1" "CLDN5"
+
+
 ###########   Load Seurat pre-existing object from diskand get the counts from the GEX assay
 
-seurat_name <- 'S1_Hb_KDM'
+seurat_name <- 'S2_Hb_KDM'
 
 # file name to save plots
-file_dir <- here('plots/05_DiffExpr_Clustering', paste0(seurat_name,'_gene_distribution.png'))
+#file_dir <- here('plots/05_DiffExpr_Clustering', paste0(seurat_name,'_gene_distribution.png'))
 
 
 seurat_obj <- readRDS(here('processed-data/01_preprocessing_QC', paste0(seurat_name, '.rds')))
@@ -121,125 +150,156 @@ colnames(cellr_clusters)
 
 
 
-######### Access individual/small groups of variables. #########
-
-# variables for testing
-#features <- c("SNAP25", 'GFAP')
-#features <- c("AQP4", "GFAP", 'SYT1', 'RNASE1')
-seurat_name
-
-## Extact GEX counts, Join with clusters and Build VPlot distributions  
-# Plots are saved in 
-#file_dir <- here('plots/05_DiffExpr_Clustering/', paste0(seurat_name,'_gene_distribution.pdf'))
-# Open pdf file 
-#pdf(file= file_dir ) 
-# create a 4X1 grid 
-#par( mfrow= c(4,1) ) 
-#par.save <- par(mfrow = c(4, 1))  
-
+######### Fetch gene counts for gene of interest, merge with clusters and plot distributions (Graph-based) from Cell RangerARC data  #########
 
 plot_gene <- function(x) {
 
+    # testing: x <- "AQP4"  #"GFAP", 'SYT1', 'RNASE1'
     print(x)
-    # Fetch data to pull the gene distributions for gene x
+    # Fetch data to pull the barcodes with gene distributions for gene x
     counts_subseted <- FetchData(object = seurat_obj, vars = x, layer = "counts") # data.frame
     #colnames(counts_subseted)
     
-    # Assign new names to the columns of the data.frame 
-    counts_subseted <- cbind(newColName = rownames(counts_subseted), counts_subseted)
-    rownames(counts_subseted) <- NULL
-    colnames(counts_subseted) <- c('Barcode',x) 
-    # Add ident name 
-    counts_subseted$ident <- seurat_name
-    head(counts_subseted)  
+    #an.error.occured <- FALSE
+    #tryCatch( {
     
-    # Join counts with clusters by barcode
-    cellranger_counts_clusters <- counts_subseted %>%
-        inner_join(cellranger_clusters) %>%
-        group_by(Cluster)
-    #print(head(cellranger_counts_clusters, n=5))
-    #       Barcode         AQP4     ident
-    # 1 AAACAGCCAAATTGCT-1    0 S1_Hb_KDM
-    # 2 AAACAGCCAGCTTACA-1    0 S1_Hb_KDM
-    # 3 AAACAGCCAGGTCCTG-1    0 S1_Hb_KDM
+        if (!length(counts_subseted)==0) {
+        
+            # Assign new names to the columns of the data.frame 
+            counts_subseted <- cbind(newColName = rownames(counts_subseted), counts_subseted)
+            rownames(counts_subseted) <- NULL
+            colnames(counts_subseted) <- c('Barcode',x) 
+            # Add ident name 
+            counts_subseted$ident <- seurat_name
+            #print(head(counts_subseted, n=3))  
     
-    # Format data for plotting 
-    cellranger_counts_clusters$Cluster <- as.character(cellranger_counts_clusters$Cluster)
-    print(head(cellranger_counts_clusters))
-    # # Groups:   Cluster [3]
-    #   Barcode            SNAP25 ident     Cluster
-    #   <chr>               <dbl> <chr>     <chr>  
-    # 1 AAACAGCCAAATTGCT-1      0 S1_Hb_KDM 5      
-    # 2 AAACAGCCAGCTTACA-1      0 S1_Hb_KDM 7      
-    # 3 AAACAGCCAGGTCCTG-1      0 S1_Hb_KDM 5      
+            # Join counts with clusters by barcode
+            cellranger_counts_clusters <- counts_subseted %>%
+                inner_join(cellranger_clusters) %>%
+                group_by(Cluster)
+            #print(head(cellranger_counts_clusters, n=3))
     
+            if (!length(cellranger_counts_clusters)==0) {
+                # Format data for plotting 
+                cellranger_counts_clusters$Cluster <- as.character(cellranger_counts_clusters$Cluster)
+                print(head(cellranger_counts_clusters))
+                # # Groups:   Cluster [3]
+                #       Barcode            SNAP25 ident     Cluster
+                #       <chr>               <dbl> <chr>     <chr>  
+                # 1 AAACAGCCAAATTGCT-1      0 S1_Hb_KDM     5      
+                # 2 AAACAGCCAGCTTACA-1      0 S1_Hb_KDM     7      
+                # 3 AAACAGCCAGGTCCTG-1      0 S1_Hb_KDM     5      
+                
+                # plot composed violin with boxplot 10-log-scaled
+                p <- cellranger_counts_clusters %>%
+                    mutate(Cluster = fct_reorder(Cluster, get(x))) %>%
+                    mutate(Cluster = factor(Cluster, levels=c(as.character(clusters)))) %>%
+                    ggplot(aes(fill=ident, y=get(x), x=Cluster)) +
+                    geom_violin(aes(fill = factor(Cluster))) +
+                    geom_boxplot(width=0.2, color="gray", alpha=0.5) & scale_y_log10()
+                
+                stitle <- paste0('Log10 Exp - ', x)
+                #print(p)
+                #print(stitle)
+                p <- p & theme_classic() &
+                    theme(legend.position = 'none', draw_quantiles = NULL,
+                          axis.text.x = element_text(angle = 0, hjust = 1, size = 6),  #10
+                          axis.text.y = element_text(size = 6), 
+                          axis.title.y = element_blank()) &
+                    theme(plot.title = element_text(size=10)) &
+                    labs(title = stitle, x = 'Clusters', y ='log10(GEX)')
+            }
+            
+        }
+        
+    #}
+    #, error = function(e) { an.error.occured <<- TRUE } )
+    #print(an.error.occured)
     
-    # plot composed violin with boxplot 10-log-scaled
-    p <- cellranger_counts_clusters %>%
-        mutate(Cluster = fct_reorder(Cluster, get(x))) %>%
-        mutate(Cluster = factor(Cluster, levels=c(as.character(clusters)))) %>%
-        ggplot(aes(fill=ident, y=get(x), x=Cluster)) +
-        geom_violin(aes(fill = factor(Cluster))) +
-        geom_boxplot(width=0.2, color="gray", alpha=0.5) & scale_y_log10()
-    stitle <- paste0('Log10 Exp - ', x)
-    p <- p & theme_classic() &
-        theme(legend.position = 'none', draw_quantiles = NULL,
-              axis.text.x = element_text(angle = 0, hjust = 1, size = 6),  #10
-              axis.text.y = element_text(size = 6), 
-              axis.title.y = element_blank()) &
-        theme(plot.title = element_text(size=10)) &
-        labs(title = stitle, x = 'Clusters', y ='log10(GEX)')
-
 }
 
 
-#generate empty list to save plots
-myplots_Gene <- list()
-
-myplots_Gene <- map(features, plot_gene)
-
-nc <- length(myplots_Gene) / 4
-nr <- 4
-#myplots_Gene[[2]] 
-
-file_dir <- here('plots/05_DiffExpr_Clustering/', paste0(seurat_name,'_gene_distribution.pdf'))
-# Make plots wider 
-#options(repr.plot.width=15, repr.plot.height=8)
-
-# Build the grid for Gene plots
-message(paste0(' Saving Gene Distributions for Sample ', seurat_name))
-g1 <- arrangeGrob(grobs = myplots_Gene, ncol = nc, nrow=nr, top=textGrob(paste("Distributions for sample", seurat_name, '(GEX Graph-based)'),gp=gpar(fontsize=10,font=2)))
-ggsave(g1, filename = file_dir) #, width = 8.42, height = 3.09 
-# Saving 8.42 x 3.09 in image
-
-
-
-
-
-
-#par(par.save)
-#dev.off()
-
-
-# for (x in features) {
+# #generate empty list to save plots
+# myplots_Gene <- list()
 # 
-#     file_dir <- here('plots/05_DiffExpr_Clustering/', paste0(seurat_name,'_gene_distribution.pdf'))
-#     # Open pdf file 
-#     pdf(file= file_dir ) 
-#     # create a 1X4 grid 
-#     par( mfrow= c(4,1) ) 
-#     
-#     message('Ploting gene distribution for gene  ', x)
-#     # map the gene dist and create the plot
-#     map(x, map_gene_distribution)
-#     
-#     dev.off()
-#     
-# }
+# # for testing
+# #features <- c("AQP4", "GFAP", 'SYT1', 'RNASE1')
+# #features <- c("SYT1", "SNAP25")
+# myplots_Gene <- map(features, plot_gene)
+# myplots_Gene[[2]]
+# 
+# nc <- length(myplots_Gene) / 4
+# nc <- 1
+# nr <- 4
+# 
+# 
+# file_dir <- here('plots/05_DiffExpr_Clustering/', paste0(seurat_name,'_gene_distribution.pdf'))
+# # Make plots wider
+# #options(repr.plot.width=15, repr.plot.height=8)
+# 
+# # Build the grid for Gene plots
+# message(paste0(' Saving Gene Distributions for Sample ', seurat_name))
+# g1 <- arrangeGrob(grobs = myplots_Gene, ncol = nc, nrow=nr,
+#                   top=textGrob(paste("Distributions for sample", seurat_name, ' Cell-Type:', 'celltype'),gp=gpar(fontsize=10,font=2)))
+# ggsave(g1, filename = file_dir) #, width = 8.42, height = 3.09
+# # Saving 8.42 x 3.09 in image
 
 
-message(' Plots saved on: ', file_dir)
 
+# Get the list of genes to plot from marker genes
+gm_lst <- (as.list(markers.custom))
+#names(gm_lst[1])
+i_pos <- 0      # reset gene-marker list position
+
+for ( gm in gm_lst ) {
+
+    skip_to_next <- FALSE
+    
+    tryCatch( {
+    
+        # generate empty list
+        myplots_Gene <- list()
+        # set cell-type position to extract cell-type name
+        i_pos <- i_pos+1                       
+        
+        # Genes to plot
+        # testing:
+        # gm <- c("SYT1", "SNAP25");  gm <- c("INHBA", "NPTXR")
+        # gm <- dput(gm_lst[4])
+        # call map to plot the gene distributions
+        #myplots_Gene <- map(dput(features), plot_gene)
+        myplots_Gene <- map(unlist(gm, use.names = FALSE), plot_gene)
+        #myplots_Gene[[2]]
+        print(paste(' Ploting ', length(myplots_Gene), ' genes'))
+        
+        # prepare layout to set 4 plots per page
+        if ( length(myplots_Gene) < 4) { nc <- 1 } else { nc <- length(myplots_Gene) / 4 }
+        nr <- 4
+        
+        # extract cell type name
+        cell_type <- names(gm_lst[i_pos])       
+        # format name properly
+        cell_typef <- gsub(" ", "_", cell_type)
+        cell_typef <- gsub("/", "_", cell_typef)
+        # set file name
+        file_dir <- here('plots/05_DiffExpr_Clustering/', paste0(seurat_name,'_GeneDist_', prefix_name,'-',cell_typef,'.pdf'))
+        print(file_dir)
+    
+        # Build the grid for Gene plots
+        message(paste0(' Saving Gene Distributions for Sample ', seurat_name, ' cell-type ', cell_type))
+        g1 <- arrangeGrob(grobs = myplots_Gene, ncol = nc, nrow = nr,
+                          top=textGrob(paste("Distributions for sample", seurat_name, ' Cell-Type:', cell_type), gp=gpar(fontsize=10,font=2)))
+        ggsave(g1, filename = file_dir) #, width = 8.42, height = 3.09
+    
+    }, error = function(e) { skip_to_next <<- TRUE} )
+    
+    if(skip_to_next) { next }     
+    
+}
+
+
+
+message(' All plots saved on: ', file_dir)
 
 
 # counts_subseted <- FetchData(object = seurat_obj, vars = feature, layer = "counts")
