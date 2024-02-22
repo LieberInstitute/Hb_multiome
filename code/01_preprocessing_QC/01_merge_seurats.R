@@ -91,7 +91,8 @@ if (count_mtx_type=='raw_counts') {
                                 add.cell.ids = c('S1_Hb_KDM', 'S2_Hb_KDM'),
                                 project = "Habenula")
     LayerData(SeuratOBJ.combined)[1:10, 1:15]
-    
+    s_sample <- 'seurat.combined.raw'
+        
 } else {
     
     SeuratOBJ <- NormalizeData(SeuratOBJ)
@@ -101,12 +102,13 @@ if (count_mtx_type=='raw_counts') {
                                   project = "Habenula", 
                                   merge.data = TRUE)     #  merge the normalized data matrices as well as the raw count matrices
     LayerData(SeuratOBJ.combined)[1:10, 1:15]
+    s_sample <- 'seurat.combined.normalized'
 }
 
 
 #
 #pbmc.big <- merge(pbmc3k, y = c(pbmc4k, pbmc8k), add.cell.ids = c("3K", "4K", "8K"), project = "PBMC15K")
-message('Merge complete!')
+message('Merge completed!')
 
 # verification of the integration
 table(SeuratOBJ.combined$orig.ident)
@@ -114,16 +116,158 @@ head(colnames(SeuratOBJ.combined))
 tail(colnames(SeuratOBJ.combined))
 unique(sapply(X = strsplit(colnames(SeuratOBJ.combined), split = "_"), FUN = "[", 1))
 
-head(SeuratOBJ.combined)
-
-# basic stats gor GEX
-p1_ATAC <- VlnPlot(SeuratOBJ.combined, features = c("nCount_RNA", "nFeature_RNA", "percent.mt"), group.by = "orig.ident") 
-p1_ATAC
+# > head(colnames(SeuratOBJ.combined))
+# [1] "S1_Hb_KDM_AAACAGCCAAATTGCT-1" "S1_Hb_KDM_AAACAGCCAGCTTACA-1"
+# [3] "S1_Hb_KDM_AAACAGCCAGGTCCTG-1" "S1_Hb_KDM_AAACAGCCAGTTAAAG-1"
+# [5] "S1_Hb_KDM_AAACAGCCATAGACTT-1" "S1_Hb_KDM_AAACATGCATCCCTCA-1"
+# > tail(colnames(SeuratOBJ.combined))
+# [1] "S2_Hb_KDM_TTTGTGTTCGATTATG-1" "S2_Hb_KDM_TTTGTGTTCTACCTAT-1"
+# [3] "S2_Hb_KDM_TTTGTTGGTAGCAGCT-1" "S2_Hb_KDM_TTTGTTGGTCGCGCAA-1"
+# [5] "S2_Hb_KDM_TTTGTTGGTTTAGTCC-1" "S2_Hb_KDM_TTTGTTGGTTTGCGCC-1"
 
 # Save RDS Object
-rds_name <- here('processed-data/01_preprocessing_QC', 'seurat.combined_GEX.rds')
+rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample, '.rds'))
+# [1] "/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/01_preprocessing_QC/seurat.combined.raw.rds"
 saveRDS(SeuratOBJ.combined, file = rds_name)
 message('Seurat combined saved in ', rds_name)   
+
+
+# Plot Genes and UMIs by density per cell 
+
+# Violin plot with UMIs, Genes, ^MT and RIBO levels
+p1 <- VlnPlot(SeuratOBJ.combined, features = c("nCount_RNA", "nFeature_RNA", "percent.mt"), group.by = "orig.ident") 
+png_file <- paste0(s_sample, '_Vplots_GEX.png')
+png_name <- here('plots/01_preprocessing_QC', png_file)  
+ggsave(p1, filename = png_name, height = 4, width = 5)
+
+# Plot Genes and UMIs by density per cell 
+df_genes_per_cell <- as.data.frame(SeuratOBJ.combined[[]])
+p1 <- df_genes_per_cell %>%
+    ggplot(aes(color=orig.ident, x=nFeature_RNA, fill= orig.ident)) +
+    geom_density(alpha = 0.2) +
+    scale_x_log10() +
+    theme_classic() +
+    theme(plot.title = element_text(hjust=0.5)) +
+    #geom_vline(xintercept = 300) +
+    ylab("Log10(UMIs)") +
+    xlab("Gene-counts") +
+    ggtitle("Genes density by cell") 
+
+png_file <- paste0(s_sample, '_Genes_Density.png')
+png_name <- here('plots/01_preprocessing_QC', png_file)  
+ggsave(p1, filename = png_name, height = 4, width = 5)
+message('UMI/Counts by MT plot saved!')  
+
+# Gene distribution by cell
+p1 <- df_genes_per_cell %>%
+    ggplot(aes(x=orig.ident, y=(nFeature_RNA), fill=orig.ident)) +
+    geom_boxplot(alpha = 0.7) +
+    theme_classic() +
+    theme(legend.position = 'none',
+          axis.text.x = element_text(vjust = 1, hjust=1)) +
+    theme(plot.title = element_text(hjust=0.5)) +
+    ylab("Log10(nFeature_RNA)") +
+    xlab("") +
+    ggtitle("Genes distribution by cell")
+
+png_file <- paste0(s_sample, '_Genes_Distribution.png')
+png_name <- here('plots/01_preprocessing_QC', png_file)  
+ggsave(p1, filename = png_name, height = 4, width = 5)
+message('UMI/Counts by MT plot saved!')  
+
+# Correlation btw Genes/UMIs 
+p1 <- df_genes_per_cell %>%
+    ggplot(aes(x=nCount_RNA, y=nFeature_RNA, color=percent.mt, group.by = 'orig.ident')) + # MTRatio
+    #    ggplot(aes(x=nCount_RNA, y=nFeature_RNA, color=MTRatio)) + # MTRatio
+    geom_point() +
+    scale_colour_gradient(low = "gray90", high = "black") +
+    stat_smooth(method=lm) +
+    scale_x_log10() +
+    scale_y_log10() +
+    theme_classic() +
+    #geom_vline(xintercept = 200, linetype=2) +
+    #geom_hline(yintercept = 200, linetype=2) +
+    facet_wrap(~orig.ident) +
+    ylab("log10(nFeature_RNA)") +
+    xlab("log10(UMIs)") +
+    ggtitle('UMIs per Genes by MT levels')
+
+png_file <- paste0(s_sample, '_UMIS_per_MT.png')
+png_name <- here('plots/01_preprocessing_QC', png_file)  
+ggsave(p1, filename = png_name, height = 4, width = 5)
+message('UMI/Counts by MT plot saved!')  
+
+
+
+############ Process PCAs
+
+# NOTE timoast comment: https://github.com/satijalab/seurat/issues/3505
+# I'd suggest doing QC and filtering cells on each object before running the integration.
+# Running NormalizeData on the integrated assay will overwrite the integration results.
+
+
+## load pre-existing seurat objects
+# select the count-mtx to merge (raw or normalized data)
+count_mtx_type <- 'raw_counts'  
+#count_mtx_type <- 'normalized'      
+if (count_mtx_type=='raw_counts') {
+    s_sample <- 'seurat.combined.raw'
+} else {
+    s_sample <- 'seurat.combined.normalized'
+}
+s_file <- paste0(s_sample, '.rds')
+SeuratOBJ.combined <- readRDS(here('processed-data/01_preprocessing_QC', s_file))
+# verification of the integration
+table(SeuratOBJ.combined$orig.ident)
+head(SeuratOBJ.combined, n=2)
+
+######### Perform analysis without integration
+
+# split the RNA measurements into two layers one for control cells, one for stimulated cells
+SeuratOBJ.combined[["RNA"]] <- split(SeuratOBJ.combined[["RNA"]], f = SeuratOBJ.combined$orig.ident)
+
+
+SeuratOBJ <- SeuratOBJ.combined
+#all.genes <- rownames(SeuratOBJ)
+
+# run standard analysis workflow
+SeuratOBJ <- NormalizeData(SeuratOBJ)
+#SeuratOBJ <- ScaleData(SeuratOBJ, features = all.genes)
+SeuratOBJ <- FindVariableFeatures(SeuratOBJ)
+SeuratOBJ <- ScaleData(SeuratOBJ)
+#SeuratOBJ <- RunPCA(SeuratOBJ, features = VariableFeatures(object = SeuratOBJ))
+SeuratOBJ <- RunPCA(SeuratOBJ)
+
+SeuratOBJ <- FindNeighbors(SeuratOBJ, dims = 1:30, reduction = "pca")
+SeuratOBJ <- FindClusters(SeuratOBJ, resolution = 2, cluster.name = "unintegrated_clusters")
+
+DimPlot(SeuratOBJ)
+DimHeatmap(SeuratOBJ)
+
+SeuratOBJ <- RunUMAP(SeuratOBJ, dims = 1:30, reduction = "pca", reduction.name = "umap.unintegrated")
+head(SeuratOBJ, n=2)
+p1 <- DimPlot(SeuratOBJ, reduction = "umap.unintegrated", group.by = c("orig.ident", "seurat_clusters"))
+
+png_file <- paste0(s_sample, '_dimplot.png')
+png_name <- here('plots/01_preprocessing_QC', png_file)  
+ggsave(p1, filename = png_name, height = 4, width = 10)
+
+
+
+
+
+
+pbmc <- RunHarmony(
+    object = pbmc,
+    group.by.vars = 'orig.ident2',
+    reduction = 'pca',
+    assay.use = 'RNA',
+    project.dim = FALSE,
+    reduction.save = "harmony_r"
+)
+
+# INTEGRATION methids for Seurat V5:  https://satijalab.org/seurat/articles/seurat5_integration (Oct 31, 2023)
+# https://satijalab.org/seurat/articles/integration_introduction.html (Nov 16, 2023)
 
 
 ############ Reproducibility information ####################
