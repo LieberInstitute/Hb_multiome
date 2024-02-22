@@ -253,9 +253,34 @@ png_name <- here('plots/01_preprocessing_QC', png_file)
 ggsave(p1, filename = png_name, height = 4, width = 10)
 
 
+SeuratOBJ <- IntegrateLayers(object = SeuratOBJ, method = CCAIntegration, orig.reduction = "pca", new.reduction = "integrated.cca",
+                        verbose = FALSE)
+
+# re-join layers after integration
+SeuratOBJ[["RNA"]] <- JoinLayers(SeuratOBJ[["RNA"]])
+
+SeuratOBJ <- FindNeighbors(SeuratOBJ, reduction = "integrated.cca", dims = 1:30)
+SeuratOBJ <- FindClusters(SeuratOBJ, resolution = 1)
+
+SeuratOBJ <- RunUMAP(SeuratOBJ, dims = 1:30, reduction = "integrated.cca")
+
+# Visualization
+head(SeuratOBJ, n=2)
+p1 <- DimPlot(SeuratOBJ, reduction = "umap", group.by = c("orig.ident", "seurat_clusters"))
+png_file <- paste0(s_sample, '_dimplot_integrated.png')
+png_name <- here('plots/01_preprocessing_QC', png_file)  
+ggsave(p1, filename = png_name, height = 4, width = 10)
+
+# visualize the two conditions side-by-side
+p1 <- DimPlot(SeuratOBJ, reduction = "umap", split.by = "orig.ident")
+png_file <- paste0(s_sample, '_dimplot_integrated_splitted.png')
+png_name <- here('plots/01_preprocessing_QC', png_file)  
+ggsave(p1, filename = png_name, height = 4, width = 10)
 
 
 
+
+# batch effect correction
 
 pbmc <- RunHarmony(
     object = pbmc,
