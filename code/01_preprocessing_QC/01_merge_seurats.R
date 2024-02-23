@@ -219,6 +219,8 @@ s_file <- paste0(s_sample, '.rds')
 SeuratOBJ.combined <- readRDS(here('processed-data/01_preprocessing_QC', s_file))
 # verification of the integration
 table(SeuratOBJ.combined$orig.ident)
+# S1_Hb_KDM S2_Hb_KDM 
+# 8178      9816 
 head(SeuratOBJ.combined, n=2)
 
 ######### Perform analysis without integration
@@ -227,16 +229,48 @@ head(SeuratOBJ.combined, n=2)
 SeuratOBJ.combined[["RNA"]] <- split(SeuratOBJ.combined[["RNA"]], f = SeuratOBJ.combined$orig.ident)
 
 
-SeuratOBJ <- SeuratOBJ.combined
-#all.genes <- rownames(SeuratOBJ)
+SeuratOBJ <- SeuratOBJ.combined     # Warning: Assay RNA changing from Assay to Assay5
 
-# run standard analysis workflow
+########### Run standard analysis: Calculate PCA cell embeddings
+
+# LogNormalize the count data present in the assay
 SeuratOBJ <- NormalizeData(SeuratOBJ)
 #SeuratOBJ <- ScaleData(SeuratOBJ, features = all.genes)
-SeuratOBJ <- FindVariableFeatures(SeuratOBJ)
-SeuratOBJ <- ScaleData(SeuratOBJ)
-#SeuratOBJ <- RunPCA(SeuratOBJ, features = VariableFeatures(object = SeuratOBJ))
+
+# Identifies features that are outliers on a 'mean variability plot'.
+# vst method (default): First, fits a line to the relationship of log(variance) and log(mean) using local polynomial regression (loess).
+SeuratOBJ <- FindVariableFeatures(SeuratOBJ,
+                                  selection.method = "vst") # First, fits a line to the relationship of log(variance) and log(mean) using local polynomial regression...
+
+# Directory to save variable features 
+dir <- file.path(here('processed-data/01_preprocessing_QC/csv_files/')) 
+if (!dir.exists(dir)) dir.create(dir)
+
+# Identify most highly variable genes
+VF <- c(10,20,50,100)
+for (x in VF) {
+    top <- head(VariableFeatures(SeuratOBJ), x)
+    write.csv(top, file.path(dir, paste0(s_file,'_', x,'_VF.csv')), row.names=FALSE)
+}
+
+
+# Global-scaling “LogNormalize” method that normalizes the GEX measurements for each cell by the total expression, multiplies this by a scale factor (10,000 by default), and log-transforms the result.
+all.genes <- rownames(SeuratOBJ)
+SeuratOBJ <- ScaleData(SeuratOBJ, features = all.genes)
+
+# Run a PCA dimensionality reduction
 SeuratOBJ <- RunPCA(SeuratOBJ)
+
+p1 <- ElbowPlot(SeuratOBJ)
+png_file <- paste0(s_sample, '_PCAelbow.png')
+png_name <- here('plots/01_preprocessing_QC', png_file)  
+ggsave(p1, filename = png_name, height = 4, width = 5)
+
+
+
+#### Here I could run Harmony, but first some visualizations
+
+# Find neighbors and clustering
 
 SeuratOBJ <- FindNeighbors(SeuratOBJ, dims = 1:30, reduction = "pca")
 SeuratOBJ <- FindClusters(SeuratOBJ, resolution = 2, cluster.name = "unintegrated_clusters")
@@ -252,6 +286,9 @@ png_file <- paste0(s_sample, '_dimplot.png')
 png_name <- here('plots/01_preprocessing_QC', png_file)  
 ggsave(p1, filename = png_name, height = 4, width = 10)
 
+
+
+##### Integrate layers to visualize
 
 SeuratOBJ <- IntegrateLayers(object = SeuratOBJ, method = CCAIntegration, orig.reduction = "pca", new.reduction = "integrated.cca",
                         verbose = FALSE)
@@ -280,16 +317,62 @@ ggsave(p1, filename = png_name, height = 4, width = 10)
 
 
 
-# batch effect correction
+####### batch effect correction with harmomny
 
-pbmc <- RunHarmony(
-    object = pbmc,
-    group.by.vars = 'orig.ident2',
-    reduction = 'pca',
-    assay.use = 'RNA',
-    project.dim = FALSE,
-    reduction.save = "harmony_r"
-)
+# It require to have the PCA available 
+
+head(SeuratOBJ, n=2)
+str(SeuratOBJ)
+
+# max_iter=10 and up to 10 correction steps are expected. However, early_stop=TRUE so harmony will stop after the cost plateaus.
+# Returns an object with a new dimensionality reduction
+
+SeuratOBJ <- SeuratOBJ %>% 
+    RunHarmony(group.by.vars = "orig.ident", 
+               plot_convergence = TRUE, 
+               nclust = 30,                    # Number of clusters in model. nclust=1 equivalent to simple linear regression
+               max.iter.harmony = 10,          # One round of Harmony involves one clustering and one correction step
+               max.iter.cluster = 20,          # Maximum number of rounds to run clustering at each round of Harmony 
+               early_stop = T,
+               dims.use = 30,
+               )
+
+SeuratOBJ@reductions$harmony
+# A dimensional reduction object with key harmony_ 
+# Number of dimensions: 50 
+# Number of cells: 17994 
+# Projected dimensional reduction calculated:  TRUE 
+# Jackstraw run: FALSE 
+# Computed using assay: RNA 
+
+# Seurat_tmp <- SeuratOBJ
+# SeuratOBJ <- Seurat_tmp
+
+# SeuratOBJ <- RunHarmony(
+#     object = SeuratOBJ,
+#     group.by.vars = "orig.ident",
+#     reduction = 'pca',
+#     assay.use = 'RNA',
+#     reduction.save = "harmony_r",
+#     plot_coverage = TRUE,
+#     nclust = 50, 
+#     max_iter = 10, 
+#     early_stop = T
+# )
+
+DimPlot(SeuratOBJ, 
+        reduction = "pca",
+        group.by = "orig.ident")
+
+DimPlot(SeuratOBJ, 
+        reduction = "harmomny",
+        group.by = "orig.ident")
+
+DimHeatmap(SeuratOBJ,
+          reduction = "harmony")
+
+
+
 
 # INTEGRATION methids for Seurat V5:  https://satijalab.org/seurat/articles/seurat5_integration (Oct 31, 2023)
 # https://satijalab.org/seurat/articles/integration_introduction.html (Nov 16, 2023)
