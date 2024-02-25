@@ -92,11 +92,9 @@ get_seurat <- function(name) {
 
 
 # load pre-existing seurat objects
-SeuratOBJ <- readRDS(here('processed-data/01_preprocessing_QC', 'S1_Hb_KDM.rds'))
+SeuratOBJ <- get_seurat(here('processed-data/01_preprocessing_QC', 'S1_Hb_KDM.rds'))
 
-SeuratOBJ2 <- readRDS(here('processed-data/01_preprocessing_QC', 'S2_Hb_KDM.rds'))
-
-table(SeuratOBJ$orig.ident)
+SeuratOBJ2 <- get_seurat(here('processed-data/01_preprocessing_QC', 'S2_Hb_KDM.rds'))
 
 # Merge Seurat objects according with the `count_mtx_type`
 if (count_mtx_type=='raw_counts') {
@@ -332,20 +330,15 @@ ggsave(p1, filename = png_name, height = 4, width = 10)
 ###################################################################### 
 #####        Integration methods available for seurat v5         ##### 
 ###################################################################### 
-##########            HarmonyIntegration                 #############
+##########            Harmony Integration                #############
 # HarmonyIntegration: https://satijalab.org/seurat/reference/harmonyintegration
+# Other options available: JointPCAIntegration, RPCAIntegration
 
 if (count_mtx_type=='raw_counts') { s_sample <- 'seurat.combined.raw' } else { s_sample <- 'seurat.combined.normalized' }
 rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample, '_PCA_CCA.rds'))
 SeuratOBJ <- get_seurat(rds_name)
 
 
-# JointPCAIntegration
-# 
-# RPCAIntegration
- 
-head(SeuratOBJ, n=2)
-str(SeuratOBJ)
 
 # max_iter=10 and up to 10 correction steps are expected. However, early_stop=TRUE so harmony will stop after the cost plateaus.
 # Returns an object with a new dimensionality reduction
