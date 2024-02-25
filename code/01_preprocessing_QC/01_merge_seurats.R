@@ -72,6 +72,24 @@ source(here("code/functions_custom", "remote_filtering_functions.R"))   # Call f
 #     
 # }
 
+## select the count-mtx to merge (raw or normalized data)
+count_mtx_type <- 'raw_counts'      
+#count_mtx_type <- 'normalized' 
+
+## load pre-existing Seurat
+get_seurat <- function(name) {
+
+        #Ex. /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/01_preprocessing_QC/seurat.combined.raw_PCA.rds
+    sobj <- readRDS(name)
+    # verification of the integration
+    print(table(sobj$orig.ident))
+    # S1_Hb_KDM S2_Hb_KDM
+    # 8178      9816
+    print(head(sobj, n=2))
+    return(sobj)
+    
+}
+
 
 # load pre-existing seurat objects
 SeuratOBJ <- readRDS(here('processed-data/01_preprocessing_QC', 'S1_Hb_KDM.rds'))
@@ -79,10 +97,6 @@ SeuratOBJ <- readRDS(here('processed-data/01_preprocessing_QC', 'S1_Hb_KDM.rds')
 SeuratOBJ2 <- readRDS(here('processed-data/01_preprocessing_QC', 'S2_Hb_KDM.rds'))
 
 table(SeuratOBJ$orig.ident)
-
-# select the count-mtx to merge (raw or normalized data)
-count_mtx_type <- 'raw_counts'      
-#count_mtx_type <- 'normalized'      
 
 # Merge Seurat objects according with the `count_mtx_type`
 if (count_mtx_type=='raw_counts') {
@@ -205,23 +219,10 @@ message('UMI/Counts by MT plot saved!')
 # I'd suggest doing QC and filtering cells on each object before running the integration.
 # Running NormalizeData on the integrated assay will overwrite the integration results.
 
-
-## load pre-existing seurat objects
-# select the count-mtx to merge (raw or normalized data)
-count_mtx_type <- 'raw_counts'  
-#count_mtx_type <- 'normalized'      
-if (count_mtx_type=='raw_counts') {
-    s_sample <- 'seurat.combined.raw'
-} else {
-    s_sample <- 'seurat.combined.normalized'
-}
-s_file <- paste0(s_sample, '.rds')
-SeuratOBJ.combined <- readRDS(here('processed-data/01_preprocessing_QC', s_file))
-# verification of the integration
-table(SeuratOBJ.combined$orig.ident)
-# S1_Hb_KDM S2_Hb_KDM 
-# 8178      9816 
-head(SeuratOBJ.combined, n=2)
+### Start from here / load pre-existing seurat objects
+if (count_mtx_type=='raw_counts') { s_sample <- 'seurat.combined.raw' } else { s_sample <- 'seurat.combined.normalized' }
+rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample, '.rds'))
+SeuratOBJ <- get_seurat(rds_name)
 
 ######### Perform analysis without integration
 
@@ -231,11 +232,10 @@ SeuratOBJ.combined[["RNA"]] <- split(SeuratOBJ.combined[["RNA"]], f = SeuratOBJ.
 
 SeuratOBJ <- SeuratOBJ.combined     # Warning: Assay RNA changing from Assay to Assay5
 
-########### Run standard analysis: Calculate PCA cell embeddings
+# Run standard analysis: Calculate PCA cell embeddings
 
 # LogNormalize the count data present in the assay
 SeuratOBJ <- NormalizeData(SeuratOBJ)
-#SeuratOBJ <- ScaleData(SeuratOBJ, features = all.genes)
 
 # Identifies features that are outliers on a 'mean variability plot'.
 # vst method (default): First, fits a line to the relationship of log(variance) and log(mean) using local polynomial regression (loess).
@@ -266,11 +266,14 @@ png_file <- paste0(s_sample, '_PCAelbow.png')
 png_name <- here('plots/01_preprocessing_QC', png_file)  
 ggsave(p1, filename = png_name, height = 4, width = 5)
 
+# Save RDS Object
+rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample, '_PCA.rds'))
+# [1] "/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/01_preprocessing_QC/seurat.combined.raw.rds"
+saveRDS(SeuratOBJ, file = rds_name)
+message('Seurat combined saved in ', rds_name)   
 
 
-#### Here I could run Harmony, but first some visualizations
-
-# Find neighbors and clustering
+#### Before data correction some visualizations for reference
 
 SeuratOBJ <- FindNeighbors(SeuratOBJ, dims = 1:30, reduction = "pca")
 SeuratOBJ <- FindClusters(SeuratOBJ, resolution = 2, cluster.name = "unintegrated_clusters")
@@ -287,11 +290,22 @@ png_name <- here('plots/01_preprocessing_QC', png_file)
 ggsave(p1, filename = png_name, height = 4, width = 10)
 
 
+###################################################################### 
+#####        Integration methods available for Seurat v5         ##### 
+###################################################################### 
+#############            CCAIntegration                  #############
+# CCAIntegration: https://satijalab.org/seurat/reference/ccaintegration
 
-##### Integrate layers to visualize
+### Start from here / load pre-existing Seurat objects
+if (count_mtx_type=='raw_counts') { s_sample <- 'seurat.combined.raw' } else { s_sample <- 'seurat.combined.normalized' }
+rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample, '_PCA.rds'))
+SeuratOBJ <- get_seurat(rds_name)
 
-SeuratOBJ <- IntegrateLayers(object = SeuratOBJ, method = CCAIntegration, orig.reduction = "pca", new.reduction = "integrated.cca",
-                        verbose = FALSE)
+SeuratOBJ <- IntegrateLayers(object = SeuratOBJ, 
+                             method = CCAIntegration, 
+                             orig.reduction = "pca", 
+                             new.reduction = "integrated.cca",
+                             verbose = FALSE)
 
 # re-join layers after integration
 SeuratOBJ[["RNA"]] <- JoinLayers(SeuratOBJ[["RNA"]])
@@ -315,12 +329,21 @@ png_name <- here('plots/01_preprocessing_QC', png_file)
 ggsave(p1, filename = png_name, height = 4, width = 10)
 
 
+###################################################################### 
+#####        Integration methods available for seurat v5         ##### 
+###################################################################### 
+##########            HarmonyIntegration                 #############
+# HarmonyIntegration: https://satijalab.org/seurat/reference/harmonyintegration
+
+if (count_mtx_type=='raw_counts') { s_sample <- 'seurat.combined.raw' } else { s_sample <- 'seurat.combined.normalized' }
+rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample, '_PCA_CCA.rds'))
+SeuratOBJ <- get_seurat(rds_name)
 
 
-####### batch effect correction with harmomny
-
-# It require to have the PCA available 
-
+# JointPCAIntegration
+# 
+# RPCAIntegration
+ 
 head(SeuratOBJ, n=2)
 str(SeuratOBJ)
 
