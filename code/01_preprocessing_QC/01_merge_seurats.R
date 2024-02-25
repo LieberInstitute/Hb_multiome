@@ -50,28 +50,6 @@ source(here("code/functions_custom", "remote_filtering_functions.R"))   # Call f
 
 ########################    Initials ########################  
 
-# seurats_lst <- c('S1_Hb_KDM', 'S2_Hb_KDM')
-# 
-# bfirst <- FALSE
-# for (x in seurats_lst) {
-#     if (!bfirst) {
-#         SeuratOBJ.combined <- readRDS(here('processed-data/01_preprocessing_QC', paste0(x, '.rds')))
-#         bfirst <- TRUE
-#     } else {
-#         SeuratOBJ <- readRDS(here('processed-data/01_preprocessing_QC', paste0(x, '.rds')))
-#         #SeuratOBJ@meta.data
-#         #str(SeuratOBJ)
-#         print(SeuratOBJ)
-#         
-#         SeuratOBJ.combined <- merge(SeuratOBJ.combined, y = SeuratOBJ,
-#                                     add.cell.ids = c(s_sample, 'PBMC'),
-#                                     project = "PBMC-FFB")
-#     }
-#     
-#     table(SeuratOBJ.combined$orig.ident)
-#     
-# }
-
 ## select the count-mtx to merge (raw or normalized data)
 count_mtx_type <- 'raw_counts'      
 #count_mtx_type <- 'normalized' 
@@ -90,6 +68,48 @@ get_seurat <- function(name) {
     
 }
 
+## plot reductions calculated: pca, umpa, CCA and Harmony
+plot_clust <- function(reduct) {
+    
+    # integrate the samples and clusters
+    p1 <- DimPlot(SeuratOBJ, 
+                  reduction = reduct, group.by = c("orig.ident", "seurat_clusters"))
+    png_file <- paste0(s_sample, '_',reduct,'_dimplot.png')
+    png_name <- here('plots/01_preprocessing_QC', png_file)  
+    ggsave(p1, filename = png_name, height = 5, width = 10)
+    
+    # visualize the two conditions side-by-side
+    p1 <- DimPlot(SeuratOBJ, 
+                  reduction = reduct, split.by = "orig.ident")
+    png_file <- paste0(s_sample, '_',reduct,'_dimplot_splitted.png')
+    png_name <- here('plots/01_preprocessing_QC', png_file)  
+    ggsave(p1, filename = png_name, height = 5, width = 10)
+    
+    # visualize more variable features in a heatmap
+    p1 <- DimHeatmap(SeuratOBJ,
+                     reduction = reduct, nfeatures = 30)
+    png_file <- paste0(s_sample, '_',reduct,'_Heatmap.png')
+    png_name <- here('plots/01_preprocessing_QC', png_file)  
+    ggsave(p1, filename = png_name, height = 5, width = 5)
+    
+}
+
+# Directory to save variable features 
+dir <- file.path(here('processed-data/01_preprocessing_QC/csv_files/')) 
+if (!dir.exists(dir)) dir.create(dir)
+
+## save variable features in each reduction 
+save_VFeatures <- function(reduct) {
+    
+    # Identify most highly variable genes
+    VF <- c(10,20,50,100)
+    for (x in VF) {
+        top <- head(VariableFeatures(SeuratOBJ), x)
+        cvs_name <- paste0(s_sample, '_',reduct,x,'_VF.csv')
+        write.csv(top, file.path(dir, cvs_name), row.names=FALSE)
+    }
+
+}
 
 # load pre-existing seurat objects
 SeuratOBJ <- get_seurat(here('processed-data/01_preprocessing_QC', 'S1_Hb_KDM.rds'))
@@ -224,7 +244,7 @@ SeuratOBJ <- get_seurat(rds_name)
 
 ######### Perform analysis without integration
 
-# split the RNA measurements into two layers one for control cells, one for stimulated cells
+# split the RNA measurements into two layers one for each sample
 SeuratOBJ.combined[["RNA"]] <- split(SeuratOBJ.combined[["RNA"]], f = SeuratOBJ.combined$orig.ident)
 
 
@@ -240,16 +260,7 @@ SeuratOBJ <- NormalizeData(SeuratOBJ)
 SeuratOBJ <- FindVariableFeatures(SeuratOBJ,
                                   selection.method = "vst") # First, fits a line to the relationship of log(variance) and log(mean) using local polynomial regression...
 
-# Directory to save variable features 
-dir <- file.path(here('processed-data/01_preprocessing_QC/csv_files/')) 
-if (!dir.exists(dir)) dir.create(dir)
-
-# Identify most highly variable genes
-VF <- c(10,20,50,100)
-for (x in VF) {
-    top <- head(VariableFeatures(SeuratOBJ), x)
-    write.csv(top, file.path(dir, paste0(s_file,'_', x,'_VF.csv')), row.names=FALSE)
-}
+map(save_VFeatures, 'pca')
 
 
 # Global-scaling “LogNormalize” method that normalizes the GEX measurements for each cell by the total expression, multiplies this by a scale factor (10,000 by default), and log-transforms the result.
@@ -276,16 +287,12 @@ message('Seurat combined saved in ', rds_name)
 SeuratOBJ <- FindNeighbors(SeuratOBJ, dims = 1:30, reduction = "pca")
 SeuratOBJ <- FindClusters(SeuratOBJ, resolution = 2, cluster.name = "unintegrated_clusters")
 
-DimPlot(SeuratOBJ)
-DimHeatmap(SeuratOBJ)
-
 SeuratOBJ <- RunUMAP(SeuratOBJ, dims = 1:30, reduction = "pca", reduction.name = "umap.unintegrated")
 head(SeuratOBJ, n=2)
-p1 <- DimPlot(SeuratOBJ, reduction = "umap.unintegrated", group.by = c("orig.ident", "seurat_clusters"))
+SeuratOBJ@reductions
 
-png_file <- paste0(s_sample, '_dimplot.png')
-png_name <- here('plots/01_preprocessing_QC', png_file)  
-ggsave(p1, filename = png_name, height = 4, width = 10)
+Map(plot_clust, 'umap.unintegrated')
+
 
 
 ###################################################################### 
@@ -305,7 +312,7 @@ SeuratOBJ <- get_seurat(rds_name)
 # 8178      9816 
 
 message("Running Seurat-CCA Integration - ", Sys.time())
-SeuratOBJ <- IntegrateLayers(object = SeuratOBJ, 
+SeuratOBJ <- IntegrateLayers(object = SeuratOBJ, # Default dims: 1:30
                              method = CCAIntegration, 
                              orig.reduction = "pca", 
                              new.reduction = "integrated.cca",
@@ -324,23 +331,56 @@ SeuratOBJ[["RNA"]] <- JoinLayers(SeuratOBJ[["RNA"]])
 
 message("Finishing Seurat-CCA Integration - ", Sys.time())
 
+## Run standard analysis: Calculate integrated.cca cell embeddings
+
+# LogNormalize the count data present in the assay
+SeuratOBJ <- NormalizeData(SeuratOBJ)
+
+# Identifies features that are outliers on a 'mean variability plot'.
+# vst method (default): First, fits a line to the relationship of log(variance) and log(mean) using local polynomial regression (loess).
+SeuratOBJ <- FindVariableFeatures(SeuratOBJ,
+                                  selection.method = "vst") # First, fits a line to the relationship of log(variance) and log(mean) using local polynomial regression...
+
+map(save_VFeatures, 'integrated.cca')
+# # Scale data
+# # Run a PCA dimensionality reduction
+
 SeuratOBJ <- FindNeighbors(SeuratOBJ, reduction = "integrated.cca", dims = 1:30)
 SeuratOBJ <- FindClusters(SeuratOBJ, resolution = 1)
 
 SeuratOBJ <- RunUMAP(SeuratOBJ, dims = 1:30, reduction = "integrated.cca")
 
-# Visualization
-head(SeuratOBJ, n=2)
-p1 <- DimPlot(SeuratOBJ, reduction = "umap", group.by = c("orig.ident", "seurat_clusters"))
-png_file <- paste0(s_sample, '_dimplot_integrated.png')
-png_name <- here('plots/01_preprocessing_QC', png_file)  
-ggsave(p1, filename = png_name, height = 4, width = 10)
+SeuratOBJ@reductions$integrated.cca
+# A dimensional reduction object with key integratedcca_ 
+# Number of dimensions: 50 
+# Number of cells: 17994 
+# Projected dimensional reduction calculated:  FALSE 
+# Jackstraw run: FALSE 
+# Computed using assay: RNA 
 
-# visualize the two conditions side-by-side
-p1 <- DimPlot(SeuratOBJ, reduction = "umap", split.by = "orig.ident")
-png_file <- paste0(s_sample, '_dimplot_integrated_splitted.png')
-png_name <- here('plots/01_preprocessing_QC', png_file)  
-ggsave(p1, filename = png_name, height = 4, width = 10)
+table(SeuratOBJ$orig.ident)
+head(SeuratOBJ, n=2)
+
+## Visualization
+Map(plot_clust, 'integrated.cca')
+
+rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample, '_PCA_CCA.rds'))
+# [1] "/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/01_preprocessing_QC/seurat.combined.raw.rds"
+saveRDS(SeuratOBJ, file = rds_name)
+message('Seurat combined saved in ', rds_name)   
+
+# # Directory to save variable features 
+# dir <- file.path(here('processed-data/01_preprocessing_QC/csv_files/')) 
+# if (!dir.exists(dir)) dir.create(dir)
+# 
+# # Identify most highly variable genes
+# VF <- c(10,20,50,100)
+# 
+# for (x in VF) {
+#     top <- head(VariableFeatures(SeuratOBJ), x)
+#     write.csv(top, file.path(dir, paste0(s_sample,'_', x,'_CCAIntegrated_VF.csv')), row.names=FALSE)
+# }
+
 
 
 ###################################################################### 
@@ -354,65 +394,57 @@ if (count_mtx_type=='raw_counts') { s_sample <- 'seurat.combined.raw' } else { s
 rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample, '_PCA_CCA.rds'))
 SeuratOBJ <- get_seurat(rds_name)
 
-
-
 # max_iter=10 and up to 10 correction steps are expected. However, early_stop=TRUE so harmony will stop after the cost plateaus.
 # Returns an object with a new dimensionality reduction
+message("Running Seurat-Harmony Integration - ", Sys.time())
 
 SeuratOBJ <- SeuratOBJ %>% 
     RunHarmony(group.by.vars = "orig.ident", 
+               reduction = "pca",
+               assay.use = 'RNA',
+               reduction.save = "harmony_r",
                plot_convergence = TRUE, 
-               nclust = 30,                    # Number of clusters in model. nclust=1 equivalent to simple linear regression
-               max.iter.harmony = 10,          # One round of Harmony involves one clustering and one correction step
-               max.iter.cluster = 20,          # Maximum number of rounds to run clustering at each round of Harmony 
+               nclust = 50,                    # Number of clusters in model. nclust=1 equivalent to simple linear regression
+               max.iter = 10,                  # One round of Harmony involves one clustering and one correction step
+               #max.iter.cluster = 20,          # Maximum number of rounds to run clustering at each round of Harmony 
                early_stop = T,
-               dims.use = 30,
+               #dims.use = 30,
                )
-## Remove redundant PCA
-reducedDim(sce, "PCA") <- NULL
-#### TSNE & UMAP ####
 
-set.seed(602)
-message("running TSNE - ", Sys.time())
+#SeuratOBJ@reductions
 
-SeuratOBJ@reductions$harmony
-# A dimensional reduction object with key harmony_ 
-# Number of dimensions: 50 
-# Number of cells: 17994 
-# Projected dimensional reduction calculated:  TRUE 
-# Jackstraw run: FALSE 
-# Computed using assay: RNA 
+message("Finishing Seurat-Harmony Integration - ", Sys.time())
 
-# Seurat_tmp <- SeuratOBJ
-# SeuratOBJ <- Seurat_tmp
 
-# SeuratOBJ <- RunHarmony(
-#     object = SeuratOBJ,
-#     group.by.vars = "orig.ident",
-#     reduction = 'pca',
-#     assay.use = 'RNA',
-#     reduction.save = "harmony_r",
-#     plot_coverage = TRUE,
-#     nclust = 50, 
-#     max_iter = 10, 
-#     early_stop = T
-# )
+## Run standard analysis: Calculate integrated.cca cell embeddings
 
-DimPlot(SeuratOBJ, 
-        reduction = "pca",
-        group.by = "orig.ident")
+# LogNormalize the count data present in the assay
+SeuratOBJ <- NormalizeData(SeuratOBJ)
 
-DimPlot(SeuratOBJ, 
-        reduction = "harmomny",
-        group.by = "orig.ident")
+# Identifies features that are outliers on a 'mean variability plot'.
+# vst method (default): First, fits a line to the relationship of log(variance) and log(mean) using local polynomial regression (loess).
+SeuratOBJ <- FindVariableFeatures(SeuratOBJ,
+                                  selection.method = "vst") # First, fits a line to the relationship of log(variance) and log(mean) using local polynomial regression...
 
-DimHeatmap(SeuratOBJ,
-          reduction = "harmony")
+map(save_VFeatures, 'harmony_r')
+# # Scale data
+# # Run a PCA dimensionality reduction
+
+
+SeuratOBJ <- FindNeighbors(SeuratOBJ, reduction = "harmony_r", dims = 1:30)
+SeuratOBJ <- FindClusters(SeuratOBJ, resolution = 1)
+
+SeuratOBJ <- RunUMAP(SeuratOBJ, dims = 1:30, reduction = "harmony_r")
+
+SeuratOBJ@reductions$harmony_r
+
+## Visualization
+#reduct <- c('pca', 'umap.unintegrated', 'integrated.cca', 'harmony_r')
+Map(plot_clust, reduct)
 
 
 
-
-# INTEGRATION methids for Seurat V5:  https://satijalab.org/seurat/articles/seurat5_integration (Oct 31, 2023)
+# INTEGRATION methods for Seurat V5:  https://satijalab.org/seurat/articles/seurat5_integration (Oct 31, 2023)
 # https://satijalab.org/seurat/articles/integration_introduction.html (Nov 16, 2023)
 
 
