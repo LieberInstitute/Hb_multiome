@@ -292,21 +292,37 @@ ggsave(p1, filename = png_name, height = 4, width = 10)
 #####        Integration methods available for Seurat v5         ##### 
 ###################################################################### 
 #############            CCAIntegration                  #############
-# CCAIntegration: https://satijalab.org/seurat/reference/ccaintegration
+## CCAIntegration: https://satijalab.org/seurat/reference/ccaintegration
+## “Seurat CCA” has the assumption that biologically more similar cells from different batches have a higher mathematical similarity (i.e. the dot product), and similarly, MNN assume similar cells from different batches have smaller Euclidean distance defined in the algorithm.
+
+## Needs PCA
 
 ### Start from here / load pre-existing Seurat objects
 if (count_mtx_type=='raw_counts') { s_sample <- 'seurat.combined.raw' } else { s_sample <- 'seurat.combined.normalized' }
 rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample, '_PCA.rds'))
 SeuratOBJ <- get_seurat(rds_name)
+# S1_Hb_KDM S2_Hb_KDM 
+# 8178      9816 
 
+message("Running Seurat-CCA Integration - ", Sys.time())
 SeuratOBJ <- IntegrateLayers(object = SeuratOBJ, 
                              method = CCAIntegration, 
                              orig.reduction = "pca", 
                              new.reduction = "integrated.cca",
                              verbose = FALSE)
 
+# We can also specify parameters such as `k.anchor` to increase the strength of integration
+# SeuratOBJ <- IntegrateLayers(object = SeuratOBJ, 
+#                              method = CCAIntegration, 
+#                              orig.reduction = "pca", 
+#                              new.reduction = "integrated.cca",
+#                              k.anchor = 20,
+#                              verbose = FALSE)
+
 # re-join layers after integration
 SeuratOBJ[["RNA"]] <- JoinLayers(SeuratOBJ[["RNA"]])
+
+message("Finishing Seurat-CCA Integration - ", Sys.time())
 
 SeuratOBJ <- FindNeighbors(SeuratOBJ, reduction = "integrated.cca", dims = 1:30)
 SeuratOBJ <- FindClusters(SeuratOBJ, resolution = 1)
@@ -352,6 +368,12 @@ SeuratOBJ <- SeuratOBJ %>%
                early_stop = T,
                dims.use = 30,
                )
+## Remove redundant PCA
+reducedDim(sce, "PCA") <- NULL
+#### TSNE & UMAP ####
+
+set.seed(602)
+message("running TSNE - ", Sys.time())
 
 SeuratOBJ@reductions$harmony
 # A dimensional reduction object with key harmony_ 
