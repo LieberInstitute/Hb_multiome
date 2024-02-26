@@ -21,6 +21,8 @@ library(harmony)
 #library(BSgenome.Hsapiens.UCSC.hg38)
 options(tidyverse.quiet = TRUE)
 library(tidyverse)
+library(ggplot2)
+library(patchwork)
 #library(SeuratDisk)                             
 library(here)
 
@@ -41,12 +43,8 @@ if (!dir.exists(here("plots/01_preprocessing_QC/"))) {
     dir.create(here("plots/01_preprocessing_QC/"))
 }
 
-#source(here("code/functions_custom", "remote_file_caller.R"))       # Call functions to read paths
-#source(here("code/functions_custom", "remote_seurat_functions.R"))  # Call functions to create and handle Seurat object
-#source(here("code/functions_custom", "remote_signac_functions.R"))  # Call functions to create Signac object
 source(here("code/functions_custom", "remote_plot_functions.R"))    # Call to plot GEX assay
-source(here("code/functions_custom", "remote_filtering_functions.R"))   # Call functions to subset the Seurat object
-
+#source(here("code/functions_custom", "remote_filtering_functions.R"))   # Call functions to subset the Seurat object
 
 ########################    Initials ########################  
 
@@ -68,9 +66,23 @@ get_seurat <- function(name) {
     
 }
 
+# get QC violin plots
+plot_violinQC <- function(seuratOBJ, sfeature, stitle) {
+    p1 <- VlnPlot(object = seuratOBJ, features = sfeature, 
+                  group.by = 'orig.ident', pt.size = 0) & geom_boxplot() &
+        theme(legend.position = 'none',
+              axis.text.x = element_text(angle=0, hjust=1, size=8),  #10
+              axis.text.y = element_text(size=8), 
+              axis.title.x = element_blank(),
+              axis.title.y = element_blank()) #&
+    #labs(title = "", x = 'Samples', y ="")
+    ggtitle(stitle)
+    return(p1)
+}
+
 ## plot reductions calculated: pca, umpa, CCA and Harmony
 plot_clust <- function(reduct) {
-    
+    # reduct <-'pca'
     # integrate the samples and clusters
     p1 <- DimPlot(SeuratOBJ, 
                   reduction = reduct, group.by = c("orig.ident", "seurat_clusters"))
@@ -85,31 +97,38 @@ plot_clust <- function(reduct) {
     png_name <- here('plots/01_preprocessing_QC', png_file)  
     ggsave(p1, filename = png_name, height = 5, width = 10)
     
-    # visualize more variable features in a heatmap
-    p1 <- DimHeatmap(SeuratOBJ,
-                     reduction = reduct, nfeatures = 30)
-    png_file <- paste0(s_sample, '_',reduct,'_Heatmap.png')
-    png_name <- here('plots/01_preprocessing_QC', png_file)  
-    ggsave(p1, filename = png_name, height = 5, width = 5)
+    # # visualize more variable features in a heatmap
+    # p1 <- DimHeatmap(SeuratOBJ,
+    #                  reduction = reduct, nfeatures = 30)
+    # png_file <- paste0(s_sample, '_',reduct,'_Heatmap.png')
+    # png_name <- here('plots/01_preprocessing_QC', png_file)  
+    # ggsave(p1, filename = png_name, height = 5, width = 10)
     
 }
+
 
 # Directory to save variable features 
 dir <- file.path(here('processed-data/01_preprocessing_QC/csv_files/')) 
 if (!dir.exists(dir)) dir.create(dir)
 
-## save variable features in each reduction 
-save_VFeatures <- function(reduct) {
+## save cvs file with variable features in each reduction 
+save_VFeatures <- function(sobj, f_name) {
     
     # Identify most highly variable genes
     VF <- c(10,20,50,100)
     for (x in VF) {
-        top <- head(VariableFeatures(SeuratOBJ), x)
-        cvs_name <- paste0(s_sample, '_',reduct,x,'_VF.csv')
+        cvs_name <- ''
+        top <- head(VariableFeatures(sobj), x)
+        cvs_name <- paste0(s_sample, '_', f_name, as.character(x), '_VF.csv')
+        #print(cvs_name)
         write.csv(top, file.path(dir, cvs_name), row.names=FALSE)
     }
 
 }
+
+
+
+
 
 # load pre-existing seurat objects
 SeuratOBJ <- get_seurat(here('processed-data/01_preprocessing_QC', 'S1_Hb_KDM.rds'))
@@ -117,6 +136,8 @@ SeuratOBJ <- get_seurat(here('processed-data/01_preprocessing_QC', 'S1_Hb_KDM.rd
 SeuratOBJ2 <- get_seurat(here('processed-data/01_preprocessing_QC', 'S2_Hb_KDM.rds'))
 
 # Merge Seurat objects according with the `count_mtx_type`
+message('Starting merging seurats...')
+
 if (count_mtx_type=='raw_counts') {
     
     SeuratOBJ.combined <- merge(SeuratOBJ, y = SeuratOBJ2,
@@ -138,7 +159,6 @@ if (count_mtx_type=='raw_counts') {
 }
 
 
-#
 #pbmc.big <- merge(pbmc3k, y = c(pbmc4k, pbmc8k), add.cell.ids = c("3K", "4K", "8K"), project = "PBMC15K")
 message('Merge completed!')
 
@@ -167,10 +187,11 @@ message('Seurat combined saved in ', rds_name)
 # Plot Genes and UMIs by density per cell 
 
 # Violin plot with UMIs, Genes, ^MT and RIBO levels
-p1 <- VlnPlot(SeuratOBJ.combined, features = c("nCount_RNA", "nFeature_RNA", "percent.mt"), group.by = "orig.ident") 
+p1 <- plot_violinQC(SeuratOBJ.combined, c("nCount_RNA", "nFeature_RNA", "percent.mt"), s_sample) 
+#p1 <- VlnPlot(SeuratOBJ.combined, features = c("nCount_RNA", "nFeature_RNA", "percent.mt"), group.by = "orig.ident") 
 png_file <- paste0(s_sample, '_Vplots_GEX.png')
 png_name <- here('plots/01_preprocessing_QC', png_file)  
-ggsave(p1, filename = png_name, height = 4, width = 5)
+ggsave(p1, filename = png_name, height = 5, width = 7)
 
 # Plot Genes and UMIs by density per cell 
 df_genes_per_cell <- as.data.frame(SeuratOBJ.combined[[]])
@@ -260,7 +281,7 @@ SeuratOBJ <- NormalizeData(SeuratOBJ)
 SeuratOBJ <- FindVariableFeatures(SeuratOBJ,
                                   selection.method = "vst") # First, fits a line to the relationship of log(variance) and log(mean) using local polynomial regression...
 
-map(save_VFeatures, 'pca')
+save_VFeatures(SeuratOBJ, 'pca')
 
 
 # Global-scaling “LogNormalize” method that normalizes the GEX measurements for each cell by the total expression, multiplies this by a scale factor (10,000 by default), and log-transforms the result.
@@ -277,7 +298,7 @@ ggsave(p1, filename = png_name, height = 4, width = 5)
 
 # Save RDS Object
 rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample, '_PCA.rds'))
-# [1] "/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/01_preprocessing_QC/seurat.combined.raw.rds"
+# .../seurat.combined.raw.rds"
 saveRDS(SeuratOBJ, file = rds_name)
 message('Seurat combined saved in ', rds_name)   
 
@@ -285,11 +306,11 @@ message('Seurat combined saved in ', rds_name)
 #### Before data correction some visualizations for reference
 
 SeuratOBJ <- FindNeighbors(SeuratOBJ, dims = 1:30, reduction = "pca")
-SeuratOBJ <- FindClusters(SeuratOBJ, resolution = 2, cluster.name = "unintegrated_clusters")
-
+SeuratOBJ <- FindClusters(SeuratOBJ, 
+                          resolution = 2, cluster.name = "unintegrated_clusters")
 SeuratOBJ <- RunUMAP(SeuratOBJ, dims = 1:30, reduction = "pca", reduction.name = "umap.unintegrated")
 head(SeuratOBJ, n=2)
-SeuratOBJ@reductions
+#SeuratOBJ@reductions
 
 Map(plot_clust, 'umap.unintegrated')
 
@@ -308,8 +329,12 @@ Map(plot_clust, 'umap.unintegrated')
 if (count_mtx_type=='raw_counts') { s_sample <- 'seurat.combined.raw' } else { s_sample <- 'seurat.combined.normalized' }
 rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample, '_PCA.rds'))
 SeuratOBJ <- get_seurat(rds_name)
+table(SeuratOBJ$`orig.ident`)
 # S1_Hb_KDM S2_Hb_KDM 
 # 8178      9816 
+
+# split the RNA measurements into two layers one for each sample, because you need to have a v5 assay (a bug ??)
+SeuratOBJ[["RNA"]] <- split(SeuratOBJ[["RNA"]], f = SeuratOBJ$orig.ident)   #It is converted to v5 assay
 
 message("Running Seurat-CCA Integration - ", Sys.time())
 SeuratOBJ <- IntegrateLayers(object = SeuratOBJ, # Default dims: 1:30
@@ -318,13 +343,7 @@ SeuratOBJ <- IntegrateLayers(object = SeuratOBJ, # Default dims: 1:30
                              new.reduction = "integrated.cca",
                              verbose = FALSE)
 
-# We can also specify parameters such as `k.anchor` to increase the strength of integration
-# SeuratOBJ <- IntegrateLayers(object = SeuratOBJ, 
-#                              method = CCAIntegration, 
-#                              orig.reduction = "pca", 
-#                              new.reduction = "integrated.cca",
-#                              k.anchor = 20,
-#                              verbose = FALSE)
+# We can also specify parameters such as `k.anchor` to increase the strength of integration, add:  k.anchor = 20
 
 # re-join layers after integration
 SeuratOBJ[["RNA"]] <- JoinLayers(SeuratOBJ[["RNA"]])
