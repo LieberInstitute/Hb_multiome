@@ -81,28 +81,21 @@ plot_violinQC <- function(seuratOBJ, sfeature, stitle) {
 }
 
 ## plot reductions calculated: pca, umpa, CCA and Harmony
-plot_clust <- function(reduct) {
-    # reduct <-'pca'
+plot_clust <- function(sobj, f_name, reduct, ga2) {
+    
     # integrate the samples and clusters
-    p1 <- DimPlot(SeuratOBJ, 
-                  reduction = reduct, group.by = c("orig.ident", "seurat_clusters"))
-    png_file <- paste0(s_sample, '_',reduct,'_dimplot.png')
+    p1 <- DimPlot(sobj, 
+                  reduction = reduct, group.by = c("orig.ident", ga2))
+    png_file <- paste0(f_name, '_',reduct,'_dimplot.png')
     png_name <- here('plots/01_preprocessing_QC', png_file)  
     ggsave(p1, filename = png_name, height = 5, width = 10)
     
     # visualize the two conditions side-by-side
-    p1 <- DimPlot(SeuratOBJ, 
+    p1 <- DimPlot(sobj, 
                   reduction = reduct, split.by = "orig.ident")
-    png_file <- paste0(s_sample, '_',reduct,'_dimplot_splitted.png')
+    png_file <- paste0(f_name, '_',reduct,'_dimplot_splitted.png')
     png_name <- here('plots/01_preprocessing_QC', png_file)  
     ggsave(p1, filename = png_name, height = 5, width = 10)
-    
-    # # visualize more variable features in a heatmap
-    # p1 <- DimHeatmap(SeuratOBJ,
-    #                  reduction = reduct, nfeatures = 30)
-    # png_file <- paste0(s_sample, '_',reduct,'_Heatmap.png')
-    # png_name <- here('plots/01_preprocessing_QC', png_file)  
-    # ggsave(p1, filename = png_name, height = 5, width = 10)
     
 }
 
@@ -261,7 +254,7 @@ message('UMI/Counts by MT plot saved!')
 ### Start from here / load pre-existing seurat objects
 if (count_mtx_type=='raw_counts') { s_sample <- 'seurat.combined.raw' } else { s_sample <- 'seurat.combined.normalized' }
 rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample, '.rds'))
-SeuratOBJ <- get_seurat(rds_name)
+SeuratOBJ.combined <- get_seurat(rds_name)
 
 ######### Perform analysis without integration
 
@@ -296,23 +289,31 @@ png_file <- paste0(s_sample, '_PCAelbow.png')
 png_name <- here('plots/01_preprocessing_QC', png_file)  
 ggsave(p1, filename = png_name, height = 4, width = 5)
 
-# Save RDS Object
-rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample, '_PCA.rds'))
-# .../seurat.combined.raw.rds"
-saveRDS(SeuratOBJ, file = rds_name)
-message('Seurat combined saved in ', rds_name)   
-
 
 #### Before data correction some visualizations for reference
 
 SeuratOBJ <- FindNeighbors(SeuratOBJ, dims = 1:30, reduction = "pca")
 SeuratOBJ <- FindClusters(SeuratOBJ, 
                           resolution = 2, cluster.name = "unintegrated_clusters")
+str(SeuratOBJ)
 SeuratOBJ <- RunUMAP(SeuratOBJ, dims = 1:30, reduction = "pca", reduction.name = "umap.unintegrated")
 head(SeuratOBJ, n=2)
 #SeuratOBJ@reductions
 
-Map(plot_clust, 'umap.unintegrated')
+# create and save UMAP-PCA plots grouped by sample and clusters and splitted side-by-side
+plot_clust(SeuratOBJ, s_sample, 'umap.unintegrated', 'seurat_clusters')
+
+# visualize more variable features in a heatmap
+p1 <- DimHeatmap(SeuratOBJ, reduction = 'pca', nfeatures = 30)
+png_file <- paste0(s_sample, '_pca_heatmap.png')
+png_name <- here('plots/01_preprocessing_QC', png_file)
+ggsave(p1, filename = png_name, height = 5, width = 10)
+
+# Save RDS Object
+rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample, '_PCA.rds'))
+# .../seurat.combined.raw_PCA.rds
+saveRDS(SeuratOBJ, file = rds_name)
+message('Seurat combined saved in ', rds_name)   
 
 
 
