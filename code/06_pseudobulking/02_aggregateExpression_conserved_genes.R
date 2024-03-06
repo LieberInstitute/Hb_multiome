@@ -137,14 +137,17 @@ DotPlot(SeuratOBJ, features = markers.to.plot, cols = c("blue", "red"), dot.scal
 ## Identify differential expressed genes across conditions
 ## We can aggregate cells of a similar type and condition together to create “pseudobulk” profiles using the AggregateExpression command
 
+
 library(ggplot2)
 library(cowplot)
 theme_set(theme_cowplot())
 
-aggregate_ifnb <- AggregateExpression(ifnb, group.by = c("seurat_annotations", "stim"), return.seurat = TRUE)
-genes.to.label = c("ISG15", "LY6E", "IFI6", "ISG20", "MX1", "IFIT2", "IFIT1", "CXCL10", "CCL8")
+colnames(SeuratOBJ@meta.data)
 
-p1 <- CellScatter(aggregate_ifnb, "CD14 Mono_CTRL", "CD14 Mono_STIM", highlight = genes.to.label)
+aggregate_ifnb <- AggregateExpression(SeuratOBJ, group.by = c("seurat_clusters", "orig.ident"), return.seurat = TRUE)
+genes.to.label =  c("MMRN1", "HTR2C", "EPHA5", "GPR151", "POU4F1")
+
+p1 <- CellScatter(aggregate_ifnb, "18_S2_Hb_KDM", "14_S1Hb_KDM", highlight = genes.to.label)
 p2 <- LabelPoints(plot = p1, points = genes.to.label, repel = TRUE)
 
 p3 <- CellScatter(aggregate_ifnb, "CD4 Naive T_CTRL", "CD4 Naive T_STIM", highlight = genes.to.label)
