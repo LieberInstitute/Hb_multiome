@@ -11,17 +11,18 @@
 ## For slurm env: runsrun --x11 --pty --partition=interactive bash
 ########################################################################
 
-library(Seurat)                                 # 4.9.9.9045 2023-05-17 [1] Github (satijalab/seurat@7d1094c)
-#options(Seurat.object.assay.version = 'v5')    # To use new Seurat v5: Please run: options(Seurat.object.assay.version = 'v5')
-#library(Signac)                                 # 1.9.0.9000 2023-05-08 [1] Github (stuart-lab/signac@cf31022)
-#library(EnsDb.Hsapiens.v86)
-#library(BSgenome.Hsapiens.UCSC.hg38)
-options(tidyverse.quiet = TRUE)
-library(tidyverse)
-
-library(ggplot2)
-library(patchwork)
-library(cowplot)
+library('Seurat')                                 # 4.9.9.9045 2023-05-17 [1] Github (satijalab/seurat@7d1094c)
+## Additional required packages for aggregation
+library('multtest')
+library('metap')
+## Additional required packages for customize clusters
+library('scCustomize')
+library('magrittr')
+library('tidyverse')
+## Packages to plot
+library('ggplot2')
+library('patchwork')
+library('cowplot')
 theme_set(theme_cowplot())
 
 #library(SeuratDisk)                             
@@ -155,12 +156,51 @@ table(Idents(SeuratOBJ))
 
 
 
-######################. Identify conserved cell type markers ######################
+######################  Identify conserved cell type markers ######################
+## Implementation from: https://satijalab.org/seurat/articles/integration_introduction.html#identify-conserved-cell-type-markers 
+
+## Run in an integrated Seurat
+SeuratOBJ[["RNA"]] <- JoinLayers(SeuratOBJ[["RNA"]])
+
+## unique(Idents(SeuratOBJ))
+## Hb.markers <- FindConservedMarkers(SeuratOBJ, ident.1 = "Clust_0", grouping.var = "orig.ident", verbose = FALSE)
+## head(nk.markers)
+
+## To avoid issue when having few cells need to adjust the minimum number of cells
+## For example, if there is a cluster "15" that has 0 cells, the function will skip that cluster with a warning (that's perfect). Also if the number of cells is between min.cells.groups (default = 3) and 0, an error is thrown and it stops working. That is why I previously remove from the Seurat Object the cells of the clusters with 3 or less cells for each condition/sample. 
+few_cells_samples <- unique(SeuratOBJ@meta.data$orig.ident)
+few_cells <- vector()
+
+for (i in 1:length(few_cells_samples)) {   # remove cellstype w/ less than 3 cells in each sample/condition
+  few_cells_tmp <- table(SeuratOBJ@meta.data$seurat_clusters.renamed[SeuratOBJ@meta.data$orig.ident == few_cells_samples[i]]) <= 3
+  few_cells_tmp <- names(few_cells_tmp)[few_cells_tmp == "TRUE"]
+  few_cells <- c(few_cells,few_cells_tmp)
+}
+
+# > few_cells
+# [1] "18"
+
+clusters <- sort(unique(SeuratOBJ@meta.data$seurat_clusters.renamed))
+clusters <- clusters[clusters %!in% few_cells]  # need to check CSC
+
+
+# ## Determine the number of clusters
+## https://github.com/satijalab/seurat/issues/6076
+
+# num_clusters <- max(as.numeric(as.character(
+#   SeuratOBJ@meta.data$seurat_clusters)))
+# 
+# ## Cycle through each cluster finding the conserved markers**
+# ## Store each dataframe of markers in the misc slot**
+# for (i in 0:num_clusters) {
+#   SeuratOBJ@misc$temp <- FindConservedMarkers(SeuratOBJ, ident.1 = i, grouping.var = "orig.ident", min.cells.group = 0)
+#   names(gene.conditions@misc)[names(gene.conditions@misc)=="temp"] <-
+#     paste0(names(gene.conditions), ".cluster_", i, ".markers")
+# }
 
 
 
 ######################. Plot conserved cell type markers with Doplot() ######################
-
 
 unique(Idents(SeuratOBJ))
 markers.to.plot <- c("MMRN1", "HTR2C", "EPHA5", "GPR151", "POU4F1", 
