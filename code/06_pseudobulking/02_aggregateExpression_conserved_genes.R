@@ -140,7 +140,7 @@ table(Idents(SeuratOBJ))
 # 821      787      683      565      564      515      273      163 
 # Clust_16 Clust_17 Clust_18 
 # 136       75       33 
-
+View(table(Idents(SeuratOBJ)))
 
 # NEEDS TO BE FIXED AND SET ORDER CORRECTLY
 # Idents(SeuratOBJ) <- factor(Idents(SeuratOBJ), levels = c("Oli-1", "Unknown-1", "Unknown-2", "Oli-Prec", "Unknown-3", 
@@ -215,25 +215,57 @@ DotPlot(SeuratOBJ, features = markers.to.plot, cols = c("blue", "red"), dot.scal
 
 colnames(SeuratOBJ@meta.data)
 
-aggregate_ifnb <- AggregateExpression(SeuratOBJ, group.by = c("seurat_clusters", "orig.ident"), return.seurat = TRUE)
-genes.to.label =  c("MMRN1", "HTR2C", "EPHA5", "GPR151", "POU4F1")
+aggregate_ifnb <- AggregateExpression(SeuratOBJ, group.by = c("seurat_clusters.renamed", "orig.ident"), return.seurat = TRUE)
+markers.to.plot <- c("MMRN1", "HTR2C", "EPHA5", "GPR151", "POU4F1")
+markers.to.plot <- c("AC109466.1", "AC008415.1", "GPR149", "GNG8")
+markers.to.plot <- c("LINC01876", "TLL1", "CD24", "AC004594.1")
+markers.to.plot <- c("HTR2C")
 
-p1 <- CellScatter(aggregate_ifnb, "Cell1", "Cell2", highlight = genes.to.label)
-p2 <- LabelPoints(plot = p1, points = genes.to.label, repel = TRUE)
+unique(Cells(SeuratOBJ))
+#p1 <- CellScatter(aggregate_ifnb, "S1_Hb_KDM_A", "Cell2", highlight = genes.to.label)
+#p2 <- LabelPoints(plot = p1, points = genes.to.label, repel = TRUE)
 
 SeuratOBJ@reductions
 
-genes.to.label =  c("MMRN1", "EPHA5", "GPR151", "POU4F1")
-FeaturePlot(SeuratOBJ, features = genes.to.label , split.by = "orig.ident", max.cutoff = 3, 
-            cols = c("grey","red"), reduction = "integrated.cca")
+# FeaturePlot(SeuratOBJ, features = genes.to.label , split.by = "orig.ident", max.cutoff = 3, 
+#             cols = c("grey","red"), reduction = "integrated.cca")
 
+# Run umap 
+SeuratOBJ <- RunUMAP(SeuratOBJ, dims = 1:30, reduction = "integrated.cca")
+SeuratOBJ@reductions
 
+# Plot in umap features for LHb/MHb marker genes 
+FeaturePlot(SeuratOB, features = markers.to.plot , split.by = "orig.ident", max.cutoff = 3, 
+            cols = c("grey","red"), reduction = "umap")
 
-plots <- VlnPlot(SeuratOBJ, features = genes.to.label, split.by = "orig.ident", group.by = "seurat_clusters",
+# Plot Violin plots for the same LHb/MHb marker genes 
+plots <- VlnPlot(SeuratOBJ, features = markers.to.plot, split.by = "orig.ident", group.by = "seurat_clusters",
                  pt.size = 0, combine = FALSE)
 wrap_plots(plots = plots, ncol = 1)
 
 
+DoHeatmap(
+  SeuratOBJ,
+  features = NULL,
+  cells = NULL,
+  group.by = "orig.ident",
+  group.bar = TRUE,
+  group.colors = NULL,
+  disp.min = -2.5,
+  disp.max = NULL,
+  slot = "scale.data",
+  assay = NULL,
+  label = TRUE,
+  size = 5.5,
+  hjust = 0,
+  vjust = 0,
+  angle = 45,
+  raster = TRUE,
+  draw.lines = TRUE,
+  lines.width = NULL,
+  group.bar.height = 0.02,
+  combine = TRUE
+)
 
 
 
