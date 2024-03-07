@@ -45,7 +45,7 @@ if (!dir.exists(here("plots/06_pseudobulking/"))) {
     dir.create(here("plots/06_pseudobulking/"))
 }
 
-source(here("code/functions_custom", "remote_plot_functions.R"))    # Call to plot GEX assay
+#source(here("code/functions_custom", "remote_plot_functions.R"))    # Call to plot GEX assay
 #source(here("code/functions_custom", "remote_filtering_functions.R"))   # Call functions to subset the Seurat object
 
 ########################    Initials ########################  
@@ -87,11 +87,19 @@ plot_violinQC <- function(seuratOBJ, sfeature, stitle) {
 # load pre-existing seurat objects
 if (count_mtx_type=='data_counts') { s_sample <- 'seurat.combined.data_counts_PCA_CCA' } else { s_sample <- 'seurat.combined.norm_counts_PCA_CCA' }
 rds_name <- here('processed-data/04_merge_seurats', paste0(s_sample, '.rds'))
+# ~/seurat.combined.data_counts_PCA_CCA.rds"
 SeuratOBJ <- get_seurat(rds_name)
-
+SeuratOBJ2 <- SeuratOBJ
+# An object of class Seurat 
+# 36601 features across 17994 samples within 1 assay 
+# Active assay: RNA (36601 features, 2000 variable features)
+# 3 layers present: data, counts, scale.data
+# 4 dimensional reductions calculated: pca, umap.unintegrated, integrated.cca, umap
 
 # verification of the integration
 table(SeuratOBJ$orig.ident)
+
+
 # S1_Hb_KDM S2_Hb_KDM 
 # 8178      9816 
 head(colnames(SeuratOBJ))
@@ -110,49 +118,60 @@ colnames(SeuratOBJ@meta.data)
 
 
 oldIdent <- levels(Idents(SeuratOBJ))
-# [1] "0"  "1"  "2"  "3"  "4"  "5"  "6"  "7"  "8"  "9"  "10" "11" "12" "13" "14"
-# [16] "15" "16" "17" "18"
+# [1] "0"  "1"  "2"  "3"  "4"  "5"  "6"  "7"  "8"  "9"  "10" "11" "12" "13" "14" "15" "16" "17" "18"
 
-newIdent <- paste("Clust", 0:18, sep = "_")
-# [1] "Clust_0"  "Clust_1"  "Clust_2"  "Clust_3"  "Clust_4"  "Clust_5" 
-# [7] "Clust_6"  "Clust_7"  "Clust_8"  "Clust_9"  "Clust_10" "Clust_11"
-# [13] "Clust_12" "Clust_13" "Clust_14" "Clust_15" "Clust_16" "Clust_17"
-# [19] "Clust_18"
+newIdent <- paste("C", 0:18, sep = "_")
+# [1] "C_0"  "C_1"  "C_2"  "C_3"  "C_4"  "C_5"  "C_6"  "C_7"  "C_8"  "C_9"  "C_10" "C_11" "C_12" "C_13" "C_14" "C_15"
+# [17] "C_16" "C_17" "C_18
 
 # count cells by clusters
 table(Idents(SeuratOBJ))
-# 0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15 
-# 4122 1625 1615 1330 1311 1250 1100 1026  821  787  683  565  564  515  273  163 
-# 16   17   18 
-# 136   75   33 
+# 0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17   18 
+# 4122 1625 1615 1330 1311 1250 1100 1026  821  787  683  565  564  515  273  163  136   75   33 
 
 # rename clusters to make them more readable
 # require scCustomize/Wrapper funtion to rename clusters
-if (FALSE) {
-  SeuratOBJ <- Rename_Clusters(SeuratOBJ, new_idents = newIdent,
+SeuratOBJ <- Rename_Clusters(SeuratOBJ, new_idents = newIdent,
                          meta_col_name = "seurat_clusters.renamed")
-}
-colnames(SeuratOBJ@meta.data)
 table(Idents(SeuratOBJ))
-# Clust_0  Clust_1  Clust_2  Clust_3  Clust_4  Clust_5  Clust_6  Clust_7 
-# 4122     1625     1615     1330     1311     1250     1100     1026 
-# Clust_8  Clust_9 Clust_10 Clust_11 Clust_12 Clust_13 Clust_14 Clust_15 
-# 821      787      683      565      564      515      273      163 
-# Clust_16 Clust_17 Clust_18 
-# 136       75       33 
-View(table(Idents(SeuratOBJ)))
+# C_0  C_1  C_2  C_3  C_4  C_5  C_6  C_7  C_8  C_9 C_10 C_11 C_12 C_13 C_14 C_15 C_16 C_17 C_18 
+# 4122 1625 1615 1330 1311 1250 1100 1026  821  787  683  565  564  515  273  163  136   75   33 
+#View(table(Idents(SeuratOBJ)))
 
-# NEEDS TO BE FIXED AND SET ORDER CORRECTLY
-# Idents(SeuratOBJ) <- factor(Idents(SeuratOBJ), levels = c("Oli-1", "Unknown-1", "Unknown-2", "Oli-Prec", "Unknown-3", 
-#                                                           "Unknown-4", "LHb-1", "Ast-1", "Ast-2", "LHb-2",
-#                                                           "Neu", "Medio_Thal", "Oli-2", "Unknown-5", "LHb-Mhb-1", 
-#                                                           "MHb", "Endo", "Unknown-6", "LHb-Mhb-2"))
+head(SeuratOBJ)
+
+
+# ## Trying to change orig.ident meta.data
+# library(stringr)
 # 
-# Idents(SeuratOBJ) <- factor(Idents(SeuratOBJ), levels = c("0", "1", "2", "3", "4", 
-#                                                           "5", "6", "7", "8", "9",
-#                                                           "10", "11", "12", "13", "14", 
-#                                                           "15", "16", "17", "18"))
-
+# ## Confirm how many samples do we have
+# # suffixes <- str_extract(string = colnames(SeuratOBJ), pattern = "[:digit:]$")
+# # unique(suffixes)
+# 
+# unique(SeuratOBJ@meta.data$orig.ident)
+# 
+# # Create dataframe by sample that contains matching orig.ident code
+# meta_by_sample <- tibble::tribble(
+#   ~orig.ident,  ~sample_name,
+#   1, "S1_Hb",
+#   2, "S2_Hb" 
+# )
+# 
+# # Change orig.ident column to factor so that it can be joined later
+# meta_by_sample$orig.ident <- as.factor(meta_by_sample$orig.ident)
+# 
+# # Pull existing meta data where samples are specified by orig.ident and remove everything but orig.ident
+# OBJ_meta <- SeuratOBJ@meta.data %>% 
+#   select(orig.ident) %>% 
+#   rownames_to_column("barcodes")
+# 
+# # Use full join with object meta data in x position so that by sample meta dataframe is propagated across the by cell meta dataframe from the object.  And then remove orig.ident because it's already present in object meta data.
+# full_new_meta <- full_join(x = OBJ_meta, y = meta_by_sample) %>% 
+#   column_to_rownames("barcodes") %>% 
+#   select(-orig.ident)
+# 
+# # Use AddMetaData to add new meta data to object
+# OBJ <- AddMetaData(object = OBJ, metadata = full_new_meta)
 
 
 
@@ -205,9 +224,11 @@ clusters <- clusters[clusters %!in% few_cells]  # need to check CSC
 unique(Idents(SeuratOBJ))
 markers.to.plot <- c("MMRN1", "HTR2C", "EPHA5", "GPR151", "POU4F1", 
                      "AC109466.1", "AC008415.1", "GPR149", "GNG8", "LINC01876", "TLL1", "CD24", "AC004594.1")
-DotPlot(SeuratOBJ, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8, split.by = "orig.ident") +
-  RotatedAxis()
+# DotPlot(SeuratOBJ, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8, split.by = "orig.ident") +
+#   RotatedAxis()
 
+DotPlot(SeuratOBJ, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8) +
+  RotatedAxis()
 
 ######################. Identify differential expressed genes across conditions ######################
 
