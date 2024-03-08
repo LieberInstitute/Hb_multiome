@@ -19,6 +19,10 @@ library('metap')
 library('scCustomize')
 library('magrittr')
 library('tidyverse')
+# for a much faster version to run FindMarkers() install these packages:
+# install.packages('devtools')
+# devtools::install_github('immunogenomics/presto')
+library('presto')
 ## Packages to plot
 library('ggplot2')
 library('patchwork')
@@ -43,6 +47,10 @@ if (!dir.exists(here("processed-data/06_pseudobulking/"))) {
 # Check if plot directory exists, if not create it
 if (!dir.exists(here("plots/06_pseudobulking/"))) {
     dir.create(here("plots/06_pseudobulking/"))
+}
+# Check if directory to store results exists, if not create it
+if (!dir.exists(here("processed-data/06_pseudobulking/csv_files"))) {
+  dir.create(here("processed-data/06_pseudobulking/csv_files"))
 }
 
 #source(here("code/functions_custom", "remote_plot_functions.R"))    # Call to plot GEX assay
@@ -89,7 +97,7 @@ if (count_mtx_type=='data_counts') { s_sample <- 'seurat.combined.data_counts_PC
 rds_name <- here('processed-data/04_merge_seurats', paste0(s_sample, '.rds'))
 # ~/seurat.combined.data_counts_PCA_CCA.rds"
 SeuratOBJ <- get_seurat(rds_name)
-SeuratOBJ2 <- SeuratOBJ
+# var. for testing: SeuratOBJ2 <- SeuratOBJ
 # An object of class Seurat 
 # 36601 features across 17994 samples within 1 assay 
 # Active assay: RNA (36601 features, 2000 variable features)
@@ -185,24 +193,6 @@ SeuratOBJ[["RNA"]] <- JoinLayers(SeuratOBJ[["RNA"]])
 ## Hb.markers <- FindConservedMarkers(SeuratOBJ, ident.1 = "Clust_0", grouping.var = "orig.ident", verbose = FALSE)
 ## head(nk.markers)
 
-## To avoid issue when having few cells need to adjust the minimum number of cells
-## For example, if there is a cluster "15" that has 0 cells, the function will skip that cluster with a warning (that's perfect). Also if the number of cells is between min.cells.groups (default = 3) and 0, an error is thrown and it stops working. That is why I previously remove from the Seurat Object the cells of the clusters with 3 or less cells for each condition/sample. 
-few_cells_samples <- unique(SeuratOBJ@meta.data$orig.ident)
-few_cells <- vector()
-
-for (i in 1:length(few_cells_samples)) {   # remove cellstype w/ less than 3 cells in each sample/condition
-  few_cells_tmp <- table(SeuratOBJ@meta.data$seurat_clusters.renamed[SeuratOBJ@meta.data$orig.ident == few_cells_samples[i]]) <= 3
-  few_cells_tmp <- names(few_cells_tmp)[few_cells_tmp == "TRUE"]
-  few_cells <- c(few_cells,few_cells_tmp)
-}
-
-# > few_cells
-# [1] "18"
-
-clusters <- sort(unique(SeuratOBJ@meta.data$seurat_clusters.renamed))
-clusters <- clusters[clusters %!in% few_cells]  # need to check CSC
-
-
 # ## Determine the number of clusters
 ## https://github.com/satijalab/seurat/issues/6076
 
@@ -217,49 +207,114 @@ clusters <- clusters[clusters %!in% few_cells]  # need to check CSC
 #     paste0(names(gene.conditions), ".cluster_", i, ".markers")
 # }
 
+## Plot conserved cell type markers with Doplot() 
 
-
-######################. Plot conserved cell type markers with Doplot() ######################
-
-unique(Idents(SeuratOBJ))
-markers.to.plot <- c("MMRN1", "HTR2C", "EPHA5", "GPR151", "POU4F1", 
-                     "AC109466.1", "AC008415.1", "GPR149", "GNG8", "LINC01876", "TLL1", "CD24", "AC004594.1")
+# unique(Idents(SeuratOBJ))
+# markers.to.plot <- c("MMRN1", "HTR2C", "EPHA5", "GPR151", "POU4F1", 
+#                      "AC109466.1", "AC008415.1", "GPR149", "GNG8", "LINC01876", "TLL1", "CD24", "AC004594.1")
 # DotPlot(SeuratOBJ, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8, split.by = "orig.ident") +
 #   RotatedAxis()
+# 
+# DotPlot(SeuratOBJ, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8) +
+#   RotatedAxis()
 
-DotPlot(SeuratOBJ, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8) +
-  RotatedAxis()
+
 
 ######################. Identify differential expressed genes across conditions ######################
 
 ## We use AggregateExpression() to aggregate cells of a similar type and condition together to create “pseudobulk” profiles
 
-colnames(SeuratOBJ@meta.data)
+## To avoid issue when having few cells need to adjust the minimum number of cells
+## For example, if there is a cluster "15" that has 0 cells, the function will skip that cluster with a warning (that's perfect). Also if the number of cells is between min.cells.groups (default = 3) and 0, an error is thrown and it stops working. That is why I previously remove from the Seurat Object the cells of the clusters with 3 or less cells for each condition/sample. 
+few_cells_samples <- unique(SeuratOBJ@meta.data$orig.ident)
+few_cells <- vector()
 
-aggregate_ifnb <- AggregateExpression(SeuratOBJ, group.by = c("seurat_clusters.renamed", "orig.ident"), return.seurat = TRUE)
+for (i in 1:length(few_cells_samples)) {   # remove cellstype w/ less than 1 cells in each sample/condition
+  few_cells_tmp <- table(SeuratOBJ@meta.data$seurat_clusters.renamed[SeuratOBJ@meta.data$orig.ident == few_cells_samples[i]]) <= 1
+  few_cells_tmp <- names(few_cells_tmp)[few_cells_tmp == "TRUE"]
+  few_cells <- c(few_cells,few_cells_tmp)
+}
+
+message(' Clusters with less than 1 cell: ', length(few_cells))
+# > few_cells
+# [1] "18"
+
+clusters <- sort(unique(SeuratOBJ@meta.data$seurat_clusters.renamed))
+`%notin%` <- Negate(`%in%`) 
+clusters <- clusters[clusters %notin% few_cells]  # need to check CSC
+
+colnames(SeuratOBJ@meta.data)
+SeuratOBJ@assays
+# data, counts, scale.data
+
+aggregate_ifnb <- AggregateExpression(SeuratOBJ, 
+                                      assays = 'RNA',
+                                      group.by = c("orig.ident", "seurat_clusters.renamed"), 
+                                      return.seurat = TRUE)
+# Defaults to: normalization.method = "LogNormalize", scale.factor = 10000
+# If return.seurat = TRUE, aggregated values are placed in the 'counts' layer of the returned object
+
+#aggregate_ifnb
+# An object of class Seurat 
+# 36601 features across 37 samples within 1 assay 
+# Active assay: RNA (36601 features, 0 variable features)
+# 3 layers present: counts, data, scale.data
+
+table(Idents(SeuratOBJ))
+# C_0  C_1  C_2  C_3  C_4  C_5  C_6  C_7  C_8  C_9 C_10 C_11 C_12 C_13 C_14 C_15 C_16 C_17 C_18 
+# 4122 1625 1615 1330 1311 1250 1100 1026  821  787  683  565  564  515  273  163  136   75   33 
+
+DEG.response <- FindAllMarkers(SeuratOBJ, 
+                               test.use = "wilcox", #'t' for Student's t-test
+                               verbose = TRUE)
+head(DEG.response, n = 5)
+# p_val avg_log2FC pct.1 pct.2 p_val_adj cluster   gene
+# NPAS3      0 -1.8361509 0.078 0.736         0     C_0  NPAS3
+# QKI        0 -1.1883844 0.176 0.830         0     C_0    QKI
+# ZBTB20     0 -1.6780801 0.068 0.710         0     C_0 ZBTB20
+# CADM2      0 -0.6540443 0.229 0.847         0     C_0  CADM2
+# MAGI2      0 -0.7831094 0.142 0.748         0     C_0  MAGI2
+
+
+cvs_name <- paste0(s_sample, '_Allmarkers.csv')
+cvs_name <- here('processed-data/06_pseudobulking/csv_files', cvs_name)
+write.csv(DEG.response, cvs_name, row.names=FALSE)
+# ~/processed-data/05_DiffExpr_Clustering_Seurat/csv_files/seurat.combined.data_counts_PCA_CCA_Allmarkers.csv"
+
+## Save integrated object with DEG calculated
+rds_name <- paste0(s_sample, '_pseudobulk.rds')
+rds_name <- here('processed-data/06_pseudobulking', rds_name)
+# file name: seurat.combined.data_counts_PCA_CCA_pseudobulk.rds
+saveRDS(SeuratOBJ, file = rds_name)
+message('Seurat combined saved in ', rds_name)   
+
+######################. Several visualizations  ######################
+
 markers.to.plot <- c("MMRN1", "HTR2C", "EPHA5", "GPR151", "POU4F1")
 markers.to.plot <- c("AC109466.1", "AC008415.1", "GPR149", "GNG8")
 markers.to.plot <- c("LINC01876", "TLL1", "CD24", "AC004594.1")
 markers.to.plot <- c("HTR2C")
 
-unique(Cells(SeuratOBJ))
-#p1 <- CellScatter(aggregate_ifnb, "S1_Hb_KDM_A", "Cell2", highlight = genes.to.label)
-#p2 <- LabelPoints(plot = p1, points = genes.to.label, repel = TRUE)
+## Plot DEG in aggregate data
 
-SeuratOBJ@reductions
+unique(Idents(SeuratOBJ))
+DotPlot(SeuratOBJ, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8) +
+  RotatedAxis()
+# DotPlot(SeuratOBJ, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8, split.by = "orig.ident") +
+#   RotatedAxis()
 
-# FeaturePlot(SeuratOBJ, features = genes.to.label , split.by = "orig.ident", max.cutoff = 3, 
+# FeaturePlot(SeuratOBJ, features = genes.to.label , split.by = "orig.ident", max.cutoff = 3,
 #             cols = c("grey","red"), reduction = "integrated.cca")
 
-# Run umap 
+# Run umap
 SeuratOBJ <- RunUMAP(SeuratOBJ, dims = 1:30, reduction = "integrated.cca")
 SeuratOBJ@reductions
 
-# Plot in umap features for LHb/MHb marker genes 
-FeaturePlot(SeuratOB, features = markers.to.plot , split.by = "orig.ident", max.cutoff = 3, 
+# Plot in umap features for LHb/MHb marker genes
+FeaturePlot(SeuratOB, features = markers.to.plot , split.by = "orig.ident", max.cutoff = 3,
             cols = c("grey","red"), reduction = "umap")
 
-# Plot Violin plots for the same LHb/MHb marker genes 
+# Plot Violin plots for the same LHb/MHb marker genes
 plots <- VlnPlot(SeuratOBJ, features = markers.to.plot, split.by = "orig.ident", group.by = "seurat_clusters",
                  pt.size = 0, combine = FALSE)
 wrap_plots(plots = plots, ncol = 1)
@@ -295,10 +350,7 @@ png_name <- here('plots/04_merge_seurats', png_file)
 ggsave(p1, filename = png_name, height = 5, width = 10)
 
 
-rds_name <- here('processed-data/04_merge_seurats', paste0(s_sample, '_PCA_CCA_Harmony.rds'))
-# .../seurat.combined.data_counts_PCA_CCA_Harmony.rds
-saveRDS(SeuratOBJ, file = rds_name)
-message('Seurat combined saved in ', rds_name)   
+
 
 
 # INTEGRATION methods for Seurat V5:  https://satijalab.org/seurat/articles/seurat5_integration (Oct 31, 2023)
