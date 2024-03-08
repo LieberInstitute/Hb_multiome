@@ -1,5 +1,5 @@
 ########################################################################
-## Aggregateexpression for conserved gene markers
+## Aggregate expression for RNA assay for CCA and Harmony correction
 ## Authors. CSC
 ## Date. March 5th, 2024
 ## Last.Adaptation: xxx
@@ -58,14 +58,14 @@ if (!dir.exists(here("processed-data/06_pseudobulking/csv_files"))) {
 
 ########################    Initials ########################  
 
-## select the count-mtx to merge (raw or normalized data)
-count_mtx_type <- 'data_counts'      
+## Select the count-mtx to merge (raw or normalized data)
+count_mtx_type <- 'data_counts'
 #count_mtx_type <- 'norm_counts' 
+#Seurat_reduction <- 'CCA'
+Seurat_reduction <- 'Harmony'
 
 ## load pre-existing Seurat
 get_seurat <- function(name) {
-
-        #Ex. "/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/04_merge_seurats/seurat.combined.data_counts_PCA_CCA.rds"
     sobj <- readRDS(name)
     # verification of the integration
     print(table(sobj$orig.ident))
@@ -73,7 +73,6 @@ get_seurat <- function(name) {
     # 8178      9816
     print(head(sobj, n=2))
     return(sobj)
-    
 }
 
 # get QC violin plots
@@ -92,10 +91,19 @@ plot_violinQC <- function(seuratOBJ, sfeature, stitle) {
 
 
 
-# load pre-existing seurat objects
-if (count_mtx_type=='data_counts') { s_sample <- 'seurat.combined.data_counts_PCA_CCA' } else { s_sample <- 'seurat.combined.norm_counts_PCA_CCA' }
-rds_name <- here('processed-data/04_merge_seurats', paste0(s_sample, '.rds'))
-# ~/seurat.combined.data_counts_PCA_CCA.rds"
+##### load pre-existing Seurat objects
+
+## Compose Seurat object name
+if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.combined.data_counts_PCA' } else { Seurat_base_name <- 'seurat.combined.norm_counts_PCA' }
+if (Seurat_reduction=='CCA') {
+  rds_name <- here('processed-data/04_merge_seurats', paste0(Seurat_base_name, '_CCA.rds'))
+} else {
+  rds_name <- here('processed-data/04_merge_seurats', paste0(Seurat_base_name, '_Harmony.rds'))
+}
+rds_name
+# ~/seurat.combined.data_counts_PCA_Harmony.rds
+# ~/seurat.combined.data_counts_PCA_CCA.rds
+
 SeuratOBJ <- get_seurat(rds_name)
 # var. for testing: SeuratOBJ2 <- SeuratOBJ
 # An object of class Seurat 
@@ -128,19 +136,15 @@ colnames(SeuratOBJ@meta.data)
 oldIdent <- levels(Idents(SeuratOBJ))
 # [1] "0"  "1"  "2"  "3"  "4"  "5"  "6"  "7"  "8"  "9"  "10" "11" "12" "13" "14" "15" "16" "17" "18"
 
-newIdent <- paste("C", 0:18, sep = "_")
+newIdent <- paste("C", 0:(length(oldIdent)-1), sep = "_")
 # [1] "C_0"  "C_1"  "C_2"  "C_3"  "C_4"  "C_5"  "C_6"  "C_7"  "C_8"  "C_9"  "C_10" "C_11" "C_12" "C_13" "C_14" "C_15"
 # [17] "C_16" "C_17" "C_18
-
-# count cells by clusters
-table(Idents(SeuratOBJ))
-# 0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17   18 
-# 4122 1625 1615 1330 1311 1250 1100 1026  821  787  683  565  564  515  273  163  136   75   33 
 
 # rename clusters to make them more readable
 # require scCustomize/Wrapper funtion to rename clusters
 SeuratOBJ <- Rename_Clusters(SeuratOBJ, new_idents = newIdent,
                          meta_col_name = "seurat_clusters.renamed")
+# count cells by clusters
 table(Idents(SeuratOBJ))
 # C_0  C_1  C_2  C_3  C_4  C_5  C_6  C_7  C_8  C_9 C_10 C_11 C_12 C_13 C_14 C_15 C_16 C_17 C_18 
 # 4122 1625 1615 1330 1311 1250 1100 1026  821  787  683  565  564  515  273  163  136   75   33 
@@ -249,7 +253,8 @@ SeuratOBJ@assays
 
 aggregate_ifnb <- AggregateExpression(SeuratOBJ, 
                                       assays = 'RNA',
-                                      group.by = c("orig.ident", "seurat_clusters.renamed"), 
+                                      #group.by = c("orig.ident", "seurat_clusters.renamed"), 
+                                      group.by = c("orig.ident", "seurat_clusters"), 
                                       return.seurat = TRUE)
 # Defaults to: normalization.method = "LogNormalize", scale.factor = 10000
 # If return.seurat = TRUE, aggregated values are placed in the 'counts' layer of the returned object
@@ -276,13 +281,13 @@ head(DEG.response, n = 5)
 # MAGI2      0 -0.7831094 0.142 0.748         0     C_0  MAGI2
 
 
-cvs_name <- paste0(s_sample, '_Allmarkers.csv')
+cvs_name <- paste0(Seurat_base_name,'_', Seurat_reduction, '_Allmarkers.csv')
 cvs_name <- here('processed-data/06_pseudobulking/csv_files', cvs_name)
 write.csv(DEG.response, cvs_name, row.names=FALSE)
 # ~/processed-data/05_DiffExpr_Clustering_Seurat/csv_files/seurat.combined.data_counts_PCA_CCA_Allmarkers.csv"
 
 ## Save integrated object with DEG calculated
-rds_name <- paste0(s_sample, '_pseudobulk.rds')
+rds_name <- paste0(Seurat_base_name,'_', Seurat_reduction, '_pseudobulk.rds')
 rds_name <- here('processed-data/06_pseudobulking', rds_name)
 # file name: seurat.combined.data_counts_PCA_CCA_pseudobulk.rds
 saveRDS(SeuratOBJ, file = rds_name)
