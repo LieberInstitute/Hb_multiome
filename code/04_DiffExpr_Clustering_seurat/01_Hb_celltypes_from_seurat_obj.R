@@ -95,8 +95,8 @@ prefix_name <- paste0(prefix_name, n_match_slice, '.csv')    # all_gm20.csv
 s_sample <- ''
 count_mtx_type <- 'data_counts'
 #count_mtx_type <- 'norm_counts' 
-Seurat_reduction <- 'CCA'
-#Seurat_reduction <- 'Harmony'
+#Seurat_reduction <- 'CCA'
+Seurat_reduction <- 'Harmony'
 
 if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.combined.data_counts_PCA' } else { Seurat_base_name <- 'seurat.combined.norm_counts_PCA' }
 
@@ -107,14 +107,14 @@ if (Seurat_reduction=='CCA') {
   rds_name <- here('processed-data/02_merge_seurats', paste0(Seurat_base_name, '_Harmony.rds'))
 }
 rds_name
-#Ex. ~/Hb_multiome/processed-data/02_merge_seurats/seurat.combined.data_counts_PCA_CCA.rds"
+# Ex. ~/Hb_multiome/processed-data/02_merge_seurats/seurat.combined.data_counts_PCA_CCA.rds"
+# Ex. ~/seurat.combined.data_counts_PCA_Harmony.rds
 
 ## Load Seurat Integrated with cluster information
 SeuratOBJ <- get_seurat(rds_name)
 SeuratOBJ@reductions
 
-#SeuratOBJ@reductions$integrated.cca
-# SeuratOBJ@reductions$integrated.cca
+# Ex. SeuratOBJ@reductions$integrated.cca
 # A dimensional reduction object with key integratedcca_ 
 # Number of dimensions: 50 
 # Number of cells: 17994 
@@ -138,7 +138,7 @@ df_mdT <- as.data.frame(mdT)
 cvs_name <- paste0(Seurat_base_name, '_', Seurat_reduction, '_cluster_info.csv')
 # > cvs_name
 # [1] "seurat.combined.data_counts_PCA_CCA_cluster_info.csv"
-write.csv(df_mdT, here('processed-data/05_DiffExpr_Clustering_Seurat', cvs_name))
+write.csv(df_mdT, here('processed-data/04_DiffExpr_Clustering_seurat', cvs_name))
 
 ## extract unique clusters in ascending order
 clusters <- as.integer(levels(unique(SeuratOBJ$seurat_clusters)))
@@ -155,17 +155,17 @@ message('Looking gene markers for ', length(clusters), ' clusters for sample ', 
 ## Extract DGE genes for all clusters for the given sample
 
 ## Read path to cellranger-arc DGE clusters
-path_cellranger_DGE_clust_df <- here('processed-data/06_pseudobulking/csv_files',
+path_cellranger_DGE_clust_df <- here('processed-data/03_pseudobulking/csv_files',
                                      paste0(Seurat_base_name, '_',Seurat_reduction, '_Allmarkers.csv'))
 path_cellranger_DGE_clust_df     
 # ~/seurat.combined.data_counts_PCA_CCA_Allmarkers.csv
 seurat_clust <- as.data.frame(read.csv(path_cellranger_DGE_clust_df, header = TRUE))
 head(seurat_clust, n=3)
 # Seurat output from FindAllmarkers()
-#     X     p_val  avg_log2FC pct.1 pct.2 p_val_adj cluster   gene
-# 1 MT-ND4     0   2.971627 0.890 0.870         0       0 MT-ND4
-# 2 MT-ND2     0   2.949543 0.765 0.735         0       0 MT-ND2
-# 3 MT-CYB     0   2.705863 0.789 0.804         0       0 MT-CYB
+# p_val avg_log2FC pct.1 pct.2 p_val_adj cluster   gene
+# 1     0  -1.836151 0.078 0.736         0     C_0  NPAS3
+# 2     0  -1.188384 0.176 0.830         0     C_0    QKI
+# 3     0  -1.678080 0.068 0.710         0     C_0 ZBTB20
 
 ## Subset columns of interest
 seurat_clust_sub  <- select(seurat_clust, gene,  p_val_adj, cluster) 
@@ -254,9 +254,9 @@ head(all_gene_match, n=3)
 # 2 PDGFRA         0       4 oligodendrocyte_precursor
 # 3   VCAN         0       4 oligodendrocyte_precursor
 
-path_cellranger_clusters_markers <- here('processed-data/04_DiffExpr_Clustering_seurat', paste0(Seurat_base_name,'_cell_types_', prefix_name))
-# ~/seurat.combined.data_counts_cell_types_all_gm20.csv"
-write.csv(all_gene_match, path_cellranger_clusters_markers, row.names=TRUE)
+path_cellranger_clusters_markers <- here('processed-data/04_DiffExpr_Clustering_seurat', paste0(Seurat_base_name, '_', Seurat_reduction, '_cell_types_', prefix_name))
+# ~/seurat.combined.data_counts_PCA_CCA_cell_types_all_gm20.csv
+write.csv(all_gene_match, path_cellranger_clusters_markers, row.names=FALSE)
 
 message(' Cell type identification in clusters done!')
 
