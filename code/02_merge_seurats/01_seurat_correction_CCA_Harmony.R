@@ -6,10 +6,10 @@
 ## Last.Adaptation: xxx
 ##
 ## Input: Seurat RDS Object generated with 01_preprocessing_GEX_ATAC.R
-## Output:  New Seurat combined object
+## Output:  New Seurat combined object: CCA and Harmony
 ##          Basic plots for reference after correction    
 ##
-## NOTES:
+## NOTES: 30G free mem recommended for 20K cells
 ## For slurm env: runsrun --x11 --pty --partition=interactive bash
 ########################################################################
 
@@ -35,12 +35,12 @@ if (!packageVersion("Seurat")=='4.9.9.9060') {
     message('Current available repository on: https://satijalab.org/seurat/articles/install.html  ') }
 
 # Check if processed_data directory exists, if not create it
-if (!dir.exists(here("processed-data/04_merge_seurats/"))) {
-    dir.create(here("processed-data/04_merge_seurats/"))
+if (!dir.exists(here("processed-data/02_merge_seurats/"))) {
+    dir.create(here("processed-data/02_merge_seurats/"))
 }
 # Check if plot directory exists, if not create it
-if (!dir.exists(here("plots/04_merge_seurats/"))) {
-    dir.create(here("plots/04_merge_seurats/"))
+if (!dir.exists(here("plots/02_merge_seurats/"))) {
+    dir.create(here("plots/02_merge_seurats/"))
 }
 
 source(here("code/functions_custom", "remote_plot_functions.R"))    # Call to plot GEX assay
@@ -55,7 +55,7 @@ count_mtx_type <- 'data_counts'
 ## load pre-existing Seurat
 get_seurat <- function(name) {
 
-        #Ex. /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/04_merge_seurats/seurat.combined.data_counts_PCA.rds
+        #Ex. /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/02_merge_seurats/seurat.combined.data_counts_PCA.rds
     sobj <- readRDS(name)
     # verification of the integration
     print(table(sobj$orig.ident))
@@ -87,21 +87,21 @@ plot_clust <- function(sobj, f_name, reduct, ga2) {
     p1 <- DimPlot(sobj, 
                   reduction = reduct, group.by = c("orig.ident", ga2))
     png_file <- paste0(f_name,'_dimplot.png')
-    png_name <- here('plots/04_merge_seurats', png_file)  
+    png_name <- here('plots/02_merge_seurats', png_file)  
     ggsave(p1, filename = png_name, height = 5, width = 10)
     
     # visualize the two conditions side-by-side
     p1 <- DimPlot(sobj, 
                   reduction = reduct, split.by = "orig.ident")
     png_file <- paste0(f_name,'_dimplot_splitted.png')
-    png_name <- here('plots/04_merge_seurats', png_file)  
+    png_name <- here('plots/02_merge_seurats', png_file)  
     ggsave(p1, filename = png_name, height = 5, width = 10)
     
 }
 
 
 # Directory to save variable features 
-dir <- file.path(here('processed-data/04_merge_seurats/csv_files/')) 
+dir <- file.path(here('processed-data/02_merge_seurats/csv_files/')) 
 if (!dir.exists(dir)) dir.create(dir)
 
 ## save cvs file with variable features in each reduction 
@@ -171,7 +171,7 @@ unique(sapply(X = strsplit(colnames(SeuratOBJ.combined), split = "_"), FUN = "["
 # [5] "S2_Hb_TTTGTTGGTTTAGTCC-1" "S2_Hb_TTTGTTGGTTTGCGCC-1"
 
 # Save RDS Object
-rds_name <- here('processed-data/04_merge_seurats', paste0(s_sample, '.rds'))
+rds_name <- here('processed-data/02_merge_seurats', paste0(s_sample, '.rds'))
 # .../seurat.combined.data_counts.rds"
 saveRDS(SeuratOBJ.combined, file = rds_name)
 message('Seurat combined saved in ', rds_name)   
@@ -183,7 +183,7 @@ message('Seurat combined saved in ', rds_name)
 p1 <- plot_violinQC(SeuratOBJ.combined, c("nCount_RNA", "nFeature_RNA", "percent.mt"), s_sample) 
 #p1 <- VlnPlot(SeuratOBJ.combined, features = c("nCount_RNA", "nFeature_RNA", "percent.mt"), group.by = "orig.ident") 
 png_file <- paste0(s_sample, '_Vplots_GEX.png')
-png_name <- here('plots/04_merge_seurats', png_file)  
+png_name <- here('plots/02_merge_seurats', png_file)  
 ggsave(p1, filename = png_name, height = 5, width = 7)
 
 # Plot Genes and UMIs by density per cell 
@@ -200,7 +200,7 @@ p1 <- df_genes_per_cell %>%
     ggtitle("Genes density by cell") 
 
 png_file <- paste0(s_sample, '_Genes_Density.png')
-png_name <- here('plots/04_merge_seurats', png_file)  
+png_name <- here('plots/02_merge_seurats', png_file)  
 ggsave(p1, filename = png_name, height = 4, width = 5)
 message('UMI/Counts by MT plot saved!')  
 
@@ -217,7 +217,7 @@ p1 <- df_genes_per_cell %>%
     ggtitle("Genes distribution by cell")
 
 png_file <- paste0(s_sample, '_Genes_Distribution.png')
-png_name <- here('plots/04_merge_seurats', png_file)  
+png_name <- here('plots/02_merge_seurats', png_file)  
 ggsave(p1, filename = png_name, height = 4, width = 5)
 message('UMI/Counts by MT plot saved!')  
 
@@ -239,7 +239,7 @@ p1 <- df_genes_per_cell %>%
     ggtitle('UMIs per Genes by MT levels')
 
 png_file <- paste0(s_sample, '_UMIS_per_MT.png')
-png_name <- here('plots/04_merge_seurats', png_file)  
+png_name <- here('plots/02_merge_seurats', png_file)  
 ggsave(p1, filename = png_name, height = 4, width = 5)
 message('UMI/Counts by MT plot saved!')  
 
@@ -253,7 +253,7 @@ message('UMI/Counts by MT plot saved!')
 
 ### Start from here / load pre-existing combined Seurat objects
 if (count_mtx_type=='data_counts') { s_sample <- 'seurat.combined.data_counts' } else { s_sample <- 'seurat.combined.norm_counts' }
-rds_name <- here('processed-data/04_merge_seurats', paste0(s_sample, '.rds'))
+rds_name <- here('processed-data/02_merge_seurats', paste0(s_sample, '.rds'))
 SeuratOBJ.combined <- get_seurat(rds_name)
 
 # verification of the integration
@@ -296,7 +296,7 @@ SeuratOBJ.combined@reductions
 
 p1 <- ElbowPlot(SeuratOBJ.combined)
 png_file <- paste0(s_sample, '_PCAelbow.png')
-png_name <- here('plots/04_merge_seurats', png_file)  
+png_name <- here('plots/02_merge_seurats', png_file)  
 ggsave(p1, filename = png_name, height = 4, width = 5)
 
 
@@ -319,11 +319,11 @@ plot_clust(SeuratOBJ.combined, paste0(s_sample, '_umap.unintegrated_'), 'umap.un
 # visualize more variable features in a heatmap
 p1 <- DimHeatmap(SeuratOBJ.combined, reduction = 'pca', nfeatures = 30)
 png_file <- paste0(s_sample, '_umap.unintegrated_pca_heatmap.png')
-png_name <- here('plots/04_merge_seurats', png_file)
+png_name <- here('plots/02_merge_seurats', png_file)
 ggsave(p1, filename = png_name) #, height = 5, width = 5
 
 # Save RDS Object
-rds_name <- here('processed-data/04_merge_seurats', paste0(s_sample, '_PCA.rds'))
+rds_name <- here('processed-data/02_merge_seurats', paste0(s_sample, '_PCA.rds'))
 # .../seurat.combined.data_counts_PCA.rds
 saveRDS(SeuratOBJ.combined, file = rds_name)
 message('Seurat combined saved in ', rds_name)   
@@ -343,7 +343,7 @@ message('Seurat combined saved in ', rds_name)
 
 ### Start from here / load pre-existing combined Seurat objects
 if (count_mtx_type=='data_counts') { s_sample <- 'seurat.combined.data_counts' } else { s_sample <- 'seurat.combined.norm_counts' }
-rds_name <- here('processed-data/04_merge_seurats', paste0(s_sample, '_PCA.rds'))   # eurat.combined.raw_PCA.rds
+rds_name <- here('processed-data/02_merge_seurats', paste0(s_sample, '_PCA.rds'))   # eurat.combined.raw_PCA.rds
 #SeuratOBJ.combined <- get_seurat(rds_name)
 #table(SeuratOBJ.combined$`orig.ident`)
 # S1_Hb_KDM S2_Hb_KDM 
@@ -404,11 +404,11 @@ plot_clust(SeuratOBJ.combined, paste0(s_sample, '_umap.integrated.cca'), 'umap',
 # visualize more variable features in a heatmap
 p1 <- DimHeatmap(SeuratOBJ.combined, reduction = 'integrated.cca', nfeatures = 30)
 png_file <- paste0(s_sample, '_integrated.cca_heatmap.png')
-png_name <- here('plots/04_merge_seurats', png_file)
+png_name <- here('plots/02_merge_seurats', png_file)
 ggsave(p1, filename = png_name, height = 5, width = 10)
 
 
-rds_name <- here('processed-data/04_merge_seurats', paste0(s_sample, '_PCA_CCA.rds'))
+rds_name <- here('processed-data/02_merge_seurats', paste0(s_sample, '_PCA_CCA.rds'))
 # .../seurat.combined.data_counts_PCA_CCA.rds
 saveRDS(SeuratOBJ.combined, file = rds_name)
 message('Seurat combined saved in ', rds_name)   
@@ -429,7 +429,7 @@ message('Seurat combined saved in ', rds_name)
 
 ### Start from here / load pre-existing Seurat combined objects
 if (count_mtx_type=='data_counts') { s_sample <- 'seurat.combined.data_counts' } else { s_sample <- 'seurat.combined.norm_counts' }
-rds_name <- here('processed-data/04_merge_seurats', paste0(s_sample, '_PCA.rds'))   # eurat.combined.raw_PCA.rds
+rds_name <- here('processed-data/02_merge_seurats', paste0(s_sample, '_PCA.rds'))   # eurat.combined.raw_PCA.rds
 SeuratOBJ.combined <- get_seurat(rds_name)
 table(SeuratOBJ.combined$`orig.ident`)
 
@@ -495,11 +495,11 @@ plot_clust(SeuratOBJ.combined, paste0(s_sample, '_umap.integrated.harmony'), 'um
 p1 <- DimHeatmap(SeuratOBJ.combined, reduction = 'integrated.harmony', nfeatures = 30)     # Error in Loadings(object = object, projected = projected, ...)[, dim,  :
 #DimHeatmap(SeuratOBJ.combined, reduction = 'integrated.harmony', dims = 1, cells = 500, balanced = TRUE)
 png_file <- paste0(s_sample, '_integrated.cca_pca_heatmap.png')
-png_name <- here('plots/04_merge_seurats', png_file)
+png_name <- here('plots/02_merge_seurats', png_file)
 ggsave(p1, filename = png_name, height = 5, width = 10)
 
 
-rds_name <- here('processed-data/04_merge_seurats', paste0(s_sample, '_PCA_Harmony.rds'))
+rds_name <- here('processed-data/02_merge_seurats', paste0(s_sample, '_PCA_Harmony.rds'))
 # .../seurat.combined.data_counts_PCA_Harmony.rds
 saveRDS(SeuratOBJ.combined, file = rds_name)
 message('Seurat combined saved in ', rds_name)   
