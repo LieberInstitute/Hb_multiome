@@ -22,8 +22,8 @@ library(here)
 here::here()
 
 # Check if processed_data directory exists, if not create it
-if (!dir.exists(here("processed-data/05_DiffExpr_Clustering/"))) {
-    dir.create(here("processed-data/05_DiffExpr_Clustering/"))
+if (!dir.exists(here("processed-data/04_DiffExpr_Clustering_seurat/"))) {
+    dir.create(here("processed-data/04_DiffExpr_Clustering_seurat/"))
 }
 
 source(here("code/functions_custom", "remote_DGE_marker_gene_lists.R"))       # Call functions to read paths
@@ -220,7 +220,7 @@ head(all_gene_match, n=3)
 # 2 PDGFRA         0       4 oligodendrocyte_precursor
 # 3   VCAN         0       4 oligodendrocyte_precursor
 
-path_cellranger_clusters_markers <- here('processed-data/05_DiffExpr_Clustering', paste0(s_sample,'_cell_types_', prefix_name))
+path_cellranger_clusters_markers <- here('processed-data/04_DiffExpr_Clustering_seurat', paste0(s_sample,'_cell_types_', prefix_name))
 # ~/seurat.combined.data_counts_cell_types_all_gm20.csv"
 write.csv(all_gene_match, path_cellranger_clusters_markers, row.names=TRUE)
 
