@@ -1,5 +1,5 @@
 ########################################################################
-## Aggregate expression for RNA assay for CCA and Harmony correction
+## Pseudo bulk with Aggregate expression (from Seurat) for RNA assay for CCA and Harmony reductions
 ## Authors. CSC
 ## Date. March 5th, 2024
 ## Last.Adaptation: xxx
@@ -7,7 +7,7 @@
 ## Input: Seurat integrated object with samples S1 and S2 after CCA correction
 ## Output:  
 ##
-## NOTES:
+## NOTES: require ~30G mem
 ## For slurm env: runsrun --x11 --pty --partition=interactive bash
 ########################################################################
 
@@ -41,16 +41,16 @@ if (!packageVersion("Seurat")=='4.9.9.9060') {
     message('Current available repository on: https://satijalab.org/seurat/articles/install.html  ') }
 
 # Check if processed_data directory exists, if not create it
-if (!dir.exists(here("processed-data/06_pseudobulking/"))) {
-    dir.create(here("processed-data/06_pseudobulking/"))
+if (!dir.exists(here("processed-data/03_pseudobulking/"))) {
+    dir.create(here("processed-data/03_pseudobulking/"))
 }
 # Check if plot directory exists, if not create it
-if (!dir.exists(here("plots/06_pseudobulking/"))) {
-    dir.create(here("plots/06_pseudobulking/"))
+if (!dir.exists(here("plots/03_pseudobulking/"))) {
+    dir.create(here("plots/03_pseudobulking/"))
 }
 # Check if directory to store results exists, if not create it
-if (!dir.exists(here("processed-data/06_pseudobulking/csv_files"))) {
-  dir.create(here("processed-data/06_pseudobulking/csv_files"))
+if (!dir.exists(here("processed-data/03_pseudobulking/csv_files"))) {
+  dir.create(here("processed-data/03_pseudobulking/csv_files"))
 }
 
 #source(here("code/functions_custom", "remote_plot_functions.R"))    # Call to plot GEX assay
@@ -96,9 +96,9 @@ plot_violinQC <- function(seuratOBJ, sfeature, stitle) {
 ## Compose Seurat object name
 if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.combined.data_counts_PCA' } else { Seurat_base_name <- 'seurat.combined.norm_counts_PCA' }
 if (Seurat_reduction=='CCA') {
-  rds_name <- here('processed-data/04_merge_seurats', paste0(Seurat_base_name, '_CCA.rds'))
+  rds_name <- here('processed-data/02_merge_seurats', paste0(Seurat_base_name, '_CCA.rds'))
 } else {
-  rds_name <- here('processed-data/04_merge_seurats', paste0(Seurat_base_name, '_Harmony.rds'))
+  rds_name <- here('processed-data/02_merge_seurats', paste0(Seurat_base_name, '_Harmony.rds'))
 }
 rds_name
 # ~/seurat.combined.data_counts_PCA_Harmony.rds
@@ -282,19 +282,19 @@ head(DEG.response, n = 5)
 
 
 cvs_name <- paste0(Seurat_base_name,'_', Seurat_reduction, '_Allmarkers.csv')
-cvs_name <- here('processed-data/06_pseudobulking/csv_files', cvs_name)
+cvs_name <- here('processed-data/03_pseudobulking/csv_files', cvs_name)
 write.csv(DEG.response, cvs_name, row.names=FALSE)
 # ~/processed-data/05_DiffExpr_Clustering_Seurat/csv_files/seurat.combined.data_counts_PCA_CCA_Allmarkers.csv"
 
 ## Save integrated object with DEG calculated
 rds_name <- paste0(Seurat_base_name,'_', Seurat_reduction, '_pseudobulk.rds')
-rds_name <- here('processed-data/06_pseudobulking', rds_name)
+rds_name <- here('processed-data/03_pseudobulking', rds_name)
 # file name: seurat.combined.data_counts_PCA_CCA_pseudobulk.rds
 saveRDS(SeuratOBJ, file = rds_name)
 message('Seurat combined saved in ', rds_name)   
 
 
-# All this chunck moved to next script. CSC
+# All this chunk moved to next script. CSC
 
 # ######################. Several visualizations  ######################
 # 
@@ -354,7 +354,7 @@ message('Seurat combined saved in ', rds_name)
 # 
 # 
 # png_file <- paste0(s_sample, '_integrated.cca_pca_heatmap.png')
-# png_name <- here('plots/04_merge_seurats', png_file)
+# png_name <- here('plots/02_merge_seurats', png_file)
 # ggsave(p1, filename = png_name, height = 5, width = 10)
 
 
