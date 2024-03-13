@@ -192,7 +192,7 @@ table(SeuratOBJ_Hb_all_pseudobulked$seurat_clusters)
 ## plot the pseudo bulk 
 
 pdf_file <- paste0(Seurat_base_name, '_', Seurat_reduction, '_DoHeatmap_pseudobulk.pdf')
-pdf_name <- here('plots/04_DiffExpr_Clustering_seurat', pdf_file)
+pdf_name <- here('plots/03_pseudobulking', pdf_file)
 pdf(file = pdf_name)
 # ~/seurat.combined.data_counts_PCA_Harmony_DoHeatmap_pseudobulk.pdf
 
