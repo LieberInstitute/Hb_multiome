@@ -1,14 +1,14 @@
 ########################################################################
+
 ## Pseudo bulk with Aggregate expression (from Seurat) for RNA assay for CCA and Harmony reductions
-## Authors. CSC
+## Authors. CSC/lcollado
 ## Date. March 5th, 2024
-## Last.Adaptation: xxx
 ##
-## Input: Seurat integrated object with samples S1 and S2 after CCA correction
-## Output:  
+## Input: Seurat integrated object with samples S1 and S2 
+## Output: Seurat pseudobulked and heatmap of the correlation over specific marker genes  
 ##
-## NOTES: require ~30G mem
-## For slurm env: runsrun --x11 --pty --partition=interactive bash
+## NOTES: require ~20G mem
+
 ########################################################################
 
 library('Seurat')                                 # 4.9.9.9045 2023-05-17 [1] Github (satijalab/seurat@7d1094c)
@@ -19,17 +19,7 @@ library('metap')
 library('scCustomize')
 library('magrittr')
 library('tidyverse')
-# for a much faster version to run FindMarkers() install these packages:
-# install.packages('devtools')
-# devtools::install_github('immunogenomics/presto')
-library('presto')
-## Packages to plot
-library('ggplot2')
-library('patchwork')
-library('cowplot')
-theme_set(theme_cowplot())
 
-#library(SeuratDisk)                             
 library(here)
 
 here::here()
@@ -48,13 +38,7 @@ if (!dir.exists(here("processed-data/03_pseudobulking/"))) {
 if (!dir.exists(here("plots/03_pseudobulking/"))) {
     dir.create(here("plots/03_pseudobulking/"))
 }
-# Check if directory to store results exists, if not create it
-if (!dir.exists(here("processed-data/03_pseudobulking/csv_files"))) {
-  dir.create(here("processed-data/03_pseudobulking/csv_files"))
-}
 
-#source(here("code/functions_custom", "remote_plot_functions.R"))    # Call to plot GEX assay
-#source(here("code/functions_custom", "remote_filtering_functions.R"))   # Call functions to subset the Seurat object
 
 ########################    Initials ########################  
 
@@ -75,21 +59,6 @@ get_seurat <- function(name) {
     return(sobj)
 }
 
-# get QC violin plots
-plot_violinQC <- function(seuratOBJ, sfeature, stitle) {
-    p1 <- VlnPlot(object = seuratOBJ, features = sfeature, 
-                  group.by = 'orig.ident', pt.size = 0) & geom_boxplot() &
-        theme(legend.position = 'none',
-              axis.text.x = element_text(angle=0, hjust=1, size=8),  #10
-              axis.text.y = element_text(size=8), 
-              axis.title.x = element_blank(),
-              axis.title.y = element_blank()) #&
-    #labs(title = "", x = 'Samples', y ="")
-    ggtitle(stitle)
-    return(p1)
-}
-
-
 
 ##### load pre-existing Seurat objects
 
@@ -104,265 +73,144 @@ rds_name
 # ~/seurat.combined.data_counts_PCA_Harmony.rds
 # ~/seurat.combined.data_counts_PCA_CCA.rds
 
+## Load Seurat object
 SeuratOBJ <- get_seurat(rds_name)
-# var. for testing: SeuratOBJ2 <- SeuratOBJ
 # An object of class Seurat 
 # 36601 features across 17994 samples within 1 assay 
 # Active assay: RNA (36601 features, 2000 variable features)
 # 3 layers present: data, counts, scale.data
 # 4 dimensional reductions calculated: pca, umap.unintegrated, integrated.cca, umap
 
-# verification of the integration
+## verify object
 table(SeuratOBJ$orig.ident)
-
-
 # S1_Hb_KDM S2_Hb_KDM 
 # 8178      9816 
 head(colnames(SeuratOBJ))
 tail(colnames(SeuratOBJ))
 colnames(SeuratOBJ@meta.data)
-# [1] "orig.ident"                 "atac_peak_region_fragments"
-# [3] "atac_fragments"             "nCount_RNA"                
-# [5] "nFeature_RNA"               "log10GenesPerUMI"          
-# [7] "percent.mt"                 "percent.ribo"              
-# [9] "MTRatio"                    "unintegrated_clusters"     
-# [11] "seurat_clusters"            "RNA_snn_res.1"   
 
 
 
-######################  Customize clusters  ######################
-
-
-oldIdent <- levels(Idents(SeuratOBJ))
-# [1] "0"  "1"  "2"  "3"  "4"  "5"  "6"  "7"  "8"  "9"  "10" "11" "12" "13" "14" "15" "16" "17" "18"
-
-newIdent <- paste("C", 0:(length(oldIdent)-1), sep = "_")
-# [1] "C_0"  "C_1"  "C_2"  "C_3"  "C_4"  "C_5"  "C_6"  "C_7"  "C_8"  "C_9"  "C_10" "C_11" "C_12" "C_13" "C_14" "C_15"
-# [17] "C_16" "C_17" "C_18
-
-# rename clusters to make them more readable
-# require scCustomize/Wrapper funtion to rename clusters
-SeuratOBJ <- Rename_Clusters(SeuratOBJ, new_idents = newIdent,
-                         meta_col_name = "seurat_clusters.renamed")
-# count cells by clusters
-table(Idents(SeuratOBJ))
-# C_0  C_1  C_2  C_3  C_4  C_5  C_6  C_7  C_8  C_9 C_10 C_11 C_12 C_13 C_14 C_15 C_16 C_17 C_18 
-# 4122 1625 1615 1330 1311 1250 1100 1026  821  787  683  565  564  515  273  163  136   75   33 
-#View(table(Idents(SeuratOBJ)))
-
-head(SeuratOBJ)
-
-
-# ## Trying to change orig.ident meta.data
-# library(stringr)
-# 
-# ## Confirm how many samples do we have
-# # suffixes <- str_extract(string = colnames(SeuratOBJ), pattern = "[:digit:]$")
-# # unique(suffixes)
-# 
-# unique(SeuratOBJ@meta.data$orig.ident)
-# 
-# # Create dataframe by sample that contains matching orig.ident code
-# meta_by_sample <- tibble::tribble(
-#   ~orig.ident,  ~sample_name,
-#   1, "S1_Hb",
-#   2, "S2_Hb" 
-# )
-# 
-# # Change orig.ident column to factor so that it can be joined later
-# meta_by_sample$orig.ident <- as.factor(meta_by_sample$orig.ident)
-# 
-# # Pull existing meta data where samples are specified by orig.ident and remove everything but orig.ident
-# OBJ_meta <- SeuratOBJ@meta.data %>% 
-#   select(orig.ident) %>% 
-#   rownames_to_column("barcodes")
-# 
-# # Use full join with object meta data in x position so that by sample meta dataframe is propagated across the by cell meta dataframe from the object.  And then remove orig.ident because it's already present in object meta data.
-# full_new_meta <- full_join(x = OBJ_meta, y = meta_by_sample) %>% 
-#   column_to_rownames("barcodes") %>% 
-#   select(-orig.ident)
-# 
-# # Use AddMetaData to add new meta data to object
-# OBJ <- AddMetaData(object = OBJ, metadata = full_new_meta)
-
-
-
-######################  Identify conserved cell type markers ######################
-## Implementation from: https://satijalab.org/seurat/articles/integration_introduction.html#identify-conserved-cell-type-markers 
+###################### Pseudo bulk expression data  ######################
 
 ## Run in an integrated Seurat
 SeuratOBJ[["RNA"]] <- JoinLayers(SeuratOBJ[["RNA"]])
 
-## unique(Idents(SeuratOBJ))
-## Hb.markers <- FindConservedMarkers(SeuratOBJ, ident.1 = "Clust_0", grouping.var = "orig.ident", verbose = FALSE)
-## head(nk.markers)
-
-# ## Determine the number of clusters
-## https://github.com/satijalab/seurat/issues/6076
-
-# num_clusters <- max(as.numeric(as.character(
-#   SeuratOBJ@meta.data$seurat_clusters)))
-# 
-# ## Cycle through each cluster finding the conserved markers**
-# ## Store each dataframe of markers in the misc slot**
-# for (i in 0:num_clusters) {
-#   SeuratOBJ@misc$temp <- FindConservedMarkers(SeuratOBJ, ident.1 = i, grouping.var = "orig.ident", min.cells.group = 0)
-#   names(gene.conditions@misc)[names(gene.conditions@misc)=="temp"] <-
-#     paste0(names(gene.conditions), ".cluster_", i, ".markers")
-# }
-
-## Plot conserved cell type markers with Doplot() 
-
-# unique(Idents(SeuratOBJ))
-# markers.to.plot <- c("MMRN1", "HTR2C", "EPHA5", "GPR151", "POU4F1", 
-#                      "AC109466.1", "AC008415.1", "GPR149", "GNG8", "LINC01876", "TLL1", "CD24", "AC004594.1")
-# DotPlot(SeuratOBJ, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8, split.by = "orig.ident") +
-#   RotatedAxis()
-# 
-# DotPlot(SeuratOBJ, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8) +
-#   RotatedAxis()
-
-
-
-######################. Identify differential expressed genes across conditions ######################
-
-## We use AggregateExpression() to aggregate cells of a similar type and condition together to create “pseudobulk” profiles
-
 ## To avoid issue when having few cells need to adjust the minimum number of cells
-## For example, if there is a cluster "15" that has 0 cells, the function will skip that cluster with a warning (that's perfect). Also if the number of cells is between min.cells.groups (default = 3) and 0, an error is thrown and it stops working. That is why I previously remove from the Seurat Object the cells of the clusters with 3 or less cells for each condition/sample. 
+## For example, if there is a cluster "15" that has 0 cells, the function will skip that cluster with a warning (that's perfect). Also if the number of cells is between min.cells.groups (default = 1-3) and 0, an error is thrown and it stops working. That is why I previously remove from the Seurat Object the cells of the clusters with 3 or less cells for each condition/sample. 
 few_cells_samples <- unique(SeuratOBJ@meta.data$orig.ident)
 few_cells <- vector()
 
+# Calculate the minimum number of cells by cluster. In this case is set to 1
+# library(arsenal)
+# sclust <- as.data.frame(SeuratOBJ@meta.data$seurat_clusters)
+# sclust_r <- as.data.frame(SeuratOBJ@meta.data$seurat_clusters.renamed)
+# comparedf(sclust, sclust_r)
+
 for (i in 1:length(few_cells_samples)) {   # remove cellstype w/ less than 1 cells in each sample/condition
-  few_cells_tmp <- table(SeuratOBJ@meta.data$seurat_clusters.renamed[SeuratOBJ@meta.data$orig.ident == few_cells_samples[i]]) <= 1
+  # for testing: i <- 1
+  few_cells_tmp <- table(SeuratOBJ@meta.data$seurat_clusters[SeuratOBJ@meta.data$orig.ident == few_cells_samples[i]]) <= 1
   few_cells_tmp <- names(few_cells_tmp)[few_cells_tmp == "TRUE"]
   few_cells <- c(few_cells,few_cells_tmp)
 }
 
-message(' Clusters with less than 1 cell: ', length(few_cells))
+message(' Number of clusters with >1 cell: ', length(few_cells), '; Cluster ID:', few_cells)
 # > few_cells
 # [1] "18"
 
-clusters <- sort(unique(SeuratOBJ@meta.data$seurat_clusters.renamed))
+clusters <- sort(unique(SeuratOBJ@meta.data$seurat_clusters))
 `%notin%` <- Negate(`%in%`) 
-clusters <- clusters[clusters %notin% few_cells]  # need to check CSC
+clusters <- clusters[clusters %notin% few_cells]
 
-colnames(SeuratOBJ@meta.data)
-SeuratOBJ@assays
-# data, counts, scale.data
+# count cells by clusters
+SeuratOBJ@meta.data$seurat_clusters
+table(Idents(SeuratOBJ))
 
-aggregate_ifnb <- AggregateExpression(SeuratOBJ, 
-                                      assays = 'RNA',
-                                      #group.by = c("orig.ident", "seurat_clusters.renamed"), 
-                                      group.by = c("orig.ident", "seurat_clusters"), 
-                                      return.seurat = TRUE)
+## Set target clusters and genes to aggregate
+## Note that we previously search Habenula marker genes at the top20 DEG for each cluster (out ~/.processed-data/04_DiffExpr_Clustering_seurat/)
+##      - Marker genes comes from Hb_pilot project 
+
+if (Seurat_reduction=='CCA') {
+  clust_selected <- c(8, 15, 18)
+  ## genes selected from Hb_pilot, defined as Hb general, LHb and MHb
+  markers.to.plot <- c("MMRN1", "GPR151", "POU4F1", # Hb
+                       "LINC01876", # LHb
+                       "CD24", "AC004594.1") # MHb
+} else {
+  clust_selected <- c(6, 12, 14, 15)
+  ## genes selected from Hb_pilot, defined as Hb general, LHb and MHb
+  markers.to.plot <- c("MMRN1", "GPR151", "POU4F1", # Hb
+                       "EPHA5", "TLL1", # LHb
+                       "AC109466.1", "AC008415.1", "GPR149", "GNG8", "NEUROD1", 
+                       "RASGRP1", "SLC5A7", "CHRNB3", "SCUBE1", "LINC02143", "CD24") # MHb  
+}  
+
+
+## Subset the clusters and marker genes selected
+SeuratOBJ_Hb_all <- subset(SeuratOBJ, 
+                           subset = seurat_clusters %in% clust_selected)
+
+## look at minimum cells by cluster assigned
+clust_tab <- table(SeuratOBJ_Hb_all$seurat_clusters)
+min(clust_tab[clust_tab > 0])
+# S1:
+# 0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16 
+# 0   0   0   0   0   0 830   0   0   0   0   0 180   0 102  99   0 
+
+## look at minimum cells by cluster assigned by sample
+md <- SeuratOBJ_Hb_all@meta.data %>% as.data.table
+## Apply vertical format to unique cluster with number of umis, arranged by sample and cluster number
+mdT <- md[, .N, by = c("orig.ident", "seurat_clusters")] %>%
+  arrange(., orig.ident, seurat_clusters, .by_group = FALSE)
+df_mdT <- as.data.frame(mdT)
+df_mdT 
+# S1: orig.ident seurat_clusters   N
+# 1  S1_Hb_KDM               6 665
+# 2  S1_Hb_KDM              12 133
+# 3  S1_Hb_KDM              14  29
+# 4  S1_Hb_KDM              15  13
+# 5  S2_Hb_KDM               6 165
+# 6  S2_Hb_KDM              12  47
+# 7  S2_Hb_KDM              14  73
+# 8  S2_Hb_KDM              15  86
+
+
+## perform pseudo bulk 
+# If return.seurat = TRUE, aggregated values are placed in the 'counts' layer of the returned object. The data is then normalized by running NormalizeData on the aggregated counts. ScaleData is then run on the default assay before returning the object.
 # Defaults to: normalization.method = "LogNormalize", scale.factor = 10000
-# If return.seurat = TRUE, aggregated values are placed in the 'counts' layer of the returned object
 
-#aggregate_ifnb
-# An object of class Seurat 
-# 36601 features across 37 samples within 1 assay 
+SeuratOBJ_Hb_all_pseudobulked <- AggregateExpression(SeuratOBJ_Hb_all, return.seurat = TRUE, 
+                                                     group.by = c("seurat_clusters", "orig.ident"))
+# S1: An object of class Seurat 
+# 36601 features across 8 samples within 1 assay 
 # Active assay: RNA (36601 features, 0 variable features)
 # 3 layers present: counts, data, scale.data
-
-table(Idents(SeuratOBJ))
-# C_0  C_1  C_2  C_3  C_4  C_5  C_6  C_7  C_8  C_9 C_10 C_11 C_12 C_13 C_14 C_15 C_16 C_17 C_18 
-# 4122 1625 1615 1330 1311 1250 1100 1026  821  787  683  565  564  515  273  163  136   75   33 
-
-DEG.response <- FindAllMarkers(SeuratOBJ, 
-                               test.use = "wilcox", #'t' for Student's t-test
-                               verbose = TRUE)
-head(DEG.response, n = 5)
-# p_val avg_log2FC pct.1 pct.2 p_val_adj cluster   gene
-# NPAS3      0 -1.8361509 0.078 0.736         0     C_0  NPAS3
-# QKI        0 -1.1883844 0.176 0.830         0     C_0    QKI
-# ZBTB20     0 -1.6780801 0.068 0.710         0     C_0 ZBTB20
-# CADM2      0 -0.6540443 0.229 0.847         0     C_0  CADM2
-# MAGI2      0 -0.7831094 0.142 0.748         0     C_0  MAGI2
+table(SeuratOBJ_Hb_all_pseudobulked$orig.ident)
+table(SeuratOBJ_Hb_all_pseudobulked$seurat_clusters)
 
 
-cvs_name <- paste0(Seurat_base_name,'_', Seurat_reduction, '_Allmarkers.csv')
-cvs_name <- here('processed-data/03_pseudobulking/csv_files', cvs_name)
-write.csv(DEG.response, cvs_name, row.names=FALSE)
-# ~/processed-data/05_DiffExpr_Clustering_Seurat/csv_files/seurat.combined.data_counts_PCA_CCA_Allmarkers.csv"
+## plot the pseudo bulk 
 
-## Save integrated object with DEG calculated
+pdf_file <- paste0(Seurat_base_name, '_', Seurat_reduction, '_DoHeatmap_pseudobulk.pdf')
+pdf_name <- here('plots/04_DiffExpr_Clustering_seurat', pdf_file)
+pdf(file = pdf_name)
+# ~/seurat.combined.data_counts_PCA_Harmony_DoHeatmap_pseudobulk.pdf
+
+p1 <- DoHeatmap(object = SeuratOBJ_Hb_all_pseudobulked, 
+                features=markers.to.plot, label = TRUE, angle=45, group.by = "seurat_clusters",
+                size=4) 
+#p1 + scale_fill_gradientn(limits = c(-2, 2), colours = PurpleAndYellow(), na.value = "white")
+
+dev.off()
+
+
+## Save new Seurat pseudo bulk 
+
 rds_name <- paste0(Seurat_base_name,'_', Seurat_reduction, '_pseudobulk.rds')
 rds_name <- here('processed-data/03_pseudobulking', rds_name)
-# file name: seurat.combined.data_counts_PCA_CCA_pseudobulk.rds
+# file name: ~/.seurat.combined.data_counts_PCA_Harmony_pseudobulk.rds
 saveRDS(SeuratOBJ, file = rds_name)
-message('Seurat combined saved in ', rds_name)   
-
-
-# All this chunk moved to next script. CSC
-
-# ######################. Several visualizations  ######################
-# 
-# markers.to.plot <- c("MMRN1", "HTR2C", "EPHA5", "GPR151", "POU4F1")
-# markers.to.plot <- c("AC109466.1", "AC008415.1", "GPR149", "GNG8")
-# markers.to.plot <- c("LINC01876", "TLL1", "CD24", "AC004594.1")
-# markers.to.plot <- c("HTR2C")
-# 
-# ## Plot DEG in aggregate data
-# 
-# unique(Idents(SeuratOBJ))
-# DotPlot(SeuratOBJ, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8) +
-#   RotatedAxis()
-# # DotPlot(SeuratOBJ, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8, split.by = "orig.ident") +
-# #   RotatedAxis()
-# 
-# # FeaturePlot(SeuratOBJ, features = genes.to.label , split.by = "orig.ident", max.cutoff = 3,
-# #             cols = c("grey","red"), reduction = "integrated.cca")
-# 
-# # Run umap
-# SeuratOBJ <- RunUMAP(SeuratOBJ, dims = 1:30, reduction = "integrated.cca")
-# SeuratOBJ@reductions
-# 
-# # Plot in umap features for LHb/MHb marker genes
-# FeaturePlot(SeuratOB, features = markers.to.plot , split.by = "orig.ident", max.cutoff = 3,
-#             cols = c("grey","red"), reduction = "umap")
-# 
-# # Plot Violin plots for the same LHb/MHb marker genes
-# plots <- VlnPlot(SeuratOBJ, features = markers.to.plot, split.by = "orig.ident", group.by = "seurat_clusters",
-#                  pt.size = 0, combine = FALSE)
-# wrap_plots(plots = plots, ncol = 1)
-# 
-# 
-# DoHeatmap(
-#   SeuratOBJ,
-#   features = NULL,
-#   cells = NULL,
-#   group.by = "orig.ident",
-#   group.bar = TRUE,
-#   group.colors = NULL,
-#   disp.min = -2.5,
-#   disp.max = NULL,
-#   slot = "scale.data",
-#   assay = NULL,
-#   label = TRUE,
-#   size = 5.5,
-#   hjust = 0,
-#   vjust = 0,
-#   angle = 45,
-#   raster = TRUE,
-#   draw.lines = TRUE,
-#   lines.width = NULL,
-#   group.bar.height = 0.02,
-#   combine = TRUE
-# )
-# 
-# 
-# 
-# png_file <- paste0(s_sample, '_integrated.cca_pca_heatmap.png')
-# png_name <- here('plots/02_merge_seurats', png_file)
-# ggsave(p1, filename = png_name, height = 5, width = 10)
-
-
-
-
-
-# INTEGRATION methods for Seurat V5:  https://satijalab.org/seurat/articles/seurat5_integration (Oct 31, 2023)
-# https://satijalab.org/seurat/articles/integration_introduction.html (Nov 16, 2023)
+message('Seurat pseudobulk completed! ')   
 
 
 
@@ -377,44 +225,31 @@ options(width = 120)
 session_info()
 
 
-# # Last modification
-# Sys.time()
-# #"2023-04-04 12:42:26 EDT"
-# proc.time()
-# options(width = 120)
-# session_info()
 # > library("sessioninfo")
 # > print('Reproducibility information:')
 # [1] "Reproducibility information:"
 # > # Last modification
 #   > Sys.time()
-# [1] "2024-03-08 15:31:50 EST"
-# > #"2023-04-04 12:42:26 EDT"
-#   > proc.time()
+# [1] "2024-03-13 13:46:47 EDT"
+# > proc.time()
 # user   system  elapsed 
-# 767.643   98.692 2702.232 
+# 354.683   20.761 1747.221 
 # > options(width = 120)
 # > session_info()
 # 
-# cluster            2.1.6      2023-12-01 [3] CRAN (R 4.3.2)
-# codetools          0.2-19     2023-02-01 [3] CRAN (R 4.3.2)
-# colorspace         2.1-0      2023-01-23 [2] CRAN (R 4.3.2)
-# cowplot          * 1.1.3      2024-01-22 [2] CRAN (R 4.3.2)
-# curl               5.2.0      2023-12-08 [2] CRAN (R 4.3.2)
+# cowplot            1.1.3      2024-01-22 [2] CRAN (R 4.3.2)
 # data.table       * 1.15.0     2024-01-30 [2] CRAN (R 4.3.2)
 # deldir             2.0-2      2023-11-23 [2] CRAN (R 4.3.2)
-# desc               1.4.3      2023-12-10 [2] CRAN (R 4.3.2)
-# devtools           2.4.5      2022-10-11 [1] CRAN (R 4.3.2)
 # digest             0.6.34     2024-01-11 [2] CRAN (R 4.3.2)
 # dotCall64          1.1-1      2023-11-28 [2] CRAN (R 4.3.2)
 # dplyr            * 1.1.4      2023-11-17 [2] CRAN (R 4.3.2)
 # ellipsis           0.3.2      2021-04-29 [2] CRAN (R 4.3.2)
 # fansi              1.0.6      2023-12-08 [2] CRAN (R 4.3.2)
+# farver             2.1.1      2022-07-06 [2] CRAN (R 4.3.2)
 # fastDummies        1.7.3      2023-07-06 [2] CRAN (R 4.3.2)
 # fastmap            1.1.1      2023-02-24 [2] CRAN (R 4.3.2)
 # fitdistrplus       1.1-11     2023-04-25 [2] CRAN (R 4.3.2)
 # forcats          * 1.0.0      2023-01-29 [2] CRAN (R 4.3.2)
-# fs                 1.6.3      2023-07-20 [2] CRAN (R 4.3.2)
 # future             1.33.1     2023-12-22 [2] CRAN (R 4.3.2)
 # future.apply       1.11.1     2023-12-21 [2] CRAN (R 4.3.2)
 # generics           0.1.3      2022-07-05 [2] CRAN (R 4.3.2)
@@ -442,12 +277,12 @@ session_info()
 # janitor            2.2.0      2023-02-02 [1] CRAN (R 4.3.2)
 # jsonlite           1.8.8      2023-12-04 [2] CRAN (R 4.3.2)
 # KernSmooth         2.23-22    2023-07-10 [3] CRAN (R 4.3.2)
+# labeling           0.4.3      2023-08-29 [2] CRAN (R 4.3.2)
 # later              1.3.2      2023-12-06 [2] CRAN (R 4.3.2)
 # lattice            0.22-5     2023-10-24 [3] CRAN (R 4.3.2)
 # lazyeval           0.2.2      2019-03-15 [2] CRAN (R 4.3.2)
 # leiden             0.4.3.1    2023-11-17 [2] CRAN (R 4.3.2)
 # lifecycle          1.0.4      2023-11-07 [2] CRAN (R 4.3.2)
-# limma              3.58.1     2023-10-31 [2] Bioconductor
 # listenv            0.9.1      2024-01-29 [2] CRAN (R 4.3.2)
 # lmtest             0.9-40     2022-03-21 [2] CRAN (R 4.3.2)
 # lubridate        * 1.9.3      2023-09-27 [2] CRAN (R 4.3.2)
@@ -456,7 +291,6 @@ session_info()
 # mathjaxr           1.6-0      2022-02-28 [1] CRAN (R 4.3.2)
 # Matrix             1.6-5      2024-01-11 [3] CRAN (R 4.3.2)
 # matrixStats        1.2.0      2023-12-11 [2] CRAN (R 4.3.2)
-# memoise            2.0.1      2021-11-26 [2] CRAN (R 4.3.2)
 # metap            * 1.9        2023-10-09 [1] CRAN (R 4.3.2)
 # mime               0.12       2021-09-28 [2] CRAN (R 4.3.2)
 # miniUI             0.1.1.1    2018-05-18 [2] CRAN (R 4.3.2)
@@ -470,23 +304,18 @@ session_info()
 # numDeriv           2016.8-1.1 2019-06-06 [2] CRAN (R 4.3.2)
 # paletteer          1.6.0      2024-01-21 [2] CRAN (R 4.3.2)
 # parallelly         1.36.0     2023-05-26 [2] CRAN (R 4.3.2)
-# patchwork        * 1.2.0      2024-01-08 [2] CRAN (R 4.3.2)
+# patchwork          1.2.0      2024-01-08 [2] CRAN (R 4.3.2)
 # pbapply            1.7-2      2023-06-27 [2] CRAN (R 4.3.2)
 # pillar             1.9.0      2023-03-22 [2] CRAN (R 4.3.2)
-# pkgbuild           1.4.3      2023-12-10 [2] CRAN (R 4.3.2)
 # pkgconfig          2.0.3      2019-09-22 [2] CRAN (R 4.3.2)
-# pkgload            1.3.4      2024-01-16 [2] CRAN (R 4.3.2)
 # plotly             4.10.4     2024-01-13 [2] CRAN (R 4.3.2)
 # plotrix            3.8-4      2023-11-10 [2] CRAN (R 4.3.2)
 # plyr               1.8.9      2023-10-02 [2] CRAN (R 4.3.2)
 # png                0.1-8      2022-11-29 [2] CRAN (R 4.3.2)
 # polyclip           1.10-6     2023-09-27 [2] CRAN (R 4.3.2)
 # presto           * 1.0.0      2024-03-08 [1] Github (immunogenomics/presto@31dc97f)
-# processx           3.8.3      2023-12-10 [2] CRAN (R 4.3.2)
-# profvis            0.3.8      2023-05-02 [2] CRAN (R 4.3.2)
 # progressr          0.14.0     2023-08-10 [2] CRAN (R 4.3.2)
 # promises           1.2.1      2023-08-10 [2] CRAN (R 4.3.2)
-# ps                 1.7.6      2024-01-18 [2] CRAN (R 4.3.2)
 # purrr            * 1.0.2      2023-08-10 [2] CRAN (R 4.3.2)
 # qqconf             1.3.2      2023-04-14 [1] CRAN (R 4.3.2)
 # R6                 2.5.1      2021-08-19 [2] CRAN (R 4.3.2)
@@ -499,7 +328,6 @@ session_info()
 # Rdpack             2.6        2023-11-08 [2] CRAN (R 4.3.2)
 # readr            * 2.1.5      2024-01-10 [2] CRAN (R 4.3.2)
 # rematch2           2.1.2      2020-05-01 [2] CRAN (R 4.3.2)
-# remotes            2.4.2.1    2023-07-18 [2] CRAN (R 4.3.2)
 # reshape2           1.4.4      2020-04-09 [2] CRAN (R 4.3.2)
 # reticulate         1.35.0     2024-01-31 [2] CRAN (R 4.3.2)
 # rlang              1.1.3      2024-01-10 [2] CRAN (R 4.3.2)
@@ -527,7 +355,6 @@ session_info()
 # spatstat.random    3.2-2      2023-11-29 [2] CRAN (R 4.3.2)
 # spatstat.sparse    3.0-3      2023-10-24 [2] CRAN (R 4.3.2)
 # spatstat.utils     3.0-4      2023-10-24 [2] CRAN (R 4.3.2)
-# statmod            1.5.0      2023-01-06 [2] CRAN (R 4.3.2)
 # stringi            1.8.3      2023-12-11 [2] CRAN (R 4.3.2)
 # stringr          * 1.5.1      2023-11-14 [2] CRAN (R 4.3.2)
 # survival           3.5-7      2023-08-14 [3] CRAN (R 4.3.2)
@@ -540,8 +367,15 @@ session_info()
 # tidyverse        * 2.0.0      2023-02-22 [2] CRAN (R 4.3.2)
 # timechange         0.3.0      2024-01-18 [2] CRAN (R 4.3.2)
 # tzdb               0.4.0      2023-05-12 [2] CRAN (R 4.3.2)
-# urlchecker         1.0.1      2021-11-30 [2] CRAN (R 4.3.2)
-# usethis            2.2.2      2023-07-06 [2] CRAN (R 4.3.2)
 # utf8               1.2.4      2023-10-22 [2] CRAN (R 4.3.2)
 # uwot               0.1.16     2023-06-29 [2] CRAN (R 4.3.2)
 # vctrs              0.6.5      2023-12-01 [2] CRAN (R 4.3.2)
+# vipor              0.4.7      2023-12-18 [2] CRAN (R 4.3.2)
+# viridisLite        0.4.2      2023-05-02 [2] CRAN (R 4.3.2)
+# withr              3.0.0      2024-01-16 [2] CRAN (R 4.3.2)
+# xtable             1.8-4      2019-04-21 [2] CRAN (R 4.3.2)
+# zoo                1.8-12     2023-04-13 [2] CRAN (R 4.3.2)
+# 
+# [1] /users/csoto/R/4.3.x
+# [2] /jhpce/shared/community/core/conda_R/4.3.x/R/lib64/R/site-library
+# [3] /jhpce/shared/community/core/conda_R/4.3.x/R/lib64/R/library
