@@ -1,11 +1,11 @@
 ########################################################################
-## Plot expression for pseudo bulk RNA assay from CCA and Harmony clusters
+## Plot gene expression for RNA assay from CCA and Harmony clusters
 ## Authors. CSC
 ## Date. March 8th, 2024
 ## Last.Adaptation: xxx
 ##
-## Input: Seurat integrated object with samples S1 and S2 with DEG calculated
-## Output:  
+## Input: Seurat integrated with correction
+## Output: Seurat with pre-selected clusters and multiple plots
 ##
 ## NOTES:
 ## For slurm env: runsrun --x11 --pty --partition=interactive bash
@@ -106,6 +106,11 @@ rds_name
 # Load pre-existing seurat
 SeuratOBJ_Hb  <- get_seurat(rds_name)
 
+## NOTE: Jump to visualizations directly
+
+
+# =============================================================================================================
+
 
 ## USE THIS OF YOU want to plot all the clusters
 
@@ -162,18 +167,13 @@ message(' Gene distribution plots completed! ')
 
 
 
-############## (Jump) PLOT Gene expression for the selected clusters and marker genes  ######################
+###################################.        PLOTS      #################################################
 
 # check the count cells by clusters
 table(Idents(SeuratOBJ_Hb))
 # Ex. Harmony
 # C_6 C_12 C_14 C_15 
 # 830  180  102   99 
-
-
-
-
-
 
 ###################### DoPlot for gene expression across the selected clusters    ######################
 
@@ -219,18 +219,47 @@ Hb_type <- append(Hb_type, list(LHb))
 Hb_type <- append(Hb_type, list(MHb))
 Hb_title_lst <- c('Broad Habenula', 'Lateral Habenula', 'Median Habenula')
 
-#length(Hb_type)
+
+main_title <- paste0("Gene expression across clusters from ", Seurat_reduction)
 #SeuratOBJ_Hb@reductions
 
+# for loop to control numbe of plots per page (set to 3)
 for (x in length(Hb_type)) {
   
-  sub_title2 <- Hb_title_lst[x]
+  sub_title <- Hb_title_lst[x]
   genes.to.plot <- as.vector(unlist(Hb_type[x]))
   
-  p2 <- FeaturePlot(SeuratOBJ_Hb, features = genes.to.plot, split.by = "orig.ident", max.cutoff = 3,
-              cols = c("grey","red"), reduction = "umap") + plot_annotation( title = main_title, subtitle = sub_title2 ) 
-  p2  
+  maxl <- length(genes.to.plot). #max number of plts per page 
   
+  `%+=%` = function(e1,e2) eval.parent(substitute(e1 <- e1 + e2))
+  x1 = 1
+  x2 = 1
+  x2 %+=% 2 ; x2
+    
+  while (x2 == maxl) {
+    if (x2 > maxl) { 
+        x2 <- maxl
+        plot_feat <- genes.to.plot[x1:x2]
+      } else {
+        plot_feat <- genes.to.plot[x1:x2]
+        x2 <- x2 + 1
+        x1 <- x2
+        x2 %+=% 2 ; x2
+      }
+    print(plot_feat)
+    
+    p2 <- FeaturePlot(SeuratOBJ_Hb, features = plot_feat, split.by = "orig.ident", 
+                      reduction = "umap",
+                      label=TRUE, label.size = 2, label.color = "black", repel = TRUE,
+                      ncol = 3) + 
+      plot_layout(ncol = 2, nrow = 3) + 
+      plot_layout(axis_titles = "collect") +
+      plot_annotation( title = main_title, subtitle = sub_title ) 
+      # A patchworked ggplot object if combine = TRUE
+      p2  
+    
+  }
+
 }
 
 #par(par.save)
@@ -244,58 +273,69 @@ dev.off()
 
 pdf_file <- paste0(Seurat_base_name, '_', Seurat_reduction, '_ViolinPlots_Hb.pdf')
 pdf_name <- here('plots/03_pseudobulking', pdf_file)
-pdf(file = pdf_name)
+main_title <- paste0("Gene expression across clusters from ", Seurat_reduction)
 
 ## Plot gene expression across the clusters selected in umap reduction
 
 #Hb_type
-for (x in length(Hb_type)) {
-  
+plot_list = list()
+for (x in 1:length(Hb_type)) {
+
   sub_title2 <- Hb_title_lst[x]
   genes.to.plot <- as.vector(unlist(Hb_type[x]))
   
-  plot_violinQC(SeuratOBJ_Hb, genes.to.plot, sub_title2)
+  #plot_violinQC(SeuratOBJ_Hb, genes.to.plot, sub_title2)
 
   ## Plot Violin plots for the same LHb/MHb marker genes
   Vplots_Hb <- VlnPlot(SeuratOBJ_Hb, features = genes.to.plot, 
-                       group.by = "seurat_clusters", pt.size = 0, combine = FALSE) 
-  + ggtitle(label = main_title, subtitle = sub_title2)
-    # theme(legend.position = 'none',
-    #       axis.text.x = element_text(angle=0, hjust=1, size=8),  
-    #       axis.text.y = element_text(size=8), 
-    #       axis.title.x = element_blank(),
-    #       axis.title.y = element_blank()) #& ggtitle(sub_title2)
-  wrap_plots(Vplots_Hb, ncol = 1)
+                       group.by = "seurat_clusters", pt.size = 0,
+                       ncol = 3, combine = TRUE) + 
+    plot_layout(ncol = 2, nrow = 3) + 
+    plot_layout(axis_titles = "collect") +
+    plot_annotation(title = main_title, subtitle = sub_title2, caption = 'Samples: S1 and S2')
+
+    #plot_annotation( title = main_title, subtitle = sub_title2 ) 
+  plot_list[[x]] <- Vplots_Hb  #wrap_plots(Vplots_Hb, ncol = 1)
   
 }
 
+pdf(file = pdf_name)
+print(plot_list)
 dev.off()
 
 
 
+###################### Violin plot for gene expression across the clusters selected  ###################### 
 
-# DoHeatmap(
-#   SeuratOBJ,
-#   features = NULL,
-#   cells = NULL,
-#   group.by = "orig.ident",
-#   group.bar = TRUE,
-#   group.colors = NULL,
-#   disp.min = -2.5,
-#   disp.max = NULL,
-#   slot = "scale.data",
-#   assay = NULL,
-#   label = TRUE,
-#   size = 5.5,
-#   hjust = 0,
-#   vjust = 0,
-#   angle = 45,
-#   raster = TRUE,
-#   draw.lines = TRUE,
-#   lines.width = NULL,
-#   group.bar.height = 0.02,
-#   combine = TRUE
-# )
+
+pdf_file <- paste0(Seurat_base_name, '_', Seurat_reduction, '_GeneExpr_Heatmap_Hb.pdf')
+pdf_name <- here('plots/03_pseudobulking', pdf_file)
+pdf(file = pdf_name)
+
+DoHeatmap(
+  SeuratOBJ_Hb,
+  features = NULL,
+  cells = NULL,
+  group.by = "orig.ident",
+  group.bar = TRUE,
+  group.colors = NULL,
+  disp.min = -2.5,
+  disp.max = NULL,
+  slot = "scale.data",
+  assay = NULL,
+  label = TRUE,
+  size = 5.5,
+  hjust = 0,
+  vjust = 0,
+  angle = 45,
+  raster = TRUE,
+  draw.lines = TRUE,
+  lines.width = NULL,
+  group.bar.height = 0.02,
+  combine = TRUE
+)
+
+dev.off()
 
 
 ############ Reproducibility information ####################
