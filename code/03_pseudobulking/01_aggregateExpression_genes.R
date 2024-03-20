@@ -4,20 +4,20 @@
 ## Authors. CSC/lcollado
 ## Date. March 5th, 2024
 ##
-## Input: Seurat integrated object with samples S1 and S2 
-## Output: Seurat pseudobulked and heatmap of the correlation over specific marker genes  
+## Input:  Seurat integrated object with integrated samples. Ex. Habenula samples S1 and S2 
+## Output:  (1) Seurat pseudobulked, 
+##          (2) DEG cvs file before pseudobulk, 
+##          (3) DEG cvs file after pseudobulk,
+##          (5) Heatmap(s) for ALL clusters, specific clusters and pre-selected markers
 ##
-## NOTES: require ~20G mem
+## NOTES: recommended ~20G free-mem
 
 ########################################################################
 
 library('Seurat')                                 # 4.9.9.9045 2023-05-17 [1] Github (satijalab/seurat@7d1094c)
-## Additional required packages for aggregation
+## required packages for aggregation
 library('multtest')
 library('metap')
-## Additional required packages for customize clusters
-library('scCustomize')
-library('magrittr')
 library('tidyverse')
 
 library(here)
@@ -37,6 +37,10 @@ if (!dir.exists(here("processed-data/03_pseudobulking/"))) {
 # Check if plot directory exists, if not create it
 if (!dir.exists(here("plots/03_pseudobulking/"))) {
     dir.create(here("plots/03_pseudobulking/"))
+}
+# Check if processed_data directory for DEG exists, if not create it
+if (!dir.exists(here("processed-data/03_pseudobulking/cvs_files_markers/"))) {
+  dir.create(here("processed-data/03_pseudobulking/cvs_files_markers/"))
 }
 
 
@@ -60,10 +64,11 @@ get_seurat <- function(name) {
 }
 
 
-##### load pre-existing Seurat objects
+##### load pre-existing Seurat objects, none pseudo-bulked
 
-## Compose Seurat object name
+## Compose Seurat object base name
 if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.combined.data_counts_PCA' } else { Seurat_base_name <- 'seurat.combined.norm_counts_PCA' }
+
 if (Seurat_reduction=='CCA') {
   rds_name <- here('processed-data/02_merge_seurats', paste0(Seurat_base_name, '_CCA.rds'))
 } else {
@@ -81,33 +86,30 @@ SeuratOBJ <- get_seurat(rds_name)
 # 3 layers present: data, counts, scale.data
 # 4 dimensional reductions calculated: pca, umap.unintegrated, integrated.cca, umap
 
-## verify object
+## Verify object
 table(SeuratOBJ$orig.ident)
 # S1_Hb_KDM S2_Hb_KDM 
 # 8178      9816 
 head(colnames(SeuratOBJ))
 tail(colnames(SeuratOBJ))
 colnames(SeuratOBJ@meta.data)
-
+SeuratOBJ@reductions
 
 
 ###################### Pseudo bulk expression data  ######################
 
 ## Run in an integrated Seurat
+
 SeuratOBJ[["RNA"]] <- JoinLayers(SeuratOBJ[["RNA"]])
 
-## To avoid issue when having few cells need to adjust the minimum number of cells
-## For example, if there is a cluster "15" that has 0 cells, the function will skip that cluster with a warning (that's perfect). Also if the number of cells is between min.cells.groups (default = 1-3) and 0, an error is thrown and it stops working. That is why I previously remove from the Seurat Object the cells of the clusters with 3 or less cells for each condition/sample. 
+#### Calculate the minimum number of cells by cluster. In this case is set to 1
+##      To avoid issue when having few cells need to adjust the minimum number of cells
+##      For example, if there is a cluster "15" that has 0 cells, the function will skip that cluster with a warning (that's perfect). Also if the number of cells is between min.cells.groups (default = 1-3) and 0, an error is thrown and it stops working. That is why I previously remove from the Seurat Object the cells of the clusters with 3 or less cells for each condition/sample. 
+
 few_cells_samples <- unique(SeuratOBJ@meta.data$orig.ident)
 few_cells <- vector()
 
-# Calculate the minimum number of cells by cluster. In this case is set to 1
-# library(arsenal)
-# sclust <- as.data.frame(SeuratOBJ@meta.data$seurat_clusters)
-# sclust_r <- as.data.frame(SeuratOBJ@meta.data$seurat_clusters.renamed)
-# comparedf(sclust, sclust_r)
-
-for (i in 1:length(few_cells_samples)) {   # remove cellstype w/ less than 1 cells in each sample/condition
+for (i in 1:length(few_cells_samples)) {   # remove cellstype w/ less than 1 cells in each sample/condition. Recommended at least 3 cell
   # for testing: i <- 1
   few_cells_tmp <- table(SeuratOBJ@meta.data$seurat_clusters[SeuratOBJ@meta.data$orig.ident == few_cells_samples[i]]) <= 1
   few_cells_tmp <- names(few_cells_tmp)[few_cells_tmp == "TRUE"]
@@ -115,20 +117,83 @@ for (i in 1:length(few_cells_samples)) {   # remove cellstype w/ less than 1 cel
 }
 
 message(' Number of clusters with >1 cell: ', length(few_cells), '; Cluster ID:', few_cells)
-# > few_cells
+# Ex. S1: few_cells
 # [1] "18"
 
 clusters <- sort(unique(SeuratOBJ@meta.data$seurat_clusters))
 `%notin%` <- Negate(`%in%`) 
-clusters <- clusters[clusters %notin% few_cells]
+clusters_high_cell <- clusters[clusters %notin% few_cells]
 
-# count cells by clusters
-SeuratOBJ@meta.data$seurat_clusters
+## Keep cell-types (clusters) with high-cell counts
+#SeuratOBJ <- subset(SeuratOBJ, subset = seurat_clusters %in% as.vector(clusters_high_cell))
+
+
+## count cells by clusters
+
+unique(SeuratOBJ@meta.data$seurat_clusters)
 table(Idents(SeuratOBJ))
 
-## Set target clusters and genes to aggregate
-## Note that we previously search Habenula marker genes at the top20 DEG for each cluster (out ~/.processed-data/04_DiffExpr_Clustering_seurat/)
-##      - Marker genes comes from Hb_pilot project 
+
+## Find DEG in the integrated Seurat for ALL clusters (BEFORE pseudobulk)
+
+all.markers <- FindAllMarkers(object = SeuratOBJ)
+head(all.markers, n=3)
+# p_val avg_log2FC pct.1 pct.2 p_val_adj cluster   gene
+# NPAS3      0  -1.836151 0.078 0.736         0       0  NPAS3
+# QKI        0  -1.188384 0.176 0.830         0       0    QKI
+# ZBTB20     0  -1.678080 0.068 0.710         0       0 ZBTB20
+
+cvs_file <- paste0(Seurat_base_name, '_',Seurat_reduction, '_Allmarkers.csv')
+cvs_file <- here('processed-data/03_pseudobulking/cvs_files_markers', cvs_file)
+write.csv(all.markers, cvs_file)
+
+
+## Apply pseudo bulk to ALL clusters and marker genes selected
+
+# ~/seurat.combined.data_counts_PCA_Harmony_DoHeatmap_pseudobulk.pdf
+SeuratOBJ_Hb_all_pseudobulked <- AggregateExpression(SeuratOBJ, return.seurat = TRUE,
+                                                     group.by = c("seurat_clusters", "orig.ident"))
+
+#SeuratOBJ_Hb_all_pseudobulked
+# Ex. Harmony reduction:
+# An object of class Seurat 
+# 36601 features across 34 samples within 1 assay 
+# Active assay: RNA (36601 features, 0 variable features)
+# 3 layers present: counts, data, scale.data
+
+table(SeuratOBJ_Hb_all_pseudobulked$seurat_clusters)
+# g0  g1 g10 g11 g12 g13 g14 g15 g16  g2  g3  g4  g5  g6  g7  g8  g9 
+# 2   2   2   2   2   2   2   2   2   2   2   2   2   2   2   2   2 
+
+
+all.markers_p <- FindAllMarkers(object = SeuratOBJ_Hb_all_pseudobulked)
+# Warning: When testing g18_S2-Hb-KDM versus all:
+#     Cell group 1 has fewer than 3 cells
+
+
+## check DEG found in the pseudobulk data
+
+if (length(all.markers_p)>0) {
+  #head(all.markers_p, n=3)
+  cvs_file <- paste0(Seurat_base_name, '_',Seurat_reduction, '_Allmarkers.csv')
+  cvs_file <- here('processed-data/03_pseudobulking/cvs_files_markers', cvs_file)
+  write.csv(all.markers_p, cvs_file)
+}
+
+## Save new Seurat pseudo bulk 
+
+rds_name <- paste0(Seurat_base_name,'_', Seurat_reduction, '_pseudobulk.rds')
+rds_name <- here('processed-data/03_pseudobulking', rds_name)
+# Ex. file name: seurat.combined.data_counts_PCA_Harmony_pseudobulk.rds
+saveRDS(SeuratOBJ_Hb_all_pseudobulked, file = rds_name)
+#SeuratOBJ_Hb_all_pseudobulked <- get_seurat(rds_name)
+
+
+
+############################ Plots. ############################
+
+## Set genes to show in the aggregate GEX data
+## These genes were previously identify as Habenula marker genes. These genes are at the top20 DEG for each cluster.
 
 if (Seurat_reduction=='CCA') {
   clust_selected <- c(8, 15, 18)
@@ -146,71 +211,70 @@ if (Seurat_reduction=='CCA') {
 }  
 
 
-## Subset the clusters and marker genes selected
-SeuratOBJ_Hb_all <- subset(SeuratOBJ, 
+p1 <- DoHeatmap(object = SeuratOBJ_Hb_all_pseudobulked, 
+                features=markers.to.plot, label = TRUE, angle=45, group.by = "seurat_clusters",
+                size=4)
+
+table(SeuratOBJ_Hb_all_pseudobulked$seurat_clusters)
+
+
+
+
+## Subset the clusters of interest
+
+SeuratOBJ_Hb_selected <- subset(SeuratOBJ, 
                            subset = seurat_clusters %in% clust_selected)
 
-## look at minimum cells by cluster assigned
-clust_tab <- table(SeuratOBJ_Hb_all$seurat_clusters)
-min(clust_tab[clust_tab > 0])
-# S1:
-# 0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16 
-# 0   0   0   0   0   0 830   0   0   0   0   0 180   0 102  99   0 
-
-## look at minimum cells by cluster assigned by sample
-md <- SeuratOBJ_Hb_all@meta.data %>% as.data.table
-## Apply vertical format to unique cluster with number of umis, arranged by sample and cluster number
-mdT <- md[, .N, by = c("orig.ident", "seurat_clusters")] %>%
-  arrange(., orig.ident, seurat_clusters, .by_group = FALSE)
-df_mdT <- as.data.frame(mdT)
-df_mdT 
-# S1: orig.ident seurat_clusters   N
-# 1  S1_Hb_KDM               6 665
-# 2  S1_Hb_KDM              12 133
-# 3  S1_Hb_KDM              14  29
-# 4  S1_Hb_KDM              15  13
-# 5  S2_Hb_KDM               6 165
-# 6  S2_Hb_KDM              12  47
-# 7  S2_Hb_KDM              14  73
-# 8  S2_Hb_KDM              15  86
+# check the count cells by clusters
+table(Idents(SeuratOBJ_Hb_selected))
+# Ex. Harmony reduction
+# 6  12  14  15 
+# 830 180 102  99 
 
 
-## perform pseudo bulk 
-# If return.seurat = TRUE, aggregated values are placed in the 'counts' layer of the returned object. The data is then normalized by running NormalizeData on the aggregated counts. ScaleData is then run on the default assay before returning the object.
-# Defaults to: normalization.method = "LogNormalize", scale.factor = 10000
-
-SeuratOBJ_Hb_all_pseudobulked <- AggregateExpression(SeuratOBJ_Hb_all, return.seurat = TRUE, 
-                                                     group.by = c("seurat_clusters", "orig.ident"))
+SeuratOBJ_Hb_selected_pseudobulked
 # S1: An object of class Seurat 
 # 36601 features across 8 samples within 1 assay 
 # Active assay: RNA (36601 features, 0 variable features)
 # 3 layers present: counts, data, scale.data
-table(SeuratOBJ_Hb_all_pseudobulked$orig.ident)
-table(SeuratOBJ_Hb_all_pseudobulked$seurat_clusters)
+
+# check the count cells by clusters
+table(SeuratOBJ_Hb_selected_pseudobulked$seurat_clusters)
+# Ex. For Harmony
+# g12 g14 g15  g6 
+# 2   2   2   2 
 
 
-## plot the pseudo bulk 
+## plot the pseudo bulk in the selected clusters
+
+p2 <- DoHeatmap(object = SeuratOBJ_Hb_selected_pseudobulked, 
+                features=markers.to.plot, label = TRUE, angle=45, group.by = "seurat_clusters",
+                size=4) 
+
+
+## Format plots
 
 pdf_file <- paste0(Seurat_base_name, '_', Seurat_reduction, '_DoHeatmap_pseudobulk.pdf')
 pdf_name <- here('plots/03_pseudobulking', pdf_file)
 pdf(file = pdf_name)
 # ~/seurat.combined.data_counts_PCA_Harmony_DoHeatmap_pseudobulk.pdf
 
-p1 <- DoHeatmap(object = SeuratOBJ_Hb_all_pseudobulked, 
-                features=markers.to.plot, label = TRUE, angle=45, group.by = "seurat_clusters",
-                size=4) 
-#p1 + scale_fill_gradientn(limits = c(-2, 2), colours = PurpleAndYellow(), na.value = "white")
+main_title <- paste0("Heatmap for pseudobulk GEX data from ", Seurat_reduction)
+sub_title <-  paste0('Marker genes for Broad Hb, LHb and MHb')
+
+p_pseudo <- (p1 / p2) + plot_annotation(title = main_title, subtitle = sub_title, caption = 'Samples: S1 and S2')  & 
+  theme(plot.title = element_text(size = 12),
+        plot.subtitle = element_text(size = 10),
+        axis.text.y=element_text(size=8),
+        legend.position="none") 
+
+p_pseudo + scale_fill_gradientn(limits = c(-2, 2), colours = PurpleAndYellow(), na.value = "white")
 
 dev.off()
 
 
-## Save new Seurat pseudo bulk 
-
-rds_name <- paste0(Seurat_base_name,'_', Seurat_reduction, '_pseudobulk.rds')
-rds_name <- here('processed-data/03_pseudobulking', rds_name)
-# file name: ~/.seurat.combined.data_counts_PCA_Harmony_pseudobulk.rds
-saveRDS(SeuratOBJ, file = rds_name)
 message('Seurat pseudobulk completed! ')   
+
 
 
 
