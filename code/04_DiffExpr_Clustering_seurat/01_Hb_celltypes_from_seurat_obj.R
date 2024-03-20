@@ -25,6 +25,15 @@ here::here()
 if (!dir.exists(here("processed-data/04_DiffExpr_Clustering_seurat/"))) {
     dir.create(here("processed-data/04_DiffExpr_Clustering_seurat/"))
 }
+# Check if processed_data directory exists, if not create it
+if (!dir.exists(here("plots/04_DiffExpr_Clustering_seurat/"))) {
+  dir.create(here("plots/04_DiffExpr_Clustering_seurat/"))
+}
+# Check if processed_data directory for DEG exists, if not create it
+if (!dir.exists(here("processed-data/04_DiffExpr_Clustering_seurat/cvs_files_markers/"))) {
+  dir.create(here("processed-data/04_DiffExpr_Clustering_seurat/cvs_files_markers/"))
+}
+
 
 # contains the different marker list 
 source(here("code/functions_custom", "remote_DGE_marker_gene_lists.R"))       # Call functions to read paths
@@ -42,12 +51,44 @@ get_seurat <- function(name) {
     
 }
 
+
 #############################           Initials        ################################
-############################# Pickup a Marker gene list ################################
 
-# We have access to 3 gene markers lists:
+## Set count-mtx type and integration model (CCA or Harmony)
 
-# Erik and Top50r putative marker genes merged
+count_mtx_type <- 'data_counts'
+#count_mtx_type <- 'norm_counts' 
+Seurat_reduction <- 'CCA'
+#Seurat_reduction <- 'Harmony'
+
+if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.combined.data_counts_PCA' } else { Seurat_base_name <- 'seurat.combined.norm_counts_PCA' }
+
+## Compose Seurat object name processed before
+if (Seurat_reduction=='CCA') {
+  rds_name <- here('processed-data/02_merge_seurats', paste0(Seurat_base_name, '_CCA.rds'))
+} else {
+  rds_name <- here('processed-data/02_merge_seurats', paste0(Seurat_base_name, '_Harmony.rds'))
+}
+rds_name
+# Ex. ~/Hb_multiome/processed-data/02_merge_seurats/seurat.combined.data_counts_PCA_CCA.rds"
+# Ex. ~/seurat.combined.data_counts_PCA_Harmony.rds
+
+## Load Seurat Integrated with cluster information
+SeuratOBJ <- get_seurat(rds_name)
+SeuratOBJ@reductions
+
+# Ex. SeuratOBJ@reductions$integrated.cca
+# A dimensional reduction object with key integratedcca_ 
+# Number of dimensions: 50 
+# Number of cells: 17994 
+# Projected dimensional reduction calculated:  FALSE 
+# Jackstraw run: FALSE 
+# Computed using assay: RNA 
+
+
+## Select gene markers lists. We have 3.
+
+## Erik and Top50r putative marker genes merged
 markers.custom <- get_erik_and_Hb_markers_genes()          # merged lists
 prefix_name <- 'all_gm'                                    # prefix to save matched markers found in the clusters
 #markers.custom <- get_bukola_markers_genes_Hb()           # Bukola lists
@@ -78,12 +119,11 @@ markers.custom$MHb_putative
 # [6] "AC114321.1" "AC104170.1" "AC079760.2" "AC024610.2" "AC022382.2"
 # ...
 
-# # markers manually added for testing functions 
-# new_gm <- c('MT-ND4', 'MT-ND2')
-# markers.custom$MHb <- append(markers.custom$MHb, new_gm)
-# markers.custom$MHb 
 
 # set the number of top DGE rows to consider for looking gene markers in the cellranger-arc clusters
+
+slice_lst() <- c(20,30,40,50)
+
 n_match_slice <- 20  
 prefix_name <- paste0(prefix_name, n_match_slice, '.csv')    # all_gm20.csv
 
@@ -91,36 +131,6 @@ prefix_name <- paste0(prefix_name, n_match_slice, '.csv')    # all_gm20.csv
 
 #############################  Set the DGE list to parse  ################################
 
-## Setup some initials. We can now parse the clusters from the CCA or Harmony corrections
-s_sample <- ''
-count_mtx_type <- 'data_counts'
-#count_mtx_type <- 'norm_counts' 
-#Seurat_reduction <- 'CCA'
-Seurat_reduction <- 'Harmony'
-
-if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.combined.data_counts_PCA' } else { Seurat_base_name <- 'seurat.combined.norm_counts_PCA' }
-
-## Compose Seurat object name processed before
-if (Seurat_reduction=='CCA') {
-  rds_name <- here('processed-data/02_merge_seurats', paste0(Seurat_base_name, '_CCA.rds'))
-} else {
-  rds_name <- here('processed-data/02_merge_seurats', paste0(Seurat_base_name, '_Harmony.rds'))
-}
-rds_name
-# Ex. ~/Hb_multiome/processed-data/02_merge_seurats/seurat.combined.data_counts_PCA_CCA.rds"
-# Ex. ~/seurat.combined.data_counts_PCA_Harmony.rds
-
-## Load Seurat Integrated with cluster information
-SeuratOBJ <- get_seurat(rds_name)
-SeuratOBJ@reductions
-
-# Ex. SeuratOBJ@reductions$integrated.cca
-# A dimensional reduction object with key integratedcca_ 
-# Number of dimensions: 50 
-# Number of cells: 17994 
-# Projected dimensional reduction calculated:  FALSE 
-# Jackstraw run: FALSE 
-# Computed using assay: RNA 
 
 ## extract cluster data
 md <- SeuratOBJ@meta.data %>% as.data.table
@@ -134,32 +144,23 @@ mdT <- md[, .N, by = c("orig.ident", "seurat_clusters")] %>%
 # 3:  S1_Hb_KDM               2  679
 
 df_mdT <- as.data.frame(mdT)
-#View(df_mdT)
 cvs_name <- paste0(Seurat_base_name, '_', Seurat_reduction, '_cluster_info.csv')
-# > cvs_name
 # [1] "seurat.combined.data_counts_PCA_CCA_cluster_info.csv"
-write.csv(df_mdT, here('processed-data/04_DiffExpr_Clustering_seurat', cvs_name))
+write.csv(df_mdT, here('processed-data/04_DiffExpr_Clustering_seurat/cvs_files_markers', cvs_name))
 
 ## extract unique clusters in ascending order
 clusters <- as.integer(levels(unique(SeuratOBJ$seurat_clusters)))
-# CCA: 19 clusters
-# [1]  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18
-# Harmony: 
-# [1]  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
-
 
 message('Looking gene markers for ', length(clusters), ' clusters for sample ', Seurat_base_name, ' for ', Seurat_reduction, ' reduction')
 
 
 
-## Extract DGE genes for all clusters for the given sample
+## Read DGE cvs file for all clusters for the given sample
 
-## Read path to cellranger-arc DGE clusters
-path_cellranger_DGE_clust_df <- here('processed-data/03_pseudobulking/csv_files',
-                                     paste0(Seurat_base_name, '_',Seurat_reduction, '_Allmarkers.csv'))
-path_cellranger_DGE_clust_df     
+DGE_cvs_name <- paste0(Seurat_base_name, '_',Seurat_reduction, '_Allmarkers.csv')
+DGE_cvs_name <- here('processed-data/03_pseudobulking/cvs_files_markers', DGE_cvs_name)
 # ~/seurat.combined.data_counts_PCA_CCA_Allmarkers.csv
-seurat_clust <- as.data.frame(read.csv(path_cellranger_DGE_clust_df, header = TRUE))
+seurat_clust <- as.data.frame(read.csv(DGE_cvs_name, header = TRUE))
 head(seurat_clust, n=3)
 # Seurat output from FindAllmarkers()
 # p_val avg_log2FC pct.1 pct.2 p_val_adj cluster   gene
@@ -176,7 +177,7 @@ head(seurat_clust_sub)
 # 3  MT-CYB         0       0
 
 message('Parsing ', length(markers.custom), ' cell types for ', length(clusters) ,' clusters in sample ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
-#Parsing 14 cell-types for clusters in sample S1_Hb_KDM
+#Parsing 14 cell types for 17 clusters in sample seurat.combined.data_counts_PCA Harmony reduction
 
 
 
@@ -199,7 +200,7 @@ for (clust in clusters) {
     #f <-  paste0(Cluster_number,'Adjusted.p.value')
     
     # format cluster name 
-    clust <- paste0("C_", clust)
+    #clust <- paste0("C_", clust)
     top_DGE_clust <- seurat_clust_sub %>% 
         dplyr::arrange(clust) %>% 
         #select(c(gene, cluster)) %>%
@@ -254,9 +255,10 @@ head(all_gene_match, n=3)
 # 2 PDGFRA         0       4 oligodendrocyte_precursor
 # 3   VCAN         0       4 oligodendrocyte_precursor
 
-path_cellranger_clusters_markers <- here('processed-data/04_DiffExpr_Clustering_seurat', paste0(Seurat_base_name, '_', Seurat_reduction, '_cell_types_', prefix_name))
+habenula_markers_cvs_name <- paste0(Seurat_base_name, '_', Seurat_reduction, '_cell_types_', prefix_name)
+habenula_markers_cvs_name <- here('processed-data/04_DiffExpr_Clustering_seurat/cvs_files_markers', habenula_markers_cvs_name)
 # ~/seurat.combined.data_counts_PCA_CCA_cell_types_all_gm20.csv
-write.csv(all_gene_match, path_cellranger_clusters_markers, row.names=FALSE)
+write.csv(all_gene_match, habenula_markers_cvs_name, row.names=FALSE)
 
 message(' Cell type identification in clusters done!')
 
