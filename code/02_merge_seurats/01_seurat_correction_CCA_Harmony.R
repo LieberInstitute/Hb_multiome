@@ -39,8 +39,12 @@ if (!dir.exists(here("processed-data/02_merge_seurats/"))) {
 if (!dir.exists(here("plots/02_merge_seurats/"))) {
     dir.create(here("plots/02_merge_seurats/"))
 }
+## Directory to save variable features 
+dir <- file.path(here('processed-data/02_merge_seurats/csv_files/')) 
+if (!dir.exists(dir)) dir.create(dir)
 
-source(here("code/functions_custom", "remote_plot_functions.R"))    # Call to plot GEX assay
+
+#source(here("code/functions_custom", "remote_plot_functions.R"))    # Call to plot GEX assay
 
 
 ########################    Initials ########################  
@@ -97,13 +101,7 @@ plot_clust <- function(sobj, f_name, reduct, ga2) {
 }
 
 
-## Directory to save variable features 
-dir <- file.path(here('processed-data/02_merge_seurats/csv_files/')) 
-if (!dir.exists(dir)) dir.create(dir)
-
-
 ## function to save variable features before correction 
-
 save_VFeatures <- function(sobj, f_name) {
     
     # Identify most highly variable genes
