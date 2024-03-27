@@ -49,6 +49,7 @@ if (!dir.exists(dir)) dir.create(dir)
 
 args = commandArgs(trailingOnly=TRUE)
 ## read count mtx type (abs_counts and normalized_counts)
+#count_mtx_type_label <- 'data_counts'      
 count_mtx_type_label <- args[1]
 
 
@@ -142,33 +143,57 @@ save_VFeatures <- function(sobj, f_name) {
 ## Merge Seurat objects according with the `count type`
 ## NOTE: By default, merge() will combine the Seurat objects based on the raw count matrices, erasing any previously normalized and scaled data matrices. If you want to merge the normalized data matrices as well as the raw count matrices, simply pass merge.data = TRUE. This should be done if the same normalization approach was applied to all objects.
 
+seurat_lst <- list()
+seurat_name_lst <- list()
 
+message('Starting to prepare seurats to merge ...')
 
+for (rds_path in all_rds) {
+  
+  print(rds_path)
+  SeuratOBJ <-readRDS(rds_path)
+  
+  if (count_mtx_type_label=='data_counts') {
 
-message('Starting merging seurats...')
+    ## None additional step required
 
-if (count_mtx_type_label=='data_counts') {
-    
-    SeuratOBJ.combined <- merge(SeuratOBJ, y = SeuratOBJ2,
-                                add.cell.ids = c('S1_Hb', 'S2_Hb'),
-                                project = "Habenula")
-    LayerData(SeuratOBJ.combined)[1:10, 1:15]
+  } else {
 
-} else {
-    
     SeuratOBJ <- NormalizeData(SeuratOBJ)
-    SeuratOBJ2 <- NormalizeData(SeuratOBJ2)
-    SeuratOBJ.combined <- merge(SeuratOBJ, y = SeuratOBJ2,
-                                  add.cell.ids = c('S1_Hb', 'S2_Hb'),
-                                  project = "Habenula", 
-                                  merge.data = TRUE)     #  merge the normalized data matrices as well as the raw count matrices
-    LayerData(SeuratOBJ.combined)[1:10, 1:15]
 
+  }
+  
+  if ( length(seurat_lst)>0 ) { seurat_lst <- append(seurat_lst, SeuratOBJ) } else { seurat_lst <- SeuratOBJ }
+  if ( length(seurat_name_lst)>0 ) { seurat_name_lst <- append(seurat_name_lst, basename(rds_path)) } else { seurat_name_lst <- basename(rds_path) }
+  
 }
 
+print(seurat_lst)
+print(seurat_name_lst)
 
+message('Seurats prepared')
+
+
+
+
+## Merge object according with the given list(s)
+
+# SeuratOBJ.combined <- merge(SeuratOBJ, y = SeuratOBJ2,
+#                             add.cell.ids = c('S1_Hb', 'S2_Hb'),
+#                             project = "Habenula", 
+#                             merge.data = TRUE)     #  merge the normalized data matrices as well as the raw count matrices
+# LayerData(SeuratOBJ.combined)[1:10, 1:15]
 #pbmc.big <- merge(pbmc3k, y = c(pbmc4k, pbmc8k), add.cell.ids = c("3K", "4K", "8K"), project = "PBMC15K")
+
+
 message('Merge completed!')
+
+
+
+
+
+
+
 
 
 ## verification of the integration
