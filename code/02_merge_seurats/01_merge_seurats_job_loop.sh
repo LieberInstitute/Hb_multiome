@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p shared
-#SBATCH --mem=10G
+#SBATCH --mem=20G
 #SBATCH --job-name=01_merge_seurats_job_loop
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
