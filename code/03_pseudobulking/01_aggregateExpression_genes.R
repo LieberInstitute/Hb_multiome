@@ -19,16 +19,20 @@ library('Seurat')                                 # 4.9.9.9045 2023-05-17 [1] Gi
 library('multtest')
 library('metap')
 library('tidyverse')
+library('ggplot2')
+library('patchwork')
 
 library(here)
 
 here::here()
 
-if (!packageVersion("Seurat")=='4.9.9.9060') {
-    stop
-    message('This pipeline was implemented with Seurat v5 and Signac v1.11+ ')
-    message('You need the laterst Seurat v5 (‘4.9.9.9060’)')
-    message('Current available repository on: https://satijalab.org/seurat/articles/install.html  ') }
+list.files(here::here('code/03_pseudobulking/'))
+
+# if (!packageVersion("Seurat")=='4.9.9.9060') {
+#     stop
+#     message('This pipeline was implemented with Seurat v5 and Signac v1.11+ ')
+#     message('You need the laterst Seurat v5 (‘4.9.9.9060’)')
+#     message('Current available repository on: https://satijalab.org/seurat/articles/install.html  ') }
 
 # Check if processed_data directory exists, if not create it
 if (!dir.exists(here("processed-data/03_pseudobulking/"))) {
@@ -49,8 +53,9 @@ if (!dir.exists(here("processed-data/03_pseudobulking/cvs_files_markers/"))) {
 ## Select the count-mtx to merge (raw or normalized data)
 count_mtx_type <- 'data_counts'
 #count_mtx_type <- 'norm_counts' 
-#Seurat_reduction <- 'CCA'
+#eurat_reduction <- 'CCA'
 Seurat_reduction <- 'Harmony'
+
 
 ## load pre-existing Seurat
 get_seurat <- function(name) {
@@ -94,6 +99,7 @@ head(colnames(SeuratOBJ))
 tail(colnames(SeuratOBJ))
 colnames(SeuratOBJ@meta.data)
 SeuratOBJ@reductions
+
 
 
 ###################### Pseudo bulk expression data  ######################
@@ -192,6 +198,12 @@ saveRDS(SeuratOBJ_Hb_all_pseudobulked, file = rds_name)
 
 ############################ Plots. ############################
 
+## load pre-existing pseudobulk data 
+# rds_name <- paste0(Seurat_base_name,'_', Seurat_reduction, '_pseudobulk.rds')
+# rds_name <- here('processed-data/03_pseudobulking', rds_name)
+# SeuratOBJ_Hb_all_pseudobulked <- get_seurat(rds_name)
+
+
 ## Set genes to show in the aggregate GEX data
 ## These genes were previously identify as Habenula marker genes. These genes are at the top20 DEG for each cluster.
 
@@ -219,10 +231,11 @@ table(SeuratOBJ_Hb_all_pseudobulked$seurat_clusters)
 
 
 
-
 ## Subset the clusters of interest
 
-SeuratOBJ_Hb_selected <- subset(SeuratOBJ, 
+clust_selected <- sapply(clust_selected, function(x) { paste0('g', x) } ) 
+
+SeuratOBJ_Hb_selected <- subset(SeuratOBJ_Hb_all_pseudobulked, 
                            subset = seurat_clusters %in% clust_selected)
 
 # check the count cells by clusters
@@ -231,15 +244,15 @@ table(Idents(SeuratOBJ_Hb_selected))
 # 6  12  14  15 
 # 830 180 102  99 
 
-
-SeuratOBJ_Hb_selected_pseudobulked
+SeuratOBJ_Hb_selected
 # S1: An object of class Seurat 
 # 36601 features across 8 samples within 1 assay 
 # Active assay: RNA (36601 features, 0 variable features)
 # 3 layers present: counts, data, scale.data
 
 # check the count cells by clusters
-table(SeuratOBJ_Hb_selected_pseudobulked$seurat_clusters)
+
+table(SeuratOBJ_Hb_selected$seurat_clusters)
 # Ex. For Harmony
 # g12 g14 g15  g6 
 # 2   2   2   2 
@@ -247,7 +260,7 @@ table(SeuratOBJ_Hb_selected_pseudobulked$seurat_clusters)
 
 ## plot the pseudo bulk in the selected clusters
 
-p2 <- DoHeatmap(object = SeuratOBJ_Hb_selected_pseudobulked, 
+p2 <- DoHeatmap(object = SeuratOBJ_Hb_selected, 
                 features=markers.to.plot, label = TRUE, angle=45, group.by = "seurat_clusters",
                 size=4) 
 
@@ -268,12 +281,24 @@ p_pseudo <- (p1 / p2) + plot_annotation(title = main_title, subtitle = sub_title
         axis.text.y=element_text(size=8),
         legend.position="none") 
 
-p_pseudo + scale_fill_gradientn(limits = c(-2, 2), colours = PurpleAndYellow(), na.value = "white")
+p_pseudo <- p_pseudo + scale_fill_gradientn(limits = c(-2, 2), colours = PurpleAndYellow(), na.value = "white")
+p_pseudo
 
 dev.off()
 
 
 message('Seurat pseudobulk completed! ')   
+
+
+# ## slurm script reproducibility
+# 
+# slurmjobs::job_loop(
+#   loops = list(type_mtx = c("data_counts", "norm_counts"), integration_model = c("mod1", "mod2", "mod3", "mod4")),
+#   name = "01_aggregateExpression_genes",
+#   cores = 2,
+#   create_shell = TRUE
+# )
+
 
 
 
