@@ -1,10 +1,11 @@
 #!/bin/bash
-#SBATCH --partition=shared		        # partition or queue name
-#SBATCH --output=S1-cellranger-%j.out	# file to collect standard output
-#SBATCH --error=S1-cellranger-%j.err	# file to collect standard output
-#SBATCH --job-name=S1_cellrangerarc	    # name job for easier spotting, controlling
-#SBATCH --cpus-per-task=8		        # number of cores
-#SBATCH --mem=128GB			            # memory per __node__
+#SBATCH --partition=shared		          # partition or queue name
+#SBATCH --output=cellranger-A%j.out	    # file to collect standard output
+#SBATCH --error=cellranger-A%j.err	    # file to collect standard output
+#SBATCH --job-name=cellrangerarc-A	    # name job for easier spotting, controlling
+#SBATCH --cpus-per-task=4		            # number of cores
+#SBATCH --mem=20GB			                # memory per __node__
+#SBATCH --mem=80GB			                # memory per __node__
 
 # You may not place any commands before the last SBATCH directive
 
@@ -17,10 +18,10 @@
 # at the start of your script. This sample script just runs those cmds.
 
 echo "**** Job starts ****"
-echo "This jobs is setup to run with 8 cores (16G mem) to get 128G mem"
-echo "Sample: S1_Hb_KDM Human Habenula"
-echo "Total dataset size: 23G ATAC / 24G GEX"
-echo "HPC folder name: S1_Hb_KDM"
+echo "This jobs is setup to run with 4 cores (20G mem) to get 80G mem"
+echo "Sample: 3A_Hb_KDM Human Habenula"
+echo "Total dataset size: 34G ATAC"
+echo "HPC folder name: 3A_Hb_KDM"
 date
 
 echo "**** SLURM info ****"
@@ -31,35 +32,32 @@ echo "Hostname: ${HOSTNAME}"
 #echo "Task id: ${$SLURM_ARRAY_TASK_ID}"
 
 ## load CellRanger
-module load cellranger_arc/2.0.2
+module load cellranger-atac/2.1.0
 
 ## List current modules for reproducibility
 module list
 
 ## Locate file
-#SAMPLE=1_HPC_KDM
-SAMPLE=S1_Hb_KDM
+SAMPLE=3A_Hb_KDM
 echo "Processing sample ${SAMPLE}"
 mkdir -p /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/code/cellranger/${SAMPLE}/
-#mkdir -p /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/code/cellranger/${SAMPLE}/logs/
-echo "Log folder created"
 date
 
 ## Run CellRanger
-cellranger-arc count --id=${SAMPLE} \
+cellranger-atac count --id=${SAMPLE} \
     --reference=/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0 \
     --libraries=/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/code/cellranger/libraries_${SAMPLE}.csv \
-    --localcores=8 \
-    --localmem=128
+    --localcores=4 \
+    --localmem=80
 
 ## Move output
 echo "Moving data to new location"
 #mkdir -p /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/HPC_multiome_pilot/processed-data/cellranger_run_fast_version/
-mv ${SAMPLE} /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/cellrangerARC/
+mv ${SAMPLE} /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/cellrangerATAC/
 echo "Data moved to new location"
 
 echo "**** Job ends ****"
 date
 
-## This script was made for slurm version xxx
-## CSC Jan 15, 2024
+## This script was made for slurm
+## CSC Aug 05, 2024
