@@ -18,10 +18,11 @@
 # at the start of your script. This sample script just runs those cmds.
 
 echo "**** Job starts ****"
+SAMPLE=3A_Hb_KDM
 echo "This jobs is setup to run with 4 cores (20G mem) to get 80G mem"
-echo "Sample: 3A_Hb_KDM Human Habenula"
+echo "Sample: ${SAMPLE} 2024 Human Habenula"
 echo "Total dataset size: 34G ATAC"
-echo "HPC folder name: 3A_Hb_KDM"
+echo "Habenula folder name: ${SAMPLE}"
 date
 
 echo "**** SLURM info ****"
@@ -29,24 +30,23 @@ echo "User: ${USER}"
 echo "Job id: ${SLURM_JOBID}"
 echo "Job name: ${JOB_NAME}"
 echo "Hostname: ${HOSTNAME}"
-#echo "Task id: ${$SLURM_ARRAY_TASK_ID}"
 
-## load CellRanger
+## load CellRanger-ATAC
 module load cellranger-atac/2.1.0
 
 ## List current modules for reproducibility
 module list
 
 ## Locate file
-SAMPLE=3A_Hb_KDM
 echo "Processing sample ${SAMPLE}"
 mkdir -p /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/code/cellranger/${SAMPLE}/
 date
 
-## Run CellRanger
+## Run CellRanger-ATAC
 cellranger-atac count --id=${SAMPLE} \
     --reference=/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0 \
-    --libraries=/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/code/cellranger/libraries_${SAMPLE}.csv \
+    --fastqs=/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ_2024/ATAC/${SAMPLE}/ \
+    --chemistry=ARC-v1 \
     --localcores=4 \
     --localmem=80
 
@@ -60,4 +60,6 @@ echo "**** Job ends ****"
 date
 
 ## This script was made for slurm
+## For running:
+##      $ sbatch <file_name.sh>
 ## CSC Aug 05, 2024
