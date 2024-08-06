@@ -1,16 +1,33 @@
 # Hb_multiome
+
 Human Habenula Multiome Project
 
 ### Overview
 
-#### System project name: Hb_multiome
+#### Local project name: Hb_multiome
 
 Allocated in: `/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome`
 
-#### Fastq Raw-data
+#### Fastq GEX and ATAC Raw-data
 
-snRNA fastq libraries in: `/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/24-01-02_SPag110823/`
-ATACseq fastq libraries in: `/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/24-01-02_SPag110823_ATAC/`
+First sequencing for `Human Habenula Pilot`:
+
+snRNA-Seq fastq libraries in: `/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/24-01-02_SPag110823/`
+
+snATAC-Seq fastq libraries in: `/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/24-01-02_SPag110823_ATAC/`
+
+<br> Second sequencing for `Human Habenula Neurotypical Controls` (August 2024):
+
+snRNA-Seq fastq libraries in: `/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2024-07-09-Psomagen/AN00019739_10X_RawData_Outs`
+
+snATAC-Seq fastq libraries in: `/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2024-08-02_Psomagen/AN00020424_10X_RawData_Outs`
+
+Notes: - Second sequencing have `Visium` sequencing files too. - `RNA multiome files` have a `C` letter; `Visum files` have a `v` lower case letter.
+
+<br>
+
+````{=html}
+<!--
 
 #### Soft links into raw-data/ subfolder:
 
@@ -20,15 +37,20 @@ These links are used to track and rename fastq files to run the `cellranger-arc`
 lrwxrwxrwx  1 csoto lieber_lcolladotor 80 Jan 11 15:02 path_atac -> /dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/24-01-02_SPag110823_ATAC/
 lrwxrwxrwx  1 csoto lieber_lcolladotor 75 Jan 11 15:03 path_snrna -> /dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/24-01-02_SPag110823/
 ```
+-->
+````
 
-Tree directory to FASTQ files (raw-data):
-```
+Example of tree FASTQ directory structure (raw-data):
+
+```         
 15:04 raw-data $ tree FASTQ/
 FASTQ/
 ├── ATAC
 └── GEX
 ```
 
+````{=html}
+<!--
 Identified files for ATACseq:
 ```
 drwxrws---+ 2 rmiller lieber_lmh_storage 6 Jan  2 11:16 1A_Hb_KDM-1
@@ -61,20 +83,31 @@ Identified files for snRNAseq:
 -rw-r-----+ 1 rmiller lieber_lmh_storage 1722948027 Jan  2 16:56 38---2C-Hb-KDM-Hb_S18_L004_R1_001.fastq.gz
 -rw-r-----+ 1 rmiller lieber_lmh_storage 3900694608 Jan  2 13:43 38---2C-Hb-KDM-Hb_S18_L004_R2_001.fastq.gz
 ```
+-->
+````
 
-Script used:
+Script used to create soft links to Fastq RawData:
 
-xxxxxx track and rename files
+```         
+create_cellranger_ARC_libraries.R
+```
 
-xxxxxx create csv files according with cellranger-arc conventions
+Script to create the `csv library file` to input in the `CellRanger-ARC` pipeline:
+
+```         
+create_fastq_soft_links_for_cellranger_arc.R
+```
+
+<br>
+
+IMPORTANT NOTES
+
+1.  These scripts are located into `raw-data/` directory.
+
+2.  These is the only exception to set R Scripts in a different directory to `code/` dir.
 
 <br>
 
 CSC
 
-Jan 12nd, 2024
-
-
-
-
-
+Aug 06th, 2024
