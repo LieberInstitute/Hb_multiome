@@ -1,28 +1,43 @@
-# cellranger arc output logs
+# Log directories and cellranger arc output
+code/01_preprocessing_QC/logs/
+code/02_merge_seurats/logs/
 code/cellranger/logs/
-coe/cellranger/tmp/
-code/cellranger/cellranger*.err
-code/cellranger/cellranger*.out
+code/cellranger/tmp/
+code/cellranger/*.err
+code/cellranger/*.out
+code/cellranger/__*.mro
 code/logs/
 
-# Cellranger-arc raw data symbolic links
-raw-data/path_atac
-raw-data/path_snrna
+
+### Temporal directories
+code/01_preprocessing_QC/tmp/
+code/02_merge_seurats/tmp/
+code/recycler/
+code/tmp/
+# From processed-data dir
+processed-data/02_merge_seurats/csv_files/tmp/
+# From cellranger-arc. These files should be moved once the pipeline is finished. 
+code/cellranger/4S_Hb_KDM/
+code/cellranger/5S_Hb_KDM/
+code/cellranger/6S_Hb_KDM/
+
+
+### Cellranger-arc raw data symbolic links
+raw-data/path_atac/
+raw-data/path_snrna/
 raw-data/FASTQ/
+raw-data/FASTQ_2024/
+raw-data/path_atac_July11_2024
+raw-data/path_rna_Aug05_2024
 
-# Here lived the results of the cellranger-count pipeline  
+
+### Big files
+# Here lived the main results of the cellranger-count pipeline. We do not control version this results.  
 processed-data/cellrangerARC/
-
 # Nextflow for cellranger-arc
 Nextflow/
+processed-data/NextflowResults/
 
 
-
-# Seurat objects with chromatine data RDS objects
-#processed-data/03_QCs_preprocessing_GEX_ATAC/*.rds
-# Temporal directories
-#plots/03_QCs_preprocessing_GEX_ATAC/tmp/
-#processed-data/03_QCs_preprocessing_GEX_ATAC/tmp/
-#processed-data/04_QCs_preprocessing_ATAC/tmp/
-
-
+## Other guys used for testing
+processed-data/cellrangerATAC/
