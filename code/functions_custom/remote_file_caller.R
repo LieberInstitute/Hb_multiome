@@ -18,30 +18,35 @@ get_raw_barcode_mtx <- function(s_experiment_name) {
     # This function find a barcode file and return the full path name 
     #       @s_experiment_name         experiment name to be used to look for the raw barcode mtx
 
-    # experiment name must to exist
-    # if(!(s_experiment_name %in% lst_experiments)) stop("Experiment name does not match any declared experiment.")
-    print(paste('Recovering path for raw barcode matrix ',s_experiment_name))
+    # Experiment name must to declared in the root directory into the `array_targets_names.txt` file
+
+    print(paste('Reading full path for the corresponding raw barcode matrix ', s_experiment_name))
     
     # Assign the file paths to load the raw barcode mtx
     
-    
-    # These are the new Habenula samples (LIEBER 2024)
-    if (s_experiment_name == 'S1_Hb_KDM' || s_experiment_name == 'S2_Hb_KDM') {
-        base_path <- '/users/csoto/Hb_multiome/processed-data/cellrangerARC'
-        if ( s_experiment_name == 'S1_Hb_KDM') {
-            s_featured_bc_mtx <- here(paste0(base_path,"/S1_Hb_KDM/outs"), "raw_feature_bc_matrix.h5") }
-        else {  # S2_Hb_KDM
-            s_featured_bc_mtx <- here(paste0(base_path,"/S2_Hb_KDM/outs"), "raw_feature_bc_matrix.h5") }
+    # These chunk is for the Habenula samples (LIEBER 2024) =======================================
+    # for testing: s_experiment_name = "S4_Hb_KDM"
+
+    Habenula_experiment_names <- c('S1_Hb_KDM', 'S2_Hb_KDM', 'S3_Hb_KDM', '4S_Hb_KDM', '5S_Hb_KDM', '6S_Hb_KDM')
+    if (s_experiment_name %in% Habenula_experiment_names) {
+        base_path <- here("processed-data", "cellrangerARC")
+        s_featured_bc_mtx <- here(base_path, s_experiment_name, "outs", "raw_feature_bc_matrix.h5")
     }
     
-    # These are the public PBMC datasets 
-    if (s_experiment_name == 'pbmc3k' || s_experiment_name == 'pbmc10k') {
+    # =============================================================================================end
+    
+    # These chunk is for the public PBMC samples ==================================================
+    # for testing: pbmc_experiment_names = "pbmc3k"
+    pbmc_experiment_names <- c("pbmc3k", "pbmc10k")
+         
+    if (s_experiment_name %in% pbmc_experiment_names) {
         base_path <- '/users/csoto/cellranger-arc-public/raw-data'   
         if ( s_experiment_name == 'pbmc3k') {
-            s_featured_bc_mtx <- here(paste0(base_path,"/PBMC_CellSorted_ARC2_0_0"), "pbmc_granulocyte_sorted_3k_raw_feature_bc_matrix.h5") }
+            s_featured_bc_mtx <- here(base_path,"PBMC_CellSorted_ARC2_0_0", "pbmc_granulocyte_sorted_3k_raw_feature_bc_matrix.h5") }
         else {
-            s_featured_bc_mtx <- here(paste0(base_path,"/PBMC_CellSorted_ARC2_0_0"), "pbmc_granulocyte_sorted_10k_raw_feature_bc_matrix.h5") }
+            s_featured_bc_mtx <- here(base_path,"PBMC_CellSorted_ARC2_0_0", "pbmc_granulocyte_sorted_10k_raw_feature_bc_matrix.h5") }
     }
+    # =============================================================================================end
 
     # These are the samples 42_* (2020)
     if ( s_experiment_name == 'hippo42_1' || s_experiment_name == 'hippo42_4' ) {
