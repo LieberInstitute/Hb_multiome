@@ -92,14 +92,9 @@ sce.out <- DropletUtils::emptyDrops(
     lower = knee_lower    # numeric scalar specifying the lower bound on the total UMI count
 )
 en <- Sys.time() - st
+
 message(paste0(' Processing time: ', en))    
-
 # head.matrix(sce.out,n=5)
-
-## Save the object to a file
-# message(paste0(' Process completed. Saving data'))
-# s_file_name <- here('processed-data/00_empty_droplets_stats', paste0(s_sample,'_empty_droplets_object.rds'))
-# saveRDS(sce.out, file = s_file_name)
     
 # Get significant TRUE cells based on the FDR cutoff
 cells_FALSE <- 0
@@ -110,7 +105,7 @@ signif_TRUE <- 0
 cells_stat <- addmargins(table(Signif = sce.out$FDR <= FDR_cutoff,
               Limited = sce.out$Limited,
               useNA = "ifany"))
-# cells_stat
+cells_stat
 
 # get specific values from a confusion mtx
 cells_FALSE <- cells_stat[1,1]
@@ -118,13 +113,9 @@ cells_FT <- cells_stat[2,1]
 cells_TRUE <- cells_stat[2,2]
 signif_TRUE <- cells_stat[2,4]
 
-# Calculate non Emptydroplets value
+# Calculate non Emptydroplets value and percentage related
 nonEmptydroplets <- (sce.out |> as.data.frame() |> filter(FDR < FDR_cutoff) |> summarise(n = n()))$n
-# [1] 10359
-
-# Calculate percentage of non Emptydroplets
 per.nonemptydroplets <- ((nonEmptydroplets*100) / totalCells) #, digits = 4)
-# [1] 1.46291
     
 # Build a table with the stats applied and the outputs gotten
 # Table with the cellranger-arc `gene expression statistics`
@@ -187,13 +178,9 @@ droplet_elbow_plot <- droplet_elbow_data %>%
     subtitle = subtitle,
     color = paste("FDR <", FDR_cutoff)
   ) +
-  # Apply theme
   define_theme() +
   theme(legend.position = "bottom")
 
-# Save plot
-#dev.off()
-message(' Process completed. Saving knee plot')
 ggsave(droplet_elbow_plot, filename = s_file_name) 
 
 
