@@ -1,3 +1,6 @@
 S1_Hb_KDM,human
 S2_Hb_KDM,human
+4S_Hb_KDM,human
+5S_Hb_KDM,human
+6S_Hb_KDM,human
 
