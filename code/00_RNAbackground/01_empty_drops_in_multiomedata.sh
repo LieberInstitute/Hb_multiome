@@ -1,14 +1,11 @@
-#!/bin/bash -l
+#!/bin/bash
+#SBATCH --partition=katun	
+#SBATCH --job-name=empty_droplets
+#SBATCH --mem=30GB						                                          # each job from the array will get its own private 30G to work with)
 #SBATCH --array=1-5                                           	        #change the number 2 to the number of entries in array_targets.txt
-# sample_name=$( sed -n ${SLURM_ARRAY_TASK_ID}p array_targets.txt)      	# for each array job, I pull out the value from array_targets corresponding to that job
-id=$( sed -n ${SLURM_ARRAY_TASK_ID}p array_targets_names.txt)
-#SBATCH --partition=shared					                            # partition or queue name
-#SBATCH --output=%j.out						                            # file to collect standard output
-#SBATCH --error=%j.err						                            # file to collect standard output
-#SBATCH --job-name=EmptyDrops					                        # name job for easier spotting, controlling
-#SBATCH --mem=30GB						                                # each job from the array will get its own private 30G to work with)
-
-# You may not place any commands before the last SBATCH directive
+id=$( sed -n ${SLURM_ARRAY_TASK_ID}p ../array_targets_names.txt)				                                      # partition or queue name
+#SBATCH --output=/logs/ED_%j.out						                              
+#SBATCH --error=/logs/ED_%j.err						                              
 
 # NOTE: This script runs IN THE SAME DIRECTORY in which you ran sbatch
 #       So include a cd command to ensure that you run it in the expected
@@ -30,15 +27,17 @@ echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 echo "Array/sample: $id"
 
 ## load modules
-module load R
-
-# list modules
+module conda_R/4.3.x
 module list
 
 echo "== This is the script =="
-Rscript 00_empty_droplets_stats_loop.R $id
+Rscript 01_empty_drops_in_multiomedata.R $id
 echo "== End of Job =="
 
 ## Script for SLURM
 ## CSC. Jan 18th, 2024
+## Last modif. Aug 08, 2024
+
+## run command
+## $ sbatch slurm_emptydrops_V2.sh
 
