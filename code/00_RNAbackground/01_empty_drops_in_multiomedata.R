@@ -1,6 +1,6 @@
 ## Code used as reference
 ## https://github.com/LieberInstitute/DLPFC_snRNAseq/blob/main/code/03_build_sce/03_droplet_qc.R
-# Adapted by HT. LIEBER `Habenula_Pilot` project (code/04_snRNA-seq/01_get_droplet_scores.R) 
+# Adapted by HT. LIEBER `Habenula_Pilot` project (code/04_snRNA-seq/01_get_droplet_scores.R)
 # https://github.com/LieberInstitute/Habenula_Pilot/blob/fa452f307a32ab063417d8ab8002917f82c1f703/code/04_snRNA-seq/01_get_droplet_scores.R
 
 ## run command in slurm:
@@ -10,12 +10,12 @@
 
 ########################################################################
 ## Runs empty drops in multimome cellranger-ARC data.
-## Goal: Distinguish between droplets containing cells and ambient RNA in a droplet-based single-cell RNA sequencing experiment  
-##.     Get preliminary statistics
+## Goal: Distinguish between droplets containing cells and ambient RNA in a droplet-based single-cell RNA sequencing experiment
+## .     Get preliminary statistics
 ##      Processes non-empty cells
-##.     Create and save a table with the statistics
-##.     Save the single-cell object processed
-##.     Create and save a knee plot
+## .     Create and save a table with the statistics
+## .     Save the single-cell object processed
+## .     Create and save a knee plot
 ## Authors. CSC
 ## Date. August 14th, 2023
 ## Last.md Jan 19th, 2024
@@ -24,7 +24,7 @@
 
 library(Seurat)
 library(SingleCellExperiment)
-library(DropletUtils)   # Functions for scRNA-seq data from droplet technologies such as 10X Genomics
+library(DropletUtils) # Functions for scRNA-seq data from droplet technologies such as 10X Genomics
 library(dplyr)
 library(ggplot2)
 library(here)
@@ -43,28 +43,28 @@ FDR_cutoff <- 0.001
 
 ## commandArgs scans the arguments which have been supplied when the current R script was invoked (from shell sh)
 sample_tmp <- commandArgs(trailingOnly = TRUE)
-#sample_tmp <- args[1]
-# for testing: sample_tmp <- '5S_Hb_KDM,human'  
+# sample_tmp <- args[1]
+# for testing: sample_tmp <- '5S_Hb_KDM,human'
 
-sample_data = unlist(strsplit(sample_tmp,","))
+sample_data <- unlist(strsplit(sample_tmp, ","))
 s_sample <- sample_data[[1]]
 
 message("Processing sample: ", s_sample)
 
 ## Break to avoid processing old samples
-if (s_sample %in% c("S1_Hb_KDM", "S1_Hb_KDM")) { 
-  print("Skipe old sample. ")
-  stop()
+if (s_sample %in% c("S1_Hb_KDM", "S1_Hb_KDM")) {
+    print("Skipe old sample. ")
+    stop()
 }
 
-## Read the raw_feature_bc_matrix.h5 
+## Read the raw_feature_bc_matrix.h5
 sample_path <- get_raw_barcode_mtx(s_sample)
-message("Reading data from ", sample_path)              # ../cellrangerARC/S1_Hb_KDM/outs/raw_feature_bc_matrix.h5
-h5_raw_path <- Read10X_h5(sample_path)                  # dgCMatrix data. Barcodes for columns and genes by rows
+message("Reading data from ", sample_path) # ../cellrangerARC/S1_Hb_KDM/outs/raw_feature_bc_matrix.h5
+h5_raw_path <- Read10X_h5(sample_path) # dgCMatrix data. Barcodes for columns and genes by rows
 # head(h5_raw_path, n=1)                                 # Sparse mtx has the 2 slots (gene expression and peaks)
 # Extract the 'Gene Expression' matrix only
-raw.sce <- h5_raw_path$`Gene Expression`                # SingleCellExperiment data. 
-head(raw.sce, n=1)
+raw.sce <- h5_raw_path$`Gene Expression` # SingleCellExperiment data.
+head(raw.sce, n = 1)
 
 ## Get total number of cells in the gene expression assay
 totalCells <- length(Cells(raw.sce))
@@ -73,115 +73,121 @@ totalCells <- length(Cells(raw.sce))
 bcRanks <- barcodeRanks(raw.sce, fit.bounds = c(10, 1e3))
 ## Barcode rank range.
 colnames(bcRanks)
-range((bcRanks$rank)) 
-range((bcRanks$total))  
-## Get knee value and add hundred points to perform a more stringent threshold. 
+range((bcRanks$rank))
+range((bcRanks$total))
+## Get knee value and add hundred points to perform a more stringent threshold.
 knee_lower <- metadata(bcRanks)$knee + 100
 ## Get the inflection point. Signs change.
 inflection <- metadata(bcRanks)$inflection
 
 message("Sample: ", s_sample, "\nKnee lower value: ", knee_lower, "\nInflection point:", inflection)
 
-## Run emptyDrops w/ knee + 100 to make it more strident 
+## Run emptyDrops w/ knee + 100 to make it more strident
 ## emptyDrops distinguish between droplets containing cells and ambient RNA in a droplet-based single-cell RNA experiment
 st <- Sys.time()
 message(Sys.time(), " Starting emptyDrops")
 sce.out <- DropletUtils::emptyDrops(
     raw.sce,
-    niters = 30000,       # number of iterations. It use the Monte Carlo p-value
-    lower = knee_lower    # numeric scalar specifying the lower bound on the total UMI count
+    niters = 30000, # number of iterations. It use the Monte Carlo p-value
+    lower = knee_lower # numeric scalar specifying the lower bound on the total UMI count
 )
 en <- Sys.time() - st
 
-message(paste0(' Processing time: ', en))    
+message(paste0(" Processing time: ", en))
 # head.matrix(sce.out,n=5)
-    
+
 # Get significant TRUE cells based on the FDR cutoff
 cells_FALSE <- 0
 cells_FT <- 0
 cells_TRUE <- 0
 signif_TRUE <- 0
 ##  add arbitrary margins on a multidimensional array
-cells_stat <- addmargins(table(Signif = sce.out$FDR <= FDR_cutoff,
-              Limited = sce.out$Limited,
-              useNA = "ifany"))
+cells_stat <- addmargins(table(
+    Signif = sce.out$FDR <= FDR_cutoff,
+    Limited = sce.out$Limited,
+    useNA = "ifany"
+))
 cells_stat
 
 # get specific values from a confusion mtx
-cells_FALSE <- cells_stat[1,1]
-cells_FT <- cells_stat[2,1]
-cells_TRUE <- cells_stat[2,2]
-signif_TRUE <- cells_stat[2,4]
+cells_FALSE <- cells_stat[1, 1]
+cells_FT <- cells_stat[2, 1]
+cells_TRUE <- cells_stat[2, 2]
+signif_TRUE <- cells_stat[2, 4]
 
 # Calculate non Emptydroplets value and percentage related
 nonEmptydroplets <- (sce.out |> as.data.frame() |> filter(FDR < FDR_cutoff) |> summarise(n = n()))$n
-per.nonemptydroplets <- ((nonEmptydroplets*100) / totalCells) #, digits = 4)
-    
+per.nonemptydroplets <- ((nonEmptydroplets * 100) / totalCells) # , digits = 4)
+
 # Build a table with the stats applied and the outputs gotten
 # Table with the cellranger-arc `gene expression statistics`
-tab_stats <- matrix(c(s_sample, totalCells, knee_lower, inflection, FDR_cutoff, 
-                      cells_FALSE, cells_FT, cells_TRUE, signif_TRUE, 
-                      nonEmptydroplets, per.nonemptydroplets), ncol=11, byrow=TRUE)
-colnames(tab_stats) <- c('Sample_name','Total_cells','Knee_lower','Inflection','FDR_cutoff',
-                         'Signif.FALSE','F/T','T/T','Signif.TRUE',
-                         'Non.Emptydroplets', '%Emptydroplets')
+tab_stats <- matrix(c(
+    s_sample, totalCells, knee_lower, inflection, FDR_cutoff,
+    cells_FALSE, cells_FT, cells_TRUE, signif_TRUE,
+    nonEmptydroplets, per.nonemptydroplets
+), ncol = 11, byrow = TRUE)
+colnames(tab_stats) <- c(
+    "Sample_name", "Total_cells", "Knee_lower", "Inflection", "FDR_cutoff",
+    "Signif.FALSE", "F/T", "T/T", "Signif.TRUE",
+    "Non.Emptydroplets", "%Emptydroplets"
+)
 tab_stats <- as.table(tab_stats)
-        
+
 # > tab_stats
 # Sample_name Total_cells Knee_lower Inflection FDR_cutoff Signif.FALSE F/T
 # A S1_Hb_KDM   720339      956        268        0.001      407          224
-# T/T  Signif.TRUE Non.Emptydroplets %Emptydroplets  
+# T/T  Signif.TRUE Non.Emptydroplets %Emptydroplets
 # A 7351 7575        7575              1.05158821055087
 
 # Export the table to CSV for further analysis
-message(paste0(' Process completed. Saving stats and plots'))
+message(paste0(" Process completed. Saving stats and plots"))
 
-s_file_name <- here("processed-data", "00_RNAbackground", paste0(s_sample,'_empty_droplets_stats.csv'))
-write.csv(tab_stats, file=s_file_name, quote=FALSE, row.names=FALSE)
+s_file_name <- here("processed-data", "00_RNAbackground", paste0(s_sample, "_empty_droplets_stats.csv"))
+write.csv(tab_stats, file = s_file_name, quote = FALSE, row.names = FALSE)
 
 # Droplet Elbow plot
 s_file_name <- here("plots", "00_RNAbackground", paste0(s_sample, "_empty_droplets_knee_plot.png"))
 
 define_theme <- function(size = 15) {
-  theme_bw() +
-    theme(text = element_text(size = size))
+    theme_bw() +
+        theme(text = element_text(size = size))
 }
 # Prepare data frame with additional FDR column
 droplet_elbow_data <- as.data.frame(bcRanks) %>%
-  mutate(FDR = sce.out$FDR)
+    mutate(FDR = sce.out$FDR)
 
 # Define parameters
 knee_meta <- metadata(bcRanks)$knee
-knee_lower_label <- paste0("Knee est 'lower' (", knee_lower, ')')
-second_knee_label <- paste0("Second Knee (", knee_meta, ')')
+knee_lower_label <- paste0("Knee est 'lower' (", knee_lower, ")")
+second_knee_label <- paste0("Second Knee (", knee_meta, ")")
 title <- paste0("Sample: ", s_sample)
 subtitle <- nonEmptydroplets # n_cell_anno
 
 # Create ggplot object
 droplet_elbow_plot <- droplet_elbow_data %>%
-  ggplot(aes(x = rank, y = total, color = FDR < FDR_cutoff)) +
-  # Define points
-  geom_point(alpha = 0.5, size = 1) +
-  # Define lines and annotations
-  geom_hline(yintercept = knee_meta, linetype = "dotted", color = "gray") +
-  annotate("text", x = 10, y = knee_meta, label = second_knee_label, vjust = -1, color = "gray") +
-  geom_hline(yintercept = knee_lower, linetype = "dashed") +
-  annotate("text", x = 10, y = knee_lower, label = knee_lower_label, vjust = -0.5) +
-  # Define scales
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  # Define labels
-  labs(
-    x = "Barcode Rank",
-    y = "Total UMI Counts",
-    title = title,
-    subtitle = subtitle,
-    color = paste("FDR <", FDR_cutoff)
-  ) +
-  define_theme() +
-  theme(legend.position = "bottom")
+    ggplot(aes(x = rank, y = total, color = FDR < FDR_cutoff)) +
+    # Define points
+    geom_point(alpha = 0.5, size = 1) +
+    # Define lines and annotations
+    geom_hline(yintercept = knee_meta, linetype = "dotted", color = "gray") +
+    annotate("text", x = 10, y = knee_meta, label = second_knee_label, vjust = -1, color = "gray") +
+    geom_hline(yintercept = knee_lower, linetype = "dashed") +
+    annotate("text", x = 10, y = knee_lower, label = knee_lower_label, vjust = -0.5) +
+    # Define scales
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    # Define labels
+    labs(
+        x = "Barcode Rank",
+        y = "Total UMI Counts",
+        title = title,
+        subtitle = subtitle,
+        color = paste("FDR <", FDR_cutoff)
+    ) +
+    define_theme() +
+    theme(legend.position = "bottom")
 
-ggsave(droplet_elbow_plot, filename = s_file_name) 
+ggsave(droplet_elbow_plot, filename = s_file_name)
 
 
 ## Reproducibility information
@@ -196,8 +202,8 @@ session_info()
 # > Sys.time()
 # [1] "2024-08-08 14:50:50 EDT"
 # > proc.time()
-# user   system  elapsed 
-# 1055.326   15.723 9628.191 
+# user   system  elapsed
+# 1055.326   15.723 9628.191
 # > options(width = 120)
 # > session_info()
 # ─ Session info ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -212,7 +218,7 @@ session_info()
 # tz       US/Eastern
 # date     2024-08-08
 # pandoc   3.1.3 @ /jhpce/shared/community/core/conda_R/4.3.x/bin/pandoc
-# 
+#
 # ─ Packages ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 # package              * version    date (UTC) lib source
 # abind                  1.4-5      2016-07-21 [2] CRAN (R 4.3.2)
