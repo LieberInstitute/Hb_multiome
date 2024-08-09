@@ -3,7 +3,7 @@
 ##
 ## Authors. CSC / HT
 ## Date. April 21st, 2023
-## Last.Adaptation: Jan.22, 2024
+## Last Update: August 2024
 ##
 ## Input: Truncated H5, meta-data.cvs and fragments.tvs
 ## Output: rds Seurat objects and plots
@@ -25,27 +25,20 @@ library(here)
 
 here::here()
 
-if (!packageVersion("Seurat")=='4.9.9.9060') {
-    stop
-    message('This pipeline was implemented with Seurat v5 and Signac v1.11+ ')
-    message('You need the laterst Seurat v5 (‘4.9.9.9060’)')
-    message('Current available repository on: https://satijalab.org/seurat/articles/install.html  ') }
+processedDir <- here("processed-data", "01_preprocessing_QC")
+plotDir <- here("plots", "01_preprocessing_QC")
+functionsDir <- here("code", "functions_custom")
 
-# Check if processed_data directory exists, if not create it
-if (!dir.exists(here("processed-data/01_preprocessing_QC/"))) {
-    dir.create(here("processed-data/01_preprocessing_QC/"))
-}
-# Check if plot directory exists, if not create it
-if (!dir.exists(here("plots/01_preprocessing_QC/"))) {
-    dir.create(here("plots/01_preprocessing_QC/"))
-}
+# Check processed_data and plot directories
+if (!dir.exists(processedDir)) { dir.create(processedDir) }
+if (!dir.exists(plotDir)) { dir.create(plotDir) }
 
-source(here("code/functions_custom", "remote_file_caller.R"))       # Call functions to read paths
-source(here("code/functions_custom", "remote_seurat_functions.R"))  # Call functions to create and handle Seurat object
-source(here("code/functions_custom", "remote_signac_functions.R"))  # Call functions to create Signac object
-source(here("code/functions_custom", "remote_plot_functions.R"))    # Call to plot GEX assay
-source(here("code/functions_custom", "remote_plot_functions_ATAC.R"))       # Call to plot ATAC assay
-source(here("code/functions_custom", "remote_filtering_functions.R"))       # Call functions to subset the Seurat object
+source(here(functionsDir, "remote_file_caller.R"))       # Call functions to read paths
+source(here(functionsDir, "remote_seurat_functions.R"))  # Call functions to create and handle Seurat object
+source(here(functionsDir, "remote_signac_functions.R"))  # Call functions to create Signac object
+source(here(functionsDir, "remote_plot_functions.R"))    # Call to plot GEX assay
+source(here(functionsDir, "remote_plot_functions_ATAC.R"))       # Call to plot ATAC assay
+source(here(functionsDir, "remote_filtering_functions.R"))       # Call functions to subset the Seurat object
 
 # Function to plot GEX QCs 
 plot_GEX_QCs <- function(SeuratO, sample_name, b_UMIscorr=FALSE) {    
@@ -60,30 +53,26 @@ plot_GEX_QCs <- function(SeuratO, sample_name, b_UMIscorr=FALSE) {
     if (b_UMIscorr) {     
         # Violin plot with UMIs, Genes, ^MT and RIBO levels
         p1 <- get_Vplots_main_GEX(SeuratO)  
-        png_file <- paste0(sample_name,'_UMIs_Genes_MT.png')
-        png_name <- here('plots/01_preprocessing_QC', png_file)  
+        png_name <- here(plotDir, paste0(sample_name,'_UMIs_Genes_MT.png'))  
         ggsave(p1, filename = png_name, height = 4, width = 7)
         message('Violin plots for UMIs, Genes and MT levels saved!')
         
         # Plot Genes Density per cell 
         p3 <- get_plt_genes_per_cell_density(df_genes_per_cell)
-        png_file <- paste0(sample_name,'_Genes_Density.png')
-        png_name <- here('plots/01_preprocessing_QC', png_file)  
+        png_name <- here(plotDir, paste0(sample_name,'_Genes_Density.png'))  
         ggsave(p3, filename = png_name, height = 4, width = 4)
         message('Genes density plot saved!')
         
         # Plot Genes Distribution per cell 
         p4 <- get_plt_genes_per_cell_boxplot(df_genes_per_cell)
-        png_file <- paste0(sample_name,'_Genes_Distribution.png')
-        png_name <- here('plots/01_preprocessing_QC', png_file)  
+        png_name <- here(plotDir, paste0(sample_name,'_Genes_Distribution.png'))  
         ggsave(p4, filename = png_name, height = 4, width = 4)
         message('Genes distribution plot saved!')
     }
     
     # Correlation btw genes and number of UMIs and determine whether strong presence of cells with low numbers of genes/UMIs
     p5 <- get_plt_UMIS_genes_MT_geomlm(df_genes_per_cell) # (df_genes_per_cell, 500, 500) 
-    png_file <- paste0(sample_name,'_UMIS_per_MT.png')
-    png_name <- here('plots/01_preprocessing_QC', png_file)  
+    png_name <- here(plotDir, paste0(sample_name,'_UMIS_per_MT.png'))  
     ggsave(p5, filename = png_name, height = 4, width = 4)
     message('UMI/Genes by MT plot saved!')
     
@@ -91,7 +80,7 @@ plot_GEX_QCs <- function(SeuratO, sample_name, b_UMIscorr=FALSE) {
     #     plot_annotation(paste0(s_sample,' Quality Scores Before Quality Controls')) &
     #     theme(plot.tag = element_text(size = 10)) 
     # png_file <- paste0(sample_name,'_ALL.pdf')
-    # png_name <- here('plots/01_preprocessing_QC', png_file)  
+    # png_name <- here(plotDir, png_file)  
     # ggsave(pALL, filename = png_name, height = 12, width = 7)
     
     message('QCs reference saved')
@@ -102,8 +91,8 @@ plot_GEX_QCs <- function(SeuratO, sample_name, b_UMIscorr=FALSE) {
 table_descriptive_stats_GEX <- function(SeuratO, sample_name, sample_tissue) {    
     
     tab_stats <- get_basic_stats_GEX(SeuratO, sample_tissue)
-    message(paste0('Exporting table with QC quantiles for sample ', sample_name))
-    s_file_name <- here('processed-data/01_preprocessing_QC', paste0(sample_name,'_GEX_MITO_stats.csv'))
+    message('Exporting table with QC quantiles for sample ', sample_name)
+    s_file_name <- here(processedDir, paste0(sample_name,'_GEX_MITO_stats.csv'))
     write.csv(tab_stats, file=s_file_name, quote=TRUE, row.names=FALSE)
 
 }
@@ -129,7 +118,7 @@ sample_data = unlist(strsplit(sample_tmp,","))
 
 s_sample <- sample_data[[1]]
 s_tissue <- sample_data[[2]]
-message('Processing sample: ',s_sample, ' from ', s_tissue, ' tissue.')
+message('Processing sample: ', s_sample, ' from ', s_tissue, ' tissue.')
 
 # Create preliminary plots
 b_get_GEX_plots <- TRUE         
@@ -138,7 +127,7 @@ b_get_GEX_plots <- TRUE
 # Remove mitochondrial levels (by sample dynamically)
 b_get_filtered_GEX <- TRUE      
 if (b_get_filtered_GEX) {
-    source(here("code/functions_custom", "remote_filtering_functions.R"))    # Filter Seurat assay by MT levels (GEX assay)
+    source(here(functionsDir, "remote_filtering_functions.R"))    # Filter Seurat assay by MT levels (GEX assay)
     i_filtering_method <- 1         # Pick up probabilities method to remove mito levels   
 }
 
@@ -161,12 +150,11 @@ s_frag_namefile <- get_ATAC_barcode_tsv(s_sample)   # Read tvs file (fragments)
 SeuratOBJ <- get_seurat_obj(s_sample, s_bc_mtx, s_tissue, meta_path, FALSE)
 # Syntax: function(seuratName, s_bc_mtx, s_tissue, s_meta, b_additional_feat = FALSE)
 #SeuratOBJ@meta.data
-str(SeuratOBJ)
 print(SeuratOBJ)
 
 message('Seurat object created successfully!')
 message('Saving Seurat ...')
-rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample,'.rds'))
+rds_name <- here(processedDir, paste0(s_sample,'.rds'))
 saveRDS(SeuratOBJ, file = rds_name)
 
 
@@ -234,7 +222,7 @@ if (b_get_filtered_GEX) {
 
 
 # message(paste0('Saving new Seurat filtered.'))
-# rds_name <- here('processed-data/01_preprocessing_QC', paste0(s_sample,'filteredM',i_filtering_method,'.rds'))
+# rds_name <- here(processedDir, paste0(s_sample,'filteredM',i_filtering_method,'.rds'))
 # saveRDS(SeuratOBJ.filtered, file = rds_name)
 
 
@@ -260,7 +248,7 @@ genome(annotations) <- "hg38"
 
 # Parse a list of Seurat objects  (lst_seurats)
 
-message(paste0(length(lst_seurats), ' Seurat objects to process...'))
+message(length(lst_seurats), ' Seurat objects to process...')
 
 for (S in lst_seurats) {
 
@@ -304,7 +292,7 @@ for (S in lst_seurats) {
             #colnames(SeuratOBJ@meta.data)
             p1_TSS <- TSSPlot(SeuratOBJ, group.by = 'high.tss') + NoLegend()
             png_file_TSS <- paste0(base_name,'_TSS.png')
-            png_name <- here('plots/01_preprocessing_QC', png_file_TSS)
+            png_name <- here(plotDir, png_file_TSS)
             ggsave(p1_TSS, filename = png_name, height = 4, width = 4)
             
         }
@@ -329,18 +317,18 @@ for (S in lst_seurats) {
         png_file_BlackR <- paste0(base_name,'_reads_in_peaks.png')
         png_file_ATAC <- paste0(base_name,'_ATAC_QCs.png')
         
-        png_name <- here('plots/01_preprocessing_QC', png_file_NS)
+        png_name <- here(plotDir, png_file_NS)
         ggsave(p1_NS, filename = png_name, height = 4, width = 4)
-        png_name <- here('plots/01_preprocessing_QC', png_file_BlackR)
+        png_name <- here(plotDir, png_file_BlackR)
         ggsave(p1_BlackR, filename = png_name, height = 4, width = 5)
-        png_name <- here('plots/01_preprocessing_QC', png_file_ATAC)
+        png_name <- here(plotDir, png_file_ATAC)
         ggsave(p1_ATAC, filename = png_name, height = 4, width = 7)
   
         message('ATAC QCs plots saved!')  
     
     }
     # Save RDS Object
-    rds_name <- here('processed-data/01_preprocessing_QC', paste0(base_name,'_ATAC.rds'))
+    rds_name <- here(processedDir, paste0(base_name,'_ATAC.rds'))
     saveRDS(SeuratOBJ, file = rds_name)
     message('ATAC RDS object saved!')   
 }
