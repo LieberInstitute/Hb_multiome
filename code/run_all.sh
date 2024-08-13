@@ -57,7 +57,7 @@ sbatch 01_empty_drops_in_multiomedata.sh
 
 ######## Build Seurats and Plot basic QCs ########
 
-## Delete the logs/old-results, and re-submit EmptyDrops
+## Delete the logs/old-results, and re-submit seurat builder
 cd ${CODEDIR}/01_preprocessing_QC
 # mkdir -p logs ## Create the logs directory if it doesn't exist
 rm logs/*.err
@@ -67,6 +67,37 @@ rm ${PROCESSEDIR}/01_preprocessing_QC/*Hb_KDM_QC_ATAC.rds
 rm ${PLOTDIR}/01_preprocessing_QC/*.png
 ## These are independent jobs-arrays 
 sbatch 01_preprocessing_GEX_ATAC.sh
+
+
+######## Combine Seurats  ########
+
+## Delete the logs/old-results, and re-submit seurat builder
+cd ${CODEDIR}/02_merge_seurats
+# mkdir -p logs ## Create the logs directory if it doesn't exist
+rm logs/*.err
+rm logs/*.out
+rm ${PROCESSEDIR}/02_merge_seurats/*seurat.combined.data_counts.rds
+rm ${PROCESSEDIR}/02_merge_seurats/*seurat.combined.norm_counts.rds
+## These are dependency jobs-arrays 
+#sbatch 01_merge_seurats_job_loop.sh
+id1=$(sbatch --parsable 01_merge_seurats_job_loop.sh)
+
+
+######## Perform CCA and Harmony corrections  ########
+
+## Delete the logs/old-results, and re-submit seurat builder
+#cd ${CODEDIR}/02_merge_seurats
+# mkdir -p logs ## Create the logs directory if it doesn't exist
+rm logs/*.err
+rm logs/*.out
+rm ${PROCESSEDIR}/02_merge_seurats/*CCA.rds
+rm ${PROCESSEDIR}/02_merge_seurats/*Harmony.rds
+rm ${PROCESSEDIR}/02_merge_seurats/*PCA.rds
+## These are dependency jobs-arrays 
+id2=$(sbatch --parsable --dependency=afterok:$id1 02_integrate_seurats_job_loop.sh)
+
+
+
 
 
 # ## Add future steps here
