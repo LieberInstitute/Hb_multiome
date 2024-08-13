@@ -5,13 +5,13 @@
 # SBATCH -t 1-00:00:00
 #SBATCH --mem=30GB						                                    # each job from the array will get its own private 30G to work with)
 #SBATCH --array=1-5                                           	  # change the array range acordingly with the rows listed in the array_targets.txt
-id=$( sed -n ${SLURM_ARRAY_TASK_ID}p ../array_targets_names.txt)				                                  
+id=$( sed -n ${SLURM_ARRAY_TASK_ID}p ../array_target_names_2024a.txt)				                                  
 #SBATCH --output=logs/Hb_allQC%j.out						                              
 #SBATCH --error=logs/Hb_allQC_%j.err		
 #SBATCH --mail-type=ALL
 
 echo "**** Job starts ****"
-echo "General script to QCed CellRanger-ARC datasets"
+echo "General script to run CellRanger-ARC datasets"
 date
 
 echo "**** SLURM info ****"
@@ -39,7 +39,9 @@ PLOTDIR="${MAINDIR}/plots"
 # Rscript update_style.R
 
 
-## Analysis workflow for `Multiome 10x CellRanger scRNAseq + scATACseq data`
+######## Analysis workflow for `Multiome 10x CellRanger scRNAseq + scATACseq data`
+
+######## EmptyDroplets ########
 
 ## First we calculate estimated number of cells by EmptyDroplets for comparison purposes 
 ## Delete the logs/old-results, and re-submit EmptyDrops
@@ -49,8 +51,22 @@ rm logs/*.err
 rm logs/*.out
 rm ${PROCESSEDIR}/00_RNAbackground/*.csv
 rm ${PLOTDIR}/00_RNAbackground/*.png
-## This is an independent jobs-array 
+## These are independent jobs-arrays 
 sbatch 01_empty_drops_in_multiomedata.sh
+
+
+######## Build Seurats and Plot basic QCs ########
+
+## Delete the logs/old-results, and re-submit EmptyDrops
+cd ${CODEDIR}/01_preprocessing_QC
+# mkdir -p logs ## Create the logs directory if it doesn't exist
+rm logs/*.err
+rm logs/*.out
+rm ${PROCESSEDIR}/01_preprocessing_QC/*Hb_KDM.rds
+rm ${PROCESSEDIR}/01_preprocessing_QC/*Hb_KDM_QC_ATAC.rds
+rm ${PLOTDIR}/01_preprocessing_QC/*.png
+## These are independent jobs-arrays 
+sbatch 01_preprocessing_GEX_ATAC.sh
 
 
 # ## Add future steps here
