@@ -25,7 +25,7 @@ echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 echo "Array/sample: $id"
 
 ## load modules
-module conda_R/4.3.x
+module load conda_R/4.3.x
 module list
 
 echo "== This is the script =="
