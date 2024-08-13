@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -p shared
+#SBATCH --partition=katun
 #SBATCH --mem=20G
 #SBATCH --job-name=01_merge_seurats_job_loop
 #SBATCH -c 2
@@ -8,6 +8,7 @@
 #SBATCH -e /dev/null
 #SBATCH --mail-type=ALL
 #SBATCH --array=1-2%20
+
 
 ## Define loops and appropriately subset each variable for the array task ID
 all_type_mtx=(data_counts norm_counts)
@@ -28,11 +29,10 @@ echo "Job id: ${SLURM_JOB_ID}"
 echo "Job name: ${SLURM_JOB_NAME}"
 echo "Node name: ${SLURMD_NODENAME}"
 echo "Task id: ${SLURM_ARRAY_TASK_ID}"
+echo "Assay type: ${type_mtx}"
 
 ## Load the R module
-module load conda_R/4.3
-
-## List current modules for reproducibility
+module load conda_R/4.3.x
 module list
 
 ## Edit with your job command
