@@ -5,9 +5,6 @@
 ## Date. April 21st, 2023
 ## Last Update: August 2024
 ##
-## Input: Truncated H5, meta-data.cvs and fragments.tvs
-## Output: rds Seurat objects and plots
-##
 ## NOTES: 
 ## For a ~10k cells cellranger dataset it is recommended ~40G free mem to process the TSS() ATAC score.  Without storing the base-resolution matrix of integration counts at each site you can use less memory, but does not allow plotting the accessibility profile at the TSS.
 ## For slurm env: $srun --pty --mem=40GB --x11 bash
@@ -20,112 +17,166 @@ library(EnsDb.Hsapiens.v86)
 library(BSgenome.Hsapiens.UCSC.hg38)
 options(tidyverse.quiet = TRUE)
 library(tidyverse)
-#library(SeuratDisk)                             
+library(ggplot2)
+library(patchwork)
 library(here)
 
 here::here()
 
+cellrangerDir <- here("processed-data", "cellrangerARC")
 processedDir <- here("processed-data", "01_preprocessing_QC")
 plotDir <- here("plots", "01_preprocessing_QC")
-functionsDir <- here("code", "functions_custom")
+functionsDir <- here("code", "01_preprocessing_QC")
 
-# Check processed_data and plot directories
+# Check processed_data and plot directories exists
 if (!dir.exists(processedDir)) { dir.create(processedDir) }
 if (!dir.exists(plotDir)) { dir.create(plotDir) }
 
-source(here(functionsDir, "remote_file_caller.R"))       # Call functions to read paths
-source(here(functionsDir, "remote_seurat_functions.R"))  # Call functions to create and handle Seurat object
-source(here(functionsDir, "remote_signac_functions.R"))  # Call functions to create Signac object
-source(here(functionsDir, "remote_plot_functions.R"))    # Call to plot GEX assay
-source(here(functionsDir, "remote_plot_functions_ATAC.R"))       # Call to plot ATAC assay
-source(here(functionsDir, "remote_filtering_functions.R"))       # Call functions to subset the Seurat object
+# source(here(functionsDir, "remote_file_caller.R"))       # Call functions to read paths
+source(here(functionsDir, "remote_seurat_functions_v2.R"))  # Call functions to create and handle Seurat object
+source(here(functionsDir, "remote_signac_functions_v2.R"))  # Call functions to create Signac object
 
-# Function to plot GEX QCs 
-plot_GEX_QCs <- function(SeuratO, sample_name, b_UMIscorr=FALSE) {    
+# Function to plot GEX basic quality controls 
+plot_GEX_QCs <- function(SeuratOBJ, sample_name, b_UMIscorr=FALSE) {    
 
-    #@b_UMIscorr: If TRUE only plots UMI/Counts by MT levels, otherwise plot all
+  # @b_UMIscorr:  If TRUE only plots UMI/Counts by MT levels, otherwise plot all. 
+  #               This is used to re-plot the correlation in QCed data
     
     # Assign the layer to the df
-    df_genes_per_cell <- as.data.frame(SeuratO[[]])
-    # Bar plot, number of cells per sample 
-    #p2 <- get_plt_cells_by_sample(df_genes_per_cell)
+  genes_per_cell <- as.data.frame(SeuratOBJ[[]])
+  if (b_UMIscorr) {
     
-    if (b_UMIscorr) {     
-        # Violin plot with UMIs, Genes, ^MT and RIBO levels
-        p1 <- get_Vplots_main_GEX(SeuratO)  
-        png_name <- here(plotDir, paste0(sample_name,'_UMIs_Genes_MT.png'))  
-        ggsave(p1, filename = png_name, height = 4, width = 7)
-        message('Violin plots for UMIs, Genes and MT levels saved!')
-        
-        # Plot Genes Density per cell 
-        p3 <- get_plt_genes_per_cell_density(df_genes_per_cell)
-        png_name <- here(plotDir, paste0(sample_name,'_Genes_Density.png'))  
-        ggsave(p3, filename = png_name, height = 4, width = 4)
-        message('Genes density plot saved!')
-        
-        # Plot Genes Distribution per cell 
-        p4 <- get_plt_genes_per_cell_boxplot(df_genes_per_cell)
-        png_name <- here(plotDir, paste0(sample_name,'_Genes_Distribution.png'))  
-        ggsave(p4, filename = png_name, height = 4, width = 4)
-        message('Genes distribution plot saved!')
-    }
+    p1 <- VlnPlot(object = SeuratOBJ, 
+                  features = c('nCount_RNA','nFeature_RNA','percent.mt'), 
+                  layer = "counts", 
+                  group.by = "orig.ident", raster=FALSE) &
+      theme(#legend.position = 'none',
+        axis.text.x = element_text(angle=0, hjust=1, size=8),  #10
+        axis.text.y = element_text(size=8),  #10
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()) # &labs(title = "", x = 'Samples', y ="")
+    png_name <- here(plotDir, paste0(sample_name,'_UMIs_Genes_MT.png'))  
+    ggsave(p1, filename = png_name, height = 4, width = 7)
+
+    ## Plot Genes Density per cell 
+    p3 <- genes_per_cell %>%
+      ggplot(aes(color=orig.ident, x=nFeature_RNA, fill= orig.ident)) +
+      geom_density(alpha = 0.2) +
+      scale_x_log10() +
+      theme_classic() +
+      theme(plot.title = element_text(hjust=0.5)) +
+      geom_vline(xintercept = 300) +
+      ylab("Log10(UMIs)") +
+      xlab("Gene-counts") +
+      ggtitle("Genes density by cell")   
+    png_name <- here(plotDir, paste0(sample_name,'_Genes_Density.png'))  
+    ggsave(p3, filename = png_name, height = 4, width = 4)
+
+    # Plot Genes Distribution per cell 
+    p4 <- genes_per_cell %>%
+      ggplot(aes(x=orig.ident, y=log10(nFeature_RNA), fill=orig.ident)) +
+      geom_boxplot(alpha = 0.7) +
+      theme_classic() +
+      theme(axis.text.x = element_text(vjust = 1, hjust=1)) +
+      theme(plot.title = element_text(hjust=0.5)) +
+      ylab("Log10(gene-counts)") +
+      xlab("") +
+      ggtitle("Genes distribution by cell")
+    png_name <- here(plotDir, paste0(sample_name,'_Genes_Distribution.png'))  
+    ggsave(p4, filename = png_name, height = 4, width = 4)
+
+  }
     
-    # Correlation btw genes and number of UMIs and determine whether strong presence of cells with low numbers of genes/UMIs
-    p5 <- get_plt_UMIS_genes_MT_geomlm(df_genes_per_cell) # (df_genes_per_cell, 500, 500) 
-    png_name <- here(plotDir, paste0(sample_name,'_UMIS_per_MT.png'))  
-    ggsave(p5, filename = png_name, height = 4, width = 4)
-    message('UMI/Genes by MT plot saved!')
+  # Correlation btw genes and number of UMIs and determine whether strong presence of cells with low numbers of genes/UMIs
+  #p5 <- get_plt_UMIS_genes_MT_geomlm(genes_per_cell) # (df_genes_per_cell, 500, 500) 
+  p5 <- genes_per_cell %>%
+    ggplot(aes(x=nCount_RNA, y=nFeature_RNA, color=percent.mt, group.by = 'orig.ident')) + # MTRatio
+    #    ggplot(aes(x=nCount_RNA, y=nFeature_RNA, color=MTRatio)) + # MTRatio
+    geom_point() +
+    scale_colour_gradient(low = "gray90", high = "black") +
+    stat_smooth(method=lm) +
+    scale_x_log10() +
+    scale_y_log10() +
+    theme_classic() +
+    # if (i_vline > 0) {
+    #     geom_vline(xintercept = i_vline, linetype=2)} +
+    # if (i_hline > 0) {
+    #     geom_hline(yintercept = i_hline, linetype=2)} +
+    # facet_wrap(~orig.ident) +
+    ylab("log10(genes-counts)") +
+    xlab("log10(UMI-counts)") +
+    ggtitle('UMIs/Genes by MT levels')
+  png_name <- here(plotDir, paste0(sample_name,'_UMIS_per_MT.png'))  
+  ggsave(p5, filename = png_name, height = 4, width = 4)
     
-    # pALL <- p1 + p3 + p4 + p5 +
-    #     plot_annotation(paste0(s_sample,' Quality Scores Before Quality Controls')) &
-    #     theme(plot.tag = element_text(size = 10)) 
-    # png_file <- paste0(sample_name,'_ALL.pdf')
-    # png_name <- here(plotDir, png_file)  
-    # ggsave(pALL, filename = png_name, height = 12, width = 7)
-    
-    message('QCs reference saved')
+  # pALL <- p1 + p3 + p4 + p5 +
+  #     plot_annotation(paste0(s_sample,' Quality Scores Before Quality Controls')) &
+  #     theme(plot.tag = element_text(size = 10)) 
+  # png_file <- paste0(sample_name,'_ALL.pdf')
+  # png_name <- here(plotDir, png_file)  
+  # ggsave(pALL, filename = png_name, height = 12, width = 7)
+  
+  message('Plots for RNA quality controls saved!')
     
 }
 
-# Some descriptive stats for further analysis
-table_descriptive_stats_GEX <- function(SeuratO, sample_name, sample_tissue) {    
-    
-    tab_stats <- get_basic_stats_GEX(SeuratO, sample_tissue)
-    message('Exporting table with QC quantiles for sample ', sample_name)
-    s_file_name <- here(processedDir, paste0(sample_name,'_GEX_MITO_stats.csv'))
-    write.csv(tab_stats, file=s_file_name, quote=TRUE, row.names=FALSE)
+get_Vplots_main_ATAC  <- function(seuratOBJ) {
+  # TSS.enrichment will fail if you do not have enough memory
+  if (!is.null(seuratOBJ@meta.data$TSS.enrichment)) { 
+    p1 <- VlnPlot(object = seuratOBJ, features = c("nCount_ATAC", "nFeature_ATAC", "TSS.enrichment"), 
+                  group.by = "orig.ident") # , ncol = 4 
+  } else {
+    p1 <- VlnPlot(object = seuratOBJ, features = c("nCount_ATAC", "nFeature_ATAC", "nucleosome_signal"), 
+                  group.by = "orig.ident") # , ncol = 3 
+  }
+  p1 <- p1 &
+    theme(#legend.position = 'none',
+      axis.text.x = element_text(angle=0, hjust=1, size=8),  #10
+      axis.text.y = element_text(size=8),  #10
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank()) # &labs(title = "", x = 'Samples', y ="")
+  
+  return(p1)
+  
+} 
 
-}
-    
-# p5 plot warning ----- CSC
-# Warning message:
-#     The following aesthetics were dropped during statistical transformation: colour
-# ℹ This can happen when ggplot fails to infer the correct grouping structure in the data.
-# ℹ Did you forget to specify a `group` aesthetic or to convert a numerical variable into a factor? 
+get_Vplots_blackR_ATAC  <- function(seuratOBJ) {
+  
+  if ((!is.null(seuratOBJ@meta.data$pct_reads_in_peaks)) && (!is.null(seuratOBJ@meta.data$blacklist_ratio))) { 
+    p1 <- VlnPlot(object = seuratOBJ, features = c("pct_reads_in_peaks","blacklist_ratio"), group.by = "orig.ident", ncol = 2)  
+  } else {
+    p1 <- VlnPlot(object = seuratOBJ, features = c("pct_reads_in_peaks","blacklist_ratio"), group.by = "orig.ident", ncol = 2) 
+  }
+  p1 <- p1 &
+    theme(#legend.position = 'none',
+      axis.text.x = element_text(angle=0, hjust=1, size=8),  #10
+      axis.text.y = element_text(size=8),  #10
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank()) # &labs(title = "", x = 'Samples', y ="")
+  
+  return(p1)
+  
+} 
+
+
 
 ########################    Initials ########################  
 
 ## commandArgs scans the arguments which have been supplied when the current R script was invoked (from shell sh)
 sample_tmp <- commandArgs(trailingOnly = TRUE)
-#sample_tmp <- args[1]
-# testing
-#sample_tmp <- 'S1_Hb_KDM,human'  # testing HUMAN tissue
-#sample_tmp <- 'S2_Hb_KDM,human'  # testing HUMAN tissue
-#sample_tmp <- '2_HPC_KDM,human'  # testing HUMAN tissue
-#sample_tmp <- '3_HPC_KDM,mouse'  # testing MOUSE tissue 
-#sample_tmp <- 'hippo42_1,human'  # testing HUMAN tissue 
-sample_data = unlist(strsplit(sample_tmp,","))
+# sample_tmp <- args[1]
+# For testing: sample_tmp <- "5S_Hb_KDM,human" 
 
+sample_data = unlist(strsplit(sample_tmp,","))
 s_sample <- sample_data[[1]]
 s_tissue <- sample_data[[2]]
 message('Processing sample: ', s_sample, ' from ', s_tissue, ' tissue.')
 
 # Create preliminary plots
 b_get_GEX_plots <- TRUE         
-#if (b_get_GEX_plots) { source(here("code/functions_custom", "remote_plot_functions.R")) }
 
 # Remove mitochondrial levels (by sample dynamically)
-b_get_filtered_GEX <- TRUE      
+b_get_filtered_GEX <- FALSE      
 if (b_get_filtered_GEX) {
     source(here(functionsDir, "remote_filtering_functions.R"))    # Filter Seurat assay by MT levels (GEX assay)
     i_filtering_method <- 1         # Pick up probabilities method to remove mito levels   
@@ -140,44 +191,64 @@ b_get_ATAC_QC <- TRUE
 ########      Recommended 40G of free_mem to 3k-10k cells 
 ########  ################################################# ######## 
 
-# Read filtered barcode matrix, meta-data and fragment file names from cellranger-ARC
-s_bc_mtx <- get_filtered_barcode_mtx(s_sample)      # Read H5 file
-meta_path <- get_metadata_path(s_sample)            # Read csv file (meta-data path)
-s_frag_namefile <- get_ATAC_barcode_tsv(s_sample)   # Read tvs file (fragments)
+filtered_barcode_path <- here(cellrangerDir, s_sample, "outs", "filtered_feature_bc_matrix.h5")
+barcode_csv_path <- here(cellrangerDir, s_sample, "outs", "per_barcode_metrics.csv")
+fragments_tsv_path <- here(cellrangerDir, s_sample, "outs", "atac_fragments.tsv.gz")
 
-# Create Seurat Object 
+mtx <- Read10X_h5(filtered_barcode_path)             
+rna_counts <- mtx$`Gene Expression`
+metadata <- read.csv(file = barcode_csv_path, header = TRUE, row.names = 1)
+meta_tmp = c('atac_peak_region_fragments','atac_fragments')
+meta = metadata[meta_tmp]
+# print(head(meta, n = 3))
 
-SeuratOBJ <- get_seurat_obj(s_sample, s_bc_mtx, s_tissue, meta_path, FALSE)
-# Syntax: function(seuratName, s_bc_mtx, s_tissue, s_meta, b_additional_feat = FALSE)
-#SeuratOBJ@meta.data
-print(SeuratOBJ)
-
+SeuratOBJ <- CreateSeuratObject(
+  counts = rna_counts,
+  assay = "RNA",
+  project = s_sample,
+  meta.data = meta
+)
+SeuratOBJ
 message('Seurat object created successfully!')
-message('Saving Seurat ...')
-rds_name <- here(processedDir, paste0(s_sample,'.rds'))
-saveRDS(SeuratOBJ, file = rds_name)
+
+## Add additional meta-data: Chr-Mitochondrial levels
+
+SeuratOBJ$log10GenesPerUMI <- log10(SeuratOBJ$nFeature_RNA) / log10(SeuratOBJ$nCount_RNA)
+## For humans or mouse. GRCh38 and mm10, respectively
+if (s_tissue=='human') {
+  SeuratOBJ[["percent.mt"]] <- PercentageFeatureSet(SeuratOBJ, pattern = "^MT-")
+} else { # it is mouse
+  SeuratOBJ[["percent.mt"]] <- PercentageFeatureSet(SeuratOBJ, pattern = "^Mt")
+}
+if (s_tissue=='human') {
+  SeuratOBJ[["percent.ribo"]] <- PercentageFeatureSet(SeuratOBJ, pattern = "^RP[LS]")
+} else { # it is mouse
+  SeuratOBJ[["percent.ribo"]] <- PercentageFeatureSet(SeuratOBJ, pattern = "^Rp[ls]")
+}
+SeuratOBJ[["MTRatio"]] <- SeuratOBJ$percent.mt / 100 
+
+message('Mitochondrial and Ribosomal percentage levels added')
+
+## Optional meta-data for alculate percentages of largest genes by single cell
+# if (b_additional_feat==TRUE) { SeuratOBJ <- l_get_perc_largest_genes(SeuratOBJ) }  
 
 
 ########  ################################################# ######## 
 ########        2. Get Visualizations for the GEX           ######## 
 ########  ################################################# ######## 
 
-# Build and plot:
-#       UMI, Genes, MITO and RIBO violin plots
-#       Number of cells per sample
-#       UMI/transcripts per cell
-#       Distribution of genes per cell (histogram)
+# Build UMI, Genes, MITO and RIBO violin plots, number of cells per sample, UMI/transcripts per cell plots, and 
+#   Distribution of genes per cell histogram
 
-# Before QC any assay, plot the data ang get some descriptive stats
-if (b_get_GEX_plots) { 
- 
-    base_name <- paste0(s_sample, '_None_QC', TRUE)
-    plot_GEX_QCs(SeuratOBJ, base_name)
-    # Calculate and save some descriptive stats for further analysis
-    table_descriptive_stats_GEX(SeuratOBJ, base_name, s_tissue)
-    
+## Before QCed data, plot GEX basic quality controls
+if (b_get_GEX_plots) {
+    base_name <- paste0(s_sample, '_None_QC')
+    plot_GEX_QCs(SeuratOBJ, base_name, TRUE)
+    ## Calculate basic interquartile range for basic GEX stats
+    # table_descriptive_stats_GEX(SeuratOBJ, base_name, s_tissue)
 }
-    
+
+
 ########  ################################################# ######## 
 ##        3. Preprocess Seurat Object based on the Mitochondrial percentage in the GEX assay
 ##              METHOD 1: (M1p)  calculate cut-off based on probabilities
@@ -212,18 +283,20 @@ if (b_get_filtered_GEX) {
     lst_seurats <- list(SeuratOBJ, SeuratOBJ.filtered)
     
     message('Seurat filtered by MT level successfully!')
+
+    rds_name <- here(processedDir, paste0(s_sample,'filteredM',i_filtering_method,'.rds'))
+    saveRDS(SeuratOBJ.filtered, file = rds_name)
+    message('Saving Seurat filtered.')
     
 } else {
     
     # Only one Seurat object available
     lst_seurats <- list(SeuratOBJ)    
+    rds_name <- here(processedDir, paste0(s_sample,'.rds'))
+    saveRDS(SeuratOBJ, file = rds_name)
+    message('Saving Seurat none filtered.')
     
 }
-
-
-# message(paste0('Saving new Seurat filtered.'))
-# rds_name <- here(processedDir, paste0(s_sample,'filteredM',i_filtering_method,'.rds'))
-# saveRDS(SeuratOBJ.filtered, file = rds_name)
 
 
 ########  ################################################# ############ 
@@ -234,7 +307,7 @@ if (b_get_filtered_GEX) {
 #SeuratOBJ <- load_seurat_obj(SeuratOBJ, s_seurat_name) 
 #head(SeuratOBJ, n = 3)
 
-# General use: Create gene annotations for hg38 and extract gene annotations from EnsDb
+## General use: Create gene annotations for hg38 and extract gene annotations from EnsDb
 annotations <- GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86)
 # show(annotations) / # View(head(annotations,n=5)) /# names(genomeStyles('Homo_sapiens'))
 seqlevelsStyle(annotations) <- "UCSC"
@@ -244,9 +317,11 @@ genome(annotations) <- "hg38"
 #[1] "tx_id"        "gene_name"    "gene_id"      "gene_biotype" "type"   
 
 
-####### Create and calculate chromatin QC metrics #######
+##### Create and calculate chromatin QC metrics #######
 
-# Parse a list of Seurat objects  (lst_seurats)
+## Parse a list of Seurat objects (lst_seurats). lst_seurats may containt:
+##      (1) A new Seurat Obj from a specific experiment, and/or
+##      (2) A Seurat Obj filtered by some GEX quality threshold (m1 or m2) 
 
 message(length(lst_seurats), ' Seurat objects to process...')
 
@@ -260,11 +335,12 @@ for (S in lst_seurats) {
     
     # Create the chromatin assay with annotations and attach it to the Seurat object 
     start.time = Sys.time()
-    SeuratOBJ <- get_create_atac_objs(S, s_bc_mtx, s_frag_namefile, annotations, TRUE) 
-    end.time = Sys.time()
-    print(end.time - start.time)        # 15s / 40G free_mem / 3k Cells / Object.size 806.2 Mb
-    #f_InspectSeurat(SeuratOBJ)
-    #tbs_atac <- get_basic_stats_ATAC(SeuratOBJ)
+    
+    atac_counts <- mtx$Peaks
+    SeuratOBJ <- get_create_atac_objs(S, atac_counts, fragments_tsv_path, annotations, TRUE) 
+    print(start.time - Sys.time())        # 15s / 40G free_mem / 3k Cells / Object.size 806.2 Mb
+    # f_InspectSeurat(SeuratOBJ)
+    # tbs_atac <- get_basic_stats_ATAC(SeuratOBJ)
 
     if (b_get_ATAC_QC) {
         # Calculate Nucleosome Signal
@@ -284,8 +360,9 @@ for (S in lst_seurats) {
             #              compute the TSS enrichment scores and visualize with TSSPlot(). You need more memory
             #           2. Error in `colnames<-`(`*tmp*`, value = seq_len(length.out = region.width) -  : attempt to set 'colnames' ...
             #              This is a vague message that would happen if no fragments are found in the set of TSS regions. 
-            #              You could double-checking that the correct gene annotations is being used or you have a low ATAC quality. 
+            #              You could double-checking that the correct gene annotations is being used or you have a low ATAC quality
             
+            ## Filtering by ATAC basic quality controls 
             SeuratOBJ <- TSSEnrichment(SeuratOBJ, fast = FALSE) 
             # Group by cells with TSS enrichment scores in two groups.
             SeuratOBJ$high.tss <- ifelse(SeuratOBJ$TSS.enrichment > 2, 'High', 'Low')
@@ -307,8 +384,6 @@ for (S in lst_seurats) {
         # Add blacklist ratio and fraction of reads in peaks
         SeuratOBJ$pct_reads_in_peaks <- SeuratOBJ$atac_peak_region_fragments / SeuratOBJ$atac_fragments * 100
         SeuratOBJ$blacklist_ratio <- SeuratOBJ$blacklist_fraction / SeuratOBJ$atac_peak_region_fragments
-        #        Error in `x[[i, drop = TRUE]]`:
-        #       ! 'blacklist_fraction' not found in this Seurat object
         # Plot Peaks in black ratio and ATAC main feature scoreds
         p1_BlackR <- get_Vplots_blackR_ATAC(SeuratOBJ)
         p1_ATAC <- get_Vplots_main_ATAC(SeuratOBJ)
@@ -331,11 +406,9 @@ for (S in lst_seurats) {
     rds_name <- here(processedDir, paste0(base_name,'_ATAC.rds'))
     saveRDS(SeuratOBJ, file = rds_name)
     message('ATAC RDS object saved!')   
+
 }
 
-
-
-# Chunk of code to filter by conventional or custom profile moved to: 01b_preprocessing_GEX_ATAC.R script
 
 
 ############ Reproducibility information ####################
