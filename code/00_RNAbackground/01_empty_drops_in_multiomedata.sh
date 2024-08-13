@@ -3,7 +3,7 @@
 #SBATCH --job-name=empty_droplets
 #SBATCH --mem=30GB						                                          # each job from the array will get its own private 30G to work with)
 #SBATCH --array=1-5                                           	        #change the number 2 to the number of entries in array_targets.txt
-id=$( sed -n ${SLURM_ARRAY_TASK_ID}p ../array_targets_names.txt)				                                      # partition or queue name
+id=$( sed -n ${SLURM_ARRAY_TASK_ID}p ../array_target_names_2024a.txt)   # partition or queue name
 #SBATCH --output=/logs/ED_%j.out						                              
 #SBATCH --error=/logs/ED_%j.err						                              
 
