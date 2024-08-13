@@ -3,7 +3,7 @@
 ##
 ## Authors. CSC
 ## Date. Feb 22, 2024
-## Last.md: xxx
+## Last.md: August 2024
 ##
 ## Input: Seurat RDS Object generated with 01_preprocessing_GEX_ATAC.R
 ## Output:  New Seurat merged ready to integrate with CCA/Harmony/etc
@@ -15,41 +15,32 @@
 library(Seurat)                                 # 4.9.9.9045 2023-05-17 [1] Github (satijalab/seurat@7d1094c)
 options(tidyverse.quiet = TRUE)
 library(tidyverse)
-# library(ggplot2)
-# library(patchwork)
 library(here)
 
 here::here()
 
-# Check if processed_data directory exists, if not create it
-if (!dir.exists(here("processed-data/02_merge_seurats/"))) {
-    dir.create(here("processed-data/02_merge_seurats/"))
-}
-# Check if plot directory exists, if not create it
-if (!dir.exists(here("plots/02_merge_seurats/"))) {
-    dir.create(here("plots/02_merge_seurats/"))
-}
+## processed_data and plots directories 
+processedDir <- here("processed-data", "02_merge_seurats")
+if (!dir.exists(processedDir)) { dir.create(processedDir) }
+#if (!dir.exists(here("plots", "02_merge_seurats"))) { dir.create(here("plots", "02_merge_seurats")) }
 ## Directory to save variable features
-dir <- file.path(here('processed-data/02_merge_seurats/csv_files/'))
-if (!dir.exists(dir)) dir.create(dir)
-
-
-
+#dir <- here('processed-data", "02_merge_seurats", "csv_files')
+#if (!dir.exists(dir)) dir.create(dir)
 
 
 ########################    Initials ########################  
 
 ## Counts for GEX assay available in Seurat: raw and normalized data
-# count_mtx_type_label <- 'data_counts'      
-# count_mtx_type_label <- 'norm_counts' 
-
-## get args
+##        count_mtx_type_label <- 'data_counts'      
+##        count_mtx_type_label <- 'norm_counts' 
 
 args = commandArgs(trailingOnly=TRUE)
-## read count mtx type (abs_counts and normalized_counts)
-count_mtx_type_label <- args[2]
+## read count mtx type:
+##      all_type_mtx=(data_counts norm_counts)
 
-message('\nMerging Seurat(s) under the ', count_mtx_type_label, ' data')
+count_mtx_type_label <- args[2]
+message('Merging ', count_mtx_type_label, ' assays')
+## for testing:  count_mtx_type_label <- "norm_counts" 
 
 ## compose rds base name for merge data
 if (count_mtx_type_label=='data_counts') { 
@@ -62,12 +53,11 @@ if (count_mtx_type_label=='data_counts') {
   stop()
 }
 
-message('\nBase name for merged Seurat is ', s_sample)
-message('\nYou are merging `', rna_layer, '` layer' )
-
+message('\nSuffix name for merged Seurat is `', s_sample, "`")
+message('\nMerging Seurat(s) using the ', count_mtx_type_label, ' assays ')
 
 ## read directory with Seurat objects
-path_directory_in <- here('processed-data/01_preprocessing_QC')
+path_directory_in <- here("processed-data", "01_preprocessing_QC")
 all_rds <- paste0(path_directory_in, '/', list.files(path_directory_in, pattern="*_Hb_KDM.rds")) #, recursive = TRUE
 all_rds
 
@@ -115,7 +105,7 @@ if (length(all_rds) < 1) { stop('\nOnly one Seurat available.') }
 seurat_lst <- list()
 seurat_name_lst <- list()
 
-message('\nStarting to prepare seurat objects to merge ...')
+message('\nPreparing Seurat objects to merge ...')
 
 
 
@@ -161,13 +151,14 @@ if (length(seurat_lst) > 1) {
   SeuratOBJ <- seurat_lst[[1]]
   l <- length(seurat_lst)
   # assign the x Seurats to merge
-  if (l>2) { SeuratOBJx <- (seurat_lst)[[2:l]] } else { SeuratOBJx <- seurat_lst[[l]] }
+  #if (l>2) { SeuratOBJx <- (seurat_lst)[[2:l]] } else { SeuratOBJx <- seurat_lst[[l]] }
+  if (l>2) { SeuratOBJx <- (seurat_lst)[2:l] } else { SeuratOBJx <- seurat_lst[l] }
   
   # By default, merge() will combine the Seurat objects based on the raw count matrices
   SeuratOBJ.combined <- merge(SeuratOBJ, y = c(SeuratOBJx), 
-                               add.cell.ids = c(seurat_name_lst), 
-                               project = "Habenula",
-                               merge.data = TRUE)     #  merge the normalized and raw count 
+                              add.cell.ids = c(seurat_name_lst), 
+                              project = "Habenula",
+                              merge.data = TRUE)     #  merge the normalized and raw count 
   ##pbmc.big <- merge(pbmc3k, y = c(pbmc4k, pbmc8k), add.cell.ids = c("3K", "4K", "8K"), project = "PBMC15K")
   
 } else {
@@ -176,7 +167,7 @@ if (length(seurat_lst) > 1) {
 }
 
 
-#SeuratOBJ.combined
+print(SeuratOBJ.combined)
 #lapply(seurat_lst, function(x) {colnames(x[[]])})
 #lapply(seurat_lst, function(x) {head(x, n=3)})
 #lapply(seurat_lst, function(x) max(x[["RNA"]]$counts))
@@ -184,12 +175,11 @@ if (length(seurat_lst) > 1) {
 
 message('\nSeurats merge completed!', split(table(SeuratOBJ.combined$orig.ident), ','))
 
-## Save integrated Seurat RDS Object
+## Save merged Seurat objects
 
-rds_name <- here('processed-data/02_merge_seurats', paste0(s_sample, '.rds'))
-saveRDS(SeuratOBJ.combined, file = rds_name)
+saveRDS(SeuratOBJ.combined, file = here(processedDir, paste0(s_sample, '.rds')))
 
-message('\nSeurat merged saved in ', rds_name, '\n\n')   
+message('Seurat merged saved!')   
 
 
 
