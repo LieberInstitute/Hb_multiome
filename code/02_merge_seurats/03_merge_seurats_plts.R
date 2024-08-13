@@ -12,6 +12,7 @@
 ## For slurm env: sbatch 03_merge_seurats_plts.sh
 ########################################################################
 
+
 library('Seurat')              
 library('dplyr')
 options(tidyverse.quiet = TRUE)
@@ -24,25 +25,24 @@ here::here()
 
 
 # Check if plot directory exists, if not create it
-if (!dir.exists(here("plots/02_merge_seurats/"))) {
-    dir.create(here("plots/02_merge_seurats/"))
-}
-
+plotDir <- here("plots", "02_merge_seurats")
+if (!dir.exists(plotDir)) { dir.create(here("plots/02_merge_seurats/")) }
 
 
 ########################    Initials ########################  
 
-## Counts for GEX assay available in Seurat: raw and normalized data
-# count_mtx_type_label <- 'data_counts'      
-# count_mtx_type_label <- 'norm_counts' 
-
-## get args
+## Available for Seurat data_counts and norm_counts
+##        count_mtx_type_label <- 'data_counts'      
+##        count_mtx_type_label <- 'norm_counts' 
 
 args = commandArgs(trailingOnly=TRUE)
 ## read count mtx type (abs_counts and normalized_counts)
 count_mtx_type_label <- args[2]
+## For testing:
+# count_mtx_type_label <- 'data_counts'      
+# count_mtx_type_label <- 'norm_counts' 
 
-#message('\nPlotting merged Seurat(s) of the `', count_mtx_type_label, '` layer')
+message('\nPlotting merged Seurat(s) for `', count_mtx_type_label, '` layer')
 
 ## compose rds base name for merge data
 if (count_mtx_type_label=='data_counts') { 
@@ -62,23 +62,18 @@ message('\nPlotting `', rna_layer, '` layer\n' )
 ############ Load Seurat to plot  ############
 
 ## read directory with Seurat objects
-path_directory_in <- here('processed-data/02_merge_seurats')
-rds_path <- paste0(path_directory_in, '/', list.files(path_directory_in, pattern=paste0(s_sample,'.rds'))) #, recursive = TRUE
+#path_directory_in <- here('processed-data/02_merge_seurats')
+processedDir <- here('processed-data', '02_merge_seurats')
+rds_path <- paste0(processedDir, '/', list.files(processedDir, pattern=paste0(s_sample,'.rds'))) #, recursive = TRUE
 rds_path
 
 if (length(rds_path) < 1) { stop('\nNone Seurat available.') }
 
-print(rds_path)
-SeuratOBJ.combined <-readRDS(rds_path)
-
+SeuratOBJ.combined <- readRDS(rds_path)
 print(SeuratOBJ.combined)
 DefaultAssay(SeuratOBJ.combined) <- "RNA"
 
 message('\nSeurat combined loaded ', split(table(SeuratOBJ.combined$orig.ident), ','))
-
-
-
-
 
 
 ############ Plots  UMIs, Genes, ^MT and RIBO levels  ############
@@ -138,109 +133,19 @@ p4 <- df_genes_per_cell %>%
   xlab("log10(UMIs)") +
   ggtitle('UMIs per Genes by MT levels') + theme(plot.title = element_text(size = 8))
 
-pdf_file <- paste0(s_sample, '_ALLplots_GEX.pdf')
-pdf_name <-  here('plots/02_merge_seurats', pdf_file)  
+pdf_name <-  here(plotDir, paste0(s_sample, '_all_plots_GEX.pdf'))
 pdf(file = pdf_name)
 # Example file name: seurat.combined.data_counts_ALLplots_GEX.pdf
-
 pAll <- p1 / p2 / p4 +
   labs(caption = paste('Note: Gene expression is from ', rna_layer, ' slot.'))
-
 pAll
-
 dev.off()
 
-message('\nPlots saved in plots/02_merge_seurats as `', pdf_file, '`')
+message('\nPlots saved `', plotDir, '`')
 
 
-## slurm script reproducibility
-
-slurmjobs::job_loop(
-  loops = list(type_mtx = c("data_counts", "norm_counts")),
-  name = "03_merge_seurats_plts",
-  cores = 2,
-  create_shell = TRUE
-)
-
-
-
-
-
-
-
-
-
-
-
-# ############ Run PCA in the merged Seurat for reference
+# ############ Add some integrated QCs for ATAC
 # 
-# # NOTE timoast comment: https://github.com/satijalab/seurat/issues/3505
-# # I'd suggest doing QC and filtering cells on each object before running the integration.
-# # Running NormalizeData on the integrated assay will overwrite the integration results.
-# 
-# ## split the RNA measurements into two layers one for each sample
-# SeuratOBJ.combined[["RNA"]] <- split(SeuratOBJ.combined[["RNA"]], f = SeuratOBJ.combined$orig.ident)
-# # Warning: Assay RNA changing from Assay to Assay5
-# 
-# SeuratOBJ.combined <- NormalizeData(SeuratOBJ.combined)
-# 
-# ## Identifies features that are outliers on a 'mean variability plot'.
-# ## vst method (default): First, fits a line to the relationship of log(variance) and log(mean) using local polynomial regression (loess).
-# 
-# SeuratOBJ.combined <- FindVariableFeatures(SeuratOBJ.combined, selection.method = "vst") 
-# # Fits a line to the relationship of log(variance) and log(mean) using local polynomial regression...
-# 
-# all.genes <- rownames(SeuratOBJ.combined)
-# SeuratOBJ.combined <- ScaleData(SeuratOBJ.combined, features = all.genes)
-# ## Scale data. Perform “LogNormalize” method to the GEX for each cell by the total expression multiply by a scale factor (10,000 by default), and log-transforms the result
-# 
-# ## Run a PCA dimensionality reduction
-# SeuratOBJ.combined <- RunPCA(SeuratOBJ.combined)
-# #SeuratOBJ.combined@reductions
-# 
-# ## Save more variable features at top 10,20,50 and 100 VF 
-# save_VFeatures(SeuratOBJ.combined, 'pca')
-# 
-# p1 <- ElbowPlot(SeuratOBJ.combined)
-# png_file <- paste0(s_sample, '_PCAelbow.png')
-# png_name <- here('plots/02_merge_seurats', png_file)  
-# ggsave(p1, filename = png_name, height = 4, width = 5)
-# 
-# 
-# 
-# 
-# ## Cluster the samples before corrections for further reference
-# 
-# ## Compute nearest neighbor graph + SNN
-# 
-# SeuratOBJ.combined <- FindNeighbors(SeuratOBJ.combined, dims = 1:30, reduction = "pca")
-# # Compute Louvain
-# SeuratOBJ.combined <- FindClusters(SeuratOBJ.combined, 
-#                                    resolution = 1, cluster.name = "unintegrated_clusters")
-# #unique(SeuratOBJ.combined$seurat_clusters)
-# #unique(SeuratOBJ.combined$unintegrated_clusters)
-# 
-# SeuratOBJ.combined <- RunUMAP(SeuratOBJ.combined, dims = 1:30, reduction = "pca", reduction.name = "umap.unintegrated")
-# head(SeuratOBJ.combined, n=2)
-# #SeuratOBJ.combined@reductions
-# 
-# # create and save UMAP-PCA plots grouped by sample and clusters and splitted side-by-side
-# plot_clust(SeuratOBJ.combined, paste0(s_sample, '_umap.unintegrated_'), 'umap.unintegrated', 'seurat_clusters')
-# 
-# # visualize more variable features in a heatmap
-# p1 <- DimHeatmap(SeuratOBJ.combined, reduction = 'pca', nfeatures = 30)
-# png_file <- paste0(s_sample, '_umap.unintegrated_pca_heatmap.png')
-# png_name <- here('plots/02_merge_seurats', png_file)
-# ggsave(p1, filename = png_name) #, height = 5, width = 5
-# 
-# # Save RDS Object
-# rds_name <- here('processed-data/02_merge_seurats', paste0(s_sample, '_PCA.rds'))
-# # .../seurat.combined.data_counts_PCA.rds
-# saveRDS(SeuratOBJ.combined, file = rds_name)
-# message('Seurat combined saved in ', rds_name)   
-# 
-
-
 
 
 
