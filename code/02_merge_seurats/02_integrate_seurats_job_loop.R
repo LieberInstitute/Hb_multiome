@@ -23,7 +23,6 @@
 # )
 
 library(Seurat)                                
-#library(Signac)                                
 library(harmony)
 options(tidyverse.quiet = TRUE)
 library(tidyverse)
@@ -34,10 +33,10 @@ library(here)
 here::here()
 
 ## Directory to save variable features 
-dir_csv <- here("processed-data", "02_merge_seurats", "csv_files")
-if (!dir.exists(dir_csv)) dir.create(dir_csv)
+csvDir <- here("processed-data", "02_merge_seurats", "csv_files")
+if (!dir.exists(csvDir)) dir.create(csvDir)
 plotsDir <- here("plots", "02_merge_seurats")
-
+processedDir <- here('processed-data', '02_merge_seurats')
 
 ########################    Initials ########################  
 
@@ -73,7 +72,6 @@ message('\nSuffix name used to save unintegrated seurat is `', s_sample, '`')
 ## Note unintegrated data are only combined 
 
 ## read directory with Seurat objects
-processedDir <- here('processed-data', '02_merge_seurats')
 all_rds <- paste0(processedDir, '/', list.files(processedDir, pattern= paste0(s_pattern,".rds"))) #, recursive = TRUE
 all_rds
 
@@ -102,7 +100,7 @@ save_VFeatures <- function(sobj, f_name, suffix) {
     
     for (x in VF) {
         top <- head(VariableFeatures(sobj), x)
-        cvs_name <- here(processedDir, "csv_files", paste0(suffix, '_', f_name, "_", as.character(x), 'VariableFeatures.csv'))
+        cvs_name <- here(csvDir, paste0(suffix, '_', f_name, "_", as.character(x), 'VariableFeatures.csv'))
         print(cvs_name)
         write.csv(top, file.path(cvs_name), row.names=FALSE)
     }
@@ -118,12 +116,9 @@ message('Processing PCA for `', s_sample, '`\n')
 SeuratOBJ.combined <-readRDS(all_rds[1])
 ## Exploration
 table(SeuratOBJ.combined$orig.ident)
-# 4S_Hb_KDM 5S_Hb_KDM 6S_Hb_KDM 
-# 4513      1720      4335
 # head(colnames(SeuratOBJ.combined))
 # tail(colnames(SeuratOBJ.combined))
 # colnames(SeuratOBJ.combined@meta.data)
-
 
 
 ######### Perform analysis in unintegrated data
@@ -172,12 +167,10 @@ plot_clust(SeuratOBJ.combined, paste0(s_sample, '_umap'), 'umap.unintegrated', '
 
 # visualize more variable features in a heatmap
 p1 <- DimHeatmap(SeuratOBJ.combined, reduction = 'pca', nfeatures = 30, fast = FALSE)
-#ggsave(p1, filename = here(plotsDir, paste0(s_sample, '_umap.unintegrated_pca_heatmap.png'))) 
 ggsave(p1, filename = here(plotsDir, paste0(s_sample, '_pca_heatmap.png')), height = 5, width = 5) 
 
 # Save RDS Object
 rds_name <- here(processedDir, paste0(s_sample, '_PCA.rds'))
-# .../seurat.combined.data_counts_PCA.rds
 saveRDS(SeuratOBJ.combined, file = rds_name)
 message('Seurat unintegrated saved in ', rds_name)   
 
@@ -214,7 +207,7 @@ message("\nRunning Seurat-CCA Integration - ", Sys.time())
 integration_method = 'CCAIntegration'
 reduction_name <- 'integrated.cca'
 
-seed(13082024)
+set.seed(1308)
 SeuratOBJ.combined <- IntegrateLayers(object = SeuratOBJ.combined, # Default dims: 1:30
                              method = CCAIntegration, 
                              orig.reduction = "pca", 
@@ -285,7 +278,7 @@ message("Running Seurat-Harmony Integration - ", Sys.time())
 integration_method = 'harmony'
 reduction_name <- 'integrated.harmony'
 
-seed(13082024)
+set.seed(1308)
 # run correction. 
 # max_iter=10 and up to 10 correction steps are expected. However, early_stop=TRUE so harmony will stop after the cost plateaus.
 # Returns an object with a new dimensionality reduction
@@ -312,7 +305,6 @@ message("Finishing Seurat-Harmony Integration - ", Sys.time())
 ## Cluster based in the new reduction
 SeuratOBJ.combined <- FindNeighbors(SeuratOBJ.combined, reduction = reduction_name, dims = 1:30)
 SeuratOBJ.combined <- FindClusters(SeuratOBJ.combined, resolution = 1)
-# 1 singletons identified. 17 final clusters.
 #SeuratOBJ.combined@reductions$integrated.harmony
 table(SeuratOBJ.combined$orig.ident)
 table(Idents(SeuratOBJ.combined))
@@ -322,13 +314,11 @@ table(Idents(SeuratOBJ.combined))
 SeuratOBJ.combined <- RunUMAP(SeuratOBJ.combined, dims = 1:30, reduction = reduction_name)
 
 # create and save UMAP-integrated.cca plots grouped by sample and clusters and splitted side-by-side
-#plot_clust(SeuratOBJ.combined, paste0(s_sample, '_umap.', reduction_name), 'umap', 'seurat_clusters')
 plot_clust(SeuratOBJ.combined, paste0(s_sample, '_', reduction_name, '_umap'), 'umap', 'seurat_clusters')
 
 # visualize more variable features in a heatmap
 p1 <- DimHeatmap(SeuratOBJ.combined, reduction = reduction_name, nfeatures = 30, fast = FALSE)
-png_name <- here(plotsDir, paste0(s_sample, '_', reduction_name, '_heatmap.png'))
-ggsave(p1, filename = png_name)
+ggsave(p1, filename = here(plotsDir, paste0(s_sample, '_', reduction_name, '_heatmap.png')), height = 5, width = 5)
 
 #rds_name <- here(processedDir, paste0(s_sample, '_PCA_Harmony.rds'))
 saveRDS(SeuratOBJ.combined, file = here(processedDir, paste0(s_sample, '_Harmony.rds')))
@@ -337,7 +327,6 @@ message('Seurat combined saved in ', rds_name)
 
 # INTEGRATION methods for Seurat V5:  https://satijalab.org/seurat/articles/seurat5_integration (Oct 31, 2023)
 # https://satijalab.org/seurat/articles/integration_introduction.html (Nov 16, 2023)
-
 
 
 
