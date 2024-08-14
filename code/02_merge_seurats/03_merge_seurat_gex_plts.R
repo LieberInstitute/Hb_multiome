@@ -23,10 +23,13 @@ library('here')
 
 here::here()
 
-# slurmjobs::job_single(
-#   name = "03_merge_seurats_plts", 
-#   memory = "10G", 
-#   cores = 1, create_shell = TRUE,
+## slurm script reproducibility
+
+# slurmjobs::job_loop(
+#   loops = list(type_mtx = c("data_counts", "norm_counts")),
+#   name = "03_merge_seurat_gex_plts",
+#   cores = 2,
+#   create_shell = TRUE
 # )
 
 
@@ -80,6 +83,7 @@ print(SeuratOBJ.combined)
 DefaultAssay(SeuratOBJ.combined) <- "RNA"
 
 message('\nSeurat combined loaded ', split(table(SeuratOBJ.combined$orig.ident), ','))
+# Layers(SeuratOBJ.combined)
 
 
 ############ Plots  UMIs, Genes, ^MT and RIBO levels  ############
