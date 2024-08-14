@@ -23,6 +23,12 @@ library('here')
 
 here::here()
 
+# slurmjobs::job_single(
+#   name = "03_merge_seurats_plts", 
+#   memory = "10G", 
+#   cores = 1, create_shell = TRUE,
+# )
+
 
 # Check if plot directory exists, if not create it
 plotDir <- here("plots", "02_merge_seurats")
