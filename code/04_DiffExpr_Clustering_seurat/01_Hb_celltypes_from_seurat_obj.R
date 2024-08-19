@@ -8,7 +8,7 @@
 ##      1) A csv files with the matched markers found in each cluster. 
 ##
 ## Authors. CSC 
-## Date. Feb 27th, 2024 / last md. Feb 28th
+## Date. Feb 27th, 2024 / last md. August 2024
 ########################################################################
 
 ## load libraries
@@ -42,7 +42,6 @@ count_mtx_type <- 'data_counts'
 #Seurat_reduction <- 'CCA'
 Seurat_reduction <- 'Harmony'
 
-#if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.combined.data_counts_PCA' } else { Seurat_base_name <- 'seurat.combined.norm_counts_PCA' }
 if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.combined.norm_counts' }
 
 ## Compose Seurat object name processed before
@@ -125,8 +124,8 @@ df_mdT <- as.data.frame(mdT)
 # 2   4S_Hb_KDM               1 880
 # 3   4S_Hb_KDM               2 304
 cvs_name <- paste0(Seurat_base_name, '_', Seurat_reduction, '_cluster_info.csv')
-# [1] "seurat.combined.data_counts_PCA_CCA_cluster_info.csv"
-write.csv(df_mdT, here('processed-data/04_DiffExpr_Clustering_seurat/cvs_files_markers', cvs_name))
+# e.g: seurat.data_counts_Harmony_cluster_info.csv
+write.csv(df_mdT, here("processed-data", "04_DiffExpr_Clustering_seurat", "cvs_files_markers", cvs_name))
 message("Saving the top", n_match_slice," DEG as ", cvs_name)
 
 ## extract unique clusters in ascending order
@@ -137,9 +136,11 @@ message('Looking gene markers for ', length(clusters),
 
 
 
+## Read DGE in pseudo buk data
+
 ## Read DGE cvs file for all clusters for the given sample
 DGE_cvs_name <- paste0(Seurat_base_name, '_',Seurat_reduction, '_Allmarkers.csv')
-DGE_cvs_name <- here('processed-data/03_pseudobulking/cvs_files_markers', DGE_cvs_name)
+DGE_cvs_name <- here("processed-data", "03_pseudobulking", "cvs_files_markers", DGE_cvs_name)
 # ~/seurat.combined.data_counts_PCA_CCA_Allmarkers.csv
 seurat_clust <- as.data.frame(read.csv(DGE_cvs_name, header = TRUE))
 head(seurat_clust, n=3)
@@ -233,6 +234,7 @@ head(all_gene_match, n=3)
 dim(all_gene_match)
 
 habenula_markers_cvs_name <- paste0(Seurat_base_name, '_', Seurat_reduction, '_cell_types_', prefix_name)
+
 habenula_markers_cvs_name <- here('processed-data/04_DiffExpr_Clustering_seurat/cvs_files_markers', habenula_markers_cvs_name)
 # ~/seurat.combined.data_counts_PCA_CCA_cell_types_all_gm20.csv
 write.csv(all_gene_match, habenula_markers_cvs_name, row.names=FALSE)
