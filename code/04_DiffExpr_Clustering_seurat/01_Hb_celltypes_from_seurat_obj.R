@@ -11,45 +11,26 @@
 ## Date. Feb 27th, 2024 / last md. Feb 28th
 ########################################################################
 
-# load libraries
+## load libraries
 library(tidyverse)
 library(dplyr)
 library(data.table)
 library(magrittr)
-
 library(here)
 
 here::here()
 
 # Check if processed_data directory exists, if not create it
-if (!dir.exists(here("processed-data/04_DiffExpr_Clustering_seurat/"))) {
-    dir.create(here("processed-data/04_DiffExpr_Clustering_seurat/"))
-}
+if (!dir.exists(here("processed-data", "04_DiffExpr_Clustering_seurat"))) { dir.create(here("processed-data", "04_DiffExpr_Clustering_seurat")) }
 # Check if processed_data directory exists, if not create it
-if (!dir.exists(here("plots/04_DiffExpr_Clustering_seurat/"))) {
-  dir.create(here("plots/04_DiffExpr_Clustering_seurat/"))
-}
+if (!dir.exists(here("plots", "04_DiffExpr_Clustering_seurat"))) { dir.create(here("plots", "04_DiffExpr_Clustering_seurat")) }
 # Check if processed_data directory for DEG exists, if not create it
-if (!dir.exists(here("processed-data/04_DiffExpr_Clustering_seurat/cvs_files_markers/"))) {
-  dir.create(here("processed-data/04_DiffExpr_Clustering_seurat/cvs_files_markers/"))
-}
-
+if (!dir.exists(here("processed-data", "04_DiffExpr_Clustering_seurat", "cvs_files_markers"))) { dir.create(here("processed-data", "04_DiffExpr_Clustering_seurat", "cvs_files_markers")) }
 
 # contains the different marker list 
-source(here("code/functions_custom", "remote_DGE_marker_gene_lists.R"))       # Call functions to read paths
+source(here("code", "functions_custom", "remote_DGE_marker_gene_lists.R"))       # Call functions to read paths
 
-get_seurat <- function(name) {
-    
-    #Ex. /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/02_merge_seurats/seurat.combined.data_counts_PCA.rds
-    sobj <- readRDS(name)
-    # verification of the integration
-    print(table(sobj$orig.ident))
-    # S1_Hb_KDM S2_Hb_KDM
-    # 8178      9816
-    print(head(sobj, n=2))
-    return(sobj)
-    
-}
+get_seurat <- function(name) { sobj <- readRDS(name)}
 
 
 #############################           Initials        ################################
@@ -58,16 +39,17 @@ get_seurat <- function(name) {
 
 count_mtx_type <- 'data_counts'
 #count_mtx_type <- 'norm_counts' 
-Seurat_reduction <- 'CCA'
-#Seurat_reduction <- 'Harmony'
+#Seurat_reduction <- 'CCA'
+Seurat_reduction <- 'Harmony'
 
-if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.combined.data_counts_PCA' } else { Seurat_base_name <- 'seurat.combined.norm_counts_PCA' }
+#if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.combined.data_counts_PCA' } else { Seurat_base_name <- 'seurat.combined.norm_counts_PCA' }
+if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.combined.norm_counts' }
 
 ## Compose Seurat object name processed before
 if (Seurat_reduction=='CCA') {
-  rds_name <- here('processed-data/02_merge_seurats', paste0(Seurat_base_name, '_CCA.rds'))
+  rds_name <- here('processed-data', '02_merge_seurats', paste0(Seurat_base_name, '_CCA.rds'))
 } else {
-  rds_name <- here('processed-data/02_merge_seurats', paste0(Seurat_base_name, '_Harmony.rds'))
+  rds_name <- here('processed-data', '02_merge_seurats', paste0(Seurat_base_name, '_Harmony.rds'))
 }
 rds_name
 # Ex. ~/Hb_multiome/processed-data/02_merge_seurats/seurat.combined.data_counts_PCA_CCA.rds"
@@ -75,8 +57,12 @@ rds_name
 
 ## Load Seurat Integrated with cluster information
 SeuratOBJ <- get_seurat(rds_name)
+## verification of the integration
+print(table(SeuratOBJ$orig.ident))
+# S1_Hb_KDM S2_Hb_KDM
+# 8178      9816
+##print(head(sobj, n=2))
 SeuratOBJ@reductions
-
 # Ex. SeuratOBJ@reductions$integrated.cca
 # A dimensional reduction object with key integratedcca_ 
 # Number of dimensions: 50 
@@ -120,43 +106,38 @@ markers.custom$MHb_putative
 # ...
 
 
-# set the number of top DGE rows to consider for looking gene markers in the cellranger-arc clusters
-
-slice_lst() <- c(20,30,40,50)
-
+## set the number of top DGE genes to pick up
 n_match_slice <- 20  
 prefix_name <- paste0(prefix_name, n_match_slice, '.csv')    # all_gm20.csv
 
 
-
 #############################  Set the DGE list to parse  ################################
 
-
-## extract cluster data
+## Extract cluster data
 md <- SeuratOBJ@meta.data %>% as.data.table
 
-## Apply vertical format to unique cluster with number of umis, arrenged by sample and cluster number
+## Apply vertical format to unique cluster with number of UMIs, arranged by sample and cluster number
 mdT <- md[, .N, by = c("orig.ident", "seurat_clusters")] %>%
     arrange(., orig.ident, seurat_clusters, .by_group = FALSE)
-#     orig.ident seurat_clusters    N
-# 1:  S1_Hb_KDM               0 1820
-# 2:  S1_Hb_KDM               1 1230
-# 3:  S1_Hb_KDM               2  679
-
 df_mdT <- as.data.frame(mdT)
+# orig.ident seurat_clusters   N
+# 1   4S_Hb_KDM               0 128
+# 2   4S_Hb_KDM               1 880
+# 3   4S_Hb_KDM               2 304
 cvs_name <- paste0(Seurat_base_name, '_', Seurat_reduction, '_cluster_info.csv')
 # [1] "seurat.combined.data_counts_PCA_CCA_cluster_info.csv"
 write.csv(df_mdT, here('processed-data/04_DiffExpr_Clustering_seurat/cvs_files_markers', cvs_name))
+message("Saving the top", n_match_slice," DEG as ", cvs_name)
 
 ## extract unique clusters in ascending order
 clusters <- as.integer(levels(unique(SeuratOBJ$seurat_clusters)))
 
-message('Looking gene markers for ', length(clusters), ' clusters for sample ', Seurat_base_name, ' for ', Seurat_reduction, ' reduction')
+message('Looking gene markers for ', length(clusters), 
+        ' clusters in sample ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
 
 
 
 ## Read DGE cvs file for all clusters for the given sample
-
 DGE_cvs_name <- paste0(Seurat_base_name, '_',Seurat_reduction, '_Allmarkers.csv')
 DGE_cvs_name <- here('processed-data/03_pseudobulking/cvs_files_markers', DGE_cvs_name)
 # ~/seurat.combined.data_counts_PCA_CCA_Allmarkers.csv
@@ -176,20 +157,15 @@ head(seurat_clust_sub)
 # 2  MT-ND2         0       0
 # 3  MT-CYB         0       0
 
-message('Parsing ', length(markers.custom), ' cell types for ', length(clusters) ,' clusters in sample ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
+message('Parsing ', length(markers.custom), ' categories (cell types) for ', length(clusters) ,' clusters in sample ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
 #Parsing 14 cell types for 17 clusters in sample seurat.combined.data_counts_PCA Harmony reduction
-
-
 
 
 ####### Parse the 10/20 DGE genes from GEX cluster against the marker genes list provided ####### 
 
 #clusters <- sort(clusters)
-
-# empty df to save cell-types matched 
+## Build dataframe structure to save cell-types matched 
 all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("Feature.ID", "Feature.Name", "Cluster.Adjusted.p.value", "cell-type", "cluster"))
-#names(marker.custom_lsts)
-
 
 # parse the clusters of the given sample
 for (clust in clusters) {
@@ -254,6 +230,7 @@ head(all_gene_match, n=3)
 # 1    MBP         0       1           oligodendrocyte
 # 2 PDGFRA         0       4 oligodendrocyte_precursor
 # 3   VCAN         0       4 oligodendrocyte_precursor
+dim(all_gene_match)
 
 habenula_markers_cvs_name <- paste0(Seurat_base_name, '_', Seurat_reduction, '_cell_types_', prefix_name)
 habenula_markers_cvs_name <- here('processed-data/04_DiffExpr_Clustering_seurat/cvs_files_markers', habenula_markers_cvs_name)
@@ -264,7 +241,7 @@ message(' Cell type identification in clusters done!')
 
 
 
-################################################################################
+
 
 
 library("sessioninfo")
