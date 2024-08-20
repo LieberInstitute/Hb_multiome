@@ -24,8 +24,8 @@ library('Seurat')                                 # 4.9.9.9045 2023-05-17 [1] Gi
 library('multtest')
 library('metap')
 library('tidyverse')
-library('ggplot2')
-library('patchwork')
+# library('ggplot2')
+# library('patchwork')
 library(here)
 
 here::here()
@@ -147,22 +147,10 @@ SeuratOBJ_Hb_all_pseudobulked <- Seurat:::AggregateExpression(SeuratOBJ,
 
 ## https://github.com/satijalab/seurat/issues/8919#issuecomment-2125129658 
 # ## AggregateExpression with return.seurat=FALSE will return the summed counts
-# SeuratOBJ_Hb_all_pseudobulked <- Seurat:::AggregateExpression(SeuratOBJ,
-#                                                      group.by = c("seurat_clusters", "orig.ident"),
-#                                                      assays="RNA",
-#                                                      #layers="counts",
-#                                                      normalization.method = "RC",
-#                                                      scale.factor = 1000000,
-#                                                      return.seurat=TRUE)
 
 ## If return.seurat = TRUE, aggregated values are placed in the 'counts' layer of the returned object. The data is then normalized by running NormalizeData on the aggregated counts. ScaleData is then run on the default assay before returning the object.
 
 SeuratOBJ_Hb_all_pseudobulked
-# Ex. Harmony reduction:
-# An object of class Seurat 
-# 36601 features across 34 samples within 1 assay 
-# Active assay: RNA (36601 features, 0 variable features)
-# 3 layers present: counts, data, scale.data
 
 table(SeuratOBJ_Hb_all_pseudobulked$seurat_clusters)
 # g0  g1 g10 g11 g12 g13 g14 g15 g17 g18 g19  g2 g21  g3  g4  g5  g6  g7  g9 
@@ -185,108 +173,105 @@ if (length(all.markers_p)>0) {
 ## Save new Seurat pseudo bulk 
 rds_name <- paste0(Seurat_base_name,'_', Seurat_reduction, '_pseudobulk.rds')
 rds_name <- here(processedDir, rds_name)
-# Ex. file name: seurat.combined.data_counts_PCA_Harmony_pseudobulk.rds
 saveRDS(SeuratOBJ_Hb_all_pseudobulked, file = rds_name)
 
 message(" Pseudobulk done!")
 
 
-############################ Plots. ############################
-
 ############################ Move this chunk to other script. CSC ############################
 
+# 
+# ## load pre-existing pseudobulk data 
+# # rds_name <- paste0(Seurat_base_name,'_', Seurat_reduction, '_pseudobulk.rds')
+# # rds_name <- here('processed-data/03_pseudobulking', rds_name)
+# # SeuratOBJ_Hb_all_pseudobulked <- get_seurat(rds_name)
+# 
+# 
+# ## Set genes to show in the aggregate GEX data
+# ## These genes were previously identify as Habenula marker genes. These genes are at the top20 DEG for each cluster.
+# 
+# if (Seurat_reduction=='CCA') {
+#   clust_selected <- c(8, 15, 18)
+#   ## genes selected from Hb_pilot, defined as Hb general, LHb and MHb
+#   markers.to.plot <- c("MMRN1", "GPR151", "POU4F1", # Hb
+#                        "LINC01876", # LHb
+#                        "CD24", "AC004594.1") # MHb
+# } else {
+#   ## Harmony
+#   ## clust_selected <- c(6, 12, 14, 15) # these are related with Hb pilot samples
+#   clust_selected <- c(6, 12, 14, 15)  # these are related with Hb S4, S5 ans S6
+#   ## genes selected from Hb_pilot, defined as Hb general, LHb and MHb
+#   markers.to.plot <- c("MMRN1", "GPR151", "POU4F1", # Hb
+#                        "EPHA5", "TLL1", # LHb
+#                        "AC109466.1", "AC008415.1", "GPR149", "GNG8", "NEUROD1", 
+#                        "RASGRP1", "SLC5A7", "CHRNB3", "SCUBE1", "LINC02143", "CD24") # MHb  
+# }  
+# 
+# 
+# p1 <- DoHeatmap(object = SeuratOBJ_Hb_all_pseudobulked, 
+#                 features=markers.to.plot, label = TRUE, angle=45, group.by = "seurat_clusters",
+#                 size=4)
+# 
+# table(SeuratOBJ_Hb_all_pseudobulked$seurat_clusters)
+# 
+# 
+# 
+# ## Subset the clusters of interest
+# clust_selected <- sapply(clust_selected, function(x) { paste0('g', x) } ) 
+# 
+# SeuratOBJ_Hb_selected <- subset(SeuratOBJ_Hb_all_pseudobulked, 
+#                            subset = seurat_clusters %in% clust_selected)
+# 
+# # check the count cells by clusters
+# table(Idents(SeuratOBJ_Hb_selected))
+# # Ex. Harmony reduction
+# # 6  12  14  15 
+# # 830 180 102  99 
+# 
+# SeuratOBJ_Hb_selected
+# # S1: An object of class Seurat 
+# # 36601 features across 8 samples within 1 assay 
+# # Active assay: RNA (36601 features, 0 variable features)
+# # 3 layers present: counts, data, scale.data
+# 
+# # check the count cells by clusters
+# 
+# table(SeuratOBJ_Hb_selected$seurat_clusters)
+# # Ex. For Harmony
+# # g12 g14 g15  g6 
+# # 2   2   2   2 
+# 
+# 
+# ## plot the pseudo bulk in the selected clusters
+# 
+# p2 <- DoHeatmap(object = SeuratOBJ_Hb_selected, 
+#                 features=markers.to.plot, label = TRUE, angle=45, group.by = "seurat_clusters",
+#                 size=4) 
+# 
+# 
+# ## Format plots
+# 
+# pdf_file <- paste0(Seurat_base_name, '_', Seurat_reduction, '_DoHeatmap_pseudobulk.pdf')
+# pdf_name <- here('plots/03_pseudobulking', pdf_file)
+# pdf(file = pdf_name)
+# # ~/seurat.combined.data_counts_PCA_Harmony_DoHeatmap_pseudobulk.pdf
+# 
+# main_title <- paste0("Heatmap for pseudobulk GEX data from ", Seurat_reduction)
+# sub_title <-  paste0('Marker genes for Broad Hb, LHb and MHb')
+# 
+# p_pseudo <- (p1 / p2) + plot_annotation(title = main_title, subtitle = sub_title, caption = 'Samples: S1 and S2')  & 
+#   theme(plot.title = element_text(size = 12),
+#         plot.subtitle = element_text(size = 10),
+#         axis.text.y=element_text(size=8),
+#         legend.position="none") 
+# 
+# p_pseudo <- p_pseudo + scale_fill_gradientn(limits = c(-2, 2), colours = PurpleAndYellow(), na.value = "white")
+# p_pseudo
+# 
+# dev.off()
+# 
 
-## load pre-existing pseudobulk data 
-# rds_name <- paste0(Seurat_base_name,'_', Seurat_reduction, '_pseudobulk.rds')
-# rds_name <- here('processed-data/03_pseudobulking', rds_name)
-# SeuratOBJ_Hb_all_pseudobulked <- get_seurat(rds_name)
 
-
-## Set genes to show in the aggregate GEX data
-## These genes were previously identify as Habenula marker genes. These genes are at the top20 DEG for each cluster.
-
-if (Seurat_reduction=='CCA') {
-  clust_selected <- c(8, 15, 18)
-  ## genes selected from Hb_pilot, defined as Hb general, LHb and MHb
-  markers.to.plot <- c("MMRN1", "GPR151", "POU4F1", # Hb
-                       "LINC01876", # LHb
-                       "CD24", "AC004594.1") # MHb
-} else {
-  ## Harmony
-  ## clust_selected <- c(6, 12, 14, 15) # these are related with Hb pilot samples
-  clust_selected <- c(6, 12, 14, 15)  # these are related with Hb S4, S5 ans S6
-  ## genes selected from Hb_pilot, defined as Hb general, LHb and MHb
-  markers.to.plot <- c("MMRN1", "GPR151", "POU4F1", # Hb
-                       "EPHA5", "TLL1", # LHb
-                       "AC109466.1", "AC008415.1", "GPR149", "GNG8", "NEUROD1", 
-                       "RASGRP1", "SLC5A7", "CHRNB3", "SCUBE1", "LINC02143", "CD24") # MHb  
-}  
-
-
-p1 <- DoHeatmap(object = SeuratOBJ_Hb_all_pseudobulked, 
-                features=markers.to.plot, label = TRUE, angle=45, group.by = "seurat_clusters",
-                size=4)
-
-table(SeuratOBJ_Hb_all_pseudobulked$seurat_clusters)
-
-
-
-## Subset the clusters of interest
-clust_selected <- sapply(clust_selected, function(x) { paste0('g', x) } ) 
-
-SeuratOBJ_Hb_selected <- subset(SeuratOBJ_Hb_all_pseudobulked, 
-                           subset = seurat_clusters %in% clust_selected)
-
-# check the count cells by clusters
-table(Idents(SeuratOBJ_Hb_selected))
-# Ex. Harmony reduction
-# 6  12  14  15 
-# 830 180 102  99 
-
-SeuratOBJ_Hb_selected
-# S1: An object of class Seurat 
-# 36601 features across 8 samples within 1 assay 
-# Active assay: RNA (36601 features, 0 variable features)
-# 3 layers present: counts, data, scale.data
-
-# check the count cells by clusters
-
-table(SeuratOBJ_Hb_selected$seurat_clusters)
-# Ex. For Harmony
-# g12 g14 g15  g6 
-# 2   2   2   2 
-
-
-## plot the pseudo bulk in the selected clusters
-
-p2 <- DoHeatmap(object = SeuratOBJ_Hb_selected, 
-                features=markers.to.plot, label = TRUE, angle=45, group.by = "seurat_clusters",
-                size=4) 
-
-
-## Format plots
-
-pdf_file <- paste0(Seurat_base_name, '_', Seurat_reduction, '_DoHeatmap_pseudobulk.pdf')
-pdf_name <- here('plots/03_pseudobulking', pdf_file)
-pdf(file = pdf_name)
-# ~/seurat.combined.data_counts_PCA_Harmony_DoHeatmap_pseudobulk.pdf
-
-main_title <- paste0("Heatmap for pseudobulk GEX data from ", Seurat_reduction)
-sub_title <-  paste0('Marker genes for Broad Hb, LHb and MHb')
-
-p_pseudo <- (p1 / p2) + plot_annotation(title = main_title, subtitle = sub_title, caption = 'Samples: S1 and S2')  & 
-  theme(plot.title = element_text(size = 12),
-        plot.subtitle = element_text(size = 10),
-        axis.text.y=element_text(size=8),
-        legend.position="none") 
-
-p_pseudo <- p_pseudo + scale_fill_gradientn(limits = c(-2, 2), colours = PurpleAndYellow(), na.value = "white")
-p_pseudo
-
-dev.off()
-
-
-message('Seurat pseudobulk completed! ')   
 
 
 # ## slurm script reproducibility
