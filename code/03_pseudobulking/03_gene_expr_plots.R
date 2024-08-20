@@ -24,8 +24,9 @@ library('cowplot')
 # library(RColorBrewer) #To use gradient color to umaps 
 theme_set(theme_cowplot())
 
+library('purrr')
 library('tidyverse')
-library(here)
+library('here')
 
 here::here()
 
