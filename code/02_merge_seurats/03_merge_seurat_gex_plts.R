@@ -71,7 +71,6 @@ message('\nPlotting `', rna_layer, '` layer\n' )
 ############ Load Seurat to plot  ############
 
 ## read directory with Seurat objects
-#path_directory_in <- here('processed-data/02_merge_seurats')
 processedDir <- here('processed-data', '02_merge_seurats')
 rds_path <- paste0(processedDir, '/', list.files(processedDir, pattern=paste0(s_sample,'.rds'))) #, recursive = TRUE
 rds_path
