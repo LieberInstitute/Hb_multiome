@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --partition=katun		              # partition or queue name
-#SBATCH --output=S4-CR_count-%j.out	        # file to collect standard output
-#SBATCH --error=S4-CR_count-%j.err	        # file to collect standard output
-#SBATCH --job-name=S4_CR_count	            # name job for easier spotting, controlling
+#SBATCH --output=S6-CR_count-%j.out	        # file to collect standard output
+#SBATCH --error=S6-CR_count-%j.err	        # file to collect standard output
+#SBATCH --job-name=S6_CR_count	            # name job for easier spotting, controlling
 #SBATCH --cpus-per-task=4		            # number of cores
 #SBATCH --mem=20GB			                # memory per __node__
 #SBATCH --mem=80GB			                # memory per __node__
@@ -18,7 +18,8 @@
 # at the start of your script. This sample script just runs those cmds.
 
 echo "**** Job starts ****"
-SAMPLE=S4C_Hb_KDM
+SAMPLE=6C_Hb_KDM      #  name as specified in the sample sheet supplied to cellranger mkfastq
+SAMPLEID=S6C_Hb_KDM   #  unique arbitrary ID used to name outputs directory
 echo "Run cellranger-count for only GEX side from a multiome experiment"
 echo "https://kb.10xgenomics.com/hc/en-us/articles/360059656912-Can-I-analyze-only-the-Gene-Expression-data-from-my-single-cell-multiome-experiment"
 echo ""
@@ -46,9 +47,10 @@ mkdir -p /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/code/cellra
 date
 
 ## Run cellRanger count
-cellranger count --id=${SAMPLE} \
-    --reference=/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0 \
+cellranger count --id=${SAMPLEID} \
+    --transcriptome=/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0 \
     --fastqs=/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ_2024/GEX/${SAMPLE}/ \
+    --sample=${SAMPLE} \
     --chemistry=ARC-v1 \
     --localcores=4 \
     --localmem=80
@@ -64,5 +66,5 @@ date
 
 ## This script was made for slurm
 ## For running:
-##      $ sbatch cellranger_count_gex_4C_Hb_KDM.sh
+##      $ sbatch cellranger_count_gex_6C_Hb_KDM.sh
 ## CSC Aug, 2024
