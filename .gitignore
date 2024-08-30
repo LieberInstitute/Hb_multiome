@@ -9,11 +9,13 @@ code/cellranger/__*.mro
 code/logs/
 
 
-### Temporal directories
+### Temporal or old scripts
+code/tmp/
+code/00_RNAbackground/tmp/
+code/00_RNAbackground/old_scripts/
 code/01_preprocessing_QC/tmp/
 code/02_merge_seurats/tmp/
 code/recycler/
-code/tmp/
 # From processed-data dir
 processed-data/02_merge_seurats/csv_files/tmp/
 # From cellranger-arc. These files should be moved once the pipeline is finished. 
@@ -21,12 +23,15 @@ code/cellranger/4S_Hb_KDM/
 code/cellranger/5S_Hb_KDM/
 code/cellranger/6S_Hb_KDM/
 
+plots/02_merge_seurats/tmp/
+
 
 ### Cellranger-arc raw data symbolic links
 raw-data/path_atac/
 raw-data/path_snrna/
 raw-data/FASTQ/
 raw-data/FASTQ_2024/
+raw-data/FASTQ_2024_data_package2/
 raw-data/path_atac_July11_2024
 raw-data/path_rna_Aug05_2024
 
