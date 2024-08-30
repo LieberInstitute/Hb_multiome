@@ -16,17 +16,34 @@ library(here)
 here::here()
 
 # Main FASTQ container
-data_path <- here("raw-data", "FASTQ_2024")
+data_path <- here("raw-data", "FASTQ_2024_data_package2")
 cellranger_library_path <- here("code", "cellranger")
 # Read soft links for GEX Fastqs
 snRNAseq_path <- here(data_path, "GEX")
 dir_list <- list.files(path=snRNAseq_path, full.names=FALSE, recursive = FALSE)
 dir_list
-# [1] "4C_Hb_KDM" "5C_Hb_KDM" "6C_Hb_KDM" "7C_Hb_KDM" "8C_Hb_KDM"
+
+for (new_subdir in dir_list) {
+  # new_subdir <-  "3C_Hb_KDM"
+  # retrieve only unique IDs for each sample (includes R1, R2 and I1 and I2)
+  dir_list <- list.files(path=here(snRNAseq_path, new_subdir), pattern="*R1", full.names=FALSE, recursive = FALSE)
+  row_gexALL <- ""
+  for (f in dir_list) {
+    # f <- "3C_Hb_KDM_S2_L005_R1_001.fastq.gz"
+    sub_dirID <- substring(f,1, regexpr("_L", f) + 4)
+    # Append in rows
+    fastqs_gex = here(snRNAseq_path, new_subdir, sub_dirID)
+    row_gex <- paste0(fastqs_gex, ", ", new_subdir, ", Gene Expression\n" )
+    row_gexALL <- paste(row_gexALL, row_gex)
+  }
+}
+# create header
+header <- 'fastqs,sample,library_type'
+row_gex = paste0(header, '\n', row_gexALL) 
+cat(row_gex)
+
+
 snATACseq_path <- here(data_path, "ATAC")
-# dir_list_atac <- list.files(path=snATACseq_path, full.names=FALSE, recursive = FALSE)
-# dir_list_atac
-# [1] "3A_Hb_KDM" "4A_Hb_KDM" "5A_Hb_KDM" "6A_Hb_KDM"
 
 ## Parse the file directories
 for (new_subdir in dir_list) {
@@ -53,9 +70,8 @@ for (new_subdir in dir_list) {
     
     ## Create and save library csv file
     new_subdir <- gsub("A", "S", new_subdir)
-    library_name <- paste0("multiome_library_",  new_subdir, '.csv')
+    library_name <- paste0("multiome_library_S",  new_subdir, '.csv')
     library_name <- here(cellranger_library_path, library_name)
-    #write.csv(row_all, library_name, row.names = FALSE, quote=FALSE)
     write.table(row_all, library_name, row.names = FALSE, col.names = FALSE, quote=FALSE)
     message("CellRanger-ARC library for : `", new_subdir, "` saved on ", cellranger_library_path, '/')
     
