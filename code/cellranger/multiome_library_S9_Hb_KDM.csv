@@ -1,6 +1,4 @@
 fastqs,sample,library_type
- /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ_2024_data_package2/GEX/9C_Hb_KDM/9C_Hb_KDM_S4_L005, 9C_Hb_KDM, Gene Expression
- /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ_2024_data_package2/GEX/9C_Hb_KDM/9C_Hb_KDM_S4_L006, 9C_Hb_KDM, Gene Expression
- /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ_2024_data_package2/GEX/9C_Hb_KDM/9C_Hb_KDM_S4_L007, 9C_Hb_KDM, Gene Expression
- /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ_2024_data_package2/ATAC/9A_Hb_KDM/9A_Hb_KDM_S5_L007, 9A_Hb_KDM, Chromatin Accessibility
+/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ_2024_data_package2/GEX/9C_Hb_KDM, 9C_Hb_KDM, Gene Expression
+/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ_2024_data_package2/ATAC/9A_Hb_KDM, 9A_Hb_KDM, Chromatin Accessibility
 
