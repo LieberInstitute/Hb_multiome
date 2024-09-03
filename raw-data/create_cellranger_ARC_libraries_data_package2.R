@@ -1,7 +1,7 @@
 ## Build csv file(s) to input in cellranger-ARC libraries (CSV files)
 ## It can handle samples with multiple gex or atac libraries, assuming they have the same base-name
 
-# CellRanger-ARC library design
+# CellRanger-ARC library naming-convention requirements for cellranger-arc v2+ (one line by library)
 # fastqs,sample,library_type
 # /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/HPC_multiome_pilot/raw-data/FASTQ/GEX/1HPC_S1_L003, 1G_HPC_KDM, Gene Expression
 # /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/HPC_multiome_pilot/raw-data/FASTQ/ATAC/1HPC_S1_L003, 1A_HPC_KDM, Chromatin Accessibility
@@ -10,7 +10,7 @@
 # Note can be more than one directory by side (atac/gex). In this case you need to adapt code
 
 
-# Tracking multiome data from directories
+# Tracking multiple fastq libraries from raw-data directories
 library(stringr)
 library(here)
 
@@ -72,52 +72,10 @@ for (new_subdir in dir_list) {
   
 }
 
-## Output sample:
+## Output example for one sample with multiple gex libraries:
 # /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ_2024_data_package2/GEX/9C_Hb_KDM/9C_Hb_KDM_S4_L005, 9C_Hb_KDM, Gene Expression
 # /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ_2024_data_package2/GEX/9C_Hb_KDM/9C_Hb_KDM_S4_L006, 9C_Hb_KDM, Gene Expression
 # /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ_2024_data_package2/GEX/9C_Hb_KDM/9C_Hb_KDM_S4_L007, 9C_Hb_KDM, Gene Expression
 # /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ_2024_data_package2/ATAC/9A_Hb_KDM/9A_Hb_KDM_S5_L007, 9A_Hb_KDM, Chromatin Accessibility
 # CellRanger-ARC library for : `9_Hb_KDM` saved on /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/code/cellranger//dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/code/cellranger/multiome_library_S9_Hb_KDM.csv
-
-
-
-# 
-# ## Parse the file directories
-# for (new_subdir in dir_list) {
-#   # values for testing
-#   # new_subdir <- "4C_Hb_KDM"
-#   
-#   # # create header
-#   # header <- 'fastqs,sample,library_type'
-#   # # Append GEX rows
-#   # fastqs_gex = here(snRNAseq_path, new_subdir)
-#   # row_gex = paste0(fastqs_gex, ", ", new_subdir, ", Gene Expression")
-#   # row_gex = paste0(header, '\n', row_gex) 
-#   # row_gex
-#   
-#   # Append ATAC rows 
-#   # We validate whether the corresponding ATAC directory exists
-#   new_subdir <- gsub("C", "A", new_subdir)
-#   fastqs_atac <- list.files(path=here(data_path, "ATAC", new_subdir), full.names=FALSE, recursive = FALSE)
-#   
-#   if (length(fastqs_atac) > 0) {
-#     row_atac = paste0(here(snATACseq_path,new_subdir), ", ", new_subdir, ", Chromatin Accessibility")
-#     row_all = paste0(row_gex, "\n", row_atac)
-#     cat(row_all)
-#     
-#     ## Create and save library csv file
-#     new_subdir <- gsub("A", "S", new_subdir)
-#     library_name <- paste0("multiome_library_S",  new_subdir, '.csv')
-#     library_name <- here(cellranger_library_path, library_name)
-#     write.table(row_all, library_name, row.names = FALSE, col.names = FALSE, quote=FALSE)
-#     message("CellRanger-ARC library for : `", new_subdir, "` saved on ", cellranger_library_path, '/')
-#     
-#   } else {
-#     
-#     ## This means only GEX dir available, but not ATAC dir, thus library is skipped
-#     message("No ATAC directory `", new_subdir,"` analogous to GEX directory available. Library skipped!")
-#     
-#   }  
-# }
-
 
