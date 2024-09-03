@@ -60,19 +60,25 @@ print(table(SeuratOBJ$orig.ident))
 SeuratOBJ@reductions
 
 ## Select gene markers lists. We have 3.
+markers.custom = list()
 
-## Erik and Top50r putative marker genes merged
-markers.custom <- get_erik_and_Hb_markers_genes()          # merged lists
+## Erik and Top50r DD marker genes
+markers.custom[["literature_base"]] <- get_erik_and_Hb_markers_genes()  
+markers.custom[["data_driven"]] <- get_Top50r_markers_genes_Hb()
+## sub-population list
+#names(markers.custom$literature_base)
+names(markers.custom)
+
 prefix_name <- 'all_gm'                                    # prefix to save matched markers found in the clusters
-#markers.custom <- get_bukola_markers_genes_Hb()           # Bukola lists
-#prefix_name <- 'erik_gm'  
-#markers.custom <- get_Top50r_markers_genes_Hb()           # Top50r lists (putative Hb)
-#prefix_name <- 'Top50r_gm'  
-# markers.custom$MHb_putative
+# markers.custom <- get_bukola_markers_genes_Hb()           # Bukola lists
+# prefix_name <- 'erik_gm'  
+# markers.custom <- get_Top50r_markers_genes_Hb()           # Top50r lists (putative Hb)
+# prefix_name <- 'Top50r_gm'  
+# markers.custom$DD_MHb
+# markers.custom$ThalE_putative
 
 ## set the number of top DGE genes to pick up
-n_match_slice <- 20  
-prefix_name <- paste0(prefix_name, n_match_slice, '.csv')    # all_gm20.csv
+n_slice <- 20  
 
 
 #############################  Set the DGE list to parse  ################################
@@ -85,17 +91,12 @@ mdT <- md[, .N, by = c("orig.ident", "seurat_clusters")] %>%
     arrange(., orig.ident, seurat_clusters, .by_group = FALSE)
 df_mdT <- as.data.frame(mdT)
 #head(df_mdT)
-# orig.ident seurat_clusters   N
-# 1   4S_Hb_KDM               0 128
-# 2   4S_Hb_KDM               1 880
-# 3   4S_Hb_KDM               2 304
 
 cvs_name <- paste0(Seurat_base_name, '_', Seurat_reduction, '_subset_cluster_info.csv')
 ## Save clustering information; e.g: seurat.data_counts_Harmony_cluster_info.csv
 write.csv(df_mdT, here("processed-data", "04_DiffExpr_Clustering_seurat", "cvs_files_markers", cvs_name))
 
 ## extract unique clusters in ascending order
-clusters <- unique(df_mdT$seurat_clusters)
 clusters <- as.integer(levels(clusters)[as.integer(clusters)])
 
 message('Reading DEG for ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
@@ -108,94 +109,109 @@ head(seurat_clust, n=3)
 # Seurat output from FindAllmarkers()
 # p_val avg_log2FC pct.1 pct.2 p_val_adj cluster   gene
 # 1     0  -1.836151 0.078 0.736         0     C_0  NPAS3
-# 2     0  -1.188384 0.176 0.830         0     C_0    QKI
-# 3     0  -1.678080 0.068 0.710         0     C_0 ZBTB20
 
 ## Subset columns of interest
-seurat_clust_sub  <- select(seurat_clust, gene,  p_val_adj, cluster) 
-head(seurat_clust_sub)
+#seurat_clust_sub  <- select(seurat_clust, gene,  p_val_adj, cluster) 
+#head(seurat_clust_sub)
 # gene p_val_adj cluster
 # 1  MT-ND4         0       0
 # 2  MT-ND2         0       0
 # 3  MT-CYB         0       0
 
-message('Parsing ', length(markers.custom), ' categories (cell types) on ', length(clusters) ,' clusters in sample ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
+message('Parsing ', length(markers.custom), ' annotations gene-markers lists on ', length(clusters) ,' clusters in ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
 
 
 ####### Parse the 10/20 DGE genes from GEX cluster against the marker genes list provided ####### 
 
-## Build dataframe structure to save cell-types that match with the gene-marker-list
+## Build df to save cell-types that match with the gene-marker-list
 all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("Feature.ID", "Feature.Name", "Cluster.Adjusted.p.value", "cell-type", "cluster"))
+names(markers.custom) #[1] "literature_base" "data_driven" 
+length(markers.custom)
+idx_lst <- 0 
+
+for (markers.lst in markers.custom) {
+  # for testing: markers.lst <- markers.custom$literature_base
+  idx_lst <- idx_lst+1
+  prefix_name <- paste0( names(markers.custom[idx_lst]), '_top', n_slice)
+  print(paste("Searching markers for : ", names(markers.lst)))
+  
+  # Read x cluster and extract the top 10 genes
+  for (clust in clusters) {
+    # Testing: clust <- 0
+    message("Parsing cluster ", as.character(clust))
+    top_DGE_clust <- seurat_clust |> 
+      dplyr::filter(cluster == clust, p_val_adj < 0.05) |> slice_head(n = n_slice)
+    
+    # get a vector with all marker genes
+    gm_lst <- as.vector(as.list(markers.lst))
+    i_pos <- 0      # reset gene-marker list position
+    
+    for ( gm in gm_lst ) {
+      #for testing: gm <- gm_lst[[1]]
+      i_pos <- i_pos+1                        # control cell type position
+      # Match top10genes with the marker genes for the cell-type x 
+      gene_match <- top_DGE_clust |> filter_all(any_vars(. %in% gm))
+      # add matched genes to a dataframe
+      if ( nrow(gene_match) > 0 ) {
+        names(gene_match)[names(gene_match) == clust ] <- "Cluster.Adjusted.p.value" # rename cols to rbind
+        gene_match['cell-type']  <- names(gm_lst[i_pos])
+        gene_match['cluster']  <- clust
+        all_gene_match <- rbind(all_gene_match, gene_match)
+      }
+      
+    }
+  }
+  
+  habenula_markers_cvs_name <- here('processed-data', '04_DiffExpr_Clustering_seurat', 'cvs_files_markers', 
+                                    paste0(Seurat_base_name, '_', Seurat_reduction, '_cellTypes_', prefix_name, ".csv"))
+  print(paste("Printing results in ", habenula_markers_cvs_name))
+  write.csv(all_gene_match, habenula_markers_cvs_name, row.names=FALSE)
+
+}
+
 
 # parse the clusters of the given sample
-for (clust in clusters) {
-    
-    # Testing: clust<-0
-    # Read cluster x and extract the 10 ten most relevant genes
-    #Cluster_number <- paste0('Cluster.',clust,'.')
-    #f <-  paste0(Cluster_number,'Adjusted.p.value')
-    message("Parsing cluster ", as.character(clust))
-    # format cluster name 
-    #clust <- paste0("C_", clust)
-    top_DGE_clust <- seurat_clust_sub %>% 
-        dplyr::arrange(clust) %>% 
-        #select(c(gene, cluster)) %>%
-        dplyr::filter(cluster == clust) %>%
-        dplyr::filter(p_val_adj < 0.05) %>%
-        slice_head(n = n_match_slice)
-        # gene p_val_adj
-        # 1    MT-ND4         0
-        # 2    MT-ND2         0
-        # 3    MT-CYB         0
-        # 4    MT-ND1         0
-        # 5    MT-ND3         0
-    
-    # Parse each gene in the top10 list against the marker gene list provided 
-    if ( nrow(top_DGE_clust) > 0 ) {
-        
-        # get a vector wit all marker genes
-        gm_lst <- as.vector(as.list(markers.custom))
-        #names(gm_lst[1])
-        i_pos <- 0      # reset gene-marker list position
-        
-        for ( gm in gm_lst ) {
+# for (clust in clusters) {
+#     # Testing: clust<-0
+#   
+#     # Read x cluster and extract the 10 ten most relevant genes
+#     message("Parsing cluster ", as.character(clust))
+#     top_DGE_clust <- seurat_clust |> 
+#         dplyr::filter(cluster == clust, p_val_adj < 0.05) |> slice_head(n = n_slice)
+#         
+#         # get a vector with all marker genes
+#         gm_lst <- as.vector(as.list(markers.lst))
+#         i_pos <- 0      # reset gene-marker list position
+# 
+#         for ( gm in gm_lst ) {
+#             #for testing: gm <- gm_lst[[1]]
+#             i_pos <- i_pos+1                        # to extract cell type position
+#             cell_type <- names(gm_lst[i_pos])       # to extract cell type name. g.e: neuron
+# 
+#             # Match top10genes with the marker genes for the cell-type x 
+#             gene_match <- top_DGE_clust |> filter_all(any_vars(. %in% gm))
+#             print(gene_match)
+#             
+#             # add matched genes to a dataframe
+#             if ( nrow(gene_match) > 0 ) {
+#                 # rename column to allow rbind
+#                 names(gene_match)[names(gene_match) == clust ] <- "Cluster.Adjusted.p.value"
+#                 gene_match['cell-type']  <- cell_type
+#                 gene_match['cluster']  <- clust
+#                 all_gene_match <- rbind(all_gene_match, gene_match)
+#             }
+#             
+#         }
+# 
+# } 
 
-            i_pos <- i_pos+1                        # to extract cell type position
-            cell_type <- names(gm_lst[i_pos])       # to extract cell type name
 
-            # Match top10genes with the marker genes for the cell-type x 
-            gene_match <- top_DGE_clust %>% filter_all(any_vars(. %in% gm))
-            print(gene_match)
-            
-            # add matched genes to a dataframe
-            if ( nrow(gene_match) > 0 ) {
-                # rename column to allow rbind
-                #names(gene_match)[names(gene_match) == f ] <- "Cluster.Adjusted.p.value"
-                names(gene_match)[names(gene_match) == clust ] <- "Cluster.Adjusted.p.value"
-                gene_match['cell-type']  <- cell_type
-                gene_match['cluster']  <- clust
-                all_gene_match <- rbind(all_gene_match, gene_match)
-            }
-            
-        }
-        
-    }
-    
-} 
-
-# save the matched genes for the corresponding sample 
-#all_gene_match
 head(all_gene_match, n=3)
-# gene p_val_adj cluster                 cell-type
-# 1    MBP         0       1           oligodendrocyte
-# 2 PDGFRA         0       4 oligodendrocyte_precursor
-# 3   VCAN         0       4 oligodendrocyte_precursor
 dim(all_gene_match)
 
-habenula_markers_cvs_name <- paste0(Seurat_base_name, '_', Seurat_reduction, '_subset_cell_types_', prefix_name)
-
-habenula_markers_cvs_name <- here('processed-data', '04_DiffExpr_Clustering_seurat', 'cvs_files_markers', habenula_markers_cvs_name)
-write.csv(all_gene_match, habenula_markers_cvs_name, row.names=FALSE)
+# habenula_markers_cvs_name <- paste0(Seurat_base_name, '_', Seurat_reduction, '_subset_cell_types_', prefix_name)
+# habenula_markers_cvs_name <- here('processed-data', '04_DiffExpr_Clustering_seurat', 'cvs_files_markers', habenula_markers_cvs_name)
+# write.csv(all_gene_match, habenula_markers_cvs_name, row.names=FALSE)
 
 message(' Cell type identification in clusters done!')
 
