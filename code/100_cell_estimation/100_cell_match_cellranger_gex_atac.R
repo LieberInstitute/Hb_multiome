@@ -1,0 +1,163 @@
+########################################################################
+## Gets the matching barcodes of multi-ome cell estimation between cellranger-count and cellranger-atac 
+##
+## Authors. CSC
+## Date. Sep 10th, 2024
+## Last Update: xx
+##
+## NOTES: 
+## Data from GEX was processed with cellranger-count from the multiome datasets (GEX only)
+## Data from ATAC was processed with cellranger-atac from the multiome datasets (ATAC only)
+## For slurm env: $srun --pty --mem=40GB --x11 bash
+########################################################################
+
+library(Seurat)                                 # 4.9.9.9045 2023-05-17 [1] Github (satijalab/seurat@7d1094c)
+#options(Seurat.object.assay.version = 'v5')    # To use new Seurat v5: Please run: options(Seurat.object.assay.version = 'v5')
+library(Signac)                                 # 1.9.0.9000 2023-05-08 [1] Github (stuart-lab/signac@cf31022)
+library(EnsDb.Hsapiens.v86)
+library(BSgenome.Hsapiens.UCSC.hg38)
+options(tidyverse.quiet = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(patchwork)
+library(here)
+
+here::here()
+main_dir_name <- "100_cell_match_cellranger_gex_atac"
+
+cellrangerDir <- here("processed-data", "cellrangerGEX")
+functionsDir <- here("code", "functions_custom")
+processedDir <- here("processed-data", main_dir_name)
+#plotDir <- here("plots", main_dir_name)
+
+# Check processed_data and plot directories exists
+if (!dir.exists(processedDir)) { dir.create(processedDir) }
+#if (!dir.exists(plotDir)) { dir.create(plotDir) }
+source(here(functionsDir, "remote_seurat_functions.R"))  # Call functions to create and handle Seurat object
+
+
+########################    Initials ########################  
+
+## commandArgs scans the arguments which have been supplied when the current R script was invoked (from shell sh)
+sample_args <- commandArgs(trailingOnly = TRUE)
+# sample_name <- sample_args[1]
+# For testing: sample_name <- "4C_Hb_KDM" 
+
+sample_name <- sample_args[1]
+message('Processing sample: ', sample_name)
+b_get_filtered_GEX <- FALSE
+b_get_GEX_plots <- FALSE
+
+
+########  ################################################# ######## 
+########  1.  Create a Seurat object with the RNA     
+########      Recommended 40G of free_mem to 3k-10k cells 
+########  ################################################# ######## 
+
+filtered_barcode_path <- here(cellrangerDir, sample_name, "outs", "filtered_feature_bc_matrix.h5")
+barcode_csv_path <- here(cellrangerDir, sample_name, "outs", "per_barcode_metrics.csv")
+#fragments_tsv_path <- here(cellrangerDir, sample_name, "outs", "atac_fragments.tsv.gz")
+
+## Create Seurat Object
+rna_counts <- Read10X_h5(filtered_barcode_path)             
+head(rna_counts, n = 3)
+SeuratOBJ = CreateSeuratObject(counts = rna_counts)
+SeuratOBJ
+message('Seurat object created successfully!')
+
+
+## Add additional meta-data: Chr-Mitochondrial levels
+
+SeuratOBJ$log10GenesPerUMI <- log10(SeuratOBJ$nFeature_RNA) / log10(SeuratOBJ$nCount_RNA)
+## For humans or mouse. GRCh38 and mm10, respectively
+SeuratOBJ[["percent.mt"]] <- PercentageFeatureSet(SeuratOBJ, pattern = "^MT-")
+SeuratOBJ[["percent.ribo"]] <- PercentageFeatureSet(SeuratOBJ, pattern = "^RP[LS]")
+SeuratOBJ[["MTRatio"]] <- SeuratOBJ$percent.mt / 100 
+
+message('Mitochondrial and Ribosomal percentage levels added')
+
+
+########  ################################################# ######## 
+########        2. Get Visualizations for the GEX           ######## 
+########  ################################################# ######## 
+
+# Build UMI, Genes, MITO and RIBO violin plots, number of cells per sample, UMI/transcripts per cell plots, and 
+#   Distribution of genes per cell histogram
+
+## Before QCed data, plot GEX basic quality controls
+if (b_get_GEX_plots) {
+    base_name <- paste0(sample_name, '_None_QC')
+    plot_GEX_QCs(SeuratOBJ, base_name, TRUE)
+    ## Calculate basic interquartile range for basic GEX stats
+    # table_descriptive_stats_GEX(SeuratOBJ, base_name, s_tissue)
+}
+
+
+########  ################################################# ######## 
+##        3. Preprocess Seurat Object based on the Mitochondrial percentage in the GEX assay
+##              METHOD 1: (M1p)  calculate cut-off based on probabilities
+##              METHOD 2: (M2sd) calculate cut-off at +/-2 Standard Deviations (95%)
+########  ################################################# ######## 
+
+
+# Create a second Seurat filtered by custom method of 1) probabilities or 2) SD
+if (b_get_filtered_GEX) {
+    # Preferred method 1. filter by probabilities
+    
+    # Validate or Load Seurat object from disk if available
+    # Note. GEX assay need to be active
+
+    if (i_filtering_method==1) {
+        # filter by probabilities: M1
+        SeuratOBJ.filtered <- get_seurat_GEX_filteringM1p(SeuratOBJ, FALSE)
+    } else {    
+        # filter by SD: M2
+        SeuratOBJ.filtered <- get_seurat_GEX_filteringM2sd(SeuratOBJ, FALSE)
+    }
+    # Rename origin ident to identify the filtered Seurat object
+    base_name <- paste0(levels(SeuratOBJ$`orig.ident`[1]), '_M', i_filtering_method)
+    SeuratOBJ.filtered$orig.ident <- base_name
+    #SeuratOBJ.filtered$`orig.ident`[1]
+
+    plot_GEX_QCs(SeuratOBJ.filtered, base_name, TRUE)
+    # Calculate and save some descriptive stats for further analysis
+    table_descriptive_stats_GEX(SeuratOBJ.filtered, base_name, s_tissue)
+    
+    # Create a list of Seurat Objects to attach ATAC assay and process by QC
+    lst_seurats <- list(SeuratOBJ, SeuratOBJ.filtered)
+    
+    message('Seurat filtered by MT level successfully!')
+
+    rds_name <- here(processedDir, paste0(sample_name,'filteredM',i_filtering_method,'.rds'))
+    saveRDS(SeuratOBJ.filtered, file = rds_name)
+    message('Saving Seurat filtered.')
+    
+} else {
+    
+    # Only one Seurat object available
+    lst_seurats <- list(SeuratOBJ)    
+    rds_name <- here(processedDir, paste0(sample_name,'.rds'))
+    saveRDS(SeuratOBJ, file = rds_name)
+    message('Saving Seurat none filtered.')
+    
+}
+
+
+########  ################################################# ############ 
+########  4. Load ATAC barcodes
+########  ################################################# ############ 
+
+
+
+
+
+############ Reproducibility information ####################
+
+library("sessioninfo")
+print('Reproducibility information:')
+# Last modification
+Sys.time()
+proc.time()
+options(width = 120)
+session_info()
+
