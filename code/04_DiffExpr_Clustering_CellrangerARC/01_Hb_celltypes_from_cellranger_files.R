@@ -8,7 +8,7 @@
 ##      1) A csv files with the matched markers found in each cluster. 
 ##
 ## Authors. CSC 
-## Date. Jan 26th, 2024 / last md. Feb,15th, 2024 
+## Date. Jan 26th, 2024 / last md. Sep,2024
 ########################################################################
 
 # load libraries
@@ -19,82 +19,48 @@ library(here)
 here::here()
 
 # Check if processed_data directory exists, if not create it
-if (!dir.exists(here("processed-data/05_DiffExpr_Clustering_CellrangerARC/"))) {
-    dir.create(here("processed-data/05_DiffExpr_Clustering_CellrangerARC/"))
-}
+if (!dir.exists(here("processed-data", "04_DiffExpr_Clustering_CellrangerARC"))) {
+  dir.create(here("processed-data", "04_DiffExpr_Clustering_CellrangerARC")) }
 
 source(here("code/functions_custom", "remote_DGE_marker_gene_lists.R"))       # Call functions to read paths
 
 
 #############################           Initials        ################################
-############################# Pickup a Marker gene list ################################
 
-# We have access to 3 gene markers lists:
+## scan the sample's names
+sample_args <- commandArgs(trailingOnly = TRUE)
+s_sample <- sample_args[1]
+# testing
+#s_sample <- 'S1_Hb_KDM'
+#s_sample <- '4S_Hb_KDM'
 
-# Erik and Top50r putative marker genes merged
-markers.custom <- get_erik_and_Hb_markers_genes()          # merged lists
-prefix_name <- 'all_gm'                                    # prefix to save matched markers found in the clusters
-#markers.custom <- get_bukola_markers_genes_Hb()           # Bukola lists
-#prefix_name <- 'erik_gm'  
-#markers.custom <- get_Top50r_markers_genes_Hb()           # Top50r lists (putative Hb)
-#prefix_name <- 'Top50r_gm'  
+message('Processing sample: ',s_sample)
 
-# str(markers.custom)
-# List of 14
-# $ neuron                   : chr [1:2] "SYT1" "SNAP25"
-# $ excitatory_neuron        : chr [1:2] "SLC17A6" "SLC17A7"
-# $ inhibitory_neuron        : chr [1:2] "GAD1" "GAD2"
-# $ mediodorsal thalamus     : chr [1:10] "EPHA4" "PDYN" "LYPD6B" "LYPD6" ...
-# $ Hb neuron specific       : chr [1:4] "POU2F2" "POU4F1" "GPR151" "CALB2"
-# $ MHB neuron specific      : chr [1:3] "TAC1" "CHAT" "CHRNB4"
-# $ LHB neuron specific      : chr [1:2] "HTR2C" "MMRN1"
-# $ oligodendrocyte          : chr [1:2] "MOBP" "MBP"
-# $ oligodendrocyte_precursor: chr [1:2] "PDGFRA" "VCAN"
-# $ microglia                : chr [1:2] "C3" "CSF1R"
-# $ astrocyte                : chr [1:2] "GFAP" "AQP4"
-# $ Endo/CP                  : chr [1:4] "TTR" "FOLR1" "FLT1" "CLDN5"
-# $ MHb_putative             : chr [1:50] "CHAT" "LINC01307" "NEUROD1" "CHRNB4" ...
-# $ LHb_putative             : chr [1:50] "HTR4" "BVES" "NRP1" "HTR2C" ...
+n_match_slice <- 20   #Top DGE to parse
+markers.custom = list()
 
-
-markers.custom$MHb_putative
-# [1] "CHAT"       "LINC01307"  "NEUROD1"    "CHRNB4"     "LINC02143" 
-# [6] "AC114321.1" "AC104170.1" "AC079760.2" "AC024610.2" "AC022382.2"
-# ...
-
-# # markers manually added for testing functions 
-# new_gm <- c('AQP4', 'MT-ND2')
-# markers.custom$MHb <- append(markers.custom$MHb, new_gm)
-# markers.custom$MHb 
+## Literature and Top50r DD marker genes
+markers.custom[["literature_base"]] <- get_erik_and_Hb_markers_genes()  
+markers.custom[["data_driven"]] <- get_Top50r_markers_genes_Hb()
+## Sub-population list from human-project
+#names(markers.custom$literature_base)
+names(markers.custom)
+markers.custom.literature <- markers.custom[["literature_base"]]
+prefix_name <- paste0(names(markers.custom)[1], "_top", n_match_slice, '.csv')
+#markers.custom.literature$inhibitory_neuron
 
 # set the number of top DGE rows to consider for looking gene markers in the cellranger-arc clusters
-n_match_slice <- 20   #10
-prefix_name <- paste0(prefix_name, n_match_slice, '.csv')
-
-#############################  Set the DGE list to parse  ################################
-
-## commandArgs scans the arguments which have been supplied when the current R script was invoked (from shell sh)
-sample_tmp <- commandArgs(trailingOnly = TRUE)
-#sample_tmp <- args[1]
-# testing
-#sample_tmp <- 'S1_Hb_KDM,human'  # testing HUMAN tissue
-#sample_tmp <- 'S2_Hb_KDM,human'  # testing HUMAN tissue
-#sample_tmp <- '2_HPC_KDM,human'  # testing HUMAN tissue
-#sample_tmp <- '2_HPC_KDM,human'  # testing HUMAN tissue
-sample_data = unlist(strsplit(sample_tmp,","))
-
-s_sample <- sample_data[[1]]
-s_tissue <- sample_data[[2]]
-message('Processing sample: ',s_sample, ' from ', s_tissue, ' tissue.')
-
+cellranger_celltypesDir <- here('processed-data','04_DiffExpr_Clustering_CellrangerARC', 
+                                paste0('cellrangerARC_cellTypes_', s_sample,'_', prefix_name))
 
 
 #############################  DGE gene lists from cellranger-arc ################################
 
 # Extract number of clusters for the given sample
-path_cellranger_clusters_df <- here(paste0('processed-data/cellrangerARC/', s_sample, '/outs/analysis/clustering/gex/graphclust'),
-                                 'clusters.csv')
-cellranger_clusters <- as.data.frame(read.csv(path_cellranger_clusters_df, header = TRUE))
+cellranger_clustersDir <- here('processed-data', 'cellrangerARC', s_sample, 'outs', 
+                               'analysis', 'clustering','gex', 'graphclust', 'clusters.csv')
+# path_cellranger_clusters_df <- here(paste0('processed-data/cellrangerARC/', s_sample, '/outs/analysis/clustering/gex/graphclust'),'clusters.csv')
+cellranger_clusters <- as.data.frame(read.csv(cellranger_clustersDir, header = TRUE))
 cellr_clusters <- unique(cellranger_clusters['Cluster'])
 clusters <- cellr_clusters[['Cluster']]
 
@@ -102,24 +68,14 @@ message('Looking gene markers for ', length(clusters), ' clusters for sample ', 
 
 # Extract DGE genes for all clusters for the given sample
 # Read path to cellranger-arc DGE clusters
-path_cellranger_DGE_clust_df <- here(paste0('processed-data/cellrangerARC/', s_sample, '/outs/analysis/clustering/gex/graphclust'),
-                                    'differential_expression.csv')
-path_cellranger_DGE_clust_df      # ~/Hb_multiome/processed-data/cellrangerARC/S1_Hb_KDM/outs/analysis/clustering/graphclust/differential_expression.csv"
-cellr_clusters <- as.data.frame(read.csv(path_cellranger_DGE_clust_df, header = TRUE))
+cellranger_clusters_DGE_Dir <- here('processed-data','cellrangerARC', s_sample, 'outs',
+                                     'analysis','clustering','gex','graphclust','differential_expression.csv')
+# path_cellranger_DGE_clust_df <- here(paste0('processed-data/cellrangerARC/', s_sample, '/outs/analysis/clustering/gex/graphclust'), 'differential_expression.csv')
+cellr_clusters <- as.data.frame(read.csv(cellranger_clusters_DGE_Dir, header = TRUE))
 head(cellr_clusters[1:5], n=3)
-# Feature.ID Feature.Name Cluster.1.Mean.Counts Cluster.1.Log2.fold.change
-# 1 ENSG00000243485  MIR1302-2HG                     0                   7.110087
-# 2 ENSG00000237613      FAM138A                     0                   7.110087
-# 3 ENSG00000186092        OR4F5                     0                   7.110087
-# Cluster.1.Adjusted.p.value
-# 1                          1
-# 2                          1
-# 3                          1
-
 
 #levels/categories of cell-types
-message('Parsing ', length(markers.custom), ' cell types for ', length(clusters) ,' clusters in sample ', s_sample)
-#Parsing 14 cell-types for clusters in sample S1_Hb_KDM
+message('Parsing ', length(markers.custom.literature), ' cell types for ', length(clusters) ,' clusters in sample ', s_sample)
 
 
 ####### Parse the 10/20 DGE genes from GEX cluster against the marker genes list provided ####### 
@@ -127,14 +83,13 @@ message('Parsing ', length(markers.custom), ' cell types for ', length(clusters)
 clusters <- sort(clusters)
 
 # empty df to save cell-types matched 
-all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("Feature.ID", "Feature.Name", "Cluster.Adjusted.p.value", "cell-type", "cluster"))
-
-#names(marker.custom_lsts)
+all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), 
+                           c("Feature.ID", "Feature.Name", "Cluster.Adjusted.p.value", "cell-type", "cluster"))
 
 
 # parse the clusters of the given sample
 for (clust in clusters) {
-
+    # For testing: clust <- 1
     # Read cluster x and extract the 10 ten most relevant genes
     Cluster_number <- paste0('Cluster.',clust,'.')
     f <-  paste0(Cluster_number,'Adjusted.p.value')
@@ -148,19 +103,17 @@ for (clust in clusters) {
     # Parse each gene in the top10 list against the marker gene list provided 
     if ( nrow(top_DGE_clust) > 0 ) {
         
-        # get a vector wit all marker genes
-        gm_lst <- as.vector(as.list(markers.custom))
-        #names(gm_lst[1])
+        # get a vector with the marker genes for the class
+        gm_lst <- as.vector(as.list(markers.custom.literature))
         i_pos <- 0      # reset gene-marker list position
-        
         for ( gm in gm_lst ) {
 
             i_pos <- i_pos+1                        # to extract cell type position
             cell_type <- names(gm_lst[i_pos])       # to extract cell type name
+            print(paste("Parsing", cell_type))
 
             # Match top10genes with the marker genes for the cell-type x 
             gene_match <- top_DGE_clust %>% filter_all(any_vars(. %in% gm))
-            print(gene_match)
             
             # add matched genes to a dataframe
             if ( nrow(gene_match) > 0 ) {
@@ -180,16 +133,10 @@ for (clust in clusters) {
 # save the matched genes for the corresponding sample 
 #all_gene_match
 head(all_gene_match, n=3)
-# Feature.ID Feature.Name Cluster.Adjusted.p.value cell-type cluster
-# 1 ENSG00000171885         AQP4            7.099002e-296 astrocyte       3
-# 2 ENSG00000131095         GFAP            4.096113e-259 astrocyte       3
-# 3 ENSG00000067715         SYT1             3.555116e-37    neuron       4
 
-path_cellranger_clusters_markers <- here('processed-data/05_DiffExpr_Clustering_CellrangerARC', paste0(s_sample,'_cell_types_', prefix_name))
-# S1_Hb_KDM_cell_types_all_gm20.csv
-write.csv(all_gene_match, path_cellranger_clusters_markers, row.names=FALSE)
+write.csv(all_gene_match, cellranger_celltypesDir, row.names=FALSE)
 
-message(' Cell type identification in clusters done!')
+message(' Cell type identification in sample', s_sample, 'done!')
 
 
 
