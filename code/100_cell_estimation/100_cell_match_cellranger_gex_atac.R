@@ -16,13 +16,9 @@
 # library(Seurat)                                 # 4.9.9.9045 2023-05-17 [1] Github (satijalab/seurat@7d1094c)
 # #options(Seurat.object.assay.version = 'v5')    # To use new Seurat v5: Please run: options(Seurat.object.assay.version = 'v5')
 # library(Signac)                                 # 1.9.0.9000 2023-05-08 [1] Github (stuart-lab/signac@cf31022)
-# library(EnsDb.Hsapiens.v86)
-# library(BSgenome.Hsapiens.UCSC.hg38)
-# options(tidyverse.quiet = TRUE)
+ options(tidyverse.quiet = TRUE)
 library(tidyverse)
 library(readr)
-# library(ggplot2)
-# library(patchwork)
 library(here)
 
 
@@ -39,8 +35,6 @@ processedDir <- here("processed-data", main_dir_name)
 
 # Check processed_data and plot directories exists
 if (!dir.exists(processedDir)) { dir.create(processedDir) }
-#if (!dir.exists(plotDir)) { dir.create(plotDir) }
-#source(here(functionsDir, "remote_seurat_functions.R"))  # Call functions to create and handle Seurat object
 
 ### Barcode translation in Cell Rangers ###  
 
@@ -86,35 +80,12 @@ b_get_GEX_plots <- FALSE
 # feature.RNA.loc_Dir <- here(cellrangerDir_GEX, sample_name_RNA, "outs", "filtered_feature_bc_matrix", "features.tsv.gz")
 # df_sample_features_RNA <- read.csv(feature.RNA.loc_Dir, header = FALSE, sep = "\t")
 # head(df_sample_features_RNA)
+
 barcode.RNA.loc_Dir <- here(cellrangerDir_GEX, sample_name_RNA, "outs", 
                             "filtered_feature_bc_matrix", "barcodes.tsv.gz")
-
-### Pull barcodes from barcode matrix
 df_sample_barcodes_RNA <- read.csv(barcode.RNA.loc_Dir, header = FALSE)
 head(df_sample_barcodes_RNA)
 v_sample_barcodes_RNA <- str_remove(unlist(df_sample_barcodes_RNA), "-1")
-#v_sample_barcodes_RNA[1:10]
-# parse_character(v_sample_barcodes_RNA)
-# df_sample_barcodes_RNA <- data.frame(v_sample_barcodes_RNA)
-# head(df_sample_barcodes_RNA, n=3)
-
-
-# ### Reads barcodes from seurat object
-
-# filtered_barcode_path <- here(cellrangerDir_GEX, sample_name_RNA, "outs", "filtered_feature_bc_matrix.h5")
-
-# rna_counts <- Read10X_h5(filtered_barcode_path)             
-# head(rna_counts, n = 3)
-# SeuratOBJ = CreateSeuratObject(counts = rna_counts)
-# message('Seurat object created successfully!')
-# head(SeuratOBJ)
-# # removes the "-1" if all cell names contain it
-# SeuratOBJ <- RenameCells(SeuratOBJ, new.names = str_remove(Cells(x = SeuratOBJ), "-1"))
-# df_cells <- as.data.frame(SeuratOBJ@meta.data, row.names = NULL)
-# v_sample_barcodes2 <- rownames(df_cells)
-# #sample_barcodes2 <- data.table(sample_barcodes2)
-# identical(v_sample_barcodes, v_sample_barcodes2)
-
 
 ### Read barcodes ATAC - - only detected cell-associated barcodes
 
@@ -127,10 +98,10 @@ head(df_sample_barcodes_ATAC)
 v_sample_barcodes_atac <- str_remove(unlist(df_sample_barcodes_ATAC), "-1")
 #v_sample_barcodes_atac[1:10]
 
-## For testing qualities use sample 4A indexes
+## For testing equalities 
 #v_sample_barcodes_atac[2] <- v_sample_barcodes_RNA[1]
-#identical(v_sample_barcodes_atac[1], v_sample_barcodes_RNA[1])
-#identical(v_sample_barcodes_atac[2], v_sample_barcodes_RNA[1])
+#identical(v_sample_barcodes_atac[1], v_sample_barcodes_RNA[1]) # False
+#identical(v_sample_barcodes_atac[2], v_sample_barcodes_RNA[1]) # True
 
 message("Barcode lenghts (RNA/ATAC)")
 length(v_sample_barcodes_RNA)
@@ -158,6 +129,22 @@ write.csv(cvs_percents, row.names = FALSE, quote = FALSE,
 
 message(" Processed ", sample_name_RNA, " and ", sample_name_ATAC)
 
+
+# ### Reads barcodes from seurat object
+
+# filtered_barcode_path <- here(cellrangerDir_GEX, sample_name_RNA, "outs", "filtered_feature_bc_matrix.h5")
+
+# rna_counts <- Read10X_h5(filtered_barcode_path)             
+# head(rna_counts, n = 3)
+# SeuratOBJ = CreateSeuratObject(counts = rna_counts)
+# message('Seurat object created successfully!')
+# head(SeuratOBJ)
+# # removes the "-1" if all cell names contain it
+# SeuratOBJ <- RenameCells(SeuratOBJ, new.names = str_remove(Cells(x = SeuratOBJ), "-1"))
+# df_cells <- as.data.frame(SeuratOBJ@meta.data, row.names = NULL)
+# v_sample_barcodes2 <- rownames(df_cells)
+# #sample_barcodes2 <- data.table(sample_barcodes2)
+# identical(v_sample_barcodes, v_sample_barcodes2)
 
 
 ############ Reproducibility information ####################
