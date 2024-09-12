@@ -30,7 +30,7 @@ module conda_R/4.3.x
 module list
 
 echo "== This is the script =="
-Rscript 100_cell_match_cellranger_gex_atac.R $id
+Rscript 01_cell_match_cellranger_gex_atac.R $id
 echo "== End of Job =="
 
 ## Script for SLURM
