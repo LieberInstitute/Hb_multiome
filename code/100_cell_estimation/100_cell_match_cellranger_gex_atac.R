@@ -43,16 +43,22 @@ if (!dir.exists(processedDir)) { dir.create(processedDir) }
 ##        The two sets of barcodes are associated by line number
 
 ## GEX barcodes
-
 barcodes_GEX <- read.csv(here("/jhpce/shared/libd/core/cellranger_arc/2.0.2/cellranger-arc-2.0.2/lib/python/cellranger/barcodes", 
                                 "737K-arc-v1.txt.gz"), header = FALSE)
-head(barcodes_GEX)
+# add row number as column
+v_barcodes_GEX <- unlist(barcodes_GEX)
+df_barcodes_GEX <- unlist(barcodes_GEX[1])
+# barcodes_GEX$line <- 1:nrow(barcodes_GEX)
+# tail(barcodes_GEX)
+# colnames(barcodes_GEX)
+
+# Split name column into firstname and last name
+
 
 ## ATAC barcodes
-
 barcodes_ATAC <- read.csv(here("/jhpce/shared/libd/core/cellranger_arc/2.0.2/cellranger-arc-2.0.2/lib/python/atac/barcodes",
                                "737K-arc-v1.txt.gz"), header = FALSE)
-head(barcodes_ATAC)             
+#head(barcodes_ATAC)             
 
 
 ########################   Start   ########################  
@@ -85,7 +91,26 @@ barcode.RNA.loc_Dir <- here(cellrangerDir_GEX, sample_name_RNA, "outs",
                             "filtered_feature_bc_matrix", "barcodes.tsv.gz")
 df_sample_barcodes_RNA <- read.csv(barcode.RNA.loc_Dir, header = FALSE)
 head(df_sample_barcodes_RNA)
+# remove GEM-Bed number `-1` and creates a vector
 v_sample_barcodes_RNA <- str_remove(unlist(df_sample_barcodes_RNA), "-1")
+v_sample_barcodes_RNA <- unlist(as.data.frame(v_sample_barcodes_RNA))
+
+# # Validate and test: 
+# head(v_barcodes_GEX)
+# length(v_barcodes_GEX)
+# head(v_sample_barcodes_RNA)
+# length(v_sample_barcodes_RNA)
+# v_sample_barcodes_RNA[5] <- v_barcodes_GEX[10]  #AAACAGCCAAACTGCC
+# v_sample_barcodes_RNA[10] <- v_barcodes_GEX[100] #AAACAGCCAATTATGC
+
+matching_cells_gex <- pmatch(v_sample_barcodes_RNA, v_barcodes_GEX)
+message("Translated barcodes from cellranger-arc GEX: ", length(matching_cells_gex))
+
+# head(matching_cells_gex, n=10)
+# v_sample_barcodes_RNA[10]==v_barcodes_GEX[100]
+
+
+
 
 ### Read barcodes ATAC - - only detected cell-associated barcodes
 
@@ -140,7 +165,7 @@ message(" Processed ", sample_name_RNA, " and ", sample_name_ATAC)
 # message('Seurat object created successfully!')
 # head(SeuratOBJ)
 # # removes the "-1" if all cell names contain it
-# SeuratOBJ <- RenameCells(SeuratOBJ, new.names = str_remove(Cells(x = SeuratOBJ), "-1"))
+# SeuratOBJ <- RenameCells(SeuratOBJ, new.names = str_remove(Cells(x = SeuratOsBJ), "-1"))
 # df_cells <- as.data.frame(SeuratOBJ@meta.data, row.names = NULL)
 # v_sample_barcodes2 <- rownames(df_cells)
 # #sample_barcodes2 <- data.table(sample_barcodes2)
