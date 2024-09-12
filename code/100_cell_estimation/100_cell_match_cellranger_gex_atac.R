@@ -45,20 +45,13 @@ if (!dir.exists(processedDir)) { dir.create(processedDir) }
 ## GEX barcodes
 barcodes_GEX <- read.csv(here("/jhpce/shared/libd/core/cellranger_arc/2.0.2/cellranger-arc-2.0.2/lib/python/cellranger/barcodes", 
                                 "737K-arc-v1.txt.gz"), header = FALSE)
-# add row number as column
 v_barcodes_GEX <- unlist(barcodes_GEX)
-df_barcodes_GEX <- unlist(barcodes_GEX[1])
 # barcodes_GEX$line <- 1:nrow(barcodes_GEX)
-# tail(barcodes_GEX)
-# colnames(barcodes_GEX)
-
-# Split name column into firstname and last name
-
 
 ## ATAC barcodes
 barcodes_ATAC <- read.csv(here("/jhpce/shared/libd/core/cellranger_arc/2.0.2/cellranger-arc-2.0.2/lib/python/atac/barcodes",
                                "737K-arc-v1.txt.gz"), header = FALSE)
-#head(barcodes_ATAC)             
+v_barcodes_ATAC <- unlist(barcodes_ATAC)
 
 
 ########################   Start   ########################  
@@ -121,18 +114,16 @@ df_sample_barcodes_ATAC <- readr::read_tsv(barcode.ATAC.loc_Dir,
                                            col_names = FALSE, show_col_types = FALSE)
 head(df_sample_barcodes_ATAC)
 v_sample_barcodes_atac <- str_remove(unlist(df_sample_barcodes_ATAC), "-1")
-#v_sample_barcodes_atac[1:10]
+v_sample_barcodes_atac <- unlist(as.data.frame(v_sample_barcodes_atac))
 
-## For testing equalities 
-#v_sample_barcodes_atac[2] <- v_sample_barcodes_RNA[1]
-#identical(v_sample_barcodes_atac[1], v_sample_barcodes_RNA[1]) # False
-#identical(v_sample_barcodes_atac[2], v_sample_barcodes_RNA[1]) # True
+matching_cells_atac <- pmatch(v_sample_barcodes_atac, v_barcodes_ATAC)
+message("Translated barcodes from cellranger-arc ATAC: ", length(matching_cells_atac))
+head(matching_cells_atac)
+# Testing
+v_sample_barcodes_atac[1] == v_barcodes_ATAC[473848]
+v_sample_barcodes_atac[5] == v_barcodes_ATAC[550741]
 
-message("Barcode lenghts (RNA/ATAC)")
-length(v_sample_barcodes_RNA)
-length(v_sample_barcodes_atac)
-
-match_cells <- intersect(v_sample_barcodes_RNA, v_sample_barcodes_atac)
+match_cells <- intersect(matching_cells_gex, matching_cells_atac)
 number_match_cells <- length(match_cells)
 message("Matching cells: ", number_match_cells)
 
