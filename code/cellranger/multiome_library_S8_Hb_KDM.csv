@@ -1,0 +1,4 @@
+fastqs,sample,library_type
+/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ_2024_data_package2/GEX/8C_Hb_KDM, 8C_Hb_KDM, Gene Expression
+/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ_2024_data_package2/ATAC/8A_Hb_KDM, 8A_Hb_KDM, Chromatin Accessibility
+
