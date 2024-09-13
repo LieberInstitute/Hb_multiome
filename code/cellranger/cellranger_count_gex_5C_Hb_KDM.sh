@@ -4,7 +4,6 @@
 #SBATCH --error=S5-CR_count-%j.err	        # file to collect standard output
 #SBATCH --job-name=S5_CR_count	            # name job for easier spotting, controlling
 #SBATCH --cpus-per-task=4		            # number of cores
-#SBATCH --mem=20GB			                # memory per __node__
 #SBATCH --mem=80GB			                # memory per __node__
 
 # You may not place any commands before the last SBATCH directive
@@ -19,7 +18,6 @@
 
 echo "**** Job starts ****"
 SAMPLE=5C_Hb_KDM      #  name as specified in the sample sheet supplied to cellranger mkfastq
-SAMPLEID=S5C_Hb_KDM   #  unique arbitrary ID used to name outputs directory
 echo "Run cellranger-count for only GEX side from a multiome experiment"
 echo "https://kb.10xgenomics.com/hc/en-us/articles/360059656912-Can-I-analyze-only-the-Gene-Expression-data-from-my-single-cell-multiome-experiment"
 echo ""
@@ -47,7 +45,7 @@ mkdir -p /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/code/cellra
 date
 
 ## Run cellRanger count
-cellranger count --id=${SAMPLEID} \
+cellranger count --id=${SAMPLE} \
     --transcriptome=/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0 \
     --fastqs=/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/raw-data/FASTQ_2024/GEX/${SAMPLE}/ \
     --sample=${SAMPLE} \
@@ -57,7 +55,6 @@ cellranger count --id=${SAMPLEID} \
 
 ## Move output
 echo "Moving data to new location"
-#mkdir -p /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/HPC_multiome_pilot/processed-data/cellranger_run_fast_version/
 mv ${SAMPLE} /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/cellrangerGEX/
 echo "Data moved to new location"
 
