@@ -8,26 +8,34 @@ Human Habenula Multiome Project
 
 Allocated in: `/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome`
 
-#### Fastq GEX and ATAC Raw-data
 
-First sequencing for `Human Habenula Pilot`:
+#### Fastq multiome snRNA-seq and snATAC-seq datasets from `Human Habenula Neurotypical Controls`
+
+JHPCE Path to `first`  sequenced dataset (January 2024):
 
 snRNA-Seq fastq libraries in: `/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/24-01-02_SPag110823/`
 
 snATAC-Seq fastq libraries in: `/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/24-01-02_SPag110823_ATAC/`
 
-<br> Second sequencing for `Human Habenula Neurotypical Controls` (August 2024):
+Path to `second`  sequenced dataset (July- early August 2024):
 
-snRNA-Seq fastq libraries in: `/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2024-07-09-Psomagen/AN00019739_10X_RawData_Outs`
+snRNA-Seq fastq libraries in: `/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2024-07-09-Psomagen/AN00019739_10X_RawData_Outs/`
 
-snATAC-Seq fastq libraries in: `/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2024-08-02_Psomagen/AN00020424_10X_RawData_Outs`
+snATAC-Seq fastq libraries in: `/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2024-08-02_Psomagen/AN00020424_10X_RawData_Outs/`
+
+Path to `third`  sequenced dataset (late August 2024):
+
+snRNA-Seq fastq libraries in: `/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2024-08-26_Psomagen/`
+
+snATAC-Seq fastq libraries in: `/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2024-08-27_Psomagen/`
+
+<!-- 
 
 Notes: - Second sequencing have `Visium` sequencing files too. - `RNA multiome files` have a `C` letter; `Visum files` have a `v` lower case letter.
 
 <br>
 
 ````{=html}
-<!--
 
 #### Soft links into raw-data/ subfolder:
 
@@ -50,64 +58,36 @@ FASTQ/
 ```
 
 ````{=html}
-<!--
-Identified files for ATACseq:
-```
-drwxrws---+ 2 rmiller lieber_lmh_storage 6 Jan  2 11:16 1A_Hb_KDM-1
-drwxrws---+ 2 rmiller lieber_lmh_storage 6 Jan  2 11:16 1A_Hb_KDM-2
-drwxrws---+ 2 rmiller lieber_lmh_storage 6 Jan  2 11:16 1A_Hb_KDM-3
-drwxrws---+ 2 rmiller lieber_lmh_storage 6 Jan  2 11:15 1A_Hb_KDM-4
-drwxrws---+ 2 rmiller lieber_lmh_storage 6 Jan  2 11:15 2A_Hb_KDM-1
-drwxrws---+ 2 rmiller lieber_lmh_storage 6 Jan  2 11:12 2A_Hb_KDM-2
-drwxrws---+ 2 rmiller lieber_lmh_storage 6 Jan  2 11:15 2A_Hb_KDM-3
-drwxrws---+ 2 rmiller lieber_lmh_storage 6 Jan  2 11:13 2A_Hb_KDM-4
-```
 
-Identified files for snRNAseq:
-```
-14:05 Hb_2024 $ ls -l | grep Hb
--rw-r-----+ 1 rmiller lieber_lmh_storage 1889340602 Jan  2 16:36 37---1C-Hb-KDM-Hb_S17_L001_R1_001.fastq.gz
--rw-r-----+ 1 rmiller lieber_lmh_storage 4432968966 Jan  2 11:57 37---1C-Hb-KDM-Hb_S17_L001_R2_001.fastq.gz
--rw-r-----+ 1 rmiller lieber_lmh_storage 1908702363 Jan  2 16:29 37---1C-Hb-KDM-Hb_S17_L002_R1_001.fastq.gz
--rw-r-----+ 1 rmiller lieber_lmh_storage 4475186382 Jan  2 11:40 37---1C-Hb-KDM-Hb_S17_L002_R2_001.fastq.gz
--rw-r-----+ 1 rmiller lieber_lmh_storage 1908480908 Jan  2 16:29 37---1C-Hb-KDM-Hb_S17_L003_R1_001.fastq.gz
--rw-r-----+ 1 rmiller lieber_lmh_storage 4464333226 Jan  2 11:44 37---1C-Hb-KDM-Hb_S17_L003_R2_001.fastq.gz
--rw-r-----+ 1 rmiller lieber_lmh_storage 1908465304 Jan  2 16:30 37---1C-Hb-KDM-Hb_S17_L004_R1_001.fastq.gz
--rw-r-----+ 1 rmiller lieber_lmh_storage 4472526848 Jan  2 11:40 37---1C-Hb-KDM-Hb_S17_L004_R2_001.fastq.gz
--rw-r-----+ 1 rmiller lieber_lmh_storage 1697727336 Jan  2 16:58 38---2C-Hb-KDM-Hb_S18_L001_R1_001.fastq.gz
--rw-r-----+ 1 rmiller lieber_lmh_storage 3851384409 Jan  2 13:53 38---2C-Hb-KDM-Hb_S18_L001_R2_001.fastq.gz
--rw-r-----+ 1 rmiller lieber_lmh_storage 1725024267 Jan  2 16:55 38---2C-Hb-KDM-Hb_S18_L002_R1_001.fastq.gz
--rw-r-----+ 1 rmiller lieber_lmh_storage 3907813188 Jan  2 13:35 38---2C-Hb-KDM-Hb_S18_L002_R2_001.fastq.gz
--rw-r-----+ 1 rmiller lieber_lmh_storage 1726565648 Jan  2 16:55 38---2C-Hb-KDM-Hb_S18_L003_R1_001.fastq.gz
--rw-r-----+ 1 rmiller lieber_lmh_storage 3902949402 Jan  2 13:39 38---2C-Hb-KDM-Hb_S18_L003_R2_001.fastq.gz
--rw-r-----+ 1 rmiller lieber_lmh_storage 1722948027 Jan  2 16:56 38---2C-Hb-KDM-Hb_S18_L004_R1_001.fastq.gz
--rw-r-----+ 1 rmiller lieber_lmh_storage 3900694608 Jan  2 13:43 38---2C-Hb-KDM-Hb_S18_L004_R2_001.fastq.gz
-```
--->
-````
 
-Script used to create soft links to Fastq RawData:
+To create soft links to the fastq multiome data use the following scripts:
 
 ```         
-create_cellranger_ARC_libraries.R
+ls create_cellranger_ARC_libraries* -l
 ```
 
-Script to create the `csv library file` to input in the `CellRanger-ARC` pipeline:
+To create the `csv library naming convention cellrangerARC` files use the following scripts:
 
 ```         
-create_fastq_soft_links_for_cellranger_arc.R
+ls create_fastq_soft_links_for_cellranger_arc* -l
 ```
 
 <br>
 
-IMPORTANT NOTES
-
-1.  These scripts are located into `raw-data/` directory.
-
-2.  These is the only exception to set R Scripts in a different directory to `code/` dir.
+Note these R scripts are located into the `raw-data/` directory. These is the only exception to set R Scripts in a different directory to `code/` dir.
 
 <br>
+
+
+#### Summary reports to cellranger pipelines:
+
+[CellrangerARC web summary report](https://github.com/LieberInstitute/Hb_multiome/tree/732545d59dcbb1087621414eb39c1b093832aa5e/processed-data/cellrangerARC_summary_rpts)
+
+[Cellranger-count web summary report](https://github.com/LieberInstitute/Hb_multiome/tree/732545d59dcbb1087621414eb39c1b093832aa5e/processed-data/cellrangerGEX_summary_rpts)
+
+[Cellranger-atac web summary report](https://github.com/LieberInstitute/Hb_multiome/tree/732545d59dcbb1087621414eb39c1b093832aa5e/processed-data/cellrangerATAC_summary_rpts)
+
+
 
 CSC
-
-Aug 06th, 2024
+Sep. 2024
