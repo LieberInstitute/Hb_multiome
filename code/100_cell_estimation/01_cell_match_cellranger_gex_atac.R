@@ -24,11 +24,13 @@ here::here()
 main_dir_name <- "100_cell_match_cellranger_gex_atac"
 cellrangerDir_GEX <- here("processed-data", "cellrangerGEX")
 cellrangerDir_ATAC <- here("processed-data", "cellrangerATAC")
+cellrangerDir_reanalize <- here("processed-data", main_dir_name, "reanalize_files")
 functionsDir <- here("code", "functions_custom")
 processedDir <- here("processed-data", main_dir_name)
 
 # Check Directories
 if (!dir.exists(processedDir)) { dir.create(processedDir) }
+if (!dir.exists(cellrangerDir_reanalize)) { dir.create(cellrangerDir_reanalize) }
 
 ### Barcode translation references in Cell Ranger ARC lives here
 ##    ATAC barcode: <path_to_cellranger-arc>/lib/python/atac/barcodes
@@ -54,6 +56,7 @@ sample_args <- commandArgs(trailingOnly = TRUE)
 # For testing: 
 #sample_args <- "4C_Hb_KDM,4A_Hb_KDM"
 #sample_args <- "6C_Hb_KDM,6A_Hb_KDM"
+#sample_args <- "3C_Hb_KDM,3A_Hb_KDM"
 
 sample_data <- unlist(strsplit(sample_args, ","))
 sample_name_RNA <- sample_data[1]
@@ -81,12 +84,12 @@ v_sample_bc_gex <- unlist(as.data.frame(v_sample_bc_gex))
 # v_sample_bc_gex[5] <- v_barcodes_GEX[10]  #AAACAGCCAAACTGCC
 # v_sample_bc_gex[10] <- v_barcodes_GEX[100] #AAACAGCCAATTATGC
 
+## retrieve line-number of matching vector in the GEX cellranger-arc reference
 translated_bc_arc_gex <- pmatch(v_sample_bc_gex, v_barcodes_GEX)
 message("Translated barcodes from cellranger-arc GEX: ", length(translated_bc_arc_gex))
 
 ## Add line-number corresponding translated ARC barcode
 df_gex$ID <- translated_bc_arc_gex
-
 
 ### Translate ATAC barcodes - only detected cell-associated barcodes
 
@@ -102,20 +105,21 @@ v_sample_bc_atac <- unlist(as.data.frame(v_sample_bc_atac))
 translated_bc_arc_atac <- pmatch(v_sample_bc_atac, v_barcodes_ATAC)
 message("Translated barcodes from cellranger-arc ATAC: ", length(translated_bc_arc_atac))
 
-# # Testing
-# v_sample_bc_atac[1] == v_barcodes_ATAC[473848]
-# v_sample_bc_atac[5] == v_barcodes_ATAC[550741]
-
 ## match translated barcodes between GEX and ATAC assays alone
 match_cells <- intersect(translated_bc_arc_gex, translated_bc_arc_atac)
 number_match_cells <- length(match_cells)
 message("Matching cells: ", number_match_cells)
 
+# head(sort(translated_bc_arc_gex), n=10)
+# head(sort(translated_bc_arc_atac), n=10)
+# head(match_cells, n=10)
+
 ## Add line-number corresponding translated ARC barcode
 df_atac$ID <- translated_bc_arc_atac
 
 ## Join table with translated barcodes matching both assays
-df_matching_barcodes <- inner_join(df_gex, df_atac, by = "ID")
+df_matching_barcodes <- inner_join((df_gex |> arrange(ID)), (df_atac |> arrange(ID)), by = "ID")
+# head(df_matching_barcodes)
 
 ## Compute validations and prepare some vectors to compute basic stats
 ## For ATAC
@@ -128,10 +132,23 @@ sum_gex_valid_bc <- sum(sum_gex, na.rm = TRUE)
 sum_gex_NO_valid_bc <- length(translated_bc_arc_gex) - sum_gex_valid_bc
 
 if (sum_gex_valid_bc == sum_atac_valid_bc) {
-  ## Cells matched
+  ## Matching cells between cellranger-count and cellranger-atac 
+  ## In csv file: col1: gex barcode, col2: arc line number, col3: atac barcode
+  names(df_matching_barcodes) <- c("v_sample_bc_gex", "cellrangerARC_line_ID", "v_sample_bc_atac")
   write.csv(df_matching_barcodes, row.names = TRUE, quote = FALSE, 
             here(processedDir, paste0(sample_name_RNA, "_", sample_name_ATAC, "_matching_cells.csv")))
   message("Matching ARC translated barcodes saved!")
+
+  ## Barcodes from `cellranger ARC` matching between cellranger-count and cellranger-atac 
+  ## This selection of barcodes matching is for running with `cellranger-arc reanalyze` pipeline
+  ARC_barcodes_matching <- v_barcodes_GEX[c(match_cells)]
+  if (length(ARC_barcodes_matching) == sum_gex_valid_bc) {
+    write.csv(as.data.frame(ARC_barcodes_matching), row.names = FALSE, quote = FALSE, 
+              here(cellrangerDir_reanalize, paste0(sample_name_RNA, "_matching_ARC_barcodes.csv")))
+    message("Matching ARC translated barcodes saved!")
+  } else {
+    message("Error saving cellranger-ARC barcodes!")
+  }
 } else {
   message("Error translating barcodes!")
 }
@@ -148,14 +165,16 @@ if (((sum_atac_valid_bc + sum_atac_NO_valid_bc) == length(translated_bc_arc_atac
 }
 
 ## Save the tsv file with basic stats 
-tsv_header <- "Sample_id\tsample_gex_bc\tvalid_bc_gex_arc\tp_valid_bc_gex_arc\tnot_valid_bc_gex_arc\tp_not_valid_bc_gex_arc\tvalid_bc_atac_arc\tp_valid_bc_atac_arc\tnot_valid_bc_atac_arc\tp_not_valid_bc_atac_arc\n"
+tsv_header <- "Sample_id\t" 
+tsv_header <- paste0(tsv_header, "translated_gex_bc\t valid_bc_gex_arc\t p_valid_bc_gex_arc\t not_valid_bc_gex_arc\t p_not_valid_bc_gex_arc\t")
+tsv_header <- paste0(tsv_header, "translated_atac_bc\t valid_bc_atac_arc\t p_valid_bc_atac_arc\t not_valid_bc_atac_arc\t p_not_valid_bc_atac_arc\n")
 s_name <- paste0(paste0(sample_name_RNA, "-", sample_name_ATAC), "\t")
 gex_line <- paste0(length(translated_bc_arc_gex), "\t", sum_gex_valid_bc, "\t", percent_gex, "\t", sum_gex_NO_valid_bc, "\t", (100-percent_gex), "\t")  
 atac_line <- paste0(length(translated_bc_arc_atac), "\t", sum_atac_valid_bc, "\t", percent_atac, "\t", sum_atac_NO_valid_bc, "\t", (100-percent_atac))  
 tsv_body <- paste0(tsv_header, s_name, gex_line, atac_line)
 cat(tsv_body)
 write.table(tsv_body, here(processedDir, paste0(sample_name_RNA, "_", sample_name_ATAC, "_matching_cells_stats.tsv")),
-            quote=FALSE, sep='\t', col.names = NA)
+            quote=FALSE, sep='\t', row.names = FALSE, col.names = FALSE)
 
 message(" Processed ", sample_name_RNA, " and ", sample_name_ATAC)
 
