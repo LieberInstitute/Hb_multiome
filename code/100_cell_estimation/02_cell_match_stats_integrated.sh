@@ -4,8 +4,8 @@
 #SBATCH --job-name=02_cell_match_stats_integrated
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
-#SBATCH -o logs/02_cell_match_stats_integrated.txt
-#SBATCH -e logs/02_cell_match_stats_integrated.txt
+#SBATCH -o /logs/02_cell_match_stats_integrated.txt
+#SBATCH -e /logs/02_cell_match_stats_integrated.txt
 # SBATCH --mail-type=ALL
 
 set -e
