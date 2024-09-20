@@ -1,0 +1,10 @@
+{
+    "atac_gex_matrix_dimension": "98196 features x 6319 barcodes",
+    "atac_matrix_dimension": "61595 features x 6319 barcodes",
+    "gex_matrix_dimension": "36601 features x 6319 barcodes",
+    "num_feature_linkages": 2945,
+    "num_gene_peak_linkages": 2529,
+    "num_genes_with_linkage": 1831,
+    "num_peak_peak_linkages": 416,
+    "num_peaks_with_linkage": 2108
+}
