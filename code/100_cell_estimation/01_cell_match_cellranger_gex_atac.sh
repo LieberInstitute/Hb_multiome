@@ -3,9 +3,9 @@
 #SBATCH --job-name=01_cell_match_cellranger_gex_atac
 #SBATCH --mem=10GB						                                          # each job from the array will get its own private 30G to work with)
 #SBATCH --array=1-12                                           	        #change the number 2 to the number of entries in array_targets.txt
+#SBATCH --output=logs/01_cell_match_cellranger_gex_atac_%A_%a.txt
+#SBATCH --error=logs/01_cell_match_cellranger_gex_atac_%A_%a.txt
 id=$( sed -n ${SLURM_ARRAY_TASK_ID}p array_target_names_full_dataset.txt)   
-#SBATCH -o logs/01_cell_match_cellranger_gex_atac.txt
-#SBATCH -e logs/01_cell_match_cellranger_gex_atac.txt			                              
 
 # NOTE: This script runs IN THE SAME DIRECTORY in which you ran sbatch
 #       So include a cd command to ensure that you run it in the expected
