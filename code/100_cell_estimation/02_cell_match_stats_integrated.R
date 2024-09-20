@@ -1,6 +1,5 @@
 #library(slurmjobs)
 library("dplyr")
-#library("rbindlist")
 library("readr")
 library("here")
 
@@ -11,21 +10,30 @@ library("here")
 here::here()
 main_dir_name <- "100_cell_match_cellranger_gex_atac"
 processedDir <- here("processed-data", main_dir_name)
-
-filenames <- list.files(processedDir, pattern="*.tsv", full.names=TRUE)
+pattern <- "\\.tsv$"
+filenames <- list.files(processedDir, pattern=pattern, full.names=TRUE)
 basename(filenames)
 
+# all_files <- lapply(filenames, function(x) {
+#   read.table(file = x, sep = '\t', 
+#              header = FALSE, stringsAsFactors = FALSE)[2,] # only extract 2nd row
+#   })
 all_files <- lapply(filenames, function(x) {
-  read.table(file = x, sep = '\t', 
+  read.csv(file = x, 
              header = FALSE, stringsAsFactors = FALSE)[2,] # only extract 2nd row
-  })
+})
 
 
 df_all_stats <- bind_rows(all_files)
 head(df_all_stats)
+df_all_stats$V1 <- NULL
+
 # set column names
-ln_header <- read.table(filenames[1], sep = '\t', header = FALSE)[1,] # only extract 1nd row
+# ln_header <- read.table(filenames[1], sep = '\t', header = FALSE)[1,] # only extract 1nd row
+ln_header <- read.csv(filenames[1], header = FALSE)[1,] # only extract 1nd row
+ln_header$V1 <- NULL
 colnames(df_all_stats) <- trimws(c(as.character(ln_header)))
+
 noquote(colnames(df_all_stats))[2:11]
 columns_sel <- c(colnames(df_all_stats))[2:11]
 
