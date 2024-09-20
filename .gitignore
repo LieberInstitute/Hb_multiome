@@ -38,11 +38,10 @@ raw-data/path_rna_Aug05_2024
 
 ### Big files
 # Here lived the main results of the cellranger-count pipeline. We do not control version this results.  
-processed-data/cellrangerARC/
-# Nextflow for cellranger-arc
 Nextflow/
-processed-data/NextflowResults/
-
-
-## Other guys used for testing
+processed-data/NextflowResults
+processed-data/cellrangerARC/
+processed-data/cellrangerARC_reanalyze/
+processed-data/cellrangerGEX/
 processed-data/cellrangerATAC/
+processed-data/NextflowResults/
