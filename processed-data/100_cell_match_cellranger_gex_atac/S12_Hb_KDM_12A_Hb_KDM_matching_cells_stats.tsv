@@ -1,0 +1,2 @@
+,Sample_id,translated_gex_bc,valid_bc_gex_arc,valid_bc_gex_arc_perc,not_valid_bc_gex_arc,not_valid_bc_gex_arc_perc,translated_atac_bc,valid_bc_atac_arc,valid_bc_atac_arc_perc,not_valid_bc_atac_arc,not_valid_bc_atac_arc_perc,ARC_total_cells,ARC_GEX_matching_cells,ARC_GEX_matching_perc,ARC_ATAC_matching_cells,ARC_ATAC_matching_perc
+1,12C_Hb_KDM-12A_Hb_KDM,5616,4876,86.82,740,13.18,6576,4876,74.15,1700,25.85,746,363,48.66,363,48.66
