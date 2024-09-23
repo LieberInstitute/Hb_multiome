@@ -24,13 +24,16 @@ here::here()
 
 cellrangerDir <- here("processed-data", "cellrangerARC")
 cellrangerDir_reanalyze <- here("processed-data", "cellrangerARC_reanalyze")
+
 processedDir <- here("processed-data", "01_preprocessing_QC", "cellrangerARC")
-plotDir <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanalyze")
+processedDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze")
+
+plotDir_reanalyze <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanalyze")
 functionsDir <- here("code", "01_preprocessing_QC")
 
 # Check processed_data and plot directories exists
-if (!dir.exists(processedDir)) { dir.create(processedDir) }
-if (!dir.exists(plotDir)) { dir.create(plotDir) }
+if (!dir.exists(processedDir_reanalyze)) { dir.create(processedDir_reanalyze) }
+if (!dir.exists(plotDir_reanalyze)) { dir.create(plotDir_reanalyze) }
 
 source(here(functionsDir, "remote_seurat_functions_v2.R"))  # Call functions to create and handle Seurat object
 source(here(functionsDir, "remote_signac_functions_v2.R"))  # Call functions to create Signac object
@@ -54,7 +57,7 @@ plot_GEX_QCs <- function(SeuratOBJ, sample_name, b_UMIscorr=FALSE) {
         axis.text.y = element_text(size=8),  #10
         axis.title.x = element_blank(),
         axis.title.y = element_blank()) # &labs(title = "", x = 'Samples', y ="")
-    png_name <- here(plotDir, paste0(sample_name,'_UMIs_Genes_MT.png'))  
+    png_name <- here(plotDir_reanalyze, paste0(sample_name,'_UMIs_Genes_MT.png'))  
     ggsave(p1, filename = png_name, height = 4, width = 7)
 
     ## Plot Genes Density per cell 
@@ -68,7 +71,7 @@ plot_GEX_QCs <- function(SeuratOBJ, sample_name, b_UMIscorr=FALSE) {
       ylab("Log10(UMIs)") +
       xlab("Gene-counts") +
       ggtitle("Genes density by cell")   
-    png_name <- here(plotDir, paste0(sample_name,'_Genes_Density.png'))  
+    png_name <- here(plotDir_reanalyze, paste0(sample_name,'_Genes_Density.png'))  
     ggsave(p3, filename = png_name, height = 4, width = 4)
 
     # Plot Genes Distribution per cell 
@@ -81,7 +84,7 @@ plot_GEX_QCs <- function(SeuratOBJ, sample_name, b_UMIscorr=FALSE) {
       ylab("Log10(gene-counts)") +
       xlab("") +
       ggtitle("Genes distribution by cell")
-    png_name <- here(plotDir, paste0(sample_name,'_Genes_Distribution.png'))  
+    png_name <- here(plotDir_reanalyze, paste0(sample_name,'_Genes_Distribution.png'))  
     ggsave(p4, filename = png_name, height = 4, width = 4)
 
   }
@@ -105,7 +108,7 @@ plot_GEX_QCs <- function(SeuratOBJ, sample_name, b_UMIscorr=FALSE) {
     ylab("log10(genes-counts)") +
     xlab("log10(UMI-counts)") +
     ggtitle('UMIs/Genes by MT levels')
-  png_name <- here(plotDir, paste0(sample_name,'_UMIS_per_MT.png'))  
+  png_name <- here(plotDir_reanalyze, paste0(sample_name,'_UMIS_per_MT.png'))  
   ggsave(p5, filename = png_name, height = 4, width = 4)
     
   # pALL <- p1 + p3 + p4 + p5 +
@@ -243,7 +246,7 @@ message('Mitochondrial and Ribosomal percentage levels added')
 
 ## Before QCed data, plot GEX basic quality controls
 if (b_get_GEX_plots) {
-    base_name <- paste0(s_sample, '_None_QC')
+    base_name <- paste0(crARC_Sample_r, '_None_QC')
     plot_GEX_QCs(SeuratOBJ, base_name, TRUE)
     ## Calculate basic interquartile range for basic GEX stats
     # table_descriptive_stats_GEX(SeuratOBJ, base_name, s_tissue)
@@ -293,7 +296,7 @@ if (b_get_filtered_GEX) {
     
     # Only one Seurat object available
     lst_seurats <- list(SeuratOBJ)    
-    rds_name <- here(processedDir, paste0(s_sample,'.rds'))
+    rds_name <- here(processedDir_reanalyze, paste0(crARC_Sample_r,'.rds'))
     saveRDS(SeuratOBJ, file = rds_name)
     message('Saving Seurat none filtered.')
     
