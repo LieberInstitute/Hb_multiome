@@ -1,12 +1,17 @@
-# Log directories and cellranger arc output
+# Log directories 
+code/logs/
+100_cell_estimation/logs/
 code/01_preprocessing_QC/logs/
 code/02_merge_seurats/logs/
+code/100_cell_estimation/logs/
+
+# cellranger arc files 
 code/cellranger/logs/
-code/cellranger/tmp/
-code/cellranger/*.err
-code/cellranger/*.out
 code/cellranger/__*.mro
-code/logs/
+code/cellranger/tmp/
+code/cellrangerARC_reanalyze/logs/
+code/cellrangerARC_reanalyze/__*.mro
+code/cellrangerARC_reanalyze/tmp/
 
 
 ### Temporal or old scripts
@@ -15,14 +20,13 @@ code/00_RNAbackground/tmp/
 code/00_RNAbackground/old_scripts/
 code/01_preprocessing_QC/tmp/
 code/02_merge_seurats/tmp/
+code/100_cell_estimation/tmp/
 code/recycler/
-# From processed-data dir
-processed-data/02_merge_seurats/csv_files/tmp/
-# From cellranger-arc. These files should be moved once the pipeline is finished. 
-code/cellranger/4S_Hb_KDM/
-code/cellranger/5S_Hb_KDM/
-code/cellranger/6S_Hb_KDM/
 
+### From processed-data dir
+processed-data/02_merge_seurats/csv_files/tmp/
+
+### From plots dir
 plots/02_merge_seurats/tmp/
 
 
