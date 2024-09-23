@@ -1,9 +1,9 @@
 ########################################################################
 ## Measure Quality Controls for GEX and ATAC assays from CellRanger-ARC data using Seurat & Signac packages
 ##
-## Authors. CSC / HT
-## Date. April 21st, 2023
-## Last Update: August 2024
+## Authors. CSC
+## Date. Sep 23rd, 2024
+## Last Update: XXX
 ##
 ## NOTES: 
 ## For a ~10k cells cellranger dataset it is recommended ~40G free mem to process the TSS() ATAC score.  Without storing the base-resolution matrix of integration counts at each site you can use less memory, but does not allow plotting the accessibility profile at the TSS.
@@ -11,7 +11,6 @@
 ########################################################################
 
 library(Seurat)                                 # 4.9.9.9045 2023-05-17 [1] Github (satijalab/seurat@7d1094c)
-#options(Seurat.object.assay.version = 'v5')    # To use new Seurat v5: Please run: options(Seurat.object.assay.version = 'v5')
 library(Signac)                                 # 1.9.0.9000 2023-05-08 [1] Github (stuart-lab/signac@cf31022)
 library(EnsDb.Hsapiens.v86)
 library(BSgenome.Hsapiens.UCSC.hg38)
@@ -24,15 +23,15 @@ library(here)
 here::here()
 
 cellrangerDir <- here("processed-data", "cellrangerARC")
-processedDir <- here("processed-data", "01_preprocessing_QC")
-plotDir <- here("plots", "01_preprocessing_QC")
+cellrangerDir_reanalyze <- here("processed-data", "cellrangerARC_reanalyze")
+processedDir <- here("processed-data", "01_preprocessing_QC", "cellrangerARC")
+plotDir <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanalyze")
 functionsDir <- here("code", "01_preprocessing_QC")
 
 # Check processed_data and plot directories exists
 if (!dir.exists(processedDir)) { dir.create(processedDir) }
 if (!dir.exists(plotDir)) { dir.create(plotDir) }
 
-# source(here(functionsDir, "remote_file_caller.R"))       # Call functions to read paths
 source(here(functionsDir, "remote_seurat_functions_v2.R"))  # Call functions to create and handle Seurat object
 source(here(functionsDir, "remote_signac_functions_v2.R"))  # Call functions to create Signac object
 
@@ -165,12 +164,14 @@ get_Vplots_blackR_ATAC  <- function(seuratOBJ) {
 ## commandArgs scans the arguments which have been supplied when the current R script was invoked (from shell sh)
 sample_tmp <- commandArgs(trailingOnly = TRUE)
 # sample_tmp <- args[1]
-# For testing: sample_tmp <- "5S_Hb_KDM,human" 
+# For testing: sample_tmp <- "S3_Hb_KDM_reanalysis, S3_Hb_KDM"
+#              sample_tmp <- "4S_Hb_KDM_reanalysis, 4S_Hb_KDM"
 
 sample_data = unlist(strsplit(sample_tmp,","))
-s_sample <- sample_data[[1]]
-s_tissue <- sample_data[[2]]
-message('Processing sample: ', s_sample, ' from ', s_tissue, ' tissue.')
+crARC_Sample_r <- trimws(sample_data[[1]])  # Cell Ranger ARC reanalyze sample sub-directory name
+crARC_Sample <- trimws(sample_data[[2]])    # Cell Ranger ARC sample sub-dir name
+message('Processing `Cell Ranger ARC reanalyze` sample `', crARC_Sample_r, "` corresponding to `Cell Ranger ARC` sample `", crARC_Sample, "`")
+
 
 # Create preliminary plots
 b_get_GEX_plots <- TRUE         
@@ -191,9 +192,9 @@ b_get_ATAC_QC <- TRUE
 ########      Recommended 40G of free_mem to 3k-10k cells 
 ########  ################################################# ######## 
 
-filtered_barcode_path <- here(cellrangerDir, s_sample, "outs", "filtered_feature_bc_matrix.h5")
-barcode_csv_path <- here(cellrangerDir, s_sample, "outs", "per_barcode_metrics.csv")
-fragments_tsv_path <- here(cellrangerDir, s_sample, "outs", "atac_fragments.tsv.gz")
+filtered_barcode_path <- here(cellrangerDir_reanalyze, crARC_Sample_r, "outs", "filtered_feature_bc_matrix.h5")
+barcode_csv_path <- here(cellrangerDir, crARC_Sample, "outs", "per_barcode_metrics.csv")
+fragments_tsv_path <- here(cellrangerDir, crARC_Sample, "outs", "atac_fragments.tsv.gz")
 
 mtx <- Read10X_h5(filtered_barcode_path)             
 rna_counts <- mtx$`Gene Expression`
@@ -205,7 +206,7 @@ meta = metadata[meta_tmp]
 SeuratOBJ <- CreateSeuratObject(
   counts = rna_counts,
   assay = "RNA",
-  project = s_sample,
+  project = crARC_Sample_r,
   meta.data = meta
 )
 SeuratOBJ
