@@ -5,7 +5,7 @@
 # SBATCH --mail-user=bioinformatic2019@gmail.com
 # SBATCH --mail-type=end,fail
 #SBATCH --array=1-3                                       #change the number 2 to the number of entries in array_targets.txt
-id=$(sed -n ${SLURM_ARRAY_TASK_ID}p ../array_target_names_2024a.txt)
+id=$(sed -n ${SLURM_ARRAY_TASK_ID}p target_names_cellrangerARC.txt)
 #SBATCH --output=/logs/CR_QC_ini_%j.out	                        
 #SBATCH --error=/logs/CR_QC_ini_%j.err	
 
