@@ -204,7 +204,9 @@ rna_counts <- mtx$`Gene Expression`
 metadata <- read.csv(file = barcode_csv_path, header = TRUE, row.names = 1)
 meta_tmp = c('atac_peak_region_fragments','atac_fragments')
 meta = metadata[meta_tmp]
-# print(head(meta, n = 3))
+message("Processing GEX sample (gex x cells):")
+dim(rna_counts)
+
 
 SeuratOBJ <- CreateSeuratObject(
   counts = rna_counts,
@@ -330,7 +332,7 @@ genome(annotations) <- "hg38"
 message(length(lst_seurats), ' Seurat objects to process...')
 
 for (S in lst_seurats) {
-
+    ## S <- lst_seurats[[1]]
     rm('SeuratOBJ')
     # pull base name to label objects and plots 
     # testing: S <- lst_seurats[[1]]
@@ -353,9 +355,17 @@ for (S in lst_seurats) {
 
         # Calculate the strength of the nucleosome signal per cell
         SeuratOBJ <- NucleosomeSignal(SeuratOBJ)
-        SeuratOBJ$nucleosome_group <- ifelse(SeuratOBJ$nucleosome_signal > 4, 'NS > 4', 'NS < 4')
-        p1_NS <- FragmentHistogram(object = SeuratOBJ, group.by = 'nucleosome_group')
+        SeuratOBJ$nucleosome_signal
+        plt_NS <- ggplot(SeuratOBJ@meta.data, aes(x=nucleosome_signal)) + 
+          geom_histogram(aes(y=..density..), colour="black", fill="white")+
+          geom_density(alpha=.5, color="darkblue", fill="lightblue") 
+        #SeuratOBJ$nucleosome_group <- ifelse(SeuratOBJ$nucleosome_signal > 4, 'NS > 4', 'NS < 4')
+        SeuratOBJ$nucleosome_group <- ifelse(SeuratOBJ$nucleosome_signal > 2, 'NS_FAIL', 'NS_PASS')
+        plt_NSgrp <- FragmentHistogram(object = SeuratOBJ, group.by = 'nucleosome_group')
+        summary(SeuratOBJ$nucleosome_signal)
         #head(SeuratOBJ, n = 3) 
+        message("NS score: ")
+        addmargins(table(SeuratOBJ$nucleosome_group))
 
         # Calculate the "Transcription Start Site (TSS)" enrichment score
         tryCatch( {
@@ -365,15 +375,35 @@ for (S in lst_seurats) {
             #           2. Error in `colnames<-`(`*tmp*`, value = seq_len(length.out = region.width) -  : attempt to set 'colnames' ...
             #              This is a vague message that would happen if no fragments are found in the set of TSS regions. 
             #              You could double-checking that the correct gene annotations is being used or you have a low ATAC quality
-            
+            22
             ## Filtering by ATAC basic quality controls 
+          
+            set.seed(24092024)  
             SeuratOBJ <- TSSEnrichment(SeuratOBJ, fast = FALSE) 
+            summary(SeuratOBJ$TSS.enrichment)
+            plt_TSS <- ggplot(SeuratOBJ@meta.data, aes(x=TSS.enrichment)) + 
+              geom_histogram(aes(y=..density..), colour="black", fill="white")+
+              geom_density(alpha=.5, color="darkblue", fill="lightblue")
             # Group by cells with TSS enrichment scores in two groups.
-            SeuratOBJ$high.tss <- ifelse(SeuratOBJ$TSS.enrichment > 2, 'High', 'Low')
-            #colnames(SeuratOBJ@meta.data)
-            p1_TSS <- TSSPlot(SeuratOBJ, group.by = 'high.tss') + NoLegend()
+            #SeuratOBJ$high.tss <- ifelse(SeuratOBJ$TSS.enrichment > 1, 'High', 'Low')
+            SeuratOBJ$high.tss <- ifelse(SeuratOBJ$TSS.enrichment > 1, 'TSS_PASS', 'TSS_FAIL')
+            message("TSS scores: ")
+            addmargins(table(SeuratOBJ$high.tss))
+            pass_TSS <- sum(SeuratOBJ$high.tss == "TSS_PASS")
+            fail_TSS <- (length(Cells(SeuratOBJ)) - pass_TSS)
+            TSS_total <- length(Cells(SeuratOBJ))
+            TSS_cap <- paste("TSS total:", TSS_total)
+            TSS_caption1 <- paste("TSS PASS:", pass_TSS,  "(", round(pass_TSS*100 / TSS_cap, digits = 2), "%)")
+            TSS_caption2 <- paste("TSS FAIL:", fail_TSS,  "(", round(fail_TSS*100 / TSS_cap, digits = 2), "%)")
+            
+            #colnames(SeuratOBJ@meta.data)  
+            subtitle = "This is the subtitile."
+            plt_TSSgrp <- TSSPlot(SeuratOBJ, group.by = 'high.tss') + NoLegend() 
+            p1_TSS <- (plt_TSS + labs(title = "TSS distribution and TSS Scores")) / plt_TSSgrp + 
+              theme(plot.caption = element_text(hjust = 0)) +
+              labs(caption = paste(TSS_cap, "\n", TSS_caption1, "\n", TSS_caption2))
             png_file_TSS <- paste0(base_name,'_TSS.png')
-            png_name <- here(plotDir, png_file_TSS)
+            png_name <- here(plotDir_reanalyze, png_file_TSS)
             ggsave(p1_TSS, filename = png_name, height = 4, width = 4)
             
         }
@@ -396,18 +426,19 @@ for (S in lst_seurats) {
         png_file_BlackR <- paste0(base_name,'_reads_in_peaks.png')
         png_file_ATAC <- paste0(base_name,'_ATAC_QCs.png')
         
-        png_name <- here(plotDir, png_file_NS)
+        png_name <- here(plotDir_reanalyze, png_file_NS)
+        p1_NS <- plt_NS + plt_NSgrp
         ggsave(p1_NS, filename = png_name, height = 4, width = 4)
-        png_name <- here(plotDir, png_file_BlackR)
+        png_name <- here(plotDir_reanalyze, png_file_BlackR)
         ggsave(p1_BlackR, filename = png_name, height = 4, width = 5)
-        png_name <- here(plotDir, png_file_ATAC)
+        png_name <- here(plotDir_reanalyze, png_file_ATAC)
         ggsave(p1_ATAC, filename = png_name, height = 4, width = 7)
   
         message('ATAC QCs plots saved!')  
     
     }
     # Save RDS Object
-    rds_name <- here(processedDir, paste0(base_name,'_ATAC.rds'))
+    rds_name <- here(processedDir_reanalyze, paste0(base_name,'_ATAC.rds'))
     saveRDS(SeuratOBJ, file = rds_name)
     message('ATAC RDS object saved!')   
 
