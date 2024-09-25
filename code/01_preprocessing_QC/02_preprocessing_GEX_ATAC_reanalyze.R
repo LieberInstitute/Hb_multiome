@@ -1,5 +1,5 @@
 ########################################################################
-## Measure Quality Controls for GEX and ATAC assays from CellRanger-ARC data using Seurat & Signac packages
+## Build Seurat and calculate initial Quality Controls for CellRanger-ARC reanalyze data sets using Seurat & Signac packages
 ##
 ## Authors. CSC
 ## Date. Sep 23rd, 2024
@@ -100,11 +100,6 @@ plot_GEX_QCs <- function(SeuratOBJ, sample_name, b_UMIscorr=FALSE) {
     scale_x_log10() +
     scale_y_log10() +
     theme_classic() +
-    # if (i_vline > 0) {
-    #     geom_vline(xintercept = i_vline, linetype=2)} +
-    # if (i_hline > 0) {
-    #     geom_hline(yintercept = i_hline, linetype=2)} +
-    # facet_wrap(~orig.ident) +
     ylab("log10(genes-counts)") +
     xlab("log10(UMI-counts)") +
     ggtitle('UMIs/Genes by MT levels')
@@ -173,6 +168,7 @@ sample_tmp <- commandArgs(trailingOnly = TRUE)
 sample_data = unlist(strsplit(sample_tmp,","))
 crARC_Sample_r <- trimws(sample_data[[1]])  # Cell Ranger ARC reanalyze sample sub-directory name
 crARC_Sample <- trimws(sample_data[[2]])    # Cell Ranger ARC sample sub-dir name
+s_tissue <- "human"
 message('Processing `Cell Ranger ARC reanalyze` sample `', crARC_Sample_r, "` corresponding to `Cell Ranger ARC` sample `", crARC_Sample, "`")
 
 
@@ -232,7 +228,8 @@ if (s_tissue=='human') {
   SeuratOBJ[["percent.ribo"]] <- PercentageFeatureSet(SeuratOBJ, pattern = "^Rp[ls]")
 }
 SeuratOBJ[["MTRatio"]] <- SeuratOBJ$percent.mt / 100 
-
+x <- as.data.frame.character(summary(SeuratOBJ$MTRatio))
+  
 message('Mitochondrial and Ribosomal percentage levels added')
 
 ## Optional meta-data for alculate percentages of largest genes by single cell
@@ -248,70 +245,25 @@ message('Mitochondrial and Ribosomal percentage levels added')
 
 ## Before QCed data, plot GEX basic quality controls
 if (b_get_GEX_plots) {
-    base_name <- paste0(crARC_Sample_r, '_None_QC')
+    base_name <- paste0(crARC_Sample_r)
     plot_GEX_QCs(SeuratOBJ, base_name, TRUE)
     ## Calculate basic interquartile range for basic GEX stats
-    # table_descriptive_stats_GEX(SeuratOBJ, base_name, s_tissue)
+    source(here(functionsDir, "remote_seurat_functions_v2.R"))  # Call functions to create and handle Seurat object
+    x <- get_basic_stats_GEX(SeuratOBJ, s_tissue)
+    write_csv(as.data.frame(x), here(processedDir_reanalyze, paste0(crARC_Sample_r, "_metrics_summary.csv")))
 }
 
 
-########  ################################################# ######## 
-##        3. Preprocess Seurat Object based on the Mitochondrial percentage in the GEX assay
-##              METHOD 1: (M1p)  calculate cut-off based on probabilities
-##              METHOD 2: (M2sd) calculate cut-off at +/-2 Standard Deviations (95%)
-########  ################################################# ######## 
-
-
-# Create a second Seurat filtered by custom method of 1) probabilities or 2) SD
-if (b_get_filtered_GEX) {
-    # Preferred method 1. filter by probabilities
-    
-    # Validate or Load Seurat object from disk if available
-    # Note. GEX assay need to be active
-
-    if (i_filtering_method==1) {
-        # filter by probabilities: M1
-        SeuratOBJ.filtered <- get_seurat_GEX_filteringM1p(SeuratOBJ, FALSE)
-    } else {    
-        # filter by SD: M2
-        SeuratOBJ.filtered <- get_seurat_GEX_filteringM2sd(SeuratOBJ, FALSE)
-    }
-    # Rename origin ident to identify the filtered Seurat object
-    base_name <- paste0(levels(SeuratOBJ$`orig.ident`[1]), '_M', i_filtering_method)
-    SeuratOBJ.filtered$orig.ident <- base_name
-    #SeuratOBJ.filtered$`orig.ident`[1]
-
-    plot_GEX_QCs(SeuratOBJ.filtered, base_name, TRUE)
-    # Calculate and save some descriptive stats for further analysis
-    table_descriptive_stats_GEX(SeuratOBJ.filtered, base_name, s_tissue)
-    
-    # Create a list of Seurat Objects to attach ATAC assay and process by QC
-    lst_seurats <- list(SeuratOBJ, SeuratOBJ.filtered)
-    
-    message('Seurat filtered by MT level successfully!')
-
-    rds_name <- here(processedDir, paste0(s_sample,'filteredM',i_filtering_method,'.rds'))
-    saveRDS(SeuratOBJ.filtered, file = rds_name)
-    message('Saving Seurat filtered.')
-    
-} else {
-    
-    # Only one Seurat object available
-    lst_seurats <- list(SeuratOBJ)    
-    rds_name <- here(processedDir_reanalyze, paste0(crARC_Sample_r,'.rds'))
-    saveRDS(SeuratOBJ, file = rds_name)
-    message('Saving Seurat none filtered.')
-    
-}
+# Only one Seurat object available
+lst_seurats <- list(SeuratOBJ)    
+# rds_name <- here(processedDir_reanalyze, paste0(crARC_Sample_r,'.rds'))
+# saveRDS(SeuratOBJ, file = rds_name)
+# message('Saving Seurat none filtered.')
 
 
 ########  ################################################# ############ 
-########  4. Create ATAC assay and attach it to Seurat object     ##### 
+########  3. Create ATAC assay and attach it to Seurat object     ##### 
 ########  ################################################# ############ 
-
-# Validate or Load Seurat object from disk if available
-#SeuratOBJ <- load_seurat_obj(SeuratOBJ, s_seurat_name) 
-#head(SeuratOBJ, n = 3)
 
 ## General use: Create gene annotations for hg38 and extract gene annotations from EnsDb
 annotations <- GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86)
@@ -329,15 +281,15 @@ genome(annotations) <- "hg38"
 ##      (1) A new Seurat Obj from a specific experiment, and/or
 ##      (2) A Seurat Obj filtered by some GEX quality threshold (m1 or m2) 
 
-message(length(lst_seurats), ' Seurat objects to process...')
+message(' Calculating chromatin QC metrics.')
 
 for (S in lst_seurats) {
-    ## S <- lst_seurats[[1]]
+
     rm('SeuratOBJ')
     # pull base name to label objects and plots 
     # testing: S <- lst_seurats[[1]]
-    message('Processing ATAC for sample ', levels(S$`orig.ident`[1]))
-    base_name <- paste0(levels(S$`orig.ident`[1]),'_QC')
+    base_name <- paste0(levels(S$`orig.ident`[1]))
+    message('Processing ATAC for sample ', base_name)
     
     # Create the chromatin assay with annotations and attach it to the Seurat object 
     start.time = Sys.time()
@@ -355,7 +307,7 @@ for (S in lst_seurats) {
 
         # Calculate the strength of the nucleosome signal per cell
         SeuratOBJ <- NucleosomeSignal(SeuratOBJ)
-        SeuratOBJ$nucleosome_signal
+        #SeuratOBJ$nucleosome_signal
         plt_NS <- ggplot(SeuratOBJ@meta.data, aes(x=nucleosome_signal)) + 
           geom_histogram(aes(y=..density..), colour="black", fill="white")+
           geom_density(alpha=.5, color="darkblue", fill="lightblue") 
@@ -366,6 +318,19 @@ for (S in lst_seurats) {
         #head(SeuratOBJ, n = 3) 
         message("NS score: ")
         addmargins(table(SeuratOBJ$nucleosome_group))
+        
+        pass_NS <- sum(SeuratOBJ$nucleosome_group == "NS_PASS")
+        fail_NS <- (length(Cells(SeuratOBJ)) - pass_NS)
+        NS_total <- length(Cells(SeuratOBJ))
+        NS_cap <- paste("NS total:", NS_total)
+        NS_caption1 <- paste("NS PASS:", pass_NS,  "(", round(pass_NS*100 / NS_total, digits = 2), "%)")
+        NS_caption2 <- paste("NS FAIL:", fail_NS,  "(", round(fail_NS*100 / NS_total, digits = 2), "%)")
+        
+        p1_NS <- (plt_NS + labs(title = "NS distribution and NS Signal", subtitle = crARC_Sample_r)) / plt_NSgrp +
+          theme(plot.caption = element_text(hjust = 0)) +
+          labs(caption = paste(NS_cap, "\n", NS_caption1, "\n", NS_caption2))
+        png_file_NS <- here(plotDir_reanalyze, paste0(crARC_Sample_r,'_Fragment_Distribution_grp.png'))
+        ggsave(p1_NS, filename = png_file_NS, height = 4, width = 4)
 
         # Calculate the "Transcription Start Site (TSS)" enrichment score
         tryCatch( {
@@ -393,16 +358,16 @@ for (S in lst_seurats) {
             fail_TSS <- (length(Cells(SeuratOBJ)) - pass_TSS)
             TSS_total <- length(Cells(SeuratOBJ))
             TSS_cap <- paste("TSS total:", TSS_total)
-            TSS_caption1 <- paste("TSS PASS:", pass_TSS,  "(", round(pass_TSS*100 / TSS_cap, digits = 2), "%)")
-            TSS_caption2 <- paste("TSS FAIL:", fail_TSS,  "(", round(fail_TSS*100 / TSS_cap, digits = 2), "%)")
+            TSS_caption1 <- paste("TSS PASS:", pass_TSS,  "(", round(pass_TSS*100 / TSS_total, digits = 2), "%)")
+            TSS_caption2 <- paste("TSS FAIL:", fail_TSS,  "(", round(fail_TSS*100 / TSS_total, digits = 2), "%)")
             
             #colnames(SeuratOBJ@meta.data)  
             subtitle = "This is the subtitile."
             plt_TSSgrp <- TSSPlot(SeuratOBJ, group.by = 'high.tss') + NoLegend() 
-            p1_TSS <- (plt_TSS + labs(title = "TSS distribution and TSS Scores")) / plt_TSSgrp + 
+            p1_TSS <- (plt_TSS + labs(title = "TSS distribution and TSS Scores", subtitle = crARC_Sample_r)) / plt_TSSgrp + 
               theme(plot.caption = element_text(hjust = 0)) +
               labs(caption = paste(TSS_cap, "\n", TSS_caption1, "\n", TSS_caption2))
-            png_file_TSS <- paste0(base_name,'_TSS.png')
+            png_file_TSS <- paste0(crARC_Sample_r,'_TSS_grp.png')
             png_name <- here(plotDir_reanalyze, png_file_TSS)
             ggsave(p1_TSS, filename = png_name, height = 4, width = 4)
             
@@ -422,15 +387,11 @@ for (S in lst_seurats) {
         p1_BlackR <- get_Vplots_blackR_ATAC(SeuratOBJ)
         p1_ATAC <- get_Vplots_main_ATAC(SeuratOBJ)
         
-        png_file_NS <- paste0(base_name,'_Fragment_Distribution_grp.png')
-        png_file_BlackR <- paste0(base_name,'_reads_in_peaks.png')
-        png_file_ATAC <- paste0(base_name,'_ATAC_QCs.png')
-        
-        png_name <- here(plotDir_reanalyze, png_file_NS)
-        p1_NS <- plt_NS + plt_NSgrp
-        ggsave(p1_NS, filename = png_name, height = 4, width = 4)
+        png_file_BlackR <- paste0(crARC_Sample_r,'_reads_in_peaks.png')
         png_name <- here(plotDir_reanalyze, png_file_BlackR)
         ggsave(p1_BlackR, filename = png_name, height = 4, width = 5)
+        
+        png_file_ATAC <- paste0(crARC_Sample_r,'_ATAC_QCs.png')
         png_name <- here(plotDir_reanalyze, png_file_ATAC)
         ggsave(p1_ATAC, filename = png_name, height = 4, width = 7)
   
@@ -438,12 +399,13 @@ for (S in lst_seurats) {
     
     }
     # Save RDS Object
-    rds_name <- here(processedDir_reanalyze, paste0(base_name,'_ATAC.rds'))
+    rds_name <- here(processedDir_reanalyze, paste0(crARC_Sample_r,'.rds'))
     saveRDS(SeuratOBJ, file = rds_name)
-    message('ATAC RDS object saved!')   
+    message('Seurat with chromatine ssay saved!')   
 
 }
 
+message('Preprocess completed!')
 
 
 ############ Reproducibility information ####################
