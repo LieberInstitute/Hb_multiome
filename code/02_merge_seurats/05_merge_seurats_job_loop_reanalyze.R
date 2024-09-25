@@ -83,8 +83,7 @@ for (rds_path in all_rds) {
   
 }
 
-#seurat_lst
-#seurat_name_lst
+# print(seurat_lst)
 # # testing
 # Cells(SeuratOBJ)[1:10]
 # Features(SeuratOBJ)
@@ -96,7 +95,7 @@ for (rds_path in all_rds) {
 # max(SeuratOBJ[["RNA"]]$data) #8.2943
 
 
-message('\nYou merged ', length(seurat_lst), ' Seurat objects: ', sapply(seurat_name_lst, function(i) paste0(i, ' ')) )
+message('\nYou combined ', length(seurat_lst), ' Seurat objects: ', sapply(seurat_name_lst, function(i) paste0(i, ', ')) )
 
 
 
