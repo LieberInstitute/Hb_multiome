@@ -2,13 +2,13 @@
 ## Merge Seurat objects contained in an specific directory
 ##
 ## Authors. CSC
-## Date. Feb 22, 2024
-## Last.md: August 2024
+## Date. Sep 25, 2024
+## Last.md: XXX
 ##
-## Input: Seurat RDS Object generated with 01_preprocessing_GEX_ATAC.R
-## Output:  New Seurat merged ready to integrate with CCA/Harmony/etc
+## Input: Seurat RDS Object generated with 05_merge_seurats_job_loop_reanalyze.R
+## Output:  New Seurat objects merged 
 ##
-## NOTES: 20G free mem recommended for 20K cells
+## NOTES: 80G free mem recommended for 60 to 80 thousand cells
 ## For slurm env: runsrun --x11 --pty --partition=interactive bash
 ########################################################################
 
@@ -20,12 +20,8 @@ library(here)
 here::here()
 
 ## processed_data and plots directories 
-processedDir <- here("processed-data", "02_merge_seurats")
-if (!dir.exists(processedDir)) { dir.create(processedDir) }
-#if (!dir.exists(here("plots", "02_merge_seurats"))) { dir.create(here("plots", "02_merge_seurats")) }
-## Directory to save variable features
-#dir <- here('processed-data", "02_merge_seurats", "csv_files')
-#if (!dir.exists(dir)) dir.create(dir)
+processedDir_out <- here("processed-data", "02_merge_seurats", "cellrangerARC_reanalyze")
+if (!dir.exists(processedDir_out)) { dir.create(processedDir_out) }
 
 
 ########################    Initials ########################  
@@ -39,7 +35,6 @@ args = commandArgs(trailingOnly=TRUE)
 ##      all_type_mtx=(data_counts norm_counts)
 
 count_mtx_type_label <- args[2]
-message('Merging ', count_mtx_type_label, ' assays')
 ## for testing:  count_mtx_type_label <- "norm_counts" 
 
 ## compose rds base name for merge data
@@ -50,64 +45,27 @@ if (count_mtx_type_label=='data_counts') {
   s_sample <- 'seurat.combined.norm_counts' 
   rna_layer <- 'data'
 } else {
+  message("Assay type not provided!")
   stop()
 }
 
+message('Merging  `', count_mtx_type_label, '` seurat assays.')
 message('\nSuffix name for merged Seurat is `', s_sample, "`")
-message('\nMerging Seurat(s) using the ', count_mtx_type_label, ' assays ')
 
 ## read directory with Seurat objects
-path_directory_in <- here("processed-data", "01_preprocessing_QC")
-all_rds <- paste0(path_directory_in, '/', list.files(path_directory_in, pattern="*_Hb_KDM.rds")) #, recursive = TRUE
-all_rds
+processedDir_in <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze")
+all_rds <- here(processedDir_in, list.files(processedDir_in, pattern="_reanalysis.rds"))
 
 if (length(all_rds) < 1) { stop('\nOnly one Seurat available.') }
 
-
-# ## function to save variable features before correction
-# save_VFeatures <- function(sobj, f_name) {
-# 
-#   # Identify most highly variable genes
-#   VF <- c(10,20,50,100)
-#   for (x in VF) {
-#     cvs_name <- ''
-#     top <- head(VariableFeatures(sobj), x)
-#     cvs_name <- paste0(s_sample, '_', f_name, as.character(x), '_VF.csv')
-#     #print(cvs_name)
-#     write.csv(top, file.path(dir, cvs_name), row.names=FALSE)
-#   }
-# 
-# }
-# 
-# ## plot reductions calculated: pca, umpa, CCA and Harmony
-# plot_clust <- function(sobj, f_name, reduct, ga2) {
-# 
-#     # integrate the samples and clusters
-#     p1 <- DimPlot(sobj,
-#                   reduction = reduct, group.by = c("orig.ident", ga2))
-#     png_file <- paste0(f_name,'_dimplot.png')
-#     png_name <- here('plots/02_merge_seurats', png_file)
-#     ggsave(p1, filename = png_name, height = 5, width = 10)
-# 
-#     # visualize the two conditions side-by-side
-#     p1 <- DimPlot(sobj,
-#                   reduction = reduct, split.by = "orig.ident")
-#     png_file <- paste0(f_name,'_dimplot_splitted.png')
-#     png_name <- here('plots/02_merge_seurats', png_file)
-#     ggsave(p1, filename = png_name, height = 5, width = 10)
-# 
-# }
-
+message("Seurats to combine: ")
+print(basename(all_rds))
 
 
 ### Prepare list of Seurat(s) to merge
 
 seurat_lst <- list()
 seurat_name_lst <- list()
-
-message('\nPreparing Seurat objects to merge ...')
-
-
 
 for (rds_path in all_rds) {
   
@@ -177,7 +135,7 @@ message('\nSeurats merge completed!', split(table(SeuratOBJ.combined$orig.ident)
 
 ## Save merged Seurat objects
 
-saveRDS(SeuratOBJ.combined, file = here(processedDir, paste0(s_sample, '.rds')))
+saveRDS(SeuratOBJ.combined, file = here(processedDir_out, paste0(s_sample, '.rds')))
 
 message('Seurat merged saved!')   
 
@@ -187,7 +145,7 @@ message('Seurat merged saved!')
 
 # slurmjobs::job_loop(
 #   loops = list(type_mtx = c("data_counts", "norm_counts")),
-#   name = "01_merge_seurats_job_loop",
+#   name = "05_merge_seurats_job_loop_reanalyze",
 #   cores = 2,
 #   create_shell = TRUE
 # )
