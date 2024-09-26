@@ -43,6 +43,15 @@ count_mtx_type <- 'norm_counts'
 #seurat_reduction <- 'CCA'
 Seurat_reduction <- 'Harmony'
 
+## Available for Seurat data_counts and norm_counts
+##        count_mtx_type_label <- 'data_counts'      
+##        count_mtx_type_label <- 'norm_counts' 
+
+args = commandArgs(trailingOnly=TRUE)
+## read count mtx type (abs_counts and normalized_counts)
+count_mtx_type <- args[2]
+Seurat_reduction <- args[3]
+
 ## function to load pre-existing Seurat
 get_seurat <- function(name) { sobj <- readRDS(name); return(sobj)}
 
@@ -58,8 +67,6 @@ if (Seurat_reduction=='CCA') {
   rds_name <- here(inputDir, paste0(Seurat_base_name, '_Harmony.rds'))
 }
 rds_name
-## Set minimum number of cells by cluster to process
-min_cells <- 1
 
 ## Load Seurat object
 SeuratOBJ <- get_seurat(rds_name)
@@ -97,7 +104,7 @@ rds_name <- paste0(Seurat_base_name,'_', Seurat_reduction, '_ALL.rds')
 rds_name <- here(processedDir, rds_name)
 saveRDS(SeuratOBJ, file = rds_name)
 
-message(" Saved Seurat batch corrected data with `min_cell=", min_cells,"` clusters filtered")
+message(" Saved Seurat batch corrected data clusters not filtered.")
 
 ## Apply pseudo bulk to ALL clusters and marker genes selected. To remove cluster with few cells update 01_aggregate_GeneExpression_filtered_clusters.R script 
 ## AggregateExpression from Seurat average data.  But can be used this internal Seurat:::PseudobulkExpression(pb.method = 'aggregate' ) to sum up counts by `categories
@@ -122,11 +129,11 @@ all.markers_p <- FindAllMarkers(object = SeuratOBJ_Hb_all_pseudobulked)
 
 ## check DEG found in the pseudobulk data
 if (length(all.markers_p)>0) {
-  cvs_file <- paste0(Seurat_base_name, '_', Seurat_reduction, '_Allmarkers_min', min_cells, 'cells_pseudobulk.csv')
+  cvs_file <- paste0(Seurat_base_name, '_', Seurat_reduction, '_Allmarkers_cells_pseudobulk.csv')
   cvs_file <- here(cvsDir, cvs_file)
   write.csv(all.markers_p, cvs_file)
 } else {
-  message("None FindAllMarkers() with more then ", min_cells, " found in pseudobulk data.")
+  message("None FindAllMarkers() found in pseudobulk data.")
 }
 
 ## Save new Seurat pseudo bulk 
