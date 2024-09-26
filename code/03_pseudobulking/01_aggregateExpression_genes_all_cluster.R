@@ -4,7 +4,7 @@
 ## Authors. CSC/lcollado
 ## Last md: Aug, 2024
 ##
-## Input:  Seurat integrated RDS object
+## Input:  Seurat `CCA` or `Harmony integration RDS object
 ## Output:  (1) Seurat pseudo bulked 
 ##          (2) DEG cvs file before pseudo bulk 
 ##          (3) DEG cvs file after pseudo bulk
@@ -17,12 +17,12 @@
 
 ########################################################################
 
-library('Seurat')                                 # 4.9.9.9045 2023-05-17 [1] Github (satijalab/seurat@7d1094c)
+library("Seurat")                                 # 4.9.9.9045 2023-05-17 [1] Github (satijalab/seurat@7d1094c)
 ## required packages for aggregation
-library('multtest')
-library('metap')
-library('tidyverse')
-library(here)
+library("multtest")
+library("metap")
+library("tidyverse")
+library("here")
 
 here::here()
 
@@ -30,43 +30,50 @@ here::here()
 
 # Check/create directories 
 processedDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
-if (!dir.exists(processedDir)) { dir.create(processedDir) }
 plotDir <- here("plots", "03_pseudobulking", "cellrangerARC_reanalyze")
-if (!dir.exists(plotDir)) { dir.create(plotDir) }
 cvsDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", "cvs_files_markers")
+
+if (!dir.exists(processedDir)) { dir.create(processedDir) }
+if (!dir.exists(plotDir)) { dir.create(plotDir) }
 if (!dir.exists(cvsDir)) { dir.create(cvsDir) }
+
 inputDir <- here("processed-data", "02_merge_seurats") 
 
-## Select the count-mtx to merge (raw or normalized data). By Default `norm_counts Harmony`
-#count_mtx_type <- 'data_counts'
-count_mtx_type <- 'norm_counts' 
-#seurat_reduction <- 'CCA'
-Seurat_reduction <- 'Harmony'
+## For testing: By Default `norm_counts Harmony`
+## For index 2:
+#   count_mtx_type <- 'data_counts'
+#   count_mtx_type <- 'norm_counts' 
+## For index 4:
+#   integration_model <- 'CCA'
+#   integration_model <- 'Harmony'
 
-## Available for Seurat data_counts and norm_counts
-##        count_mtx_type_label <- 'data_counts'      
-##        count_mtx_type_label <- 'norm_counts' 
-
+## read input arguments
 args = commandArgs(trailingOnly=TRUE)
-## read count mtx type (abs_counts and normalized_counts)
 count_mtx_type <- args[2]
-Seurat_reduction <- args[3]
+integration_model <- args[4]
+
+if (is.na(count_mtx_type) || is.na(integration_model)) {
+  message("Processing ", count_mtx_type, " with ", integration_model, " method.")
+} else {
+  message("Input arguments missed")
+  stop()
+}
 
 ## function to load pre-existing Seurat
 get_seurat <- function(name) { sobj <- readRDS(name); return(sobj)}
 
-## Compose Seurat object name
+## Build Seurat object name
 if (count_mtx_type=='data_counts') { 
   Seurat_base_name <- 'seurat.data_counts' 
 } else { 
   Seurat_base_name <- 'seurat.norm_counts' 
 }
-if (Seurat_reduction=='CCA') {
+if (integration_model=='CCA') {
   rds_name <- here(inputDir, paste0(Seurat_base_name, '_CCA.rds'))
 } else {
   rds_name <- here(inputDir, paste0(Seurat_base_name, '_Harmony.rds'))
 }
-rds_name
+#rds_name
 
 ## Load Seurat object
 SeuratOBJ <- get_seurat(rds_name)
@@ -92,15 +99,15 @@ table(Idents(SeuratOBJ))
 all.markers <- FindAllMarkers(object = SeuratOBJ)
 #head(all.markers, n=3)
 
-# cvs_file <- paste0(Seurat_base_name, '_', Seurat_reduction, '_Allmarkers.csv')
-cvs_file <- paste0(Seurat_base_name, '_', Seurat_reduction, '_Allmarkers_','ALL.csv')
+# cvs_file <- paste0(Seurat_base_name, '_', integration_model, '_Allmarkers.csv')
+cvs_file <- paste0(Seurat_base_name, '_', integration_model, '_Allmarkers_','ALL.csv')
 cvs_file <- here(cvsDir, cvs_file)
 write.csv(all.markers, cvs_file)
 
 message(" FindAllMarkers in batch corrected data done!")
 
 ## Save new Seurat pseudo bulk 
-rds_name <- paste0(Seurat_base_name,'_', Seurat_reduction, '_ALL.rds')
+rds_name <- paste0(Seurat_base_name,'_', integration_model, '_ALL.rds')
 rds_name <- here(processedDir, rds_name)
 saveRDS(SeuratOBJ, file = rds_name)
 
@@ -129,7 +136,7 @@ all.markers_p <- FindAllMarkers(object = SeuratOBJ_Hb_all_pseudobulked)
 
 ## check DEG found in the pseudobulk data
 if (length(all.markers_p)>0) {
-  cvs_file <- paste0(Seurat_base_name, '_', Seurat_reduction, '_Allmarkers_cells_pseudobulk.csv')
+  cvs_file <- paste0(Seurat_base_name, '_', integration_model, '_Allmarkers_cells_pseudobulk.csv')
   cvs_file <- here(cvsDir, cvs_file)
   write.csv(all.markers_p, cvs_file)
 } else {
@@ -137,7 +144,7 @@ if (length(all.markers_p)>0) {
 }
 
 ## Save new Seurat pseudo bulk 
-rds_name <- paste0(Seurat_base_name,'_', Seurat_reduction, '_ALL_pseudobulk.rds')
+rds_name <- paste0(Seurat_base_name,'_', integration_model, '_ALL_pseudobulk.rds')
 rds_name <- here(processedDir, rds_name)
 saveRDS(SeuratOBJ_Hb_all_pseudobulked, file = rds_name)
 
