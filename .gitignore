@@ -1,51 +1,23 @@
-# Log directories 
-code/logs/
-100_cell_estimation/logs/
-code/01_preprocessing_QC/logs/
-code/02_merge_seurats/logs/
-code/100_cell_estimation/logs/
+# Log / tmp directories 
+**/logs/
+**/tmp/
+**/old_scripts/
+**/recycler/
 
 # cellranger arc files 
-code/cellranger/logs/
+#code/cellranger/logs/
 code/cellranger/__*.mro
-code/cellranger/tmp/
-code/cellrangerARC_reanalyze/logs/
 code/cellrangerARC_reanalyze/__*.mro
-code/cellrangerARC_reanalyze/tmp/
-
-
-### Temporal or old scripts
-code/tmp/
-code/00_RNAbackground/tmp/
-code/00_RNAbackground/old_scripts/
-code/01_preprocessing_QC/tmp/
-code/02_merge_seurats/tmp/
-code/100_cell_estimation/tmp/
-code/recycler/
-
-### From processed-data dir
-processed-data/02_merge_seurats/csv_files/tmp/
-
-### From plots dir
-plots/02_merge_seurats/tmp/
-
 
 ### Cellranger-arc raw data symbolic links
-raw-data/path_atac/
-raw-data/path_snrna/
-raw-data/FASTQ/
-raw-data/FASTQ_2024/
-raw-data/FASTQ_2024_data_package2/
-raw-data/path_atac_July11_2024
-raw-data/path_rna_Aug05_2024
-
+**/raw-data/
 
 ### Big files
 # Here lived the main results of the cellranger-count pipeline. We do not control version this results.  
 Nextflow/
-processed-data/NextflowResults
+processed-data/NextflowResults/
 processed-data/cellrangerARC/
 processed-data/cellrangerARC_reanalyze/
 processed-data/cellrangerGEX/
 processed-data/cellrangerATAC/
-processed-data/NextflowResults/
+processed-data/**/*.rds
