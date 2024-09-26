@@ -1,6 +1,6 @@
 ########################################################################
 
-## Pseudo bulk with Aggregate expression (from Seurat) for RNA assay for CCA and Harmony reductions
+## Aggregate gene expression (from Seurat) for RNA assay for CCA and Harmony reductions
 ## Authors. CSC/lcollado
 ## Last md: Aug, 2024
 ##
@@ -22,8 +22,6 @@ library('Seurat')                                 # 4.9.9.9045 2023-05-17 [1] Gi
 library('multtest')
 library('metap')
 library('tidyverse')
-# library('ggplot2')
-# library('patchwork')
 library(here)
 
 here::here()
