@@ -76,7 +76,6 @@ get_raw_barcode_mtx <- function(s_experiment_name) {
 }
 
 
-
 get_filtered_barcode_mtx <- function(s_experiment_name) {
     # Read the filtered barcode file and return the full path name 
     #       @s_experiment_name         experiment name to be used to look for the raw barcode mtx
@@ -105,6 +104,7 @@ get_filtered_barcode_mtx <- function(s_experiment_name) {
     
 }
 
+
 # new function. CSC.01.2024
 get_ATAC_barcode_tsv <- function(s_experiment_name) {
     # Read fragment metadata and return the full path name
@@ -131,7 +131,6 @@ get_ATAC_barcode_tsv <- function(s_experiment_name) {
 }
 
 
-
 # Function name changed: get_ATAC_metadata_paths by get_ATAC_barcode_paths
 get_ATAC_barcode_paths <- function(s_experiment_name) {
     # This function call a fragment metadata and return the full path name
@@ -154,6 +153,7 @@ get_ATAC_barcode_paths <- function(s_experiment_name) {
     return(atac_paths)
 
 }
+
 
 get_metadata_path <- function(s_experiment_name) {
     # This function build metadata obj with specific features
@@ -181,6 +181,7 @@ get_metadata_path <- function(s_experiment_name) {
     return(meta_path_file)
     
 }
+
 
 get_job_array_targets <- function(lst_experiments) {
     # This function create a txt file with the full paths to the raw barcode matrices from cellranger-arc data
