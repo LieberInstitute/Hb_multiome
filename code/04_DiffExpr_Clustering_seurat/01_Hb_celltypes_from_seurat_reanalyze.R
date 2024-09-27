@@ -21,12 +21,19 @@ library(here)
 
 here::here()
 
-## Check directories
-if (!dir.exists(here("processed-data", "04_DiffExpr_Clustering_seurat"))) { dir.create(here("processed-data", "04_DiffExpr_Clustering_seurat")) }
-if (!dir.exists(here("processed-data", "04_DiffExpr_Clustering_seurat", "cvs_files_markers"))) { dir.create(here("processed-data", "04_DiffExpr_Clustering_seurat", "cvs_files_markers")) }
+# Check/create directories
+inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
+processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
+plotDir <- here("plots", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
+cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze", "cvs_files_markers")
 
-# contains the different marker list 
-source(here("code", "functions_custom", "remote_DGE_marker_gene_lists.R"))       # Call functions to read paths
+## Check directories
+if (!dir.exists(processedDir)) {dir.create(processedDir)}
+if (!dir.exists(plotDir)) {dir.create(plotDir)}
+if (!dir.exists(cvsDir)) {dir.create(cvsDir)}
+
+# Contains marker lists 
+source(here("code", "04_DiffExpr_Clustering_seurat", "remote_DGE_marker_gene_lists.R"))       # Call functions to read paths
 
 get_seurat <- function(name) { sobj <- readRDS(name)}
 
@@ -38,7 +45,7 @@ get_seurat <- function(name) { sobj <- readRDS(name)}
 #count_mtx_type <- 'data_counts'
 count_mtx_type <- 'norm_counts' 
 #Seurat_reduction <- 'CCA'
-Seurat_reduction <- 'Harmony'
+Seurat_reduction <- 'Harmony' 
 ## Minimum cells by cluster
 minCells <- 1
 
@@ -46,15 +53,17 @@ if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } 
 
 ## Build Seurat object name. `subset` suffix means clusters with fewer cells than `minCells` had been filtered. 
 if (Seurat_reduction=='CCA') {
-  rds_name <- here('processed-data', '03_pseudobulking', paste0(Seurat_base_name, '_CCA_subset.rds'))
+  Seurat_base_name <- here('processed-data', '03_pseudobulking', paste0(Seurat_base_name, '_CCA_subset.rds'))
 } else {
-  rds_name <- here('processed-data', '03_pseudobulking', paste0(Seurat_base_name, '_Harmony_subset.rds'))
+  Seurat_base_name <- here('processed-data', '03_pseudobulking', paste0(Seurat_base_name, '_Harmony_subset.rds'))
 }
-basename(rds_name)
+basename(Seurat_base_name)
 # Ex. seurat.norm_counts_Harmony_subset.rds
 
+message("Processing ", Seurat_base_name)
+
 ## Load Seurat Integrated with cluster information
-SeuratOBJ <- get_seurat(rds_name)
+SeuratOBJ <- get_seurat(Seurat_base_name)
 ## verification of the integration
 print(table(SeuratOBJ$orig.ident))
 SeuratOBJ@reductions
