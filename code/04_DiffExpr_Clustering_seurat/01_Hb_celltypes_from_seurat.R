@@ -97,6 +97,7 @@ cvs_name <- paste0(Seurat_base_name, '_', Seurat_reduction, '_subset_cluster_inf
 write.csv(df_mdT, here("processed-data", "04_DiffExpr_Clustering_seurat", "cvs_files_markers", cvs_name))
 
 ## extract unique clusters in ascending order
+clusters <- unique(df_mdT$seurat_clusters)
 clusters <- as.integer(levels(clusters)[as.integer(clusters)])
 
 message('Reading DEG for ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
