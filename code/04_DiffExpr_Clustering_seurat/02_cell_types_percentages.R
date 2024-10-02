@@ -42,7 +42,8 @@ head(df_mdT)
 allT <- c(unique(df_mdT[["seurat_clusters"]]))
 hb <- c(1, 7, 8, 13, 18, 19) ## Habenula clusters
 neu <- c(1, 5, 6, 7, 8, 11, 13, 18, 19) ## Neuron clusters
-lst_clust <- list(hb = hb, neu = neu, allTypes = allT)
+thal <- c(2, 3, 4, 5, 8, 11)
+lst_clust <- list(hb = hb, neu = neu, allTypes = allT, Thal = thal)
 names(lst_clust)
 
 i<-1
@@ -51,7 +52,7 @@ for (x in lst_clust) {
   ## for testing x <- c(1, 5, 6, 7, 8, 11, 13, 18, 19) ## Neuron clusters
   clust <- x
   clust_types <- names(lst_clust[i])
-  message(" Summarizing ", clust_types," clusters. ")
+  print(paste(" Summarizing ", clust_types," clusters. "))
   message(length(clust), " Clusters to summarize")
   print(clust)
   i<-i+1
@@ -69,7 +70,6 @@ for (x in lst_clust) {
                 dplyr::filter(seurat_clusters %in% clust) |>
                 group_by(orig.ident) |> 
                 summarise(total_sample = sum(N)) |>
-                #mutate(seurat_clusters = "Hb_total_sample") |>
                 mutate(seurat_clusters = "Total.Cells.Sample") |>
                 pivot_wider(id_cols = seurat_clusters, names_from = orig.ident, values_from = total_sample) |>
                 mutate(total_clust = rowSums(across(where(is.numeric))))) # sum total cells by sample
@@ -107,7 +107,7 @@ for (x in lst_clust) {
   df_summary_Hb <- df_summary_Hb |> rowwise() |> 
     mutate(Perc.Cluster = sum(c(S4_Hb_KDM, S5_Hb_KDM, S6_Hb_KDM) * 100 / total_cells))
 
-  ## Extract total cells by by sample
+  ## Extract total cells by sample
   total_cells_by_sample <- total_cellsS |> 
     pivot_longer(!seurat_clusters, names_to = "sample", values_to = "countsT") |>
     select(c(countsT))
@@ -119,15 +119,12 @@ for (x in lst_clust) {
   df_summary_Hb <- bind_rows(df_summary_Hb, df_tmp)
   
   ## Load markers used to label clusters and collapse names in cluster cell.type description
-  # seurat.combined.data_counts_PCA_Harmony_cell_types_all_gm20.csv
-  cluster_names <- here(cvsDir, "cvs_files_markers", paste0(Seurat_base_name, suffix_clust_names))
-  df_cluster_names <- read.csv(cluster_names)
+  # seurat.combined.data_counts_Harmony_cell_types_all_gm20.csv
+  df_cluster_names <- read.csv(here(cvsDir, "cvs_files_markers", paste0(Seurat_base_name, suffix_clust_names)))
   df_cluster_names <- df_cluster_names[c("cluster", "cell.type")] |>
-    group_by(cluster) %>% summarise(cell.types = paste(cell.type, collapse=","))
-  df_cluster_names
-  df_cluster_names <- df_cluster_names |> rename(seurat_clusters = cluster)
-  df_cluster_names <- df_cluster_names |> dplyr::filter(seurat_clusters %in% clust)
-  df_summary_Hb <- merge(df_summary_Hb, df_cluster_names, by = "seurat_clusters", all.x = TRUE)
+    group_by(cluster) |> summarise(cell.types = paste(cell.type, collapse=",")) |>
+    rename(seurat_clusters = cluster) |> dplyr::filter(seurat_clusters %in% clust)
+  df_summary_Hb <- merge(df_summary_Hb, df_cluster_names, by = "seurat_clusters", all.x = TRUE, sort = FALSE)
   print(df_summary_Hb)
   
   write.csv(df_summary_Hb, cvs_file)
