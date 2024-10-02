@@ -23,16 +23,15 @@ here::here()
 
 # Check/create directories
 inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
+inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", "cvs_files_markers")
 processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
-plotDir <- here("plots", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
 cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze", "cvs_files_markers")
 
 ## Check directories
 if (!dir.exists(processedDir)) {dir.create(processedDir)}
-if (!dir.exists(plotDir)) {dir.create(plotDir)}
 if (!dir.exists(cvsDir)) {dir.create(cvsDir)}
 
-# Contains marker lists 
+## Contains marker lists 
 source(here("code", "04_DiffExpr_Clustering_seurat", "remote_DGE_marker_gene_lists.R"))       # Call functions to read paths
 
 get_seurat <- function(name) { sobj <- readRDS(name)}
@@ -53,38 +52,39 @@ if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } 
 
 ## Build Seurat object name. `subset` suffix means clusters with fewer cells than `minCells` had been filtered. 
 if (Seurat_reduction=='CCA') {
-  Seurat_base_name <- here('processed-data', '03_pseudobulking', paste0(Seurat_base_name, '_CCA_subset.rds'))
+  Seurat_base_name <- paste0(Seurat_base_name, '_CCA_All')
 } else {
-  Seurat_base_name <- here('processed-data', '03_pseudobulking', paste0(Seurat_base_name, '_Harmony_subset.rds'))
+  Seurat_base_name <- paste0(Seurat_base_name, '_Harmony_All')
 }
 basename(Seurat_base_name)
-# Ex. seurat.norm_counts_Harmony_subset.rds
 
-message("Processing ", Seurat_base_name)
+message("Starting cell-type identification for ", Seurat_base_name)
 
 ## Load Seurat Integrated with cluster information
-SeuratOBJ <- get_seurat(Seurat_base_name)
+SeuratOBJ <- get_seurat(here(inputDir, paste0(Seurat_base_name, ".rds")))
 ## verification of the integration
 print(table(SeuratOBJ$orig.ident))
-SeuratOBJ@reductions
+#SeuratOBJ@reductions
 
 ## Select gene markers lists. We have 3.
 markers.custom = list()
 
-## Erik and Top50r DD marker genes
-markers.custom[["literature_base"]] <- get_erik_and_Hb_markers_genes()  
+## Gene markers lists
 markers.custom[["data_driven"]] <- get_Top50r_markers_genes_Hb()
+markers.custom[["literature_base"]] <- get_erik_and_Hb_markers_genes()  
+
 ## sub-population list
 #names(markers.custom$literature_base)
-names(markers.custom)
+#names(markers.custom)
+
+## Check unique marker genes
+# x <- markers.custom[["literature_base"]]
+# unlist(x)
+# table(unname(unlist(x)))
+# duplicated(unname(unlist(x)))
+# summary(table(unname(unlist(x))))
 
 prefix_name <- 'all_gm'                                    # prefix to save matched markers found in the clusters
-# markers.custom <- get_bukola_markers_genes_Hb()           # Bukola lists
-# prefix_name <- 'erik_gm'  
-# markers.custom <- get_Top50r_markers_genes_Hb()           # Top50r lists (putative Hb)
-# prefix_name <- 'Top50r_gm'  
-# markers.custom$DD_MHb
-# markers.custom$ThalE_putative
 
 ## set the number of top DGE genes to pick up
 n_slice <- 20  
@@ -101,18 +101,20 @@ mdT <- md[, .N, by = c("orig.ident", "seurat_clusters")] %>%
 df_mdT <- as.data.frame(mdT)
 #head(df_mdT)
 
-cvs_name <- paste0(Seurat_base_name, '_', Seurat_reduction, '_subset_cluster_info.csv')
+cvs_name <- paste0(Seurat_base_name, '_cluster_info.csv')
 ## Save clustering information; e.g: seurat.data_counts_Harmony_cluster_info.csv
-write.csv(df_mdT, here("processed-data", "04_DiffExpr_Clustering_seurat", "cvs_files_markers", cvs_name))
+write.csv(df_mdT, here(cvsDir, cvs_name))
 
 ## extract unique clusters in ascending order
+## extract unique clusters in ascending order
+clusters <- unique(df_mdT$seurat_clusters)
 clusters <- as.integer(levels(clusters)[as.integer(clusters)])
 
-message('Reading DEG for ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
+message('Identifing cell types for ', length(clusters),' clusters from the ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
 
 ## Read DGE cvs file for all clusters for the given sample
-DGE_cvs_name <- paste0(Seurat_base_name, '_',Seurat_reduction, '_Allmarkers_min', minCells, 'cells.csv')
-DGE_cvs_name <- here("processed-data", "03_pseudobulking", "cvs_files_markers", DGE_cvs_name) # *_Allmarkers_min1cells.csv
+#DGE_cvs_name <- paste0(Seurat_base_name, '_',Seurat_reduction, '_Allmarkers_min', minCells, 'cells.csv')
+DGE_cvs_name <- here(inputDir_cvs, paste0(Seurat_base_name, "markers.csv")) 
 seurat_clust <- as.data.frame(read.csv(DGE_cvs_name, header = TRUE))
 head(seurat_clust, n=3)
 # Seurat output from FindAllmarkers()
@@ -127,7 +129,7 @@ head(seurat_clust, n=3)
 # 2  MT-ND2         0       0
 # 3  MT-CYB         0       0
 
-message('Parsing ', length(markers.custom), ' annotations gene-markers lists on ', length(clusters) ,' clusters in ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
+message('Parsing ', length(markers.custom), ' gene-markers lists on ', length(clusters) ,' clusters in ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
 
 
 ####### Parse the 10/20 DGE genes from GEX cluster against the marker genes list provided ####### 
@@ -135,13 +137,13 @@ message('Parsing ', length(markers.custom), ' annotations gene-markers lists on 
 ## Build df to save cell-types that match with the gene-marker-list
 all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("Feature.ID", "Feature.Name", "Cluster.Adjusted.p.value", "cell-type", "cluster"))
 names(markers.custom) #[1] "literature_base" "data_driven" 
-length(markers.custom)
 idx_lst <- 0 
 
 for (markers.lst in markers.custom) {
   # for testing: markers.lst <- markers.custom$literature_base
+  # for testing: markers.lst <- markers.custom$data_driven
   idx_lst <- idx_lst+1
-  prefix_name <- paste0( names(markers.custom[idx_lst]), '_top', n_slice)
+  prefix_name <- paste0(names(markers.custom[idx_lst]), '_top', n_slice)
   print(paste("Searching markers for : ", names(markers.lst)))
   
   # Read x cluster and extract the top 10 genes
@@ -151,12 +153,12 @@ for (markers.lst in markers.custom) {
     top_DGE_clust <- seurat_clust |> 
       dplyr::filter(cluster == clust, p_val_adj < 0.05) |> slice_head(n = n_slice)
     
-    # get a vector with all marker genes
+    # get a vector with all cell-types with their marker genes
     gm_lst <- as.vector(as.list(markers.lst))
     i_pos <- 0      # reset gene-marker list position
     
     for ( gm in gm_lst ) {
-      #for testing: gm <- gm_lst[[1]]
+      #for testing: gm <- gm_lst[[2]]
       i_pos <- i_pos+1                        # control cell type position
       # Match top10genes with the marker genes for the cell-type x 
       gene_match <- top_DGE_clust |> filter_all(any_vars(. %in% gm))
@@ -171,52 +173,15 @@ for (markers.lst in markers.custom) {
     }
   }
   
-  habenula_markers_cvs_name <- here('processed-data', '04_DiffExpr_Clustering_seurat', 'cvs_files_markers', 
-                                    paste0(Seurat_base_name, '_', Seurat_reduction, '_cellTypes_', prefix_name, ".csv"))
+  habenula_markers_cvs_name <- here(cvsDir, 
+                                    paste0(Seurat_base_name, '_cellTypes_', prefix_name, ".csv"))
   print(paste("Printing results in ", habenula_markers_cvs_name))
   write.csv(all_gene_match, habenula_markers_cvs_name, row.names=FALSE)
-
+  rm("gene_match", "all_gene_match")
 }
 
-
-# parse the clusters of the given sample
-# for (clust in clusters) {
-#     # Testing: clust<-0
-#   
-#     # Read x cluster and extract the 10 ten most relevant genes
-#     message("Parsing cluster ", as.character(clust))
-#     top_DGE_clust <- seurat_clust |> 
-#         dplyr::filter(cluster == clust, p_val_adj < 0.05) |> slice_head(n = n_slice)
-#         
-#         # get a vector with all marker genes
-#         gm_lst <- as.vector(as.list(markers.lst))
-#         i_pos <- 0      # reset gene-marker list position
-# 
-#         for ( gm in gm_lst ) {
-#             #for testing: gm <- gm_lst[[1]]
-#             i_pos <- i_pos+1                        # to extract cell type position
-#             cell_type <- names(gm_lst[i_pos])       # to extract cell type name. g.e: neuron
-# 
-#             # Match top10genes with the marker genes for the cell-type x 
-#             gene_match <- top_DGE_clust |> filter_all(any_vars(. %in% gm))
-#             print(gene_match)
-#             
-#             # add matched genes to a dataframe
-#             if ( nrow(gene_match) > 0 ) {
-#                 # rename column to allow rbind
-#                 names(gene_match)[names(gene_match) == clust ] <- "Cluster.Adjusted.p.value"
-#                 gene_match['cell-type']  <- cell_type
-#                 gene_match['cluster']  <- clust
-#                 all_gene_match <- rbind(all_gene_match, gene_match)
-#             }
-#             
-#         }
-# 
-# } 
-
-
-head(all_gene_match, n=3)
-dim(all_gene_match)
+# head(all_gene_match, n=3)
+# dim(all_gene_match)
 
 # habenula_markers_cvs_name <- paste0(Seurat_base_name, '_', Seurat_reduction, '_subset_cell_types_', prefix_name)
 # habenula_markers_cvs_name <- here('processed-data', '04_DiffExpr_Clustering_seurat', 'cvs_files_markers', habenula_markers_cvs_name)
@@ -225,15 +190,17 @@ dim(all_gene_match)
 message(' Cell type identification in clusters done!')
 
 
-
+## slurm script reproducibility
+# library("slurmjobs")
+# job_single(
+#   name = "01_Hb_celltypes_from_seurat_reanalyze", memory = "50G", cores = 2, create_shell = TRUE
+# )
 
 
 
 library("sessioninfo")
 print('Reproducibility information:')
-# Last modification
 Sys.time()
-#"2023-04-04 12:42:26 EDT"
 proc.time()
 options(width = 120)
 session_info()
