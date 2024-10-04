@@ -1,26 +1,17 @@
 ########################################################################
-## Merge Seurat objects to prepare for batch effect correction
+## Integrate Seurat objects for batch effect correction
 ##
 ## Authors. CSC
-## Date. Feb 22, 2024
-## Last modification. Aug 2024
+## Date. Sep 25, 2024
+## Last modification. XXX
 ##
-## Input: Seurat RDS merged for integration 
+## Input: Seurat objects in RDS format
 ## Output:  Seurat object with new reduction slot: CCA / Harmony
 ##          Plots for reference after correction    
 ##
-## NOTES: 30G free mem recommended for 20K cells
+## NOTES: 80G free mem recommended for 60 to 80 thousand cells
 ## For slurm env: runsrun --x11 --pty --partition=interactive bash
 ########################################################################
-
-## slurm script reproducibility
-
-# slurmjobs::job_loop(
-#   loops = list(type_mtx = c("data_counts", "norm_counts")),
-#   name = "02_integrate_seurats_job_loop.R",
-#   cores = 2,
-#   create_shell = TRUE
-# )
 
 library(Seurat)                                
 library(harmony)
@@ -33,47 +24,61 @@ library(here)
 here::here()
 
 ## Directory to save variable features 
-csvDir <- here("processed-data", "02_merge_seurats", "csv_files")
+csvDir <- here("processed-data", "02_merge_seurats", "cellrangerARC_reanalyze", "csv_files")
+plotsDir <- here("plots", "02_merge_seurats", "cellrangerARC_reanalyze")
+processedDir <- here("processed-data", "02_merge_seurats", "cellrangerARC_reanalyze")
+
 if (!dir.exists(csvDir)) dir.create(csvDir)
-plotsDir <- here("plots", "02_merge_seurats")
-processedDir <- here('processed-data', '02_merge_seurats')
+if (!dir.exists(plotsDir)) dir.create(plotsDir)
+if (!dir.exists(processedDir)) dir.create(processedDir)
+
 
 ########################    Initials ########################  
 
-## Available for Seurat data_counts and norm_counts
-##        count_mtx_type_label <- 'data_counts'      
-##        count_mtx_type_label <- 'norm_counts' 
+## For testing:
+#   count_mtx_type <- 'data_counts'      
+#   count_mtx_type <- 'norm_counts' 
 
 args = commandArgs(trailingOnly=TRUE)
 ## read count mtx type (abs_counts and normalized_counts)
-count_mtx_type_label <- args[2]
-## For testing:
-# count_mtx_type_label <- 'data_counts'      
-# count_mtx_type_label <- 'norm_counts' 
+count_mtx_type <- args[2]
 
-message('\nIntegrating Seurat objects for `', count_mtx_type_label, '` assays')
+# if (is.na(count_mtx_type)) {
+#   message("Processing ", count_mtx_type)
+# } else {
+#   message("Input argument missed")
+#   stop()
+# }
 
 ## RDS suffix name and input assay to process 
-if (count_mtx_type_label=='data_counts') { 
+if (count_mtx_type=='data_counts') { 
   #s_sample <- 'seurat.integrated.data_counts' 
   s_sample <- 'seurat.unintegrated.data_counts' 
   s_pattern <- 'seurat.combined.data_counts' 
   rna_layer <- 'counts'
-} else if (count_mtx_type_label=='norm_counts') { # normalized counts
+} else if (count_mtx_type=='norm_counts') { # normalized counts
   #s_sample <- 'seurat.integrated.norm_counts' 
   s_sample <- 'seurat.unintegrated.norm_counts' 
   s_pattern <- 'seurat.combined.norm_counts' 
   rna_layer <- 'data'
 } else {
+  message("Assay type not provided!")
   stop()
 }
 
-message('\nSuffix name used to save unintegrated seurat is `', s_sample, '`')
-## Note unintegrated data are only combined 
+message('\nIntegrating Seurat object on `', count_mtx_type, '` layer')
+
 
 ## read directory with Seurat objects
-all_rds <- paste0(processedDir, '/', list.files(processedDir, pattern= paste0(s_pattern,".rds"))) #, recursive = TRUE
-all_rds
+all_rds <- here(processedDir, list.files(processedDir, pattern= paste0(s_pattern,".rds"))) #, recursive = TRUE
+basename(all_rds)
+
+if (length(basename(all_rds))==0) {
+  message("Not Seurat object available. Seurat combined object required.")
+  stop()
+} else {
+  message('\nSuffix name used to save unintegrated seurat is `', s_sample, '`')
+}
 
 ## plot reductions calculated: pca, umpa, CCA and Harmony
 plot_clust <- function(sobj, f_name, reduct, ga2) {
@@ -111,11 +116,13 @@ save_VFeatures <- function(sobj, f_name, suffix) {
 
 ############  Process PCA
 
-message('Processing PCA for `', s_sample, '`\n')
+message('Processing PCA for `', s_sample, '`')
 
 SeuratOBJ.combined <-readRDS(all_rds[1])
 ## Exploration
-table(SeuratOBJ.combined$orig.ident)
+total_cells <- sum(table(SeuratOBJ.combined$orig.ident))
+message("Processing ", total_cells, " cells from ", length(unique(table(SeuratOBJ.combined$orig.ident)))," samples")
+unique(table(SeuratOBJ.combined$orig.ident))
 # head(colnames(SeuratOBJ.combined))
 # tail(colnames(SeuratOBJ.combined))
 # colnames(SeuratOBJ.combined@meta.data)
@@ -141,7 +148,7 @@ SeuratOBJ.combined <- FindVariableFeatures(SeuratOBJ.combined, selection.method 
 save_VFeatures(SeuratOBJ.combined, 'pca', s_sample)
 ## Scale data. Perform “LogNormalize” method to the GEX for each cell by the total expression multiply by a scale factor (10,000 by default), and log-transforms the result
 all.genes <- rownames(SeuratOBJ.combined)
-SeuratOBJ.combined <- ScaleData(SeuratOBJ.combined, features = all.genes)
+SeuratOBJ.combined <- ScaleData(SeuratOBJ.combined, features = all.genes) # Requires a lot of memory +100 for 60K cells
 ## Run PCA
 SeuratOBJ.combined <- RunPCA(SeuratOBJ.combined)
 #Reductions(SeuratOBJ.combined)
@@ -184,23 +191,15 @@ message('Seurat unintegrated saved in ', rds_name)
 ## “Seurat CCA” has the assumption that biologically more similar cells from different batches have a higher mathematical similarity (i.e. the dot product), and similarly, MNN assume similar cells from different batches have smaller Euclidean distance defined in the algorithm.
 
 ## Rename samples 
-if (count_mtx_type_label=='data_counts') { 
+if (count_mtx_type=='data_counts') { 
   #s_sample <- 'seurat.integrated.data_counts'
   s_sample <- 'seurat.data_counts'
-} else if (count_mtx_type_label=='norm_counts') { # normalized counts
+} else if (count_mtx_type=='norm_counts') { # normalized counts
   #s_sample <- 'seurat.integrated.norm_counts' 
   s_sample <- 'seurat.norm_counts' 
 }
 
-### Start from here IF you have pre-existing combined Seurat  with PCA
-# if (count_mtx_type=='data_counts') { s_sample <- 'seurat.combined.data_counts' 
-# } else { s_sample <- 'seurat.combined.norm_counts' }
-# rds_name <- here(processedDir, paste0(s_sample, '_PCA.rds'))   # Seurat.combined.raw_PCA.rds
-# SeuratOBJ.combined <- get_seurat(rds_name)
-
 table(SeuratOBJ.combined$`orig.ident`)
-# 4S_Hb_KDM 5S_Hb_KDM 6S_Hb_KDM 
-# 4513      1720      4335
 
 message("\nRunning Seurat-CCA Integration - ", Sys.time())
 
@@ -329,7 +328,14 @@ message('Seurat combined saved in ', rds_name)
 # https://satijalab.org/seurat/articles/integration_introduction.html (Nov 16, 2023)
 
 
+## slurm script reproducibility
 
+# slurmjobs::job_loop(
+#   loops = list(type_mtx = c("data_counts", "norm_counts")),
+#   name = "06_integrate_seurats_job_loop_reanalyze",
+#   cores = 2,
+#   create_shell = TRUE
+# )
 
 ############ Reproducibility information ####################
 

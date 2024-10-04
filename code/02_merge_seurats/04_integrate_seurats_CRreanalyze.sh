@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=100G
-#SBATCH --job-name=06_integrate_seurats_job_loop_reanalyze
+#SBATCH --job-name=04_integrate_seurats_CRreanalyze
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
@@ -14,7 +14,7 @@ all_type_mtx=(data_counts norm_counts)
 type_mtx=${all_type_mtx[$(( $SLURM_ARRAY_TASK_ID / 1 % 2 ))]}
 
 ## Explicitly pipe script output to a log
-log_path=logs/06_integrate_seurats_job_loop_reanalyze_${type_mtx}_${SLURM_ARRAY_TASK_ID}.txt
+log_path=logs/04_integrate_seurats_CRreanalyze_${type_mtx}_${SLURM_ARRAY_TASK_ID}.txt
 
 {
 set -e
@@ -32,7 +32,7 @@ PLOTDIR="${MAINDIR}/plots/02_merge_seurats/cellrangerARC_reanalyze"
 
 ## Delete the logs/old-results, and re-submit seurat builder
 # mkdir -p logs ## Create the logs directory if it doesn't exist
-rm logs/06_integrate_seurats_job_loop_reanalyze*.txt
+rm logs/04_integrate_seurats_CRreanalyze*.txt
 rm ${PROCESSEDIR}/seurat.*_PCA.rds
 rm ${PROCESSEDIR}/seurat.*_CCA.rds
 rm ${PROCESSEDIR}/seurat.*_Harmony.rds
@@ -52,7 +52,7 @@ module load conda_R/4.3.x
 module list
 
 ## Edit with your job command
-Rscript 06_integrate_seurats_job_loop_reanalyze.R --type_mtx ${type_mtx}
+Rscript 04_integrate_seurats_CRreanalyze.R --type_mtx ${type_mtx}
 
 echo "**** Job ends ****"
 date
