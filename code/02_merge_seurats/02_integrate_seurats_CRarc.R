@@ -13,15 +13,6 @@
 ## For slurm env: runsrun --x11 --pty --partition=interactive bash
 ########################################################################
 
-## slurm script reproducibility
-
-# slurmjobs::job_loop(
-#   loops = list(type_mtx = c("data_counts", "norm_counts")),
-#   name = "02_integrate_seurats_job_loop.R",
-#   cores = 2,
-#   create_shell = TRUE
-# )
-
 library(Seurat)                                
 library(harmony)
 options(tidyverse.quiet = TRUE)
@@ -38,11 +29,9 @@ if (!dir.exists(csvDir)) dir.create(csvDir)
 plotsDir <- here("plots", "02_merge_seurats")
 processedDir <- here('processed-data', '02_merge_seurats')
 
-########################    Initials ########################  
 
-## Available for Seurat data_counts and norm_counts
-##        count_mtx_type_label <- 'data_counts'      
-##        count_mtx_type_label <- 'norm_counts' 
+
+########################    Initials ########################  
 
 args = commandArgs(trailingOnly=TRUE)
 ## read count mtx type (abs_counts and normalized_counts)
@@ -192,12 +181,6 @@ if (count_mtx_type_label=='data_counts') {
   s_sample <- 'seurat.norm_counts' 
 }
 
-### Start from here IF you have pre-existing combined Seurat  with PCA
-# if (count_mtx_type=='data_counts') { s_sample <- 'seurat.combined.data_counts' 
-# } else { s_sample <- 'seurat.combined.norm_counts' }
-# rds_name <- here(processedDir, paste0(s_sample, '_PCA.rds'))   # Seurat.combined.raw_PCA.rds
-# SeuratOBJ.combined <- get_seurat(rds_name)
-
 table(SeuratOBJ.combined$`orig.ident`)
 # 4S_Hb_KDM 5S_Hb_KDM 6S_Hb_KDM 
 # 4513      1720      4335
@@ -329,6 +312,14 @@ message('Seurat combined saved in ', rds_name)
 # https://satijalab.org/seurat/articles/integration_introduction.html (Nov 16, 2023)
 
 
+## slurm script reproducibility
+
+# slurmjobs::job_loop(
+#   loops = list(type_mtx = c("data_counts", "norm_counts")),
+#   name = "02_integrate_seurats_job_loop.R",
+#   cores = 2,
+#   create_shell = TRUE
+# )
 
 
 ############ Reproducibility information ####################
