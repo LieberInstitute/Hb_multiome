@@ -95,7 +95,7 @@ for (rds_path in all_rds) {
 # max(SeuratOBJ[["RNA"]]$data) #8.2943
 
 
-message('\nYou combined ', length(seurat_lst), ' Seurat objects: ', sapply(seurat_name_lst, function(i) paste0(i, ', ')) )
+message('\nMerging ', length(seurat_lst), ' Seurat objects: ', sapply(seurat_name_lst, function(i) paste0(i, ', ')) )
 
 
 
@@ -130,13 +130,13 @@ print(SeuratOBJ.combined)
 #lapply(seurat_lst, function(x) max(x[["RNA"]]$counts))
 #AverageExpression(SeuratOBJ, group.by = "orig.ident", features = 'ATP6AP1')
 
-message('\nSeurats merge completed!', split(table(SeuratOBJ.combined$orig.ident), ','))
+message('\nMerged completed!', split(table(SeuratOBJ.combined$orig.ident), ','))
 
 ## Save merged Seurat objects
 
 saveRDS(SeuratOBJ.combined, file = here(processedDir_out, paste0(s_sample, '.rds')))
 
-message('Seurat merged saved!')   
+message('Saved merged rds object!')   
 
 
 
