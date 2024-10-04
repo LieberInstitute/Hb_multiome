@@ -22,11 +22,6 @@ here::here()
 ## processed_data and plots directories 
 processedDir <- here("processed-data", "02_merge_seurats")
 if (!dir.exists(processedDir)) { dir.create(processedDir) }
-#if (!dir.exists(here("plots", "02_merge_seurats"))) { dir.create(here("plots", "02_merge_seurats")) }
-## Directory to save variable features
-#dir <- here('processed-data", "02_merge_seurats", "csv_files')
-#if (!dir.exists(dir)) dir.create(dir)
-
 
 ########################    Initials ########################  
 
@@ -63,50 +58,12 @@ all_rds
 
 if (length(all_rds) < 1) { stop('\nOnly one Seurat available.') }
 
-
-# ## function to save variable features before correction
-# save_VFeatures <- function(sobj, f_name) {
-# 
-#   # Identify most highly variable genes
-#   VF <- c(10,20,50,100)
-#   for (x in VF) {
-#     cvs_name <- ''
-#     top <- head(VariableFeatures(sobj), x)
-#     cvs_name <- paste0(s_sample, '_', f_name, as.character(x), '_VF.csv')
-#     #print(cvs_name)
-#     write.csv(top, file.path(dir, cvs_name), row.names=FALSE)
-#   }
-# 
-# }
-# 
-# ## plot reductions calculated: pca, umpa, CCA and Harmony
-# plot_clust <- function(sobj, f_name, reduct, ga2) {
-# 
-#     # integrate the samples and clusters
-#     p1 <- DimPlot(sobj,
-#                   reduction = reduct, group.by = c("orig.ident", ga2))
-#     png_file <- paste0(f_name,'_dimplot.png')
-#     png_name <- here('plots/02_merge_seurats', png_file)
-#     ggsave(p1, filename = png_name, height = 5, width = 10)
-# 
-#     # visualize the two conditions side-by-side
-#     p1 <- DimPlot(sobj,
-#                   reduction = reduct, split.by = "orig.ident")
-#     png_file <- paste0(f_name,'_dimplot_splitted.png')
-#     png_name <- here('plots/02_merge_seurats', png_file)
-#     ggsave(p1, filename = png_name, height = 5, width = 10)
-# 
-# }
-
-
-
 ### Prepare list of Seurat(s) to merge
 
 seurat_lst <- list()
 seurat_name_lst <- list()
 
 message('\nPreparing Seurat objects to merge ...')
-
 
 
 for (rds_path in all_rds) {
