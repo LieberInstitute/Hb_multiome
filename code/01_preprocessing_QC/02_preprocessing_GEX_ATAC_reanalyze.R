@@ -391,7 +391,7 @@ for (S in lst_seurats) {
         png_name <- here(plotDir_reanalyze, png_file_BlackR)
         ggsave(p1_BlackR, filename = png_name, height = 4, width = 5)
         
-        png_file_ATAC <- paste0(crARC_Sample_r,'_ATAC_QCs.png')
+        png_file_ATAC <- paste0(crARC_Sample_r,'_ATAC.png')
         png_name <- here(plotDir_reanalyze, png_file_ATAC)
         ggsave(p1_ATAC, filename = png_name, height = 4, width = 7)
   
