@@ -29,6 +29,7 @@ here::here()
 ########################    Initials ######################## 
 
 # Check/create directories 
+inputDir <- here("processed-data", "02_merge_seurats", "cellrangerARC_reanalyze")
 processedDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
 plotDir <- here("plots", "03_pseudobulking", "cellrangerARC_reanalyze")
 cvsDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", "cvs_files_markers")
@@ -36,8 +37,6 @@ cvsDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", 
 if (!dir.exists(processedDir)) { dir.create(processedDir) }
 if (!dir.exists(plotDir)) { dir.create(plotDir) }
 if (!dir.exists(cvsDir)) { dir.create(cvsDir) }
-
-inputDir <- here("processed-data", "02_merge_seurats") 
 
 ## For testing: By Default `norm_counts Harmony`
 ## For index 2:
@@ -52,10 +51,11 @@ args = commandArgs(trailingOnly=TRUE)
 count_mtx_type <- args[2]
 integration_model <- args[4]
 
-if (is.na(count_mtx_type) || is.na(integration_model)) {
+if (length(count_mtx_type) && length(integration_model)) {
   message("Processing ", count_mtx_type, " with ", integration_model, " method.")
 } else {
   message("Input arguments missed")
+  message("Assay type: ", count_mtx_type, " Intergration model: ", integration_model)
   stop()
 }
 
@@ -74,6 +74,8 @@ if (integration_model=='CCA') {
   rds_name <- here(inputDir, paste0(Seurat_base_name, '_Harmony.rds'))
 }
 #rds_name
+
+message("Processing ", Seurat_base_name, " ", integration_model)
 
 ## Load Seurat object
 SeuratOBJ <- get_seurat(rds_name)
@@ -100,14 +102,14 @@ all.markers <- FindAllMarkers(object = SeuratOBJ)
 #head(all.markers, n=3)
 
 # cvs_file <- paste0(Seurat_base_name, '_', integration_model, '_Allmarkers.csv')
-cvs_file <- paste0(Seurat_base_name, '_', integration_model, '_Allmarkers_','ALL.csv')
+cvs_file <- paste0(Seurat_base_name, '_', integration_model, '_Allmarkers.csv')
 cvs_file <- here(cvsDir, cvs_file)
 write.csv(all.markers, cvs_file)
 
 message(" FindAllMarkers in batch corrected data done!")
 
 ## Save new Seurat pseudo bulk 
-rds_name <- paste0(Seurat_base_name,'_', integration_model, '_ALL.rds')
+rds_name <- paste0(Seurat_base_name,'_', integration_model, '_All.rds')
 rds_name <- here(processedDir, rds_name)
 saveRDS(SeuratOBJ, file = rds_name)
 
@@ -134,7 +136,7 @@ all.markers_p <- FindAllMarkers(object = SeuratOBJ_Hb_all_pseudobulked)
 # Warning: When testing g18_S2-Hb-KDM versus all:
 #     Cell group 1 has fewer than 3 cells
 
-## check DEG found in the pseudobulk data
+## check DEG found in the pseudo bulk data
 if (length(all.markers_p)>0) {
   cvs_file <- paste0(Seurat_base_name, '_', integration_model, '_Allmarkers_cells_pseudobulk.csv')
   cvs_file <- here(cvsDir, cvs_file)
@@ -144,7 +146,7 @@ if (length(all.markers_p)>0) {
 }
 
 ## Save new Seurat pseudo bulk 
-rds_name <- paste0(Seurat_base_name,'_', integration_model, '_ALL_pseudobulk.rds')
+rds_name <- paste0(Seurat_base_name,'_', integration_model, '_All_pseudobulk.rds')
 rds_name <- here(processedDir, rds_name)
 saveRDS(SeuratOBJ_Hb_all_pseudobulked, file = rds_name)
 
