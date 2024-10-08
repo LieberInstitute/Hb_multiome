@@ -67,10 +67,6 @@ SeuratOBJ <-readRDS(rds_name) # Harmony
 #str(SeuratOBJ_CCA)
 #head(SeuratOBJ@reductions$pca) 
 
-#if (SeuratOBJ@reductions %in% c('integrated.harmony','b')) { print(SeuratOBJ$integrated.harmony ) }
-
-#head(SeuratOBJ@reductions$pca) 
-
 # active clusters 
 unique(Idents(SeuratOBJ))
 #Idents(SeuratOBJ_CCA)[1:1000]
@@ -80,6 +76,7 @@ unique(Idents(SeuratOBJ))
 
 
 ############ Link clusters and build a graph-plot if linkage  ############
+
 
 # Convert Seurat to sce object; as not supported with v5. I must to convert the assays to v3 assays
 
@@ -127,6 +124,9 @@ jacc.mat.08vs1 <-
     colData(sce_h),
     linkClustersMatrix( sort(sce_h[['seurat_clusters']]), sort(sce_h[['RNA_snn_res.1']]) )
   )
+
+summary(sort(sce_h[['seurat_clusters']]))
+summary(sort(sce_h[['RNA_snn_res.1']]))
 
 #colnames(jacc.mat.08vs1)
 
