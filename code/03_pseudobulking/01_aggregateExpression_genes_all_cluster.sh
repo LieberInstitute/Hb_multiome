@@ -19,12 +19,6 @@ integration_model=${all_integration_model[$(( $SLURM_ARRAY_TASK_ID / 1 % 2 ))]}
 ## Explicitly pipe script output to a log
 log_path=logs/01_aggregateExpression_genes_all_cluster_${type_mtx}_${integration_model}_${SLURM_ARRAY_TASK_ID}.txt
 
-{
-set -e
-
-echo "**** Job starts ****"
-date
-
 echo "Removing previous Dir/Subdir/files outputs if exists"
 echo " "
 ## remove previous outputs if exists
@@ -41,6 +35,12 @@ rm ${PROCESSEDIR}/seurat.*CCA*.rds
 rm ${PROCESSEDIR_CSV}/*.csv
 rm ${PLOTDIR}/*.png
 echo " "
+
+{
+set -e
+
+echo "**** Job starts ****"
+date
 
 echo "**** JHPCE info ****"
 echo "User: ${USER}"
