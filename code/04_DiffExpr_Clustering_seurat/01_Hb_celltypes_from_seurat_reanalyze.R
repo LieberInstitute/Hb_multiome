@@ -56,7 +56,13 @@ if (Seurat_reduction=='CCA') {
 } else {
   Seurat_base_name <- paste0(Seurat_base_name, '_Harmony_All')
 }
-basename(Seurat_base_name)
+## Validate seurat exists
+if (length(list.files(inputDir, pattern = Seurat_base_name)==1)) {
+  message("Processing ", Seurat_base_name)
+} else {
+  message("Input seurat object missed!")
+  stop()
+}
 
 message("Starting cell-type identification for ", Seurat_base_name)
 
@@ -135,13 +141,16 @@ message('Parsing ', length(markers.custom), ' gene-markers lists on ', length(cl
 ####### Parse the 10/20 DGE genes from GEX cluster against the marker genes list provided ####### 
 
 ## Build df to save cell-types that match with the gene-marker-list
-all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("Feature.ID", "Feature.Name", "Cluster.Adjusted.p.value", "cell-type", "cluster"))
+#all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("Feature.ID", "Feature.Name", "Cluster.Adjusted.p.value", "cell-type", "cluster"))
 names(markers.custom) #[1] "literature_base" "data_driven" 
 idx_lst <- 0 
 
 for (markers.lst in markers.custom) {
   # for testing: markers.lst <- markers.custom$literature_base
   # for testing: markers.lst <- markers.custom$data_driven
+  
+  all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("Feature.ID", "Feature.Name", "Cluster.Adjusted.p.value", "cell-type", "cluster"))
+  
   idx_lst <- idx_lst+1
   prefix_name <- paste0(names(markers.custom[idx_lst]), '_top', n_slice)
   print(paste("Searching markers for : ", names(markers.lst)))

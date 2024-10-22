@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=30G
-#SBATCH --job-name=02_cell_types_percentages_reanalyze
+#SBATCH --job-name=02_cell_types_percentages_CRcount
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
@@ -14,20 +14,20 @@ all_marker_lst=(literature_base data_driven)
 marker_lst=${all_marker_lst[$(( $SLURM_ARRAY_TASK_ID / 1 % 2 ))]}
 
 ## Explicitly pipe script output to a log
-log_path=logs/02_cell_types_percentages_reanalyze_${marker_lst}_${SLURM_ARRAY_TASK_ID}.txt
+log_path=logs/02_cell_types_percentages_CRcount_${marker_lst}_${SLURM_ARRAY_TASK_ID}.txt
 
 echo "Removing previous outputs ..."
 echo " "
 ## remove previous outputs if exists
-SUBDIR="04_DiffExpr_Clustering_seurat/cellrangerARC_reanalyze"
 MAINDIR="/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome"
+SUBDIR="04_DiffExpr_Clustering_seurat/cellranger_count"
 PROCESSEDIR="${MAINDIR}/processed-data/${SUBDIR}"
 PLOTDIR="${MAINDIR}/plots/${SUBDIR}"
 
 
 ## Delete the logs/old-results, and re-submit seurat builder
 # mkdir -p logs ## Create the logs directory if it doesn't exist
-rm logs/02_cell_types_percentages_reanalyze*.txt
+rm logs/02_cell_types_percentages_CRcount*.txt
 rm ${PROCESSEDIR}/SUMMARY*.csv
 rm ${PLOTDIR}/*.png
 echo " "
@@ -52,7 +52,7 @@ module load conda_R/4.3.x
 module list
 
 ## Edit with your job command
-Rscript 02_cell_types_percentages_reanalyze.R --marker_lst ${marker_lst}
+Rscript 02_cell_types_percentages_CRcount.R --marker_lst ${marker_lst}
 
 echo "**** Job ends ****"
 date

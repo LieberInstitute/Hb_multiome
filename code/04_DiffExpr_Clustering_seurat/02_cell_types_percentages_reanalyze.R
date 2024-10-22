@@ -12,8 +12,13 @@ library("ggplot2")
 
 options(digits=2)
 
+## Data from cellrangerARC-reanalyze
 cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
 plotDir <- here("plots", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
+
+## Data from cellranger-count
+# cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count")
+# plotDir <- here("plots", "04_DiffExpr_Clustering_seurat", "cellranger_count")
 
 if (!dir.exists(cvsDir)) { dir.create(cvsDir) }
 if (!dir.exists(plotDir)) { dir.create(plotDir) }
@@ -30,13 +35,15 @@ if (marker_lst=="literature_base") {
   hb <- c(3,4,5,9) 
   thal <- c(0,8,24)
 } else if (marker_lst=="data_driven") {
-  neu <- c(0,1,3,4,5,8,9,10,11,14,16,21,24,2,26) 
-  hb <- c(4,5,9,10,14,16,2)
-  thal <- c(0,1,3,11,21,24,26)
+  neu <- c(0,1,2,3,4,5,8,9,10,11,14,16,21,24,26) 
+  hb <- c(2,4,5,9,10,14,16)
+  thal <- c(0,1,3,8,11,21,24)
 } else {
   message("Input marker list not valid!")
   stop()
 }
+
+
 
 # By now only available for norm count with Harmomy
 #count_mtx_type <- 'data_counts'
@@ -71,39 +78,32 @@ if (Seurat_reduction=='CCA') {
 }
   
 input_csv <- paste0(input_csv, "_info.csv")
-basename(input_csv)
 
-message("Calculating percentages in progress .../n ")
+message("Loading information from ", basename(input_csv), ". Calculating percentages in progress ... ")
 
 ###### Load clusters by sample from processed_data directory ######
 
 ## Format sample ID names and reorder
 df_mdT <- read.csv(input_csv, row.names = 1)
-df_mdT$orig.ident <- gsub("^([0-9])S", "S\\1", df_mdT$orig.ident)
-df_mdT$orig.ident <- gsub("^(S[0-9]+_Hb)", "\\1_r", df_mdT$orig.ident)
-df_mdT$orig.ident <- str_extract(df_mdT$orig.ident, "^(S[0-9]+_Hb_r)")      
-#table(df_mdT)
-ref_sort <- c("S3_Hb_r", "S4_Hb_r", "S5_Hb_r", "S6_Hb_r", "S7_Hb_r", "S8_Hb_r", "S9_Hb_r", "S10_Hb_r", "S11_Hb_r", "S12_Hb_r")
-df_mdT[order(sapply(df_mdT$orig.ident, function(x) which(x == ref_sort))), ]
-#unique(df_mdT$orig.ident)
+df_mdT$orig.ident <- sprintf("S%02d_Hb_r", extract_numeric(df_mdT$orig.ident))
+ref_sort <- sort(unique(df_mdT$orig.ident))
+df_mdT <- df_mdT[order(sapply(df_mdT$orig.ident, function(x) which(x == ref_sort))), ]
+#print(unique(df_mdT$orig.ident))
 
 ### Preparing list of clusters to summarize 
 ## Add all cell-types to the end of the list of lists
-allT <- c(unique(df_mdT[["seurat_clusters"]]))
+allT <- c(sort(unique(df_mdT[["seurat_clusters"]])))
 lst_clust <- list(hb = hb, neu = neu, thal= thal, allTypes = allT) 
 names(lst_clust)
 
-i<-1
-lst_plt <- list()
 
-## Parse total cells and percentages from 3 cell types
-for (x in lst_clust) {
-  ## for testing literature base: x <- c(0,3,4,5,9,17,22,24)
-  ## for testing data-driven base: x <- c(0,1,3,4,5,8,9,10,11,14,16,21,24,2,26) 
-  clust <- x
-  clust_types <- names(lst_clust[i])
-  message(length(clust), " Clusters to summarize")
-  i<-i+1
+## Parse total cells by cluster and calculate percentages
+## for testing: i <- 1
+for (i in seq_along(lst_clust)) {  
+  
+  clust <- lst_clust[[i]]
+  clust_types <- names(lst_clust)[[i]]
+  message(length(clust), " clusters to summarize in ", clust_types)
   
   ## Filtering clusters of interest in the given samples
   grp_clusters <- df_mdT |>
@@ -112,91 +112,81 @@ for (x in lst_clust) {
     left_join(df_mdT |>
                 group_by(seurat_clusters) |> 
                 summarise(total_clust = sum(N))) |> # sum total cells by cluster
-    mutate(seurat_clusters = as.character(seurat_clusters)) |>
-    bind_rows(df_mdT |>   # bid row with total cells by sample
-                dplyr::filter(seurat_clusters %in% clust) |>
-                group_by(orig.ident) |> 
-                summarise(total_sample = sum(N)) |>
-                mutate(seurat_clusters = "Total.Cells.Sample") |>
-                pivot_wider(id_cols = seurat_clusters, names_from = orig.ident, values_from = total_sample) |>
-                mutate(total_clust = rowSums(across(where(is.numeric))))) # sum total cells by sample
-  #table(is.na.data.frame(grp_clusters))
+    mutate(seurat_clusters = as.character(seurat_clusters))
+  ## replace NAs
   grp_clusters[is.na(grp_clusters)] <- 0
-  
-  ## save cluster information. g.e: SUMMARY_literature_base_norm_counts_Harmony_All_cluster_hb.csv
-  cvs_name <- paste0('SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types ,".csv")
-  # Reorder column by sample name
-  grp_clusters <- grp_clusters[,  c("seurat_clusters", ref_sort, "total_clust")]
-  write.csv(grp_clusters, here(cvsDir, cvs_name))  
 
-  #### Calculate perceptual values by cluster and sample 
-  df_summary_Hb <- read.csv(here(cvsDir, cvs_name), row.names = 1, check.names=FALSE)
-  ## Extract total cells by specific cell-types by sample
-  total_cells_by_cell_type_grp <- tail(df_summary_Hb, 1) |>
-    pivot_longer(!seurat_clusters, names_to = "sample", values_to = "counts_grp") |>
-    select(c(sample, counts_grp))
+  ########  Calculate perceptual values by CLUSTER ######## 
   
-  ## calculate `total cells by sample by specific group of clusters`
-  n <- dim(total_cells_by_cell_type_grp)[1]-1
-  tbl_total_cells_grp <- total_cells_by_cell_type_grp[1:n,]
-  colnames(tbl_total_cells_grp)[2] <- clust_types
-  message("Adding total cells for ", clust_types," cluster group.")
-  lst_new <-list(tbl_total_cells_grp[2])
-  names(lst_new[i]) <- names(lst_clust[i])
-  lst_plt <- append(lst_plt, lst_new)
+  totals_grp_clusters <- grp_clusters
+
+  ## Add total cells by cluster in the group
+  totals_grp_clusters <- totals_grp_clusters |> select(all_of(c(ref_sort,"seurat_clusters"))) |> pivot_longer(!seurat_clusters)
+  totals_grp_clusters <- totals_grp_clusters |> group_by(seurat_clusters) |> summarise(total_clust = sum(value))
   
-  ## Calculate `total cells` by sample
-  total_cellsS <- df_mdT |>   
-    group_by(orig.ident) |> 
-    summarise(total_sample = sum(N)) |>
-    mutate(seurat_clusters = "Total.Cells.ALL") |> #"Total_sample"
-    pivot_wider(id_cols = seurat_clusters, names_from = orig.ident, values_from = total_sample) |>
-    mutate(total_clust = rowSums(across(where(is.numeric)))) 
-  df_summary_Hb <- bind_rows(df_summary_Hb, total_cellsS)
-  
-  ## Calculate percentages by clusters
+  ## Add percent cells by cluster in the group
   total_cells <- sum(df_mdT$N)
-  #sample_ids <- noquote(paste(ref_sort, sep="", collapse=","))
-  df_summary_Hb <- df_summary_Hb |> rowwise() |> 
-    mutate(Perc.Cluster = sum(c(S3_Hb_r,S4_Hb_r,S5_Hb_r,S6_Hb_r,S7_Hb_r,S8_Hb_r,S9_Hb_r,S10_Hb_r,S11_Hb_r,S12_Hb_r) * 100 / total_cells))
-  df_summary_Hb$Perc.Cluster <- round(df_summary_Hb$Perc.Cluster, digits = 2)
-  ## ## Calculate percentages by sample
-  total_cellsS <- total_cellsS |>   
-    pivot_longer(!seurat_clusters, names_to = "sample", values_to = "countsT") |>
-    select(c(countsT))
+  totals_grp_clusters <- totals_grp_clusters |> mutate(Perc.Cluster = totals_grp_clusters$total_clust * 100 / total_cells)
   
-  vect1 <- df_summary_Hb[df_summary_Hb$seurat_clusters=="Total.Cells.Sample", ][0:length(ref_sort)+2] 
-  vect2 <- df_summary_Hb[df_summary_Hb$seurat_clusters=="Total.Cells.ALL", ][0:length(ref_sort)+2] 
-  percent.sample <- round((vect1*100 / vect2), digits = 2)
-  percent.sample <- append(list(seurat_clusters = "Percentage.Sample"), percent.sample, 1)
-  df_summary_Hb <- bind_rows(df_summary_Hb, percent.sample)
-
-  ## Load markers used to label clusters and collapse names in `cell.type` description 
-  # seurat.combined.data_counts_Harmony_cell_types_all_gm20.csv
+  ## Load cluster info and cell-types to collapse names in `cell.type` column (description) 
   df_cluster_names <- read.csv(here(cvsDir, "cvs_files_markers", paste0(Seurat_base_name, suffix_clust_names)))
-  df_cluster_names_long <- df_cluster_names[c("cluster", "cell.type")] |>
+  df_cluster_names <- df_cluster_names[c("cluster", "cell.type")] |> 
     group_by(cluster) |> summarise(cell.types = paste(cell.type, collapse=",")) |>
     rename(seurat_clusters = cluster) |> dplyr::filter(seurat_clusters %in% clust)
-  df_summary_Hb_long <- merge(df_summary_Hb, df_cluster_names_long, by = "seurat_clusters", all.x = TRUE, sort = FALSE)
-  cvs_name_long <- paste0('SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types ,"_long_CT.csv")
-  write.csv(df_summary_Hb_long, here(cvsDir, cvs_name_long))
-  ## Second version drop duplicate cell.types
-  df_cluster_names <- df_cluster_names[c("cluster", "cell.type")] |>
-    group_by(cluster) |> distinct() |> summarise(cell.types = paste(cell.type, collapse=",")) |>
-    rename(seurat_clusters = cluster) |> distinct() |> dplyr::filter(seurat_clusters %in% clust)
-  df_summary_Hb <- merge(df_summary_Hb, df_cluster_names, by = "seurat_clusters", all.x = TRUE, sort = FALSE)
-  write.csv(df_summary_Hb, here(cvsDir, cvs_name))
-  #print(df_summary_Hb)  
+  
+  ## Update in nice-readable format the `cell.types` column with `IDs+counts by marker` by cluster
+  list_ct <- df_cluster_names[["cell.types"]]
+  nc <- list()
+  for (x in seq_along(list_ct)) {
+    ct_cluster <- list_ct[x]
+    x1 <- sapply(ct_cluster, function(x) strsplit(x, ","))
+    for (ct in x1) {
+      ids <- unique(ct)
+      num_rep <- table(ct)
+      col_new <- noquote(c(rbind(ids, paste0("(", num_rep, ")"))))
+    }
+    if (length(col_new)==2) {col_new <- paste0("***", col_new[1], col_new[2])}
+    nc <- append(nc, paste0(col_new, collapse = " "))
+  }
+  df_cluster_names$cell.types <- noquote(unlist(nc))
+  
+  ## Save detail counts and percentages by grp of clusters
+  totals_grp_clusters <- merge(grp_clusters, totals_grp_clusters, by = "seurat_clusters", all.x = TRUE, sort = FALSE)
+  totals_grp_clusters <- merge(totals_grp_clusters, df_cluster_names, by = "seurat_clusters", all.x = TRUE, sort = FALSE)
+  
+  cvs_name <- paste0("DETAIL_", marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types ,"_v2.csv")
+  #write.csv(grp_clusters, here(cvsDir, cvs_name)) 
+  write.csv(totals_grp_clusters, here(cvsDir, cvs_name))
+  
+  
+  ########  Calculate perceptual values by SAMPLE ######## 
+  
+  ## Add total cells by sample in the group
+  df_summary <- totals_grp_clusters |> select(all_of(ref_sort)) |> pivot_longer(cols = everything(), names_to = "sampleID") |> 
+    group_by(sampleID) |> reframe(total_sample = sum(value))
+
+  ## Calculate `total cells` by sample
+  df_summary <- full_join(df_summary, (df_mdT |>
+    group_by(orig.ident) |> select(orig.ident, N) |>
+      summarise(total_sample = sum(N))), join_by(sampleID == orig.ident)) |>
+    mutate(Percentage.Sample = total_sample.x * 100 / total_sample.y)
+  
+  df_summary <- rename(df_summary, all_of(c(Total.Cells.Sample = "total_sample.x", Total.Cells.ALL = "total_sample.y") ))
+  df_summary <- as.data.frame(t(df_summary)) |> row_to_names(1)
+  
+  cvs_name <- paste0('SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types,"_v2.csv")
+  write.csv(df_summary, here(cvsDir, cvs_name), row.names=FALSE)
+  
+  ## bind rows to the main table
+  df_summary <- data.frame(seurat_clusters = c("Total.Cells.Sample", "Total.Cells.ALL", "Percentage.Sample"), df_summary)
+  new_columns <- list(total_clust = NA, Perc.Cluster = NA, cell.types = NA)
+  df_summary <- df_summary |> mutate(!!!new_columns)
+  df_summary <- rbind(totals_grp_clusters, df_summary)
+  
+  cvs_name <- paste0('SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types,"_v2.csv")
+  write.csv(df_summary, here(cvsDir, cvs_name), row.names=FALSE)
+
 }
-
-# print(lst_plt)
-# plot(unlist(lst_plt[10]))
-# message(" List for plot")
-# plt_total_cells <- ggplot(lst_plt, aes(x=sample, y=counts_grp, group=1)) +
-#   geom_line() + geom_point() + ggtitle(paste("Cell-type for" , clust_types , "group")) +
-#   theme(axis.text.x = element_text())  # csc. it reorder the samples.to fix (angle = 45, hjust=0.3)
-# ggsave(here(cvsDir, paste0("plt", suffix_clust_plt,"_", clust_types, ".png")))
-
 
 message("Done!")
 

@@ -1,13 +1,19 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=50G
-#SBATCH --job-name=01_Hb_celltypes_from_seurat_reanalyze
+#SBATCH --mem=20G
+#SBATCH --job-name=01_Hb_celltypes_from_seurat_CRcount
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
-#SBATCH -o logs/01_Hb_celltypes_from_seurat_reanalyze.txt
-#SBATCH -e logs/01_Hb_celltypes_from_seurat_reanalyze.txt
+#SBATCH -o /dev/null
+#SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
 
+## Explicitly pipe script output to a log
+log_path=logs/01_Hb_celltypes_from_seurat_CRcount_${SLURM_JOB_ID}.txt
+
+echo " "
+
+{
 set -e
 
 echo "**** Job starts ****"
@@ -27,10 +33,13 @@ module load conda_R/4.3.x
 module list
 
 ## Edit with your job command
-Rscript 01_Hb_celltypes_from_seurat_reanalyze.R
+Rscript 01_Hb_celltypes_from_seurat_CRcount.R
 
 echo "**** Job ends ****"
 date
+
+} > $log_path 2>&1
+
 
 ## This script was made using slurmjobs version 1.2.1
 ## available from http://research.libd.org/slurmjobs/
