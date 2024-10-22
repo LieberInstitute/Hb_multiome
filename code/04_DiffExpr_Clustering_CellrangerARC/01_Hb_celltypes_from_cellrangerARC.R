@@ -110,11 +110,8 @@ for (clust in clusters) {
 
             i_pos <- i_pos+1                        # to extract cell type position
             cell_type <- names(gm_lst[i_pos])       # to extract cell type name
-            print(paste("Parsing", cell_type))
-
-            # Match top10genes with the marker genes for the cell-type x 
+            # Matching genes
             gene_match <- top_DGE_clust %>% filter_all(any_vars(. %in% gm))
-            
             # add matched genes to a dataframe
             if ( nrow(gene_match) > 0 ) {
                 # rename column to allow rbind
