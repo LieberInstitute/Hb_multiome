@@ -13,6 +13,7 @@
 ########################################################################
 
 library(Seurat)                                 # 4.9.9.9045 2023-05-17 [1] Github (satijalab/seurat@7d1094c)
+#library(scCustomize)
 options(tidyverse.quiet = TRUE)
 library(tidyverse)
 library(here)
@@ -20,15 +21,11 @@ library(here)
 here::here()
 
 ## processed_data and plots directories 
-processedDir_out <- here("processed-data", "02_merge_seurats", "cellrangerARC_reanalyze")
+processedDir_out <- here("processed-data", "02_merge_seurats", "cellranger_count")
 if (!dir.exists(processedDir_out)) { dir.create(processedDir_out) }
 
 
 ########################    Initials ########################  
-
-## Counts for GEX assay available in Seurat: raw and normalized data
-##        count_mtx_type_label <- 'data_counts'      
-##        count_mtx_type_label <- 'norm_counts' 
 
 args = commandArgs(trailingOnly=TRUE)
 ## read count mtx type:
@@ -53,8 +50,8 @@ message('Merging  `', count_mtx_type_label, '` seurat assays.')
 message('\nSuffix name for merged Seurat is `', s_sample, "`")
 
 ## read directory with Seurat objects
-processedDir_in <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze")
-all_rds <- here(processedDir_in, list.files(processedDir_in, pattern="_reanalysis.rds"))
+processedDir_in <- here("processed-data", "01_preprocessing_QC", "cellranger_count")
+all_rds <- here(processedDir_in, list.files(processedDir_in, pattern="_CR.rds"))
 
 if (length(all_rds) < 1) { stop('\nOnly one Seurat available.') }
 
@@ -68,36 +65,31 @@ seurat_lst <- list()
 seurat_name_lst <- list()
 
 for (rds_path in all_rds) {
-  
-  print(rds_path)
-  SeuratOBJ <-readRDS(rds_path)
-  print(SeuratOBJ)
-  DefaultAssay(SeuratOBJ) <- "RNA"
-  
-  if (count_mtx_type_label=='norm_counts') { SeuratOBJ <- NormalizeData(SeuratOBJ) }
-  
-  if ( length(seurat_lst)>0 ) { seurat_lst <- append(seurat_lst, SeuratOBJ) } else { seurat_lst <- SeuratOBJ }
-  # Get first word for the Seurat name
-  s <- strsplit(levels(SeuratOBJ$orig.ident)[1], split = "_")[[1]][1]
-  if ( length(seurat_name_lst)>0 ) { seurat_name_lst <- append(seurat_name_lst, s) } else { seurat_name_lst <- s }
+    #rds_path = all_rds[1]  
+    print(rds_path)
+    SeuratOBJ <-readRDS(rds_path)
+    print(SeuratOBJ)
+    # Get first word for the Seurat name
+    s <- strsplit(levels(SeuratOBJ$orig.ident)[1], split = "_")[[1]][1]
+    
+    #SeuratOBJ <- RenameCells(SeuratOBJ, add.cell.id=s)
+    Cells(SeuratOBJ)
+
+    if (count_mtx_type_label=='norm_counts') { SeuratOBJ <- NormalizeData(SeuratOBJ) }
+    if ( length(seurat_lst)>0 ) { seurat_lst <- append(seurat_lst, SeuratOBJ) } else { seurat_lst <- SeuratOBJ }
+    if ( length(seurat_name_lst)>0 ) { seurat_name_lst <- append(seurat_name_lst, s) } else { seurat_name_lst <- s }
   
 }
 
-# print(seurat_lst)
-# # testing
-# Cells(SeuratOBJ)[1:10]
-# Features(SeuratOBJ)
-# nrow(SeuratOBJ)
-
-# some validations, 'data' slot should exists if NormalizedData was ran
-# Layers(SeuratOBJ)
-# max(SeuratOBJ[["RNA"]]$counts) #1255
-# max(SeuratOBJ[["RNA"]]$data) #8.2943
-
+#print(seurat_lst)
+lapply(seurat_lst, function(x) unique(x[[]]$orig.ident))
+#lapply(seurat_lst, function(x) max(x[["RNA"]]$counts))
+#lapply(seurat_lst, function(x) {colnames(x[[]])})
+#lapply(seurat_lst, function(x) {head(x, n=3)})
+#lapply(seurat_lst, function(x) max(x[["RNA"]]$counts))
 
 message('\nMerging ', length(seurat_lst), ' Seurat objects: ', sapply(seurat_name_lst, function(i) paste0(i, ', ')) )
-
-
+#merged_object <- Merge_Seurat_List(list_seurat = seurat_lst)
 
 ## Merge the Seurat objects contained in the list according with the `count type`
 ## NOTE: By default, merge() will combine the Seurat objects based on the raw count matrices, erasing any previously normalized and scaled data matrices. If you want to merge the normalized data matrices as well as the raw count matrices, simply pass merge.data = TRUE. This should be done if the same normalization approach was applied to all objects.
@@ -115,7 +107,7 @@ if (length(seurat_lst) > 1) {
   SeuratOBJ.combined <- merge(SeuratOBJ, y = c(SeuratOBJx), 
                               add.cell.ids = c(seurat_name_lst), 
                               project = "Habenula",
-                              merge.data = TRUE)     #  merge the normalized and raw count 
+                              merge.data = FALSE)     #  merge the normalized and raw count 
   ##pbmc.big <- merge(pbmc3k, y = c(pbmc4k, pbmc8k), add.cell.ids = c("3K", "4K", "8K"), project = "PBMC15K")
   
 } else {
@@ -125,10 +117,7 @@ if (length(seurat_lst) > 1) {
 
 
 print(SeuratOBJ.combined)
-#lapply(seurat_lst, function(x) {colnames(x[[]])})
-#lapply(seurat_lst, function(x) {head(x, n=3)})
-#lapply(seurat_lst, function(x) max(x[["RNA"]]$counts))
-#AverageExpression(SeuratOBJ, group.by = "orig.ident", features = 'ATP6AP1')
+unique(SeuratOBJ.combined@meta.data$orig.ident)
 
 message('\nMerged completed!', split(table(SeuratOBJ.combined$orig.ident), ','))
 
