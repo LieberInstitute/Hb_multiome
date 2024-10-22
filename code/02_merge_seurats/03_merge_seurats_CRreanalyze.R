@@ -26,10 +26,6 @@ if (!dir.exists(processedDir_out)) { dir.create(processedDir_out) }
 
 ########################    Initials ########################  
 
-## Counts for GEX assay available in Seurat: raw and normalized data
-##        count_mtx_type_label <- 'data_counts'      
-##        count_mtx_type_label <- 'norm_counts' 
-
 args = commandArgs(trailingOnly=TRUE)
 ## read count mtx type:
 ##      all_type_mtx=(data_counts norm_counts)
@@ -83,20 +79,9 @@ for (rds_path in all_rds) {
   
 }
 
-# print(seurat_lst)
-# # testing
-# Cells(SeuratOBJ)[1:10]
-# Features(SeuratOBJ)
-# nrow(SeuratOBJ)
-
-# some validations, 'data' slot should exists if NormalizedData was ran
-# Layers(SeuratOBJ)
-# max(SeuratOBJ[["RNA"]]$counts) #1255
-# max(SeuratOBJ[["RNA"]]$data) #8.2943
-
+print(seurat_lst)
 
 message('\nMerging ', length(seurat_lst), ' Seurat objects: ', sapply(seurat_name_lst, function(i) paste0(i, ', ')) )
-
 
 
 ## Merge the Seurat objects contained in the list according with the `count type`
