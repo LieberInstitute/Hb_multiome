@@ -9,7 +9,7 @@
 ## OUPUT:
 ##      Seurat objects with the complement barcodes resulted 
 ##
-## Note: Need 80 GB mem for 100K cells
+## Note: Need 150GB MEM for 100K cells
 ##
 ## Authors. CSC 
 ## Date. Oct 23rd 2024
@@ -84,6 +84,8 @@ df_sampleIDs_Seurat <- data.frame(orig.ident=sample_IDs, cell_prefix=cell_prefix
 df_sampleIDs_Seurat <- left_join(df_sampleIDs_Seurat, df_sampleIDs_CSV, by="cell_prefix")
 
 ## Get some stats for validation before remove cells
+message("Initial number of cells: ", sum(table(SeuratOBJ$orig.ident)))
+
 print(table(SeuratOBJ$orig.ident))
 # 10C_Hb_KDM 11C_Hb_KDM 12C_Hb_KDM  3C_Hb_KDM  4C_Hb_KDM  5C_Hb_KDM  6C_Hb_KDM 
 # 12303      14591       5616       6275       7770       3775       8852 
@@ -100,7 +102,7 @@ message("Starting process to remove cross-barcodes from Cell Ranger-count Seurat
 
 #head(SeuratOBJ@active.ident)
 #SeuratOBJ@meta.data[SeuratOBJ@meta.data$orig.ident==df_sampleIDs_Seurat$orig.ident[4],]
-
+all_bc_to_remove <- c()
 for (r in 1:nrow(df_sampleIDs_Seurat)) {
   message("\nSample: ", basename(df_sampleIDs_Seurat$path[r]))
   ## read CSV with cells to remove and format them according with corresponding Seurat `cell-prefix` format
@@ -108,24 +110,34 @@ for (r in 1:nrow(df_sampleIDs_Seurat)) {
   barcodes_to_remove <- unlist(barcodes_to_remove)
   barcodes_to_remove <- paste0(df_sampleIDs_Seurat$cell_prefix[r], barcodes_to_remove)
   message("Cells to remove: ", length(barcodes_to_remove))
-  ## remove cells from integrated seurat
-  SeuratObj_subset <- subset(SeuratOBJ, cells = barcodes_to_remove, invert = TRUE)
+  all_bc_to_remove <- append(all_bc_to_remove, barcodes_to_remove) 
   }
 
-#head(barcodes_to_remove)
-#SeuratObj_subset <- subset(SeuratOBJ, cells = barcodes_to_remove, invert = TRUE)
-
+## remove cells from integrated seurat
+message("Barcodes to remove: ", length(all_bc_to_remove))
+SeuratObj_subset <- subset(SeuratOBJ, cells = all_bc_to_remove, invert = TRUE)
 message("Resulting subset excluding cross-barcodes from Cell Ranger-count Seurat object: `", Seurat_base_name, "`")
-
 print(table(SeuratObj_subset$orig.ident))
 table(Idents(SeuratObj_subset))
 
+message("Final number of cells: ", sum(table(SeuratObj_subset$orig.ident)))
+
 ## Save new Seurat-subset 
 rds_name <- paste0(Seurat_base_name,'_', '_cellRanger_count_subset.rds')
-rds_name <- here(processedDir, rds_name)
-saveRDS(SeuratOBJ, file = rds_name)
+rds_name <- here(outputDir, rds_name)
+saveRDS(SeuratObj_subset, file = rds_name)
 
 # SeuratOBJ[ (SeuratOBJ@meta.data$orig.ident == "3C_Hb_KDM") == TRUE) ]
 # Idents(SeuratOBJ)
 # length(Cells(SeuratOBJ))
+
+message("Done!")
+
+
+# ## slurm script reproducibility
+# library("slurmjobs")
+# job_single(
+#   name = "03_Hb_celltypes_from_seurat_CRcount_complement", memory = "100G", cores = 4, create_shell = TRUE
+# )
+
 
