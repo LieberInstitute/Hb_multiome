@@ -81,7 +81,7 @@ if (length(list.files(inputDir, pattern = Seurat_base_name)==1)) {
   message("Input seurat object missed!")
   stop()
 }
-# seurat.norm_counts_Harmony_All_subset.rds
+# Ex. seurat.norm_counts_Harmony_All_subset.rds
 
 message("Starting cell-type identification for ", Seurat_base_name)
 
@@ -125,7 +125,7 @@ write.csv(df_mdT, here(cvsDir, cvs_name))
 clusters <- unique(df_mdT$seurat_clusters)
 clusters <- as.integer(levels(clusters)[as.integer(clusters)])
 
-message('Identifing cell types for ', length(clusters),' clusters from the ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
+message('Identifing cell types for ', length(clusters),' Seurat clusters from ', Seurat_base_name)
 
 ## Read DGE cvs file for all clusters for the given sample
 #DGE_cvs_name <- paste0(Seurat_base_name, '_',Seurat_reduction, '_Allmarkers_min', minCells, 'cells.csv')
@@ -141,22 +141,19 @@ message('Parsing ', length(markers.custom), ' gene-markers lists on ', length(cl
 
 ####### Parse the 20 Top DGE genes from GEX cluster against the marker genes list provided ####### 
 
-## Build df to save cell-types that match with the gene-marker-list
-#all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("Feature.ID", "Feature.Name", "Cluster.Adjusted.p.value", "cell-type", "cluster"))
 names(markers.custom) #[1] "literature_base" "data_driven" 
-# idx_lst <- 1 
+idx_lst <- 0 
 
-for (idx_lst in seq_along(markers.custom)) {
-#for (markers.lst in markers.custom) {
+for (markers.lst in markers.custom) {
   # for testing: markers.lst <- markers.custom$literature_base
   # for testing: markers.lst <- markers.custom$data_driven
   
+  ## Build df to save cell-types that match with the gene-marker-list
   all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("Feature.ID", "Feature.Name", "Cluster.Adjusted.p.value", "cell-type", "cluster"))
   
-  #idx_lst <- idx_lst+1
-  markers.lst <- markers.custom[idx_lst]
+  idx_lst <- idx_lst+1
   prefix_name <- paste0(names(markers.custom[idx_lst]), '_top', n_slice)
-  print(paste("Searching markers for : ", names(markers.lst)))
+  print(paste("Searching markers for ", names(markers.lst)))
   
   ## Read x cluster and extract the top 10 genes
   for (clust in clusters) {
@@ -189,8 +186,8 @@ for (idx_lst in seq_along(markers.custom)) {
   }
   
   if (cellranger_pipe=="CR_crossBarcodes") {
-    habenula_markers_cvs_name <- here(cvsDir, paste0(Seurat_base_name, '_cellTypes_', prefix_name, "_subset.csv"))
-  } else {
+    habenula_markers_cvs_name <- here(cvsDir, paste0(Seurat_base_name, '_cellTypes_', prefix_name, ".csv"))
+  } else { # complement subset
     habenula_markers_cvs_name <- here(cvsDir, paste0(Seurat_base_name, '_cellTypes_', prefix_name, ".csv"))
   }
   print(paste("Printing results in ", habenula_markers_cvs_name))
@@ -206,16 +203,12 @@ message(' Cell type identification in clusters done!')
 
 ## slurm script reproducibility
 # library("slurmjobs")
-# job_single(
-#   name = "01_Hb_celltypes_from_seurat_reanalyze", memory = "50G", cores = 2, create_shell = TRUE
+# slurmjobs::job_loop(
+#   loops = list(cellranger_lst = c("CR_crossBarcodes", "CR_complementBarcodes")),
+#   name = "01_Hb_celltypes_from_seurat_CRcount_v2",
+#   cores = 2,
+#   create_shell = TRUE
 # )
-library("slurmjobs")
-slurmjobs::job_loop(
-  loops = list(cellranger_lst = c("CR_crossBarcodes", "CR_complementBarcodes")),
-  name = "01_Hb_celltypes_from_seurat_CRcount_v2",
-  cores = 2,
-  create_shell = TRUE
-)
 
 
 library("sessioninfo")
