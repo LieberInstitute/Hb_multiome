@@ -1,5 +1,5 @@
 ########################################################################
-## Obtains from the Cell Ranger-count side the complementary barcodes after the intersection between `Cell Ranger-count` and `Cell Ranger-atac`
+## Obtains from the Cell Ranger-count side the complement barcodes after the intersection between `Cell Ranger-count` and `Cell Ranger-atac`
 ##      for further analysis (cell-type identification and perceptual values of neu, hb and thal)
 ##
 ## INPUT:
@@ -27,6 +27,7 @@ here::here()
 
 inputDir <- here("processed-data", "03_pseudobulking", "cellranger_count")
 outputDir <- here("processed-data", "03_pseudobulking", "cellranger_count") # change dir if necessary
+outputDir_csv <- here("processed-data", "03_pseudobulking", "cvs_files_markers") 
 cross_barcodes_Dir <- here("processed-data", "100_cell_match_cellranger_gex_atac", "reanalize_files")
 
 ## Read the CSV files with the cross-barcodes to be removed from each sample
@@ -124,8 +125,20 @@ table(Idents(SeuratObj_subset))
 
 message("Final number of cells: ", sum(table(SeuratObj_subset$orig.ident)))
 
+## Find DEG in the subset Seurat for ALL clusters (not pseudo-bulked data)
+all.markers <- FindAllMarkers(object = SeuratObj_subset)
+#head(all.markers, n=3)
+
+Seurat_base_name <- paste0(Seurat_base_name, "_subset")
+
+cvs_file <- paste0(Seurat_base_name, '_Allmarkers.csv')
+cvs_file <- here(outputDir_csv, cvs_file)
+write.csv(all.markers, cvs_file)
+
+message(" FindAllMarkers in subset-seruat done!")
+
 ## Save new Seurat-subset 
-rds_name <- paste0(Seurat_base_name, '_subset.rds')
+rds_name <- paste0(Seurat_base_name, ".rds")
 rds_name <- here(outputDir, rds_name)
 saveRDS(SeuratObj_subset, file = rds_name) #seurat.norm_counts_Harmony_All_cellRanger_count_subset.rds
 
@@ -133,6 +146,7 @@ saveRDS(SeuratObj_subset, file = rds_name) #seurat.norm_counts_Harmony_All_cellR
 # Idents(SeuratOBJ)
 # length(Cells(SeuratOBJ))
 
+message(" Saved Seurat subset data")
 message("Done!")
 
 
