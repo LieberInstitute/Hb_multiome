@@ -21,11 +21,26 @@ library(here)
 
 here::here()
 
-# Check/create directories
-inputDir <- here("processed-data", "03_pseudobulking", "cellranger_count")
-inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellranger_count", "cvs_files_markers")
-processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count")
-cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count", "cvs_files_markers")
+## read input arguments
+args = commandArgs(trailingOnly=TRUE)
+cellranger_pipe <- args[2]
+## For testing:
+# cellranger_pipe <- "CR_complementBarcodes"
+# cellranger_pipe <- "CR_crossBarcodes"
+
+## input validations
+if (length(cellranger_pipe)) {
+  message("CellRanger input: ", cellranger_pipe)
+  # assign directories
+  inputDir <- here("processed-data", "03_pseudobulking", "cellranger_count")
+  inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellranger_count", "cvs_files_markers")
+  processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count")
+  cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count", "cvs_files_markers")
+} else {
+  message("Input argument missed")
+  message("CellRanger input: ", cellranger_pipe)
+  stop()
+}
 
 ## Check directories
 if (!dir.exists(processedDir)) {dir.create(processedDir)}
@@ -39,30 +54,34 @@ get_seurat <- function(name) { sobj <- readRDS(name)}
 
 #############################           Initials        ################################
 
-## Set count-mtx type and integration model (CCA or Harmony)
-
-#count_mtx_type <- 'data_counts'
+## We are only using the norm count with Harmony
 count_mtx_type <- 'norm_counts' 
-#Seurat_reduction <- 'CCA'
 Seurat_reduction <- 'Harmony' 
-## Minimum cells by cluster
-minCells <- 1
+minCells <- 1 ### Minimum cells by cluster 
 
 if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts'}
 
-## Build Seurat object name. `subset` suffix means clusters with fewer cells than `minCells` had been filtered. 
+DEG_file_name <- paste0(Seurat_base_name, '_Harmony_All')
+
+## Build Seurat object base name
 if (Seurat_reduction=='CCA') {
-  Seurat_base_name <- paste0(Seurat_base_name, '_CCA_All')
+  #Seurat_base_name <- paste0(Seurat_base_name, '_CCA_All')
 } else {
-  Seurat_base_name <- paste0(Seurat_base_name, '_Harmony_All')
+  if (cellranger_pipe=="CR_crossBarcodes") {
+    Seurat_base_name <- paste0(Seurat_base_name, '_Harmony_All')
+  } else { ##CR_complementBarcodes
+    Seurat_base_name <- paste0(Seurat_base_name, '_Harmony_All_subset')
+  }
 }
+
 ## Validate seurat exists
 if (length(list.files(inputDir, pattern = Seurat_base_name)==1)) {
-  message("Processing ", Seurat_base_name)
+  message("Processing: ", Seurat_base_name)
 } else {
   message("Input seurat object missed!")
   stop()
 }
+# seurat.norm_counts_Harmony_All_subset.rds
 
 message("Starting cell-type identification for ", Seurat_base_name)
 
@@ -70,7 +89,6 @@ message("Starting cell-type identification for ", Seurat_base_name)
 SeuratOBJ <- get_seurat(here(inputDir, paste0(Seurat_base_name, ".rds")))
 ## verification of the integration
 print(table(SeuratOBJ$orig.ident))
-#SeuratOBJ@reductions
 
 ## Select gene markers lists. We have 3.
 markers.custom = list()
@@ -82,13 +100,6 @@ markers.custom[["literature_base"]] <- get_erik_and_Hb_markers_genes()
 ## sub-population list
 #names(markers.custom$literature_base)
 #names(markers.custom)
-
-## Check unique marker genes
-# x <- markers.custom[["literature_base"]]
-# unlist(x)
-# table(unname(unlist(x)))
-# duplicated(unname(unlist(x)))
-# summary(table(unname(unlist(x))))
 
 prefix_name <- 'all_gm'                                    # prefix to save matched markers found in the clusters
 
@@ -118,7 +129,7 @@ message('Identifing cell types for ', length(clusters),' clusters from the ', Se
 
 ## Read DGE cvs file for all clusters for the given sample
 #DGE_cvs_name <- paste0(Seurat_base_name, '_',Seurat_reduction, '_Allmarkers_min', minCells, 'cells.csv')
-DGE_cvs_name <- here(inputDir_cvs, paste0(Seurat_base_name, "markers.csv")) 
+DGE_cvs_name <- here(inputDir_cvs, paste0(DEG_file_name, "markers.csv")) 
 seurat_clust <- as.data.frame(read.csv(DGE_cvs_name, header = TRUE))
 head(seurat_clust, n=3)
 # Seurat output from FindAllmarkers()
@@ -128,20 +139,22 @@ head(seurat_clust, n=3)
 message('Parsing ', length(markers.custom), ' gene-markers lists on ', length(clusters) ,' clusters in ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
 
 
-####### Parse the 10/20 DGE genes from GEX cluster against the marker genes list provided ####### 
+####### Parse the 20 Top DGE genes from GEX cluster against the marker genes list provided ####### 
 
 ## Build df to save cell-types that match with the gene-marker-list
 #all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("Feature.ID", "Feature.Name", "Cluster.Adjusted.p.value", "cell-type", "cluster"))
 names(markers.custom) #[1] "literature_base" "data_driven" 
-idx_lst <- 0 
+# idx_lst <- 1 
 
-for (markers.lst in markers.custom) {
+for (idx_lst in seq_along(markers.custom)) {
+#for (markers.lst in markers.custom) {
   # for testing: markers.lst <- markers.custom$literature_base
   # for testing: markers.lst <- markers.custom$data_driven
   
   all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("Feature.ID", "Feature.Name", "Cluster.Adjusted.p.value", "cell-type", "cluster"))
   
-  idx_lst <- idx_lst+1
+  #idx_lst <- idx_lst+1
+  markers.lst <- markers.custom[idx_lst]
   prefix_name <- paste0(names(markers.custom[idx_lst]), '_top', n_slice)
   print(paste("Searching markers for : ", names(markers.lst)))
   
@@ -175,15 +188,17 @@ for (markers.lst in markers.custom) {
     
   }
   
-  habenula_markers_cvs_name <- here(cvsDir, 
-                                    paste0(Seurat_base_name, '_cellTypes_', prefix_name, ".csv"))
+  if (cellranger_pipe=="CR_crossBarcodes") {
+    habenula_markers_cvs_name <- here(cvsDir, paste0(Seurat_base_name, '_cellTypes_', prefix_name, "_subset.csv"))
+  } else {
+    habenula_markers_cvs_name <- here(cvsDir, paste0(Seurat_base_name, '_cellTypes_', prefix_name, ".csv"))
+  }
   print(paste("Printing results in ", habenula_markers_cvs_name))
   write.csv(all_gene_match, habenula_markers_cvs_name, row.names=FALSE)
-  #rm("gene_match", "all_gene_match") 
 
 }
 
-# head(all_gene_match, n=3)
+head(all_gene_match, n=3)
 # dim(all_gene_match)
 
 message(' Cell type identification in clusters done!')
@@ -194,7 +209,13 @@ message(' Cell type identification in clusters done!')
 # job_single(
 #   name = "01_Hb_celltypes_from_seurat_reanalyze", memory = "50G", cores = 2, create_shell = TRUE
 # )
-
+library("slurmjobs")
+slurmjobs::job_loop(
+  loops = list(cellranger_lst = c("CR_crossBarcodes", "CR_complementBarcodes")),
+  name = "01_Hb_celltypes_from_seurat_CRcount_v2",
+  cores = 2,
+  create_shell = TRUE
+)
 
 
 library("sessioninfo")
