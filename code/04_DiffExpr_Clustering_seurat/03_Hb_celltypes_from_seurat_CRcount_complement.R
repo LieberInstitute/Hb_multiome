@@ -9,7 +9,7 @@
 ## OUPUT:
 ##      Seurat objects with the complement barcodes resulted 
 ##
-## Note: Need 150GB MEM for 100K cells
+## Note: Need 50 MEM for 100K cells
 ##
 ## Authors. CSC 
 ## Date. Oct 23rd 2024
@@ -26,7 +26,7 @@ here::here()
 # Check/create directories
 
 inputDir <- here("processed-data", "03_pseudobulking", "cellranger_count")
-outputDir <- here("processed-data", "03_pseudobulking", "cellranger_count")
+outputDir <- here("processed-data", "03_pseudobulking", "cellranger_count") # change dir if necessary
 cross_barcodes_Dir <- here("processed-data", "100_cell_match_cellranger_gex_atac", "reanalize_files")
 
 ## Read the CSV files with the cross-barcodes to be removed from each sample
@@ -116,16 +116,18 @@ for (r in 1:nrow(df_sampleIDs_Seurat)) {
 ## remove cells from integrated seurat
 message("Barcodes to remove: ", length(all_bc_to_remove))
 SeuratObj_subset <- subset(SeuratOBJ, cells = all_bc_to_remove, invert = TRUE)
+
 message("Resulting subset excluding cross-barcodes from Cell Ranger-count Seurat object: `", Seurat_base_name, "`")
+
 print(table(SeuratObj_subset$orig.ident))
 table(Idents(SeuratObj_subset))
 
 message("Final number of cells: ", sum(table(SeuratObj_subset$orig.ident)))
 
 ## Save new Seurat-subset 
-rds_name <- paste0(Seurat_base_name,'_', '_cellRanger_count_subset.rds')
+rds_name <- paste0(Seurat_base_name, '_subset.rds')
 rds_name <- here(outputDir, rds_name)
-saveRDS(SeuratObj_subset, file = rds_name)
+saveRDS(SeuratObj_subset, file = rds_name) #seurat.norm_counts_Harmony_All_cellRanger_count_subset.rds
 
 # SeuratOBJ[ (SeuratOBJ@meta.data$orig.ident == "3C_Hb_KDM") == TRUE) ]
 # Idents(SeuratOBJ)
@@ -137,7 +139,7 @@ message("Done!")
 # ## slurm script reproducibility
 # library("slurmjobs")
 # job_single(
-#   name = "03_Hb_celltypes_from_seurat_CRcount_complement", memory = "100G", cores = 4, create_shell = TRUE
+#   name = "03_Hb_celltypes_from_seurat_CRcount_complement", memory = "50G", cores = 4, create_shell = TRUE
 # )
 
 
