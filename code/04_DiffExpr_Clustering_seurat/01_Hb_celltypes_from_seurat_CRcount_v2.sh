@@ -1,17 +1,20 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=20G
-#SBATCH --job-name=01_Hb_celltypes_from_seurat_CRcount
+#SBATCH --mem=50G
+#SBATCH --job-name=01_Hb_celltypes_from_seurat_CRcount_v2
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
+#SBATCH --array=1-2%20
+
+## Define loops and appropriately subset each variable for the array task ID
+all_cellranger_lst=(CR_crossBarcodes CR_complementBarcodes)
+cellranger_lst=${all_cellranger_lst[$(( $SLURM_ARRAY_TASK_ID / 1 % 2 ))]}
 
 ## Explicitly pipe script output to a log
-log_path=logs/01_Hb_celltypes_from_seurat_CRcount_${SLURM_JOB_ID}.txt
-
-echo " "
+log_path=logs/01_Hb_celltypes_from_seurat_CRcount_v2_${cellranger_lst}_${SLURM_ARRAY_TASK_ID}.txt
 
 {
 set -e
@@ -33,13 +36,13 @@ module load conda_R/4.3.x
 module list
 
 ## Edit with your job command
-Rscript 01_Hb_celltypes_from_seurat_CRcount.R
+Rscript 01_Hb_celltypes_from_seurat_CRcount.R --cellranger_lst ${cellranger_lst}
 
 echo "**** Job ends ****"
 date
 
 } > $log_path 2>&1
 
-
 ## This script was made using slurmjobs version 1.2.1
 ## available from http://research.libd.org/slurmjobs/
+
