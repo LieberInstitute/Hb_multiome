@@ -1,0 +1,4 @@
+"","seurat_clusters","S03_Hb_r","S04_Hb_r","S05_Hb_r","S06_Hb_r","S07_Hb_r","S08_Hb_r","S09_Hb_r","S10_Hb_r","S11_Hb_r","S12_Hb_r","total_clust.x","Perc.Cluster","cell.types"
+"1","8",19,12,30,53,21,7,141,215,23,19,540,2.54392990059829,"Hb neuron specific (1) Thalamus broad (1)"
+"2","26",25,1,1,31,9,4,26,125,5,1,228,1.07410373580817,"inhibitory_neuron (2) Thalamus/MDm (1)"
+"3","29",0,0,0,0,0,0,0,30,0,0,30,0.141329438922127,"inhibitory_neuron (2) Thalamus/MDm (1)"
