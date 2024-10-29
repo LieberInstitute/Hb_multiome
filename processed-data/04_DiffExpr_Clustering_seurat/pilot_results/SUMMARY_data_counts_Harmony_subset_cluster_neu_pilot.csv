@@ -1,0 +1,10 @@
+"","seurat_clusters","S1_Hb_KDM","S2_Hb_KDM","total_clust","Perc.Cluster","cell.types"
+"1","6",665,165,830,4.62498606931907,"LHB neuron specific,microglia,microglia"
+"2","9",341,260,601,3.34893569597682,"neuron,neuron"
+"3","10",166,373,539,3.00345480887106,"inhibitory_neuron,inhibitory_neuron"
+"4","12",133,47,180,1.00300902708124,"LHb_putative,LHb_putative"
+"5","14",29,73,102,0.568371782012705,"Hb neuron specific,Hb neuron specific,MHb_putative,MHb_putative,MHb_putative,MHb_putative,MHb_putative,MHb_putative,MHb_putative,MHb_putative,MHb_putative,MHb_putative"
+"6","15",13,86,99,0.551654964894684,"MHb_putative"
+"7","Perc.Sample",16.57,10.23,13.1,0,NA
+"8","Total.Cells.Sample",1347,1004,2351,13.1004123481556,NA
+"9","Total.Cells.ALL",8131,9815,17946,100,NA
