@@ -1,134 +1,226 @@
 ###############################################################################
 ##
 ##  Calculate and summarize percentage statistics of pre-selected cell types in different categories
-## 
+##
 ###############################################################################
 
-library(tidyverse)
-library(scales)
-library(here)
+library("stringr")
+library("tidyverse")
+library("janitor")
+library("scales")
+library("here")
+
+## read input arguments
+args = commandArgs(trailingOnly=TRUE)
+cellranger_pipe <- args[2]
+marker_lst <- args[4]
+## We are only using the norm count with Harmony
+count_mtx_type <- 'norm_counts'
+Seurat_reduction <- 'Harmony'
 
 options(digits=2)
 
-## Set count-mtx type and integration model (CCA or Harmony)
+## Selected manually the clusters based on the cell-type identification gene-marker lists
+## args opt for testing:
+# marker_lst="literature_base"
+# marker_lst="data_driven"
+# cellranger_pipe = "CR_crossBarcodes"
+# cellranger_pipe = "CR_complementBarcodes"
+# cellranger_pipe = "CR_arc_reanalyze"
 
-cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat")
-
-#count_mtx_type <- 'data_counts'
-count_mtx_type <- 'norm_counts' 
-#Seurat_reduction <- 'CCA'
-Seurat_reduction <- 'Harmony'
-
-if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts' }
-## Compose Seurat object name processed before
-if (Seurat_reduction=='CCA') {
-  suffix <- '_CCA_subset_cluster'
-  suffix_clust_names <- '_CCA_subset_cell_types_all_gm20.csv'
-  input_csv <- here(cvsDir, "cvs_files_markers", paste0(Seurat_base_name, suffix))
+## input validations
+if (length(cellranger_pipe)==0 || length(marker_lst)==0) {
+  message("Cellranger pipeline or input marker list missed or not valid!")
+  stop()
 } else {
-  suffix <- '_Harmony_subset_cluster'
-  input_csv <- here(cvsDir, "cvs_files_markers", paste0(Seurat_base_name, suffix))
-  suffix_clust_names <- '_Harmony_subset_cell_types_all_gm20.csv'
+  message("CellRanger input: ", cellranger_pipe)
+  message("Marker list input: ", (marker_lst))
 }
+
+## CellRanger-count pipelines
+if (cellranger_pipe=="CR_crossBarcodes" || cellranger_pipe=="CR_complementBarcodes") {
+
+  ## path to Dir(s)
+  if (cellranger_pipe=="CR_crossBarcodes") {
+    cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count")
+
+    suffix <- '_Harmony_All_cluster'
+
+  } else if (cellranger_pipe=="CR_complementBarcodes") {
+    cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count_complement")
+    suffix <- '_Harmony_All_subset_cluster'
+  }
+
+  ## Manually pre-selected clusters for both CellRanger-count strategies
+  if (marker_lst=="literature_base") {
+    neu <- c(0,1,2,5,7,8,10,13,14,17,25,26,29)
+    hb <- c(0,2,5,7,10,13,14)
+    thal <- c(8,26,29)
+  } else if (marker_lst=="data_driven") {
+    neu <- c(0,1,2,5,7,8,9,10,13,14,15,16,26,27,28,29)
+    hb <- c(2,5,7,9,10,13,14,16,27)
+    thal <- c(0,1,8,15,26,28,29)
+  }
+
+} else if (cellranger_pipe=="CR_arc_reanalyze") {
+
+  ## path to Dir(s)
+  cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
+  suffix <- '_Harmony_All_cluster'
+  ## Manually pre-selected clusters for CR-arc reanalyze
+  if (marker_lst=="literature_base") {
+    neu <- c(0,3,4,5,8,9,17,22,24)
+    hb <- c(3,4,5,9)
+    thal <- c(0,8)
+  } else if (marker_lst=="data_driven") {
+    neu <- c(0,1,2,3,4,5,8,9,10,11,14,16,21,24,26)
+    hb <- c(2,4,5,9,10,14,16)
+    thal <- c(0,1,3,8,11,21,24)
+  }
+
+}
+
+
+## Set count-mtx type and integration model (CCA or Harmony)
+if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts' }
+
+## Build CSV file with DEG from corresponding Seurat processed before
+input_csv <- here(cvsDir, "cvs_files_markers", paste0(Seurat_base_name, suffix))
+if (marker_lst=="literature_base") {
+  suffix_clust_names <- '_Harmony_All_cellTypes_literature_base_top20.csv'
+} else if (marker_lst=="data_driven") {
+  suffix_clust_names <- '_Harmony_All_cellTypes_data_driven_top20.csv'
+}
+
 input_csv <- paste0(input_csv, "_info.csv")
-basename(input_csv)
+# ~/processed-data/04_DiffExpr_Clustering_seurat/cellrangerARC_reanalyze/cvs_files_markers
+message("Calculating percentage of neurons, habenula and thalamus cell types")
+message("Active gene marker list ref: ", marker_lst)
 
-## Load clusters by sample from processed_data directory
-# for reproduce in S1 ans S2: 
+###### Load clusters by sample from processed_data directory ######
+
+## Format sample ID names and reorder
 df_mdT <- read.csv(input_csv, row.names = 1)
-head(df_mdT)
+df_mdT$orig.ident <- sprintf("S%02d_Hb_r", parse_number(df_mdT$orig.ident))
+ref_sort <- sort(unique(df_mdT$orig.ident))
+df_mdT <- df_mdT[order(sapply(df_mdT$orig.ident, function(x) which(x == ref_sort))), ]
+#print(unique(df_mdT$orig.ident))
 
-### Preparing list of clusters to summarize 
-allT <- c(unique(df_mdT[["seurat_clusters"]]))
-hb <- c(1, 7, 8, 13, 18, 19) ## Habenula clusters
-neu <- c(1, 5, 6, 7, 8, 11, 13, 18, 19) ## Neuron clusters
-thal <- c(2, 3, 4, 5, 8, 11)
-lst_clust <- list(hb = hb, neu = neu, allTypes = allT, Thal = thal)
+### Preparing list of clusters to summarize
+## Add all cell-types to the end of the list of lists
+allT <- c(sort(unique(df_mdT[["seurat_clusters"]])))
+lst_clust <- list(hb = hb, neu = neu, thal= thal, allTypes = allT)
+message("Group of clusters prepared: ")
+#lst_clust
 names(lst_clust)
 
-i<-1
 
-for (x in lst_clust) {
-  ## for testing x <- c(1, 5, 6, 7, 8, 11, 13, 18, 19) ## Neuron clusters
-  clust <- x
-  clust_types <- names(lst_clust[i])
-  print(paste(" Summarizing ", clust_types," clusters. "))
-  message(length(clust), " Clusters to summarize")
-  print(clust)
-  i<-i+1
-  
-  ## Filtering clusters of interest
-  hb_clusters <- df_mdT |>
-    dplyr::arrange(seurat_clusters) |> 
+## Parse total cells by cluster and calculate percentages
+## for testing: i <- 1
+for (i in seq_along(lst_clust)) {
+
+  clust <- lst_clust[[i]]
+  clust_types <- names(lst_clust)[[i]]
+  message(length(clust), " clusters to summarize in ", clust_types)
+
+  ## Filtering clusters of interest in the given samples
+  grp_clusters <- df_mdT |>
     dplyr::filter(seurat_clusters %in% clust) |>
     pivot_wider(names_from = orig.ident, values_from = N) |>  # make wider format the table
     left_join(df_mdT |>
-                group_by(seurat_clusters) |> 
+                group_by(seurat_clusters) |>
                 summarise(total_clust = sum(N))) |> # sum total cells by cluster
-    mutate(seurat_clusters = as.character(seurat_clusters)) |>
-    bind_rows(df_mdT |>   # bid row with total cells by sample
-                dplyr::filter(seurat_clusters %in% clust) |>
-                group_by(orig.ident) |> 
-                summarise(total_sample = sum(N)) |>
-                mutate(seurat_clusters = "Total.Cells.Sample") |>
-                pivot_wider(id_cols = seurat_clusters, names_from = orig.ident, values_from = total_sample) |>
-                mutate(total_clust = rowSums(across(where(is.numeric))))) # sum total cells by sample
-  
-  hb_clusters <- hb_clusters |> rename(S4_Hb_KDM = `4S_Hb_KDM`, S5_Hb_KDM = `5S_Hb_KDM`, S6_Hb_KDM = `6S_Hb_KDM`)
-  #print(hb_clusters)
+    mutate(seurat_clusters = as.character(seurat_clusters))
+  ## replace NAs
+  grp_clusters[is.na(grp_clusters)] <- 0
 
-  cvs_name <- paste0('SUMMARY_', count_mtx_type, suffix, "_", clust_types ,".csv")
-  cvs_file <- here(cvsDir, cvs_name)
-  write.csv(hb_clusters, cvs_file)  
+  ########  Calculate perceptual values by CLUSTER ########
 
-  
-  ######## Load summary csv rpt in wider format
-  df_summary_Hb <- read.csv(cvs_file, row.names = 1, check.names=FALSE)
+  totals_grp_clusters <- grp_clusters
 
-  #### Calculate perceptual values by cluster and sample 
-  
-  ## Extract total cells by specific cell-types by sample
-  total_cells_by_Hb_sample <- tail(df_summary_Hb, 1) |>
-    pivot_longer(!seurat_clusters, names_to = "sample", values_to = "countsHb") |>
-    select(c(sample, countsHb))
-  
-  ## Calculate Total cells by sample
-  total_cellsS <- df_mdT |>   
-    group_by(orig.ident) |> 
-    summarise(total_sample = sum(N)) |>
-    mutate(seurat_clusters = "Total.Cells.ALL") |> #"Total_sample"
-    pivot_wider(id_cols = seurat_clusters, names_from = orig.ident, values_from = total_sample) |>
-    mutate(total_clust = rowSums(across(where(is.numeric)))) |> 
-    rename(S4_Hb_KDM = `4S_Hb_KDM`, S5_Hb_KDM = `5S_Hb_KDM`, S6_Hb_KDM = `6S_Hb_KDM`)
-  df_summary_Hb <- bind_rows(df_summary_Hb, total_cellsS)
-  
-  ## Calculate percent cells by sample
+  ## Add total cells by cluster in the group
+  totals_grp_clusters <- totals_grp_clusters |> select(all_of(c(ref_sort,"seurat_clusters"))) |> pivot_longer(!seurat_clusters)
+  totals_grp_clusters <- totals_grp_clusters |> group_by(seurat_clusters) |> summarise(total_clust = sum(value))
+
+  ## Add percent cells by cluster in the group
   total_cells <- sum(df_mdT$N)
-  df_summary_Hb <- df_summary_Hb |> rowwise() |> 
-    mutate(Perc.Cluster = sum(c(S4_Hb_KDM, S5_Hb_KDM, S6_Hb_KDM) * 100 / total_cells))
+  totals_grp_clusters <- totals_grp_clusters |> mutate(Perc.Cluster = totals_grp_clusters$total_clust * 100 / total_cells)
 
-  ## Extract total cells by sample
-  total_cells_by_sample <- total_cellsS |> 
-    pivot_longer(!seurat_clusters, names_to = "sample", values_to = "countsT") |>
-    select(c(countsT))
-  
-  df_tmp <- bind_cols(total_cells_by_Hb_sample, total_cells_by_sample) 
-  df_tmp <- df_tmp |> rowwise() |> mutate(Percentage_sample = round((countsHb*100 / countsT), digits = 2))
-  df_tmp <- df_tmp[c("sample", "Percentage_sample")] |> pivot_wider(names_from = sample, values_from = Percentage_sample)
-  df_tmp <- cbind(seurat_clusters = "Perc.Sample", df_tmp, "Perc.Cluster" = 0) 
-  df_summary_Hb <- bind_rows(df_summary_Hb, df_tmp)
-  
-  ## Load markers used to label clusters and collapse names in cluster cell.type description
-  # seurat.combined.data_counts_Harmony_cell_types_all_gm20.csv
+  ## Load cluster info and cell-types to collapse names in `cell.type` column (description)
   df_cluster_names <- read.csv(here(cvsDir, "cvs_files_markers", paste0(Seurat_base_name, suffix_clust_names)))
+  ## Note. Alternative can be used the re-run of DEG calculated in the complement Seurat from CR-count after removed the cross-barcodes
+  ##                  <<Directory: top20_subset>>
+  ##      Here I am using the DEG originally calculated in the CR-count harmnony data
+  ##      df_cluster_names <- read.csv(here(cvsDir, "cvs_files_markers", "top20_subset", paste0(Seurat_base_name, suffix_clust_names)))
   df_cluster_names <- df_cluster_names[c("cluster", "cell.type")] |>
     group_by(cluster) |> summarise(cell.types = paste(cell.type, collapse=",")) |>
     rename(seurat_clusters = cluster) |> dplyr::filter(seurat_clusters %in% clust)
-  df_summary_Hb <- merge(df_summary_Hb, df_cluster_names, by = "seurat_clusters", all.x = TRUE, sort = FALSE)
-  print(df_summary_Hb)
-  
-  write.csv(df_summary_Hb, cvs_file)
+
+  ## Update in nice-readable format the `cell.types` column with `IDs+counts by marker` by cluster
+  list_ct <- df_cluster_names[["cell.types"]]
+  nc <- list()
+  for (x in seq_along(list_ct)) {
+    ct_cluster <- list_ct[x]
+    x1 <- sapply(ct_cluster, function(x) strsplit(x, ","))
+    for (ct in x1) {
+      ids <- unique(ct)
+      num_rep <- table(ct)
+      col_new <- noquote(c(rbind(ids, paste0("(", num_rep, ")"))))
+    }
+    if (length(col_new)==2) {col_new <- paste0("***", col_new[1], col_new[2])}
+    nc <- append(nc, paste0(col_new, collapse = " "))
+  }
+  df_cluster_names$cell.types <- noquote(unlist(nc))
+
+  ## Save detail counts and percentages by grp of clusters
+  totals_grp_clusters <- merge(grp_clusters, totals_grp_clusters, by = "seurat_clusters", all.x = TRUE, sort = FALSE)
+  totals_grp_clusters <- merge(totals_grp_clusters, df_cluster_names, by = "seurat_clusters", all.x = TRUE, sort = FALSE)
+  totals_grp_clusters["total_clust.y"] <- list(NULL) ## Delete column
+
+  cvs_name <- paste0("DETAIL_", marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types ,"_v3.csv")
+  #write.csv(grp_clusters, here(cvsDir, cvs_name))
+  write.csv(totals_grp_clusters, here(cvsDir, "cvs_files_markers", cvs_name))
+
+
+  ########  Calculate perceptual values by SAMPLE ########
+
+  ## Add total cells by sample in the group
+  df_summary <- totals_grp_clusters |> select(all_of(ref_sort)) |> pivot_longer(cols = everything(), names_to = "sampleID") |>
+    group_by(sampleID) |> reframe(total_sample = sum(value))
+
+  ## Calculate `total cells` by sample
+  df_summary <- full_join(df_summary, (df_mdT |>
+    group_by(orig.ident) |> select(orig.ident, N) |>
+      summarise(total_sample = sum(N))), join_by(sampleID == orig.ident)) |>
+    mutate(Percentage.Sample = total_sample.x * 100 / total_sample.y)
+
+  df_summary <- rename(df_summary, all_of(c(Total.Cells.Sample = "total_sample.x", Total.Cells.ALL = "total_sample.y") ))
+  df_summary <- as.data.frame(t(df_summary)) |> row_to_names(1)
+
+  cvs_name <- paste0('SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types,"_v3.csv")
+  write.csv(df_summary, here(cvsDir, "cvs_files_markers", cvs_name), row.names=FALSE)
+
+  ## bind rows to the main table
+  df_summary <- data.frame(seurat_clusters = c("Total.Cells.Sample", "Total.Cells.ALL", "Percentage.Sample"), df_summary)
+  new_columns <- list(total_clust.x = NA, Perc.Cluster = NA, cell.types = NA)
+  df_summary <- df_summary |> mutate(!!!new_columns)
+  df_summary <- rbind(totals_grp_clusters, df_summary)
+
+  cvs_name <- paste0('FULL_SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types,"_v3.csv")
+  write.csv(df_summary, here(cvsDir, cvs_name), row.names=FALSE)
 
 }
+
+message("Done!")
+
+
+# # slurm script reproducibility
+# library("slurmjobs")
+# slurmjobs::job_loop(
+#   loops = list(cellranger_pipe = c("CR_crossBarcodes", "CR_complementBarcodes", "CR_arc_reanalyze"), marker_lst = c("literature_base", "data_drive")),
+#   name = "02_cell_types_percentages_v3",
+#   cores = 2,
+#   create_shell = TRUE
+# )
 
 
