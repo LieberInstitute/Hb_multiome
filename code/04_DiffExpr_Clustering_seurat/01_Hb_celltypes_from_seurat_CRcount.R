@@ -31,11 +31,18 @@ cellranger_pipe <- args[2]
 ## input validations
 if (length(cellranger_pipe)) {
   message("CellRanger input: ", cellranger_pipe)
-  # assign directories
-  inputDir <- here("processed-data", "03_pseudobulking", "cellranger_count")
-  inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellranger_count", "cvs_files_markers")
-  processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count")
-  cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count", "cvs_files_markers")
+  if (cellranger_pipe=="CR_crossBarcodes") {
+    inputDir <- here("processed-data", "03_pseudobulking", "cellranger_count")
+    inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellranger_count", "cvs_files_markers")
+    processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count")
+    cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count", "cvs_files_markers")
+  } else {
+    inputDir <- here("processed-data", "03_pseudobulking", "cellranger_count_complement")
+    inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellranger_count_complement", "cvs_files_markers")
+    processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count_complement")
+    cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count_complement", "cvs_files_markers")
+  }  
+  
 } else {
   message("Input argument missed")
   message("CellRanger input: ", cellranger_pipe)
@@ -61,20 +68,20 @@ minCells <- 1 ### Minimum cells by cluster
 
 if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts'}
 
-DEG_file_name <- paste0(Seurat_base_name, '_Harmony_All')
-
-## Build Seurat object base name
+## Build Seurat object base name and csv deg
 if (Seurat_reduction=='CCA') {
   #Seurat_base_name <- paste0(Seurat_base_name, '_CCA_All')
 } else {
   if (cellranger_pipe=="CR_crossBarcodes") {
     Seurat_base_name <- paste0(Seurat_base_name, '_Harmony_All')
+    DGE_cvs_name <- paste0(Seurat_base_name, "markers.csv")
   } else { ##CR_complementBarcodes
     Seurat_base_name <- paste0(Seurat_base_name, '_Harmony_All_subset')
+    DGE_cvs_name <- paste0(Seurat_base_name, "_markers.csv")
   }
 }
 
-## Validate seurat exists
+## Validate Seurat object exists
 if (length(list.files(inputDir, pattern = Seurat_base_name)==1)) {
   message("Processing: ", Seurat_base_name)
 } else {
@@ -90,20 +97,16 @@ SeuratOBJ <- get_seurat(here(inputDir, paste0(Seurat_base_name, ".rds")))
 ## verification of the integration
 print(table(SeuratOBJ$orig.ident))
 
-## Select gene markers lists. We have 3.
-markers.custom = list()
-
 ## Gene markers lists
+markers.custom = list()
 markers.custom[["data_driven"]] <- get_Top50r_markers_genes_Hb()
 markers.custom[["literature_base"]] <- get_erik_and_Hb_markers_genes()  
-
 ## sub-population list
 #names(markers.custom$literature_base)
 #names(markers.custom)
 
+## set labels for the number of top DGE genes to pick up
 prefix_name <- 'all_gm'                                    # prefix to save matched markers found in the clusters
-
-## set the number of top DGE genes to pick up
 n_slice <- 20  
 
 
@@ -117,6 +120,8 @@ mdT <- md[, .N, by = c("orig.ident", "seurat_clusters")] %>%
     arrange(., orig.ident, seurat_clusters, .by_group = FALSE)
 df_mdT <- as.data.frame(mdT)
 
+message("Total cells in the Seurat object: ", sum(df_mdT$N))
+
 cvs_name <- paste0(Seurat_base_name, '_cluster_info.csv')
 ## Save clustering information; e.g: seurat.data_counts_Harmony_cluster_info.csv
 write.csv(df_mdT, here(cvsDir, cvs_name))
@@ -129,7 +134,7 @@ message('Identifing cell types for ', length(clusters),' Seurat clusters from ',
 
 ## Read DGE cvs file for all clusters for the given sample
 #DGE_cvs_name <- paste0(Seurat_base_name, '_',Seurat_reduction, '_Allmarkers_min', minCells, 'cells.csv')
-DGE_cvs_name <- here(inputDir_cvs, paste0(DEG_file_name, "markers.csv")) 
+DGE_cvs_name <- here(inputDir_cvs, DGE_cvs_name) 
 seurat_clust <- as.data.frame(read.csv(DGE_cvs_name, header = TRUE))
 head(seurat_clust, n=3)
 # Seurat output from FindAllmarkers()
