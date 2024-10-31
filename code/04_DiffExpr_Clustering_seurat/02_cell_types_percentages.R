@@ -39,18 +39,19 @@ if (length(cellranger_pipe)==0 || length(marker_lst)==0) {
 
 ## CellRanger-count pipelines
 if (cellranger_pipe=="CR_crossBarcodes" || cellranger_pipe=="CR_complementBarcodes") {
-
   ## path to Dir(s)
   if (cellranger_pipe=="CR_crossBarcodes") {
+    
     cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count")
-
     suffix <- '_Harmony_All_cluster'
 
   } else if (cellranger_pipe=="CR_complementBarcodes") {
+    
     cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count_complement")
     suffix <- '_Harmony_All_subset_cluster'
+    
   }
-
+  
   ## Manually pre-selected clusters for both CellRanger-count strategies
   if (marker_lst=="literature_base") {
     neu <- c(0,1,2,5,7,8,10,13,14,17,25,26,29)
@@ -67,6 +68,7 @@ if (cellranger_pipe=="CR_crossBarcodes" || cellranger_pipe=="CR_complementBarcod
   ## path to Dir(s)
   cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
   suffix <- '_Harmony_All_cluster'
+  
   ## Manually pre-selected clusters for CR-arc reanalyze
   if (marker_lst=="literature_base") {
     neu <- c(0,3,4,5,8,9,17,22,24)
@@ -80,6 +82,19 @@ if (cellranger_pipe=="CR_crossBarcodes" || cellranger_pipe=="CR_complementBarcod
 
 }
 
+## first remove previous/old files
+fr = 0 
+files_remove <- list.files(path = cvsDir, pattern = "FULL_SUMMARY_*", full.names = TRUE)
+fr <- length(files_remove)
+file.remove(files_remove)
+files_remove <- list.files(path = here(cvsDir, "cvs_files_markers"), pattern = "DETAIL_*", full.names = TRUE)
+fr <- fr + length(files_remove)
+file.remove(files_remove)
+files_remove <- list.files(path = here(cvsDir, "cvs_files_markers"), pattern = "SUMMARY_*", full.names = TRUE)
+fr <- fr + length(files_remove)
+file.remove(files_remove)
+
+message("Removed ", fr ," previous summary reports from all datasets!")
 
 ## Set count-mtx type and integration model (CCA or Harmony)
 if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts' }
