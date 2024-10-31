@@ -74,8 +74,8 @@ if (cellranger_pipe=="CR_crossBarcodes" || cellranger_pipe=="CR_complementBarcod
     thal <- c(0,8)
   } else if (marker_lst=="data_driven") {
     neu <- c(0,1,2,3,4,5,8,9,10,11,14,16,21,24,26)
-    hb <- c(2,4,5,9,10,14,16)
-    thal <- c(0,1,3,8,11,21,24)
+    hb <- c(2,4,5,9,14,16)
+    thal <- c(0,1,3,8,21,24)
   }
 
 }
