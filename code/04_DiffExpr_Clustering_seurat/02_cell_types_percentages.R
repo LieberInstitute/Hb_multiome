@@ -55,7 +55,7 @@ if (cellranger_pipe=="CR_crossBarcodes" || cellranger_pipe=="CR_complementBarcod
   if (marker_lst=="literature_base") {
     neu <- c(0,1,2,5,7,8,10,13,14,17,25,26,29)
     hb <- c(0,2,5,7,10,13,14)
-    thal <- c(8,26,29)
+    thal <- c()
   } else if (marker_lst=="data_driven") {
     neu <- c(0,1,2,5,7,8,9,10,13,14,15,16,26,27,28,29)
     hb <- c(2,5,7,10,13,14,16,27)
