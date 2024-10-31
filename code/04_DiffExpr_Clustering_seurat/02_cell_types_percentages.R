@@ -86,15 +86,15 @@ if (cellranger_pipe=="CR_crossBarcodes" || cellranger_pipe=="CR_complementBarcod
 fr = 0 
 files_remove <- list.files(path = cvsDir, pattern = "FULL_SUMMARY_*", full.names = TRUE)
 fr <- length(files_remove)
-file.remove(files_remove)
+if (!fr==0) {file.remove(files_remove); fr<-0}
 files_remove <- list.files(path = here(cvsDir, "cvs_files_markers"), pattern = "DETAIL_*", full.names = TRUE)
-fr <- fr + length(files_remove)
-file.remove(files_remove)
+fr <- length(files_remove)
+if (!fr==0) {file.remove(files_remove); fr<-0}
 files_remove <- list.files(path = here(cvsDir, "cvs_files_markers"), pattern = "SUMMARY_*", full.names = TRUE)
-fr <- fr + length(files_remove)
-file.remove(files_remove)
+fr <- length(files_remove)
+if (!fr==0) {file.remove(files_remove); fr<-0}
 
-message("Removed ", fr ," previous summary reports from all datasets!")
+message("Removed previous summary reports from all datasets!")
 
 ## Set count-mtx type and integration model (CCA or Harmony)
 if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts' }
@@ -122,11 +122,15 @@ df_mdT <- df_mdT[order(sapply(df_mdT$orig.ident, function(x) which(x == ref_sort
 #print(unique(df_mdT$orig.ident))
 
 ### Preparing list of clusters to summarize
-## Add all cell-types to the end of the list of lists
 allT <- c(sort(unique(df_mdT[["seurat_clusters"]])))
-lst_clust <- list(hb = hb, neu = neu, thal= thal, allTypes = allT)
+
+## Build the list with cluster to parse
+lst_clust <- list(allTypes = allT)
+if (!is_null(neu)) { lst_clust <- append(lst_clust, list(neu = neu)) }
+if (!is_null(hb)) { lst_clust <- append(lst_clust, list(hb = hb)) }
+if (!is_null(thal)) { lst_clust <- append(lst_clust, list(thal= thal)) }
+#lst_clust <- list(hb = hb, neu = neu, thal= thal, allTypes = allT)
 message("Group of clusters prepared: ")
-#lst_clust
 names(lst_clust)
 
 
