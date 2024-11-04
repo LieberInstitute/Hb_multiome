@@ -7,7 +7,9 @@
 
 # Load libraries
 library("Seurat")
+library("Signac")
 library("SingleCellExperiment")
+library("scuttle")
 #library("VariantAnnotation")
 library("here")
 library("ggplot2")
@@ -20,7 +22,7 @@ library("uwot")
 #library("DropletUtils")
 #library("Rtsne")
 library("gridExtra")
-#library("EnsDb.Hsapiens.v86")
+library("EnsDb.Hsapiens.v86")
 #library("reshape")
 #library("cowplot")
 library("dplyr")
@@ -31,77 +33,91 @@ library("sessioninfo")
 
 here::here()
 
+# test
+Seurat_base_name <- "4S_Hb_KDM"
+
 #cellrangerDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze") # to process individual Seurat Objects
-cellrangerDir_reanalyze <- here("processed-data", "02_merge_seurats", "cellrangerARC_reanalyze")  # to process intgerated Seurat Object 
+cellrangerDir_reanalyze <- here("processed-data", "cellrangerARC", Seurat_base_name, "outs")  # to process intgerated Seurat Object 
 processedDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze")
 plotDir_reanalyze <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanalyze")
+
+# Call functions to create and handle meta-data to seurat objects
+source(here("code/functions_custom", "remote_file_caller.R"))
 
 # Check processed_data and plot directories exists
 if (!dir.exists(processedDir_reanalyze)) { dir.create(processedDir_reanalyze) }
 if (!dir.exists(plotDir_reanalyze)) { dir.create(plotDir_reanalyze) }
 
-## function to load pre-existing Seurat
-get_seurat <- function(name) { sobj <- readRDS(name); return(sobj)}
+## Read the raw_feature_bc_matrix.h5
+sample_path <- get_raw_barcode_mtx(Seurat_base_name)
+message("Reading raw feature bc data: ", sample_path) # ../cellrangerARC/S1_Hb_KDM/outs/raw_feature_bc_matrix.h5
+h5_raw_path <- Read10X_h5(sample_path) # dgCMatrix data. Barcodes for columns and genes by rows
+# head(h5_raw_path, n=1)                                 # Sparse mtx has the 2 slots (gene expression and peaks)
+# Extract the 'Gene Expression' matrix only
+raw.sce <- h5_raw_path$`Gene Expression` # SingleCellExperiment data.
 
-## Build Seurat object name
-Seurat_base_name <- 'seurat.norm_counts' 
-rds_name <- here(cellrangerDir_reanalyze, paste0(Seurat_base_name, '_Harmony.rds'))
-#rds_name
+## Get total number of raw cells in the gene expression assay
+totalCells <- length(Cells(raw.sce))
+# [1] 583052
 
-## Load Seurat object
-SeuratOBJ <- get_seurat(rds_name)
+message("Building Seurat object with raw data for ", Seurat_base_name)
 
-## Verify Seurat object
-table(SeuratOBJ$orig.ident)
-
-message("Processing QCs for ", Seurat_base_name)
-
-
-
-
+# ## Conversion from SingleCellExperiment objects to Seurat objects
+# typeof(SeuratOBJ) 
+# SeuratOBJ@assays$RNA@layers$counts
+# #sce <- SingleCellExperiment(list(counts=as.matrix(SeuratOBJ@assays$RNA@layers$counts))) # Only pull counts
+# seurat.sce <- as.SingleCellExperiment(SeuratOBJ) # pull all assays in both RNA and ATAC assays
+# dim(seurat.sce)
+# # [1] 70990  7345
+# colnames(colData(seurat.sce))
 
 set.seed(777)
 
-# Loading droplets results 
-load(here("processed-data", "08_build_sce", "droplet_scores_Hippo_42_4.RDS"), verbose = T)
-sce.out
-# QC approach based on Workflow 3.3 in OSCA:
-# http://bioconductor.org/books/3.16/OSCA.workflows/unfiltered-human-pbmcs-10x-genomics.html#quality-control-2
+#### Compute QC metrics ####
 
-############### FINDING HIGH MITO ##############################################
-# read the raw data matrix
-sce.42_4 <- read10xCounts(here("rafael_rerun/42_4/outs", "raw_feature_bc_matrix.h5"))
-# class: SingleCellExperiment 
-# dim: 128902 730781 
-# metadata(1): Samples
-# assays(1): counts
-# rownames(128902): ENSG00000243485 ENSG00000237613 ...
-# KI270713.1:31342-32216 KI270713.1:34152-35040
-# rowData names(3): ID Symbol Type
-# colnames: NULL
-# colData names(2): Sample Barcode
-# reducedDimNames(0):
-#     mainExpName: NULL
-# altExpNames(0):
-#     
-# Unifying feature names
-rownames(sce.42_4) <- uniquifyFeatureNames(
-  rowData(sce.42_4)$ID, rowData(sce.42_4)$Symbol)
+# Initialize the Seurat object with the raw (non-normalized data)
+Seurat.raw <- CreateSeuratObject(
+  counts = raw.sce,
+  assay = "RNA",
+  project = Seurat_base_name
+  #meta.data = meta2
+)
+Seurat.raw
+# An object of class Seurat 
+# 36601 features across 583052 samples within 1 assay 
+# Active assay: RNA (36601 features, 0 variable features)
+# 1 layer present: counts
+str(Seurat.raw)
+Seurat.sce <- SingleCellExperiment(list(counts=as.matrix(Seurat.raw@assays$RNA@layers$counts))) # Only pull counts
+str(Seurat.sce)
+ 
+# Then we can add an simple CPM transformation to the original matrix count matrix and store it
+exprs(sce) <- log2(calculateCPM(sce, use.size.factors = FALSE) + 1)  #SCATER
 
-location <- mapIds(EnsDb.Hsapiens.v86, keys=rowData(sce.42_4)$ID, 
-                   column="SEQNAME", keytype="GENEID")
-head(location, n=10)
-# Warning message:
-#   Unable to map 94912 of 128902 requested IDs. 
 
-# Once we are satisfied with the performance of emptyDrops(), we subset our SingleCellExperiment object to retain only the detected cells. Discerning readers will notice the use of which(), which conveniently removes the NAs prior to the subsetting
 
-sce.42_4 <- sce.42_4[,which(sce.out$FDR <= 0.001)]
-unfiltered <- sce.42_4
+# ############### FINDING HIGH MITO ##############################################
+# # read the raw data matrix
+# sce.42_4 <- read10xCounts(here("rafael_rerun/42_4/outs", "raw_feature_bc_matrix.h5"))
+
+# # Unifying feature names
+# rownames(Seurat.raw) <- uniquifyFeatureNames(
+#   rowData(Seurat.raw)$ID, rowData(Seurat.raw)$Symbol)
+# 
+# location <- mapIds(EnsDb.Hsapiens.v86, keys=rowData(Seurat.raw)$ID, 
+#                    column="SEQNAME", keytype="GENEID")
+# head(location, n=10)
+# # Warning message:
+# #   Unable to map 94912 of 128902 requested IDs. 
+# 
+# # Once we are satisfied with the performance of emptyDrops(), we subset our SingleCellExperiment object to retain only the detected cells. Discerning readers will notice the use of which(), which conveniently removes the NAs prior to the subsetting
+# 
+# seurat.sce <- Seurat.raw[,which(seurat.sce$FDR <= 0.001)]
+# unfiltered <- Seurat.raw
 
 # Quality control
 # Filtering on the mitochondrial proportion
-stats <- perCellQCMetrics(sce.42_4, subsets=list(Mito=which(location=="MT")))
+stats <- perCellQCMetrics(Seurat.raw, subsets=list(Mito=which(location=="MT")))
 
 # Setup parameters to state different levels of outliers 
 high.mito <- isOutlier(stats$subsets_Mito_percent, type="higher")
