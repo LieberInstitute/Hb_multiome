@@ -11,17 +11,16 @@
 
 ########################################################################
 
-## Testing resource to implement interoperability among sce and seurat
-
 library(Seurat)
 library(SingleCellExperiment)
-library(DropletUtils)   # Functions for scRNA-seq data from droplet technologies such as 10X Genomics
+library(DropletUtils)   
+library(tidyverse)
 library(here)
-#library(tidyverse)
 library(sessioninfo)
-here::here()
 
 ############        Initials        ############
+
+here::here()
 
 # Call functions to create and handle meta-data to seurat objects
 cellrangerDir_reanalyze <- here("processed-data", "cellrangerARC")
@@ -38,8 +37,17 @@ define_theme <- function(size = 15) {
 
 # Load raw barcode data or Seurat with raw data
 b_h5file <- TRUE
-# test
-s_sample_name <- "4S_Hb_KDM"
+
+## commandArgs scans the arguments which have been supplied when the current R script was invoked (from shell sh)
+sample_tmp <- commandArgs(trailingOnly = TRUE)
+sample_tmp <- args[1]
+# For testing: 
+# sample_tmp <- "S3_Hb_KDM_reanalysis, S3_Hb_KDM"
+
+sample_data = unlist(strsplit(sample_tmp,","))
+sample_name <- trimws(sample_data[[2]])
+message("Reading sample: ", sample_name)
+
 
 # Specify if raw data will be load directly from a H5 file or a SeuratOBJ
 if (!b_h5file) {
@@ -56,7 +64,7 @@ if (!b_h5file) {
  } else if (b_h5file) {
 
     # Load h5 file directly as usually do in single cell exp
-    cellrangerDir_reanalyze <- here(cellrangerDir_reanalyze, Seurat_base_name, "outs", "raw_feature_bc_matrix.h5")  
+    cellrangerDir_reanalyze <- here(cellrangerDir_reanalyze,  sample_name, "outs", "raw_feature_bc_matrix.h5")  
     h5_raw_path <- Read10X_h5(here(cellrangerDir_reanalyze)) 
     raw.sce <- h5_raw_path$`Gene Expression`
 
@@ -66,7 +74,8 @@ str(raw.sce)
 head(raw.sce, n=3)
 
 totalCells <- length(Cells(raw.sce))
-message("Processing ", totalCells, " from multiome sample ", s_sample_name)
+
+message("Processing ", totalCells, " from multiome sample ", sample_name)
 # Processing 583052 from multiome sample 4S_Hb_KDM
 
 # barcodeRanks method (from DropletUtils package), compute barcode rank statistics and identify the knee and inflection points on the total count curve
@@ -89,7 +98,7 @@ o <- order(bcRanks$rank)
 lines(bcRanks$rank[o], bcRanks$fitted[o], col="red")
 abline(h=metadata(bcRanks)$knee, col="dodgerblue", lty=2)
 abline(h=metadata(bcRanks)$inflection, col="forestgreen", lty=2)
-title(paste0(s_sample_name, '\nWithout gene filtering'))
+title(paste0(sample_name, '\nWithout gene filtering'))
 legend("bottomleft", lty=2, col=c("dodgerblue", "forestgreen"), 
        legend = c(paste0("knee: ", toString(knee_lower)), paste0("inflection: ", toString(infection))))
        
@@ -105,7 +114,9 @@ sce.out <- DropletUtils::emptyDrops(
 )
 
 # Saving data
-save(sce.out, file = here(processedDir_reanalyze, paste0(s_sample_name, "_droplet_scores.rds")))
+save(sce.out, file = here(processedDir_reanalyze, paste0(sample_name, "_droplet_scores.rds")))
+
+message("Saved droplet scores RDS object")
 
 #### QC Plot ####
 
@@ -132,7 +143,7 @@ per.nonemptydroplets <- ((nonEmptydroplets*100) / totalCells) #, digits = 4)
 
 data = data.frame(Cells=c("TotalCells", "NonEmptyCells", "PercentageNonEmpty"), 
                   values=c(totalCells, nonEmptydroplets, paste(per.nonemptydroplets, "%")))
-message(paste0('Sample: ', s_sample_name))
+message(paste0('Sample: ', sample_name))
 print(data)
 # Cells             values
 # 1         TotalCells             583052
@@ -149,17 +160,18 @@ head(sce.out, n=3)
 
 # Prepare data frame with additional FDR column
 
-droplet_elbow_data <- as.data.frame(bcRanks) %>%
-  mutate(FDR = sce.out$FDR)
+droplet_elbow_data <- as.data.frame(bcRanks) |> mutate(FDR = sce.out$FDR)
 
 # Define parameters
 knee_meta <- metadata(bcRanks)$knee
 knee_lower_label <- paste0("Knee est 'lower' (", knee_lower, ')')
 second_knee_label <- paste0("Second Knee (", knee_meta, ')') 
-title <- paste0("Sample: ", s_sample_name)
+title <- paste0("Sample: ", sample_name)
 subtitle <- n_cell_anno
 
 ## Create ggplot object
+
+message("Creating elbow plot ...")
 
 droplet_elbow_plot <- droplet_elbow_data %>%
   ggplot(aes(x = rank, y = total, color = FDR < FDR_cutoff)) +
@@ -190,10 +202,14 @@ droplet_elbow_plot <- droplet_elbow_data %>%
   theme(legend.position = "bottom")
 
 ## Save the png format
-ggsave(droplet_elbow_plot, here(plotDir_reanalyze, paste0(s_sample_name, "reanalyze_droplet_qc", ".png")))
+ggsave(droplet_elbow_plot, here(plotDir_reanalyze, paste0(sample_name, "_droplet_qc", ".png")))
+
+message("Saved elbow plot!")
+
+message("Done!")
 
 # plot the elbow
-droplet_elbow_plot
+#droplet_elbow_plot
 
 
 # ## Conversion from SingleCellExperiment objects to Seurat objects
