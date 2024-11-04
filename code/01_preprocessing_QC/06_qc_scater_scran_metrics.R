@@ -4,13 +4,17 @@
 ## Note. Compute the QC metrics with Seurat, Scran and Scater
 ########################################################################
 
-
 # Load libraries
-library("Seurat")
-library("Signac")
-library("SingleCellExperiment")
-library("scuttle")
+#library("Seurat")
+#library("Signac")
+#library("scuttle")
 #library("VariantAnnotation")
+#library("Rtsne")
+#library("reshape")
+#library("cowplot")
+#library("dplyr")
+
+library("SingleCellExperiment")
 library("here")
 library("ggplot2")
 library("ggrepel")
@@ -19,15 +23,10 @@ library("batchelor")
 library("scran")
 library("scry")
 library("uwot")
-#library("DropletUtils")
-#library("Rtsne")
+library("DropletUtils")
 library("gridExtra")
 library("EnsDb.Hsapiens.v86")
-#library("reshape")
-#library("cowplot")
-library("dplyr")
 library("sessioninfo")
-
 
 ## Read directories
 
@@ -36,63 +35,74 @@ here::here()
 # test
 Seurat_base_name <- "4S_Hb_KDM"
 
-#cellrangerDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze") # to process individual Seurat Objects
-cellrangerDir_reanalyze <- here("processed-data", "cellrangerARC", Seurat_base_name, "outs")  # to process intgerated Seurat Object 
+## Loading droplets results 
+load(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_droplet_scores.rds"))) 
+## Read the raw matrix 
+cellrangerDir_reanalyze <- here("processed-data", "cellrangerARC", Seurat_base_name, "outs")  # to process integrated Seurat Object 
 processedDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze")
 plotDir_reanalyze <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanalyze")
 
 # Call functions to create and handle meta-data to seurat objects
-source(here("code/functions_custom", "remote_file_caller.R"))
+#source(here("code/functions_custom", "remote_file_caller.R"))
 
 # Check processed_data and plot directories exists
 if (!dir.exists(processedDir_reanalyze)) { dir.create(processedDir_reanalyze) }
 if (!dir.exists(plotDir_reanalyze)) { dir.create(plotDir_reanalyze) }
 
 ## Read the raw_feature_bc_matrix.h5
-sample_path <- get_raw_barcode_mtx(Seurat_base_name)
-message("Reading raw feature bc data: ", sample_path) # ../cellrangerARC/S1_Hb_KDM/outs/raw_feature_bc_matrix.h5
-h5_raw_path <- Read10X_h5(sample_path) # dgCMatrix data. Barcodes for columns and genes by rows
-# head(h5_raw_path, n=1)                                 # Sparse mtx has the 2 slots (gene expression and peaks)
-# Extract the 'Gene Expression' matrix only
-raw.sce <- h5_raw_path$`Gene Expression` # SingleCellExperiment data.
+message("Reading raw feature bc data for sample: ", Seurat_base_name) # ../cellrangerARC/S1_Hb_KDM/outs/raw_feature_bc_matrix.h5
+sce.raw <- read10xCounts(here(cellrangerDir_reanalyze, "raw_feature_bc_matrix.h5")) # dgCMatrix data. Barcodes for columns and genes by rows (DropletUtils)
+sce.raw
 
-## Get total number of raw cells in the gene expression assay
-totalCells <- length(Cells(raw.sce))
-# [1] 583052
-
-message("Building Seurat object with raw data for ", Seurat_base_name)
-
-# ## Conversion from SingleCellExperiment objects to Seurat objects
-# typeof(SeuratOBJ) 
-# SeuratOBJ@assays$RNA@layers$counts
-# #sce <- SingleCellExperiment(list(counts=as.matrix(SeuratOBJ@assays$RNA@layers$counts))) # Only pull counts
-# seurat.sce <- as.SingleCellExperiment(SeuratOBJ) # pull all assays in both RNA and ATAC assays
-# dim(seurat.sce)
-# # [1] 70990  7345
-# colnames(colData(seurat.sce))
+# # Extract the 'Gene Expression' matrix only
+# raw.sce <- h5_raw_path$`Gene Expression` # SingleCellExperiment data.
+# 
+# ## Get total number of raw cells in the gene expression assay
+# totalCells <- length(Cells(raw.sce))
+# # [1] 583052
+# 
+# message("Building Seurat object with raw data for ", Seurat_base_name)
+# 
+# # ## Conversion from SingleCellExperiment objects to Seurat objects
+# # typeof(SeuratOBJ) 
+# # SeuratOBJ@assays$RNA@layers$counts
+# # #sce <- SingleCellExperiment(list(counts=as.matrix(SeuratOBJ@assays$RNA@layers$counts))) # Only pull counts
+# # seurat.sce <- as.SingleCellExperiment(SeuratOBJ) # pull all assays in both RNA and ATAC assays
+# # dim(seurat.sce)
+# # # [1] 70990  7345
+# # colnames(colData(seurat.sce))
 
 set.seed(777)
 
 #### Compute QC metrics ####
 
-# Initialize the Seurat object with the raw (non-normalized data)
-Seurat.raw <- CreateSeuratObject(
-  counts = raw.sce,
-  assay = "RNA",
-  project = Seurat_base_name
-  #meta.data = meta2
-)
-Seurat.raw
-# An object of class Seurat 
-# 36601 features across 583052 samples within 1 assay 
-# Active assay: RNA (36601 features, 0 variable features)
-# 1 layer present: counts
-str(Seurat.raw)
-Seurat.sce <- SingleCellExperiment(list(counts=as.matrix(Seurat.raw@assays$RNA@layers$counts))) # Only pull counts
-str(Seurat.sce)
- 
-# Then we can add an simple CPM transformation to the original matrix count matrix and store it
-exprs(sce) <- log2(calculateCPM(sce, use.size.factors = FALSE) + 1)  #SCATER
+# # Initialize the Seurat object with the raw (non-normalized data)
+# Seurat.raw <- CreateSeuratObject(
+#   counts = raw.sce,
+#   assay = "RNA",
+#   project = Seurat_base_name
+#   #meta.data = meta2
+# )
+# Seurat.raw
+# # An object of class Seurat 
+# # 36601 features across 583052 samples within 1 assay 
+# # Active assay: RNA (36601 features, 0 variable features)
+# # 1 layer present: counts
+# str(Seurat.raw)
+# Seurat.sce <- SingleCellExperiment(list(counts=as.matrix(Seurat.raw@assays$RNA@layers$counts))) # Only pull counts
+# str(Seurat.sce)
+#  
+# 
+# ## Read filtered feature bc 
+# sample_path <- paste0(here(processedDir_reanalyze, Seurat_base_name), "_reanalysis.rds")
+# Seurat.filter <- readRDS(sample_path)
+# Seurat.filter
+# str(Seurat.filter)
+# Seurat.sce.f <- SingleCellExperiment(list(counts=as.matrix(Seurat.filter@assays$RNA@layers$counts)))
+# str(Seurat.sce.f)
+# 
+# # Then we can add an simple CPM transformation to the original matrix count matrix and store it
+# exprs(Seurat.sce.f) <- log2(calculateCPM(Seurat.sce.f) + 1)  #SCATER
 
 
 
@@ -100,28 +110,26 @@ exprs(sce) <- log2(calculateCPM(sce, use.size.factors = FALSE) + 1)  #SCATER
 # # read the raw data matrix
 # sce.42_4 <- read10xCounts(here("rafael_rerun/42_4/outs", "raw_feature_bc_matrix.h5"))
 
-# # Unifying feature names
-# rownames(Seurat.raw) <- uniquifyFeatureNames(
-#   rowData(Seurat.raw)$ID, rowData(Seurat.raw)$Symbol)
-# 
-# location <- mapIds(EnsDb.Hsapiens.v86, keys=rowData(Seurat.raw)$ID, 
-#                    column="SEQNAME", keytype="GENEID")
-# head(location, n=10)
-# # Warning message:
-# #   Unable to map 94912 of 128902 requested IDs. 
-# 
-# # Once we are satisfied with the performance of emptyDrops(), we subset our SingleCellExperiment object to retain only the detected cells. Discerning readers will notice the use of which(), which conveniently removes the NAs prior to the subsetting
-# 
-# seurat.sce <- Seurat.raw[,which(seurat.sce$FDR <= 0.001)]
-# unfiltered <- Seurat.raw
+# Unifying feature names
+rownames(sce.raw) <- uniquifyFeatureNames(rowData(sce.raw)$ID, rowData(sce.raw)$Symbol)
+
+location <- mapIds(EnsDb.Hsapiens.v86, keys=rowData(sce.raw)$ID, column="SEQNAME", keytype="GENEID")
+head(location, n=10)
+# Warning message:
+#   Unable to map 73631 of 107621 requested IDs.
+
+# We subset our SingleCellExperiment object to retain only the detected cells. Discerning readers will notice the use of which(), which conveniently removes the NAs prior to the sub-setting
+
+sce.raw <- sce.raw[,which(sce.raw$FDR <= 0.001)]
+unfiltered <- sce.raw
 
 # Quality control
 # Filtering on the mitochondrial proportion
-stats <- perCellQCMetrics(Seurat.raw, subsets=list(Mito=which(location=="MT")))
+stats <- perCellQCMetrics(sce.raw, subsets=list(Mito=which(location=="MT")))
 
 # Setup parameters to state different levels of outliers 
 high.mito <- isOutlier(stats$subsets_Mito_percent, type="higher")
-sce.42_4 <- sce.42_4[,!high.mito]
+sce.raw <- sce.raw[,!high.mito]
 summary(high.mito)
 # Mode   FALSE    TRUE 
 # logical    8429    1441 
@@ -204,9 +212,12 @@ sce_42_4 <- process_sample(sample_42_4_path, sce_out_42_4_path, output_42_4_path
 sce_42_1 <- process_sample(sample_42_1_path, sce_out_42_1_path, output_42_1_path)
 
 # Creating a new data frame from the given S4 object lists
+
 data <- data.frame(
-  sum = sce.42_4.qc@listData$sum,
-  subsets_MT_percent = sce.42_4.qc@listData$subsets_MT_percent
+  #sum = sce.42_4.qc@listData$sum,
+  sum = sce.out@listData$sum,
+  #subsets_MT_percent = sce.42_4.qc@listData$subsets_MT_percent
+  subsets_MT_percent = sce.out@listData$subsets_MT_percent
 )
 
 # Defining thresholds
@@ -216,7 +227,7 @@ thresholds <- attr(discard.mito, "thresholds")["higher"]
 ggplot(data = data, aes(x = sum, y = subsets_MT_percent)) +
   geom_point() +
   scale_x_log10() +
-  geom_hline(yintercept = thresholds, color = "red") +
+  #geom_hline(yintercept = thresholds, color = "red") +
   labs(
     title = "Scatter plot of Total count vs. Mitochondrial %",
     x = "Total count",
