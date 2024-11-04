@@ -1,18 +1,14 @@
 ########################################################################
-## Applying QC metrics to filtered sce objects
+## Applying QC metrics to filtered Seurat object
 ##
-## Implementation done with public datasets: 
-## Samples from : 
-## hippo 42_1 (ARC 2.0.0) Cell Sorted: 3k 
-## hippo 42_4 (ARC 2.0.0) Cell Sorted: 3k   
+## Note. Compute the QC metrics with Seurat, Scran and Scater
+########################################################################
 
-## Authors. CSC + HT 
-## Date. July 14th, 2023
 
 # Load libraries
+library("Seurat")
 library("SingleCellExperiment")
-# library("jaffelab") error load
-library("VariantAnnotation")
+#library("VariantAnnotation")
 library("here")
 library("ggplot2")
 library("ggrepel")
@@ -21,17 +17,49 @@ library("batchelor")
 library("scran")
 library("scry")
 library("uwot")
-library("DropletUtils")
-library("Rtsne")
+#library("DropletUtils")
+#library("Rtsne")
 library("gridExtra")
-library("EnsDb.Hsapiens.v86")
-library("reshape")
-library("cowplot")
+#library("EnsDb.Hsapiens.v86")
+#library("reshape")
+#library("cowplot")
 library("dplyr")
-library("Seurat")
 library("sessioninfo")
 
-# set.seed
+
+## Read directories
+
+here::here()
+
+#cellrangerDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze") # to process individual Seurat Objects
+cellrangerDir_reanalyze <- here("processed-data", "02_merge_seurats", "cellrangerARC_reanalyze")  # to process intgerated Seurat Object 
+processedDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze")
+plotDir_reanalyze <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanalyze")
+
+# Check processed_data and plot directories exists
+if (!dir.exists(processedDir_reanalyze)) { dir.create(processedDir_reanalyze) }
+if (!dir.exists(plotDir_reanalyze)) { dir.create(plotDir_reanalyze) }
+
+## function to load pre-existing Seurat
+get_seurat <- function(name) { sobj <- readRDS(name); return(sobj)}
+
+## Build Seurat object name
+Seurat_base_name <- 'seurat.norm_counts' 
+rds_name <- here(cellrangerDir_reanalyze, paste0(Seurat_base_name, '_Harmony.rds'))
+#rds_name
+
+## Load Seurat object
+SeuratOBJ <- get_seurat(rds_name)
+
+## Verify Seurat object
+table(SeuratOBJ$orig.ident)
+
+message("Processing QCs for ", Seurat_base_name)
+
+
+
+
+
 set.seed(777)
 
 # Loading droplets results 
