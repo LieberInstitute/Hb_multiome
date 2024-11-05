@@ -23,11 +23,15 @@ library(sessioninfo)
 here::here()
 
 # Call functions to create and handle meta-data to seurat objects
-cellrangerDir_reanalyze <- here("processed-data", "cellrangerARC")
+cellrangerARC_Dir <- here("processed-data", "cellrangerARC")
 processedDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze")
+csvDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", "csv_files")
 plotDir_reanalyze <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanalyze")
 
-source(here("code", "remote_seurat_functions.R"))
+# Check directories exists
+if (!dir.exists(csvDir_reanalyze)) { dir.create(csvDir_reanalyze) }
+
+#source(here("code", "remote_seurat_functions.R"))
 
 # Define theme function
 define_theme <- function(size = 15) {
@@ -40,13 +44,13 @@ b_h5file <- TRUE
 
 ## commandArgs scans the arguments which have been supplied when the current R script was invoked (from shell sh)
 sample_tmp <- commandArgs(trailingOnly = TRUE)
-sample_tmp <- args[1]
 # For testing: 
 # sample_tmp <- "S3_Hb_KDM_reanalysis, S3_Hb_KDM"
 
 sample_data = unlist(strsplit(sample_tmp,","))
 sample_name <- trimws(sample_data[[2]])
-message("Reading sample: ", sample_name)
+
+message("Reading CellRangerARC sample: ", sample_name)
 
 
 # Specify if raw data will be load directly from a H5 file or a SeuratOBJ
@@ -64,18 +68,18 @@ if (!b_h5file) {
  } else if (b_h5file) {
 
     # Load h5 file directly as usually do in single cell exp
-    cellrangerDir_reanalyze <- here(cellrangerDir_reanalyze,  sample_name, "outs", "raw_feature_bc_matrix.h5")  
-    h5_raw_path <- Read10X_h5(here(cellrangerDir_reanalyze)) 
+    cellrangerARC_Dir <- here(cellrangerARC_Dir,  sample_name, "outs", "raw_feature_bc_matrix.h5")  
+    h5_raw_path <- Read10X_h5(here(cellrangerARC_Dir)) 
     raw.sce <- h5_raw_path$`Gene Expression`
 
 } 
 
-str(raw.sce)
+#str(raw.sce)
 head(raw.sce, n=3)
 
 totalCells <- length(Cells(raw.sce))
 
-message("Processing ", totalCells, " from multiome sample ", sample_name)
+message("Processing ", totalCells, " from CellRanger ARC sample ", sample_name)
 # Processing 583052 from multiome sample 4S_Hb_KDM
 
 # barcodeRanks method (from DropletUtils package), compute barcode rank statistics and identify the knee and inflection points on the total count curve
@@ -93,17 +97,18 @@ knee_lower <- metadata(bcRanks)$knee + 100
 infection <- metadata(bcRanks)$inflection
 # [1] 276
 
-plot(bcRanks$rank, bcRanks$total, log="xy", xlab="Rank", ylab="Total UMI Counts")
 o <- order(bcRanks$rank)
-lines(bcRanks$rank[o], bcRanks$fitted[o], col="red")
-abline(h=metadata(bcRanks)$knee, col="dodgerblue", lty=2)
-abline(h=metadata(bcRanks)$inflection, col="forestgreen", lty=2)
-title(paste0(sample_name, '\nWithout gene filtering'))
-legend("bottomleft", lty=2, col=c("dodgerblue", "forestgreen"), 
-       legend = c(paste0("knee: ", toString(knee_lower)), paste0("inflection: ", toString(infection))))
-       
+# legend_label <- c(paste0("knee: ", toString(knee_lower)), paste0("inflection: ", toString(infection)))
+# plot(bcRanks$rank, bcRanks$total, log="xy", xlab="Rank", ylab="Total UMI Counts") +
+#   lines(bcRanks$rank[o], bcRanks$fitted[o], col="red") +
+#   abline(h=metadata(bcRanks)$knee, col="dodgerblue", lty=2) +
+#   abline(h=metadata(bcRanks)$inflection, col="forestgreen", lty=2) +
+#   title(paste0(sample_name, '\nWithout gene filtering')) +
+#   legend("bottomleft", lty=2, col=c("dodgerblue", "forestgreen"), 
+#        legend = legend_label)
+
 #### Run emptyDrops w/ knee + 100 ####
-set.seed(100)
+set.seed(05112024)
 
 # emptyDrops from DropletUtils Bioconductor package is used
 # Distinguish between droplets containing cells and ambient RNA in a droplet-based single-cell RNA sequencing experiment. 
@@ -115,7 +120,7 @@ sce.out <- DropletUtils::emptyDrops(
 
 # Saving data
 save(sce.out, file = here(processedDir_reanalyze, paste0(sample_name, "_droplet_scores.rds")))
-
+# ~/processed-data/01_preprocessing_QC/cellrangerARC_reanalyze/
 message("Saved droplet scores RDS object")
 
 #### QC Plot ####
@@ -127,9 +132,10 @@ table(Signif = sce.out$FDR <= FDR_cutoff)
 # 311  7241 
 
 #  add arbitrary margins on a multidimensional array
-addmargins(table(Signif = sce.out$FDR <= FDR_cutoff, 
+tab <- addmargins(table(Signif = sce.out$FDR <= FDR_cutoff, 
                  Limited = sce.out$Limited, 
                  useNA = "ifany"))
+write.csv(tab, here(csvDir_reanalyze, paste0(sample_name, "_droplet_FDRcutoff.csv")))
 n_cell_anno <- paste("Non-empty:", sum(sce.out$FDR < FDR_cutoff, na.rm = TRUE))
 
 # Calculate non Emptydroplets value
@@ -143,8 +149,9 @@ per.nonemptydroplets <- ((nonEmptydroplets*100) / totalCells) #, digits = 4)
 
 data = data.frame(Cells=c("TotalCells", "NonEmptyCells", "PercentageNonEmpty"), 
                   values=c(totalCells, nonEmptydroplets, paste(per.nonemptydroplets, "%")))
-message(paste0('Sample: ', sample_name))
+message(paste0('Total True Cells on Sample ', sample_name))
 print(data)
+write.csv(data, here(csvDir_reanalyze, paste0(sample_name, "_total_TrueCells.csv")))
 # Cells             values
 # 1         TotalCells             583052
 # 2      NonEmptyCells               7241
@@ -162,7 +169,7 @@ head(sce.out, n=3)
 
 droplet_elbow_data <- as.data.frame(bcRanks) |> mutate(FDR = sce.out$FDR)
 
-# Define parameters
+## Define parameters to plot
 knee_meta <- metadata(bcRanks)$knee
 knee_lower_label <- paste0("Knee est 'lower' (", knee_lower, ')')
 second_knee_label <- paste0("Second Knee (", knee_meta, ')') 
@@ -170,21 +177,17 @@ title <- paste0("Sample: ", sample_name)
 subtitle <- n_cell_anno
 
 ## Create ggplot object
-
 message("Creating elbow plot ...")
 
-droplet_elbow_plot <- droplet_elbow_data %>%
+droplet_elbow_plot <- droplet_elbow_data |>
   ggplot(aes(x = rank, y = total, color = FDR < FDR_cutoff)) +
-  
   # Define points
   geom_point(alpha = 0.5, size = 1) +
-  
   # Define lines and annotations
   geom_hline(yintercept = knee_meta, linetype = "dotted", color = "gray") +
   annotate("text", x = 10, y = knee_meta, label = second_knee_label, vjust = -1, color = "gray") +
   geom_hline(yintercept = knee_lower, linetype = "dashed") +
   annotate("text", x = 10, y = knee_lower, label = knee_lower_label, vjust = -0.5) +
-  
   # Define scales
   scale_x_continuous(trans = "log10") +
   scale_y_continuous(trans = "log10") +
@@ -208,8 +211,6 @@ message("Saved elbow plot!")
 
 message("Done!")
 
-# plot the elbow
-#droplet_elbow_plot
 
 
 # ## Conversion from SingleCellExperiment objects to Seurat objects
@@ -222,6 +223,12 @@ message("Done!")
 # sce.seurat <- as.Seurat(sce.out)
 # # Error in UseMethod(generic = "as.Seurat", object = x) : 
 # # no applicable method for 'as.Seurat' applied to an object of class "c('DFrame', 'DataFrame', 'SimpleList', 'RectangularData', 'List', 'DataFrame_OR_NULL', 'Vector', 'list_OR_List', 'Annotated', 'vector_OR_Vector')"
+
+# library(slurmjobs)
+# job_single(
+#   name = "05_sce_seurat_emptydroplet", memory = "30G", cores = 1, create_shell = TRUE,
+#   task_num = 10
+# )
 
 
 ## Reproducibility information
