@@ -36,7 +36,7 @@ here::here()
 Seurat_base_name <- "4S_Hb_KDM"
 
 ## Loading droplets results 
-load(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_droplet_scores.rds"))) 
+load(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_droplet_scores.rds"))) # sce.out
 ## Read the raw matrix 
 cellrangerDir_reanalyze <- here("processed-data", "cellrangerARC", Seurat_base_name, "outs")  # to process integrated Seurat Object 
 processedDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze")
@@ -72,7 +72,7 @@ sce.raw
 # # # [1] 70990  7345
 # # colnames(colData(seurat.sce))
 
-set.seed(777)
+set.seed(5112024)
 
 #### Compute QC metrics ####
 
@@ -107,8 +107,6 @@ set.seed(777)
 
 
 # ############### FINDING HIGH MITO ##############################################
-# # read the raw data matrix
-# sce.42_4 <- read10xCounts(here("rafael_rerun/42_4/outs", "raw_feature_bc_matrix.h5"))
 
 # Unifying feature names
 rownames(sce.raw) <- uniquifyFeatureNames(rowData(sce.raw)$ID, rowData(sce.raw)$Symbol)
@@ -120,12 +118,18 @@ head(location, n=10)
 
 # We subset our SingleCellExperiment object to retain only the detected cells. Discerning readers will notice the use of which(), which conveniently removes the NAs prior to the sub-setting
 
-sce.raw <- sce.raw[,which(sce.raw$FDR <= 0.001)]
+#summary(sce.out$FDR[!is.na(sce.out$FDR)])
+#summary(sce.out$FDR)
+
+sce.raw <- sce.raw[,which(sce.out$FDR <= 0.001)]
 unfiltered <- sce.raw
 
 # Quality control
 # Filtering on the mitochondrial proportion
 stats <- perCellQCMetrics(sce.raw, subsets=list(Mito=which(location=="MT")))
+colnames(stats)
+# [1] "sum"                   "detected"              "subsets_Mito_sum"     
+# [4] "subsets_Mito_detected" "subsets_Mito_percent"  "total"
 
 # Setup parameters to state different levels of outliers 
 high.mito <- isOutlier(stats$subsets_Mito_percent, type="higher")
@@ -133,7 +137,6 @@ sce.raw <- sce.raw[,!high.mito]
 summary(high.mito)
 # Mode   FALSE    TRUE 
 # logical    8429    1441 
-
 
 colData(unfiltered) <- cbind(colData(unfiltered), stats)
 unfiltered$discard <- high.mito
