@@ -30,7 +30,7 @@ Seurat_base_name <- "4S_Hb_KDM"
 
 ## Prepate dirs and read the raw matrix 
 cellrangerDir_reanalyze <- here("processed-data", "cellrangerARC", Seurat_base_name, "outs")  # to process integrated Seurat Object 
-processedDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze")
+csvDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", "csv_files")
 plotDir_reanalyze <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanalyze")
 
 ## Load raw data + droplets results
@@ -38,7 +38,7 @@ unfiltered_path <- here(cellrangerDir_reanalyze, "raw_feature_bc_matrix.h5")
 sce_emptydrops_path <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_droplet_scores.rds")) # sce.out
 
 # Check processed_data and plot directories exists
-if (!dir.exists(processedDir_reanalyze)) { dir.create(processedDir_reanalyze) }
+if (!dir.exists(csvDir_reanalyze)) { dir.create(csvDir_reanalyze) }
 if (!dir.exists(plotDir_reanalyze)) { dir.create(plotDir_reanalyze) }
 
 ## Read the raw_feature_bc_matrix.h5
@@ -54,7 +54,7 @@ set.seed(5112024)
 ## Call function
 process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   # fdr_threshold = 0.001
-  # raw_sample_path <- here(cellrangerDir_reanalyze, "raw_feature_bc_matrix.h5")
+  # sample_path <- here(cellrangerDir_reanalyze, "raw_feature_bc_matrix.h5")
   # sce_out_path <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_droplet_scores.rds"))
   
   # Load the sample data
@@ -90,6 +90,10 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   colData(unfiltered) <- cbind(colData(unfiltered), stats)
   unfiltered$discard <- high.mito
   # colnames(colData(unfiltered))
+  
+  csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_valid_barcodes.csv"))
+  write.csv(sce$Barcode, csv_name)
+  print(paste0("Saved valid (true) barcodes from isOutliers for sample ", Seurat_base_name))
 
   ## Build title labels
   out_detected <- total_unfiltered_cells - total_filtered_cells
@@ -110,9 +114,8 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
 
   # Save the plot
   plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_metrics.png"))
-  #ggsave(filename = plotName, plot = plot_grid)
-  
-  message("Done!")
+  ggsave(filename = plotName, plot = plot_grid)
+  print(paste0("Saved plot from isOutliers for sample ", Seurat_base_name))
   
   return(sce)
 
@@ -121,27 +124,31 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
 ## call function to process sample 
 process_sample(unfiltered_path, sce_emptydrops_path)
 
+message("Done!")
 
-# Creating a new data frame from the given S4 object lists
 
-data <- data.frame(
-  #sum = sce.42_4.qc@listData$sum,
-  sum = sce.out@listData$sum,
-  #subsets_MT_percent = sce.42_4.qc@listData$subsets_MT_percent
-  subsets_MT_percent = sce.out@listData$subsets_MT_percent
-)
 
-# Defining thresholds
-thresholds <- attr(discard.mito, "thresholds")["higher"]
 
-# Creating the plot
-ggplot(data = data, aes(x = sum, y = subsets_MT_percent)) +
-  geom_point() +
-  scale_x_log10() +
-  #geom_hline(yintercept = thresholds, color = "red") +
-  labs(
-    title = "Scatter plot of Total count vs. Mitochondrial %",
-    x = "Total count",
-    y = "Mitochondrial %"
-  ) +
-  theme_minimal()
+# # Creating a new data frame from the given S4 object lists
+# 
+# sce.out@listData$sum
+# 
+# data <- data.frame(
+#   sum = sce.out@listData$sum,
+#   subsets_MT_percent = sce.out@listData$subsets_MT_percent
+# )
+# 
+# # Defining thresholds
+# thresholds <- attr(discard.mito, "thresholds")["higher"]
+# 
+# # Creating the plot
+# ggplot(data = data, aes(x = sum, y = subsets_MT_percent)) +
+#   geom_point() +
+#   scale_x_log10() +
+#   #geom_hline(yintercept = thresholds, color = "red") +
+#   labs(
+#     title = "Scatter plot of Total count vs. Mitochondrial %",
+#     x = "Total count",
+#     y = "Mitochondrial %"
+#   ) +
+#   theme_minimal()
