@@ -24,7 +24,17 @@ library("sessioninfo")
 here::here()
 
 # test
-Seurat_base_name <- "4S_Hb_KDM"
+#Seurat_base_name <- "4S_Hb_KDM"
+
+## Scans arguments invoked from slurm job shell sh
+sample_tmp <- commandArgs(trailingOnly = TRUE)
+# For testing: 
+# sample_tmp <- "S3_Hb_KDM_reanalysis, S3_Hb_KDM"
+
+sample_data = unlist(strsplit(sample_tmp,","))
+Seurat_base_name <- trimws(sample_data[[2]])
+
+message("Reading CellRangerARC sample: ", Seurat_base_name)
 
 # load(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_droplet_scores.rds"))) # sce.out
 
@@ -58,7 +68,7 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   # sce_out_path <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_droplet_scores.rds"))
   
   # Load the sample data
-  sce <- read10xCounts(raw_sample_path)
+  sce <- read10xCounts(sample_path)
   
   # Unifying feature names
   rownames(sce) <- uniquifyFeatureNames(rowData(sce)$ID, rowData(sce)$Symbol)
@@ -127,8 +137,6 @@ process_sample(unfiltered_path, sce_emptydrops_path)
 message("Done!")
 
 
-
-
 # # Creating a new data frame from the given S4 object lists
 # 
 # sce.out@listData$sum
@@ -152,3 +160,18 @@ message("Done!")
 #     y = "Mitochondrial %"
 #   ) +
 #   theme_minimal()
+
+
+## Add job array
+# library("slurmjobs")
+# job_single(
+#   name = "06_qc_scater_scran_metrics", memory = "30G", cores = 1, create_shell = TRUE,
+#   task_num = 10
+# )
+
+## Reproducibility information
+print("Reproducibility information:")
+Sys.time()
+proc.time()
+options(width = 120)
+session_info()
