@@ -1,13 +1,14 @@
 #!/bin/bash
-#SBATCH -p shared
+#SBATCH -p katun
 #SBATCH --mem=30G
 #SBATCH --job-name=06_qc_scater_scran_metrics
 #SBATCH -c 1
 #SBATCH -t 1-00:00:00
 #SBATCH -o logs/06_qc_scater_scran_metrics.%a.txt
 #SBATCH -e logs/06_qc_scater_scran_metrics.%a.txt
-#SBATCH --mail-type=ALL
+# SBATCH --mail-type=ALL
 #SBATCH --array=1-10%20
+id=$(sed -n ${SLURM_ARRAY_TASK_ID}p target_names_cellrangerARC_reanalyze.txt)
 
 set -e
 
@@ -22,13 +23,13 @@ echo "Node name: ${SLURMD_NODENAME}"
 echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 
 ## Load the R module
-module load conda_R/4.3
+module load conda_R/4.3.x
 
 ## List current modules for reproducibility
 module list
 
 ## Edit with your job command
-Rscript -e "options(width = 120); sessioninfo::session_info()"
+Rscript 06_qc_scater_scran_metrics.R $id
 
 echo "**** Job ends ****"
 date
