@@ -1,13 +1,8 @@
 ########################################################################
-## Applying QC metrics to filtered Seurat object
+## Applying QC metrics to Seurat object
 ##
-## Note. Compute the QC metrics with Seurat, Scran and Scater
+## Note. Compute the QC metrics with scran and scater 
 ########################################################################
-
-#library("VariantAnnotation")
-#library("Rtsne")
-#library("reshape")
-#library("cowplot")
 
 library("SingleCellExperiment")
 library("scuttle")
@@ -38,7 +33,7 @@ cellrangerDir_reanalyze <- here("processed-data", "cellrangerARC", Seurat_base_n
 processedDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze")
 plotDir_reanalyze <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanalyze")
 
-## Loading droplets results 
+## Load raw data + droplets results
 unfiltered_path <- here(cellrangerDir_reanalyze, "raw_feature_bc_matrix.h5")
 sce_emptydrops_path <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_droplet_scores.rds")) # sce.out
 
@@ -56,7 +51,7 @@ set.seed(5112024)
 
 # ############### FINDING HIGH MITO ##############################################
 
-# Function
+## Call function
 process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   # fdr_threshold = 0.001
   # raw_sample_path <- here(cellrangerDir_reanalyze, "raw_feature_bc_matrix.h5")
@@ -95,7 +90,12 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   colData(unfiltered) <- cbind(colData(unfiltered), stats)
   unfiltered$discard <- high.mito
   # colnames(colData(unfiltered))
-  
+
+  ## Build title labels
+  out_detected <- total_unfiltered_cells - total_filtered_cells
+  out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits = 2 ) 
+  caption_label <- paste0(out_detected, " cells (", out_detected_p, "%) outliers detected from ", total_unfiltered_cells, ". ", total_filtered_cells, " True cells.")
+  ## Build plot
   plot_grid <- gridExtra::grid.arrange(
     plotColData(unfiltered, y="sum", colour_by="discard") +
       scale_y_log10() + ggtitle("Total count"),
@@ -103,12 +103,14 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
       scale_y_log10() + ggtitle("Detected features"),
     plotColData(unfiltered, y="subsets_Mito_percent",
                 colour_by="discard") + ggtitle("Mito percent"),
-    ncol = 3
+    ncol = 3,
+    top = paste0(Seurat_base_name, " Outliers detected"),
+    bottom = caption_label
   )
 
   # Save the plot
   plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_metrics.png"))
-  ggsave(filename = plotName, plot = plot_grid)
+  #ggsave(filename = plotName, plot = plot_grid)
   
   message("Done!")
   
@@ -116,7 +118,7 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
 
 }
 
-## call funtion to process sample
+## call function to process sample 
 process_sample(unfiltered_path, sce_emptydrops_path)
 
 
