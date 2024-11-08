@@ -123,13 +123,20 @@ head(location, n=10)
 
 sce.raw <- sce.raw[,which(sce.out$FDR <= 0.001)]
 unfiltered <- sce.raw
+colData(unfiltered)
+dim(assay(unfiltered))
 
 # Quality control
 # Filtering on the mitochondrial proportion
-stats <- perCellQCMetrics(sce.raw, subsets=list(Mito=which(location=="MT")))
-colnames(stats)
-# [1] "sum"                   "detected"              "subsets_Mito_sum"     
-# [4] "subsets_Mito_detected" "subsets_Mito_percent"  "total"
+is.mito <- grep("MT-", rownames(sce.raw))
+stats <- perCellQCMetrics(sce.raw, subsets=list(Mito=is.mito))
+#colnames(stats)
+summary(stats$subsets_Mito_percent)
+
+## store this in the colData() of our SingleCellExperiment object for future reference
+colData(sce.raw) <- cbind(colData(sce.raw), stats)
+colnames(colData(sce.raw))
+colData(sce.raw)
 
 # Setup parameters to state different levels of outliers 
 high.mito <- isOutlier(stats$subsets_Mito_percent, type="higher")
