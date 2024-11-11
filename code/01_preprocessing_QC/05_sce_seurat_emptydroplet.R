@@ -13,7 +13,8 @@
 
 library(Seurat)
 library(SingleCellExperiment)
-library(DropletUtils)   
+library(DropletUtils)  
+library(scales)
 library(tidyverse)
 library(here)
 library(sessioninfo)
@@ -190,7 +191,7 @@ droplet_elbow_plot <- droplet_elbow_data |>
   annotate("text", x = 10, y = knee_lower, label = knee_lower_label, vjust = -0.5) +
   # Define scales
   scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10", oob = scales::squish_infinite) +
   
   # Define labels
   labs(
@@ -205,24 +206,13 @@ droplet_elbow_plot <- droplet_elbow_data |>
   theme(legend.position = "bottom")
 
 ## Save the png format
-ggsave(droplet_elbow_plot, here(plotDir_reanalyze, paste0(sample_name, "_droplet_qc", ".png")))
+plt_name <- here(plotDir_reanalyze, paste0(sample_name, "_droplet_qc.png"))
+ggsave(filename = plt_name, plot = droplet_elbow_plot)
 
 message("Saved elbow plot!")
 
 message("Done!")
 
-
-
-# ## Conversion from SingleCellExperiment objects to Seurat objects
-# 
-# # Not direct conversion available in R,need first be transformed from Dframe to s3 
-# typeof(sce.out)   #S4
-# sce.out.t <- t(sce.out)
-# sce.seurat <- as.Seurat(sce.out.t, counts = "counts", data = "logcounts")
-# # gives the same results; but omits defaults provided in the last line
-# sce.seurat <- as.Seurat(sce.out)
-# # Error in UseMethod(generic = "as.Seurat", object = x) : 
-# # no applicable method for 'as.Seurat' applied to an object of class "c('DFrame', 'DataFrame', 'SimpleList', 'RectangularData', 'List', 'DataFrame_OR_NULL', 'Vector', 'list_OR_List', 'Annotated', 'vector_OR_Vector')"
 
 # library(slurmjobs)
 # job_single(
