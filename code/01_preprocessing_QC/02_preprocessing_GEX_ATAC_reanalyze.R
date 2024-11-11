@@ -256,9 +256,6 @@ if (b_get_GEX_plots) {
 
 # Only one Seurat object available
 lst_seurats <- list(SeuratOBJ)    
-# rds_name <- here(processedDir_reanalyze, paste0(crARC_Sample_r,'.rds'))
-# saveRDS(SeuratOBJ, file = rds_name)
-# message('Saving Seurat none filtered.')
 
 
 ########  ################################################# ############ 
@@ -284,7 +281,8 @@ genome(annotations) <- "hg38"
 message(' Calculating chromatin QC metrics.')
 
 for (S in lst_seurats) {
-
+    # testing:
+    # S <- SeuratOBJ
     rm('SeuratOBJ')
     # pull base name to label objects and plots 
     # testing: S <- lst_seurats[[1]]
@@ -296,6 +294,7 @@ for (S in lst_seurats) {
     
     atac_counts <- mtx$Peaks
     SeuratOBJ <- get_create_atac_objs(S, atac_counts, fragments_tsv_path, annotations, TRUE) 
+    
     print(start.time - Sys.time())        # 15s / 40G free_mem / 3k Cells / Object.size 806.2 Mb
     # f_InspectSeurat(SeuratOBJ)
     # tbs_atac <- get_basic_stats_ATAC(SeuratOBJ)
@@ -307,14 +306,24 @@ for (S in lst_seurats) {
 
         # Calculate the strength of the nucleosome signal per cell
         SeuratOBJ <- NucleosomeSignal(SeuratOBJ)
+        
+        SeuratOBJ$nucleosome_position <- ifelse(SeuratOBJ$nucleosome_signal < 1, 'NucleosomeFree', "Multinucleosome") 
+        sum(SeuratOBJ$nucleosome_position == "NucleosomeFree")
+     
         #SeuratOBJ$nucleosome_signal
         plt_NS <- ggplot(SeuratOBJ@meta.data, aes(x=nucleosome_signal)) + 
           geom_histogram(aes(y=..density..), colour="black", fill="white")+
           geom_density(alpha=.5, color="darkblue", fill="lightblue") 
-        #SeuratOBJ$nucleosome_group <- ifelse(SeuratOBJ$nucleosome_signal > 4, 'NS > 4', 'NS < 4')
+        
         SeuratOBJ$nucleosome_group <- ifelse(SeuratOBJ$nucleosome_signal > 2, 'NS_FAIL', 'NS_PASS')
         plt_NSgrp <- FragmentHistogram(object = SeuratOBJ, group.by = 'nucleosome_group')
+        plt_NSmono <- FragmentHistogram(object = SeuratOBJ, group.by = 'nucleosome_position')
+        
         summary(SeuratOBJ$nucleosome_signal)
+        summary(SeuratOBJ$nucleosome_position)
+        NFR <- sum(SeuratOBJ$nucleosome_position == "NucleosomeFree")
+        multi_NS <- sum(!SeuratOBJ$nucleosome_position == "NucleosomeFree")
+        
         #head(SeuratOBJ, n = 3) 
         message("NS score: ")
         addmargins(table(SeuratOBJ$nucleosome_group))
@@ -326,11 +335,18 @@ for (S in lst_seurats) {
         NS_caption1 <- paste("NS PASS:", pass_NS,  "(", round(pass_NS*100 / NS_total, digits = 2), "%)")
         NS_caption2 <- paste("NS FAIL:", fail_NS,  "(", round(fail_NS*100 / NS_total, digits = 2), "%)")
         
-        p1_NS <- (plt_NS + labs(title = "NS distribution and NS Signal", subtitle = crARC_Sample_r)) / plt_NSgrp +
+        p1_NS <- (plt_NS + labs(title = "NS distribution and NS Signal (NS<2)", subtitle = crARC_Sample_r)) / plt_NSgrp +
           theme(plot.caption = element_text(hjust = 0)) +
           labs(caption = paste(NS_cap, "\n", NS_caption1, "\n", NS_caption2))
         png_file_NS <- here(plotDir_reanalyze, paste0(crARC_Sample_r,'_Fragment_Distribution_grp.png'))
         ggsave(p1_NS, filename = png_file_NS, height = 4, width = 4)
+        
+        plt_NSmono <- (plt_NS + labs(title = "NS position", subtitle = crARC_Sample_r)) / plt_NSmono +
+          theme(plot.caption = element_text(hjust = 0)) +
+          labs(caption = paste0("NFR = ", NFR, "\nMultinucleosome = ", multi_NS))
+        png_file_NS <- here(plotDir_reanalyze, paste0(crARC_Sample_r,'_NS_position.png'))
+        ggsave(plt_NSmono, filename = png_file_NS, height = 4, width = 4)
+        
 
         # Calculate the "Transcription Start Site (TSS)" enrichment score
         tryCatch( {
@@ -398,6 +414,7 @@ for (S in lst_seurats) {
         message('ATAC QCs plots saved!')  
     
     }
+    
     # Save RDS Object
     rds_name <- here(processedDir_reanalyze, paste0(crARC_Sample_r,'.rds'))
     saveRDS(SeuratOBJ, file = rds_name)
