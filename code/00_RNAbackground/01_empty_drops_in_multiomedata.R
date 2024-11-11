@@ -51,14 +51,15 @@ s_sample <- sample_data[[1]]
 
 message("Processing sample: ", s_sample)
 
-## Break to avoid processing old samples
+## Skip old samples (pilot)
 if (s_sample %in% c("S1_Hb_KDM", "S1_Hb_KDM")) {
     print("Skipe old sample. ")
     stop()
 }
 
 ## Read the raw_feature_bc_matrix.h5
-sample_path <- get_raw_barcode_mtx(s_sample)
+#sample_path <- get_raw_barcode_mtx(s_sample)
+sample_path <- here("processed-data", "cellrangerARC", s_sample, "outs", "raw_feature_bc_matrix.h5")
 message("Reading data from ", sample_path) # ../cellrangerARC/S1_Hb_KDM/outs/raw_feature_bc_matrix.h5
 h5_raw_path <- Read10X_h5(sample_path) # dgCMatrix data. Barcodes for columns and genes by rows
 # head(h5_raw_path, n=1)                                 # Sparse mtx has the 2 slots (gene expression and peaks)
@@ -72,7 +73,7 @@ totalCells <- length(Cells(raw.sce))
 ## Compute barcode rank statistics and identify the knee and inflection points on the total count curve
 bcRanks <- barcodeRanks(raw.sce, fit.bounds = c(10, 1e3))
 ## Barcode rank range.
-colnames(bcRanks)
+#colnames(bcRanks)
 range((bcRanks$rank))
 range((bcRanks$total))
 ## Get knee value and add hundred points to perform a more stringent threshold.
