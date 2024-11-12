@@ -1,10 +1,10 @@
 ########################################################################
-## Applying QC metrics to Seurat object
-##
-## Note. Compute the QC metrics with scran and scater 
+## Calculate standard quality control metrics based on the singleCellExperiment assay in Seurat's GEX assays
+## CSC. Nov-2024
 ########################################################################
 
 library("SingleCellExperiment")
+library("Seurat")
 library("scuttle")
 library("here")
 library("ggplot2")
@@ -23,52 +23,42 @@ library("sessioninfo")
 
 here::here()
 
-# test
-#Seurat_base_name <- "4S_Hb_KDM"
-
 ## Scans arguments invoked from slurm job shell sh
 sample_tmp <- commandArgs(trailingOnly = TRUE)
-# For testing: 
-# sample_tmp <- "S3_Hb_KDM_reanalysis, S3_Hb_KDM"
-
 sample_data = unlist(strsplit(sample_tmp,","))
 Seurat_base_name <- trimws(sample_data[[2]])
 
-message("Reading CellRangerARC sample: ", Seurat_base_name)
+message("Reading CellRangerARC reanalyze sample: ", Seurat_base_name)
 
-# load(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_droplet_scores.rds"))) # sce.out
-
-## Prepate dirs and read the raw matrix 
-cellrangerDir_reanalyze <- here("processed-data", "cellrangerARC", Seurat_base_name, "outs")  # to process integrated Seurat Object 
+## Prepare Dir(s) and read the raw matrix 
+cellrangerDir_reanalyze <- here("processed-data", "cellrangerARC", Seurat_base_name, "outs")  
 csvDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", "csv_files")
 plotDir_reanalyze <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanalyze")
 
-## Load raw data + droplets results
+## Load raw data
 unfiltered_path <- here(cellrangerDir_reanalyze, "raw_feature_bc_matrix.h5")
-sce_emptydrops_path <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_droplet_scores.rds")) # sce.out
+# sce_emptydrops_path <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_droplet_scores.rds")) # sce.out
 
 # Check processed_data and plot directories exists
 if (!dir.exists(csvDir_reanalyze)) { dir.create(csvDir_reanalyze) }
 if (!dir.exists(plotDir_reanalyze)) { dir.create(plotDir_reanalyze) }
 
 ## Read the raw_feature_bc_matrix.h5
-message("Reading raw feature bc data corresponding to sample: ", Seurat_base_name) # ../cellrangerARC/S1_Hb_KDM/outs/raw_feature_bc_matrix.h5
-# sce.raw <- read10xCounts(here(cellrangerDir_reanalyze, "raw_feature_bc_matrix.h5")) # dgCMatrix data. Barcodes for columns and genes by rows (DropletUtils)
-# sce.raw
+message("Reading raw feature barcode data corresponding to sample: ", Seurat_base_name) # ../cellrangerARC/S1_Hb_KDM/outs/raw_feature_bc_matrix.h5
 
-set.seed(5112024)
+set.seed(11112024)
 
 
 # ############### FINDING HIGH MITO ##############################################
 
 ## Call function
 process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
-  # fdr_threshold = 0.001
-  # sample_path <- here(cellrangerDir_reanalyze, "raw_feature_bc_matrix.h5")
-  # sce_out_path <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_droplet_scores.rds"))
+  # fdr_threshold = 0.001   # Only need it if you are processing empyDrops results
   
   # Load the sample data
   sce <- read10xCounts(sample_path)
+  # class: SingleCellExperiment 
+  # dim: 181201 702703 
   
   # Unifying feature names
   rownames(sce) <- uniquifyFeatureNames(rowData(sce)$ID, rowData(sce)$Symbol)
@@ -76,25 +66,47 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   # Map the IDs
   location <- mapIds(EnsDb.Hsapiens.v86, keys=rowData(sce)$ID, column="SEQNAME", keytype="GENEID")
   
-  # Load sce.out
-  load(sce_out_path, verbose = T)
+  ## If interested in use the emptyDrops derived cells for calculate Outliers use the chunk code below
+  # sce_out_path <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_droplet_scores.rds"))
+  # load(sce_out_path, verbose = T) # load sce.out (emptyDrops derived RDS object)
+  ## Subset our SingleCellExperiment object to retain only the detected cells
+  # sce <- sce[,which(sce.out$FDR <= fdr_threshold)]
+  # unfiltered <- sce
   
-  # Subset our SingleCellExperiment object to retain only the detected cells
-  sce <- sce[,which(sce.out$FDR <= fdr_threshold)]
+  ## Load sce.out from cellrangerARC_reanalyze Dir
+  sce.out2 <- readRDS(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_reanalysis.rds")))
+  sce.out2 <- as.SingleCellExperiment(sce.out2, assay = "RNA")
+  ## Select those cells detected from custom Cell RangerARC reanalyze pipeline
+  v_reanalyze_cells <- Cells(sce.out2)
+  #dim(sce) ## [1] 181201 702703
+  #colData(sce)
+  sce <- sce[,sce$Barcode %in% c(v_reanalyze_cells)]
+  #dim(sce) #[1] 181201   5050
   unfiltered <- sce
+  
   total_unfiltered_cells <- dim(assay(unfiltered))[2]
   
   # Quality control
   # Filtering on the mitochondrial proportion
   is.mito <- grep("MT-", rownames(sce))
   stats <- perCellQCMetrics(sce, subsets=list(Mito=is.mito))
-  # colnames(stats)
-  # summary(stats$subsets_Mito_percent)
-  # stats <- perCellQCMetrics(sce, subsets=list(Mito=which(location=="MT")))
+  
+  ## For reference, these are result derived from reanalyze (5050 cells) vs emptyDrops for sample S03 (5802 cells)
+  #summary(stats$subsets_Mito_percent) 
+  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  # 0.0000  0.4765  1.0858  2.5113  2.1428 84.0290
+  
+  ## For comparison purposes: result derived from emptyDrops for sample S03
+  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  # 0.0000  0.5258  1.1725  2.5728  2.3095 71.2544
+  #stats$subsets_Mito_percent[is.na(stats$subsets_Mito_percent)] <- 0
+
+  #stats <- perCellQCMetrics(sce, subsets=list(Mito=which(location=="MT")))
   high.mito <- isOutlier(stats$subsets_Mito_percent, type="higher")
+  table(high.mito[high.mito==FALSE])
+  
   sce <- sce[,!high.mito]
   total_filtered_cells <- dim(assay(sce))[2]
-  #summary(high.mito)
   
   ## store this in the colData() of our SingleCellExperiment object for future reference
   colData(unfiltered) <- cbind(colData(unfiltered), stats)
@@ -109,6 +121,7 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   out_detected <- total_unfiltered_cells - total_filtered_cells
   out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits = 2 ) 
   caption_label <- paste0(out_detected, " cells (", out_detected_p, "%) outliers detected from ", total_unfiltered_cells, ". ", total_filtered_cells, " True cells.")
+
   ## Build plot
   plot_grid <- gridExtra::grid.arrange(
     plotColData(unfiltered, y="sum", colour_by="discard") +
