@@ -40,9 +40,6 @@ define_theme <- function(size = 15) {
     theme(text = element_text(size = size))
 }
 
-# Load raw barcode data or Seurat with raw data
-b_h5file <- TRUE
-
 ## commandArgs scans the arguments which have been supplied when the current R script was invoked (from shell sh)
 sample_tmp <- commandArgs(trailingOnly = TRUE)
 # For testing: 
@@ -53,34 +50,17 @@ sample_name <- trimws(sample_data[[2]])
 
 message("Reading CellRangerARC sample: ", sample_name)
 
-
-# Specify if raw data will be load directly from a H5 file or a SeuratOBJ
-if (!b_h5file) {
-
-     # # The raw file is selected instead of the truncared filtered matrix
-     # s_featured_bc_mtx <- here("raw-data/PBMC_CellSorted_ARC2_0_0", "pbmc_granulocyte_sorted_10k_raw_feature_bc_matrix.h5")
-     # #s_meta_fname <- here("raw-data/PBMC_CellSorted_ARC2_0_0", "pbmc_granulocyte_sorted_3k_per_barcode_metrics.csv")
-     # SeuratOBJ <- f_create_seurat_RAW(s_sample_name2, s_featured_bc_mtx)
-     # #s_frag_namefile <- here('raw-data/PBMC_CellSorted_ARC2_0_0/', 'pbmc_granulocyte_sorted_3k_atac_fragments.tsv.gz')
-     # # Make a Seurat obj a SCE
-     # DefaultAssay(SeuratOBJ) <- "RNA"
-     # SeuratOBJ.sce <- as.SingleCellExperiment(SeuratOBJ)
-
- } else if (b_h5file) {
-
-    # Load h5 file directly as usually do in single cell exp
-    cellrangerARC_Dir <- here(cellrangerARC_Dir,  sample_name, "outs", "raw_feature_bc_matrix.h5")  
-    h5_raw_path <- Read10X_h5(here(cellrangerARC_Dir)) 
-    raw.sce <- h5_raw_path$`Gene Expression`
-
-} 
-
+# Load raw barcode data or Seurat with raw data
+# Load h5 file directly as usually do in single cell exp
+cellrangerARC_Dir <- here(cellrangerARC_Dir,  sample_name, "outs", "raw_feature_bc_matrix.h5")  
+h5_raw_path <- Read10X_h5(here(cellrangerARC_Dir)) 
+raw.sce <- h5_raw_path$`Gene Expression`
 #str(raw.sce)
 head(raw.sce, n=3)
 
 totalCells <- length(Cells(raw.sce))
 
-message("Processing ", totalCells, " from CellRanger ARC sample ", sample_name)
+message("Processing ", totalCells, " cells from `CellRangerARC reanalyze` sample ", sample_name)
 # Processing 583052 from multiome sample 4S_Hb_KDM
 
 # barcodeRanks method (from DropletUtils package), compute barcode rank statistics and identify the knee and inflection points on the total count curve
