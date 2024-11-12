@@ -73,6 +73,10 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   SeuratOBJ <- readRDS(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_reanalysis.rds")))
   DefaultAssay(SeuratOBJ) <- "ATAC"
   
+  colnames(SeuratOBJ@meta.data)
+
+  ##### Nucleosome Signal and NS-position classification"
+  
   #table(SeuratOBJ$nucleosome_signal)
   ## Add new meta data with NS position
   SeuratOBJ$nucleosome_signal_p <- round(SeuratOBJ$nucleosome_signal, digits = 0)
@@ -85,6 +89,9 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   #sum(SeuratOBJ$nucleosome_position_pos == "NucleosomeFree")
   sum(!SeuratOBJ$nucleosome_position_pos == "NucleosomeFree")
   
+  ##### Find/show TSS enrichment scores by grouping the cells based on the score and plotting the accessibility signal over all TSS sites
+  
+  DensityScatter(SeuratOBJ, x = 'nucleosome_signal', y = 'TSS.enrichment', log_x = TRUE, quantiles = TRUE)
   
   
   ## Convert ATAC assay from Seurat to singleCellexperiment
