@@ -1,5 +1,5 @@
 ########################################################################
-## Calculate standard quality control metrics based on the singleCellExperiment assay in Seurat's GEX assays
+## Calculate standard quality control metrics based on the singleCellExperiment assay in Seurat's ATAC assays
 ## CSC. Nov-2024
 ########################################################################
 
@@ -25,6 +25,8 @@ here::here()
 
 ## Scans arguments invoked from slurm job shell sh
 sample_tmp <- commandArgs(trailingOnly = TRUE)
+# For testing:
+# sample_tmp <- "S3_Hb_KDM_reanalysis, S3_Hb_KDM"
 sample_data = unlist(strsplit(sample_tmp,","))
 Seurat_base_name <- trimws(sample_data[[2]])
 
@@ -46,7 +48,7 @@ if (!dir.exists(plotDir_reanalyze)) { dir.create(plotDir_reanalyze) }
 ## Read the raw_feature_bc_matrix.h5
 message("Reading raw feature barcode data corresponding to sample: ", Seurat_base_name) # ../cellrangerARC/S1_Hb_KDM/outs/raw_feature_bc_matrix.h5
 
-set.seed(11112024)
+set.seed(12112024)
 
 
 # ############### FINDING HIGH MITO ##############################################
@@ -54,6 +56,7 @@ set.seed(11112024)
 ## Call function
 process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   # fdr_threshold = 0.001   # Only need it if you are processing empyDrops results
+  # sample_path <- "/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/cellrangerARC/S3_Hb_KDM/outs/raw_feature_bc_matrix.h5"
   
   # Load the sample data
   sce <- read10xCounts(sample_path)
@@ -66,16 +69,27 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   # Map the IDs
   location <- mapIds(EnsDb.Hsapiens.v86, keys=rowData(sce)$ID, column="SEQNAME", keytype="GENEID")
   
-  ## If interested in use the emptyDrops derived cells for calculate Outliers use the chunk code below
-  # sce_out_path <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_droplet_scores.rds"))
-  # load(sce_out_path, verbose = T) # load sce.out (emptyDrops derived RDS object)
-  ## Subset our SingleCellExperiment object to retain only the detected cells
-  # sce <- sce[,which(sce.out$FDR <= fdr_threshold)]
-  # unfiltered <- sce
-  
   ## Load sce.out from cellrangerARC_reanalyze Dir
-  sce.out2 <- readRDS(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_reanalysis.rds")))
-  sce.out2 <- as.SingleCellExperiment(sce.out2, assay = "RNA")
+  SeuratOBJ <- readRDS(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_reanalysis.rds")))
+  DefaultAssay(SeuratOBJ) <- "ATAC"
+  
+  #table(SeuratOBJ$nucleosome_signal)
+  ## Add new meta data with NS position
+  SeuratOBJ$nucleosome_signal_p <- round(SeuratOBJ$nucleosome_signal, digits = 0)
+  table(SeuratOBJ$nucleosome_signal_p) 
+  sum(SeuratOBJ$nucleosome_signal_p == 0)
+  ## Add new meta-data with NS positions
+  SeuratOBJ$nucleosome_position_pos <- ifelse(SeuratOBJ$nucleosome_signal_p == 0, "NucleosomeFree", 
+                                              ifelse(SeuratOBJ$nucleosome_signal_p == 2, "Dinucleosomes", "Multinucleosomes")) 
+  #table(SeuratOBJ$nucleosome_position_pos)
+  #sum(SeuratOBJ$nucleosome_position_pos == "NucleosomeFree")
+  sum(!SeuratOBJ$nucleosome_position_pos == "NucleosomeFree")
+  
+  
+  
+  ## Convert ATAC assay from Seurat to singleCellexperiment
+  
+  sce.out2 <- as.SingleCellExperiment(SeuratObj, assay = "ATAC")
   ## Select those cells detected from custom Cell RangerARC reanalyze pipeline
   v_reanalyze_cells <- Cells(sce.out2)
   #dim(sce) ## [1] 181201 702703
