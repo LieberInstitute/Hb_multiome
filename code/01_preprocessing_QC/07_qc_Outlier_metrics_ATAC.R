@@ -75,6 +75,9 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   
   colnames(SeuratOBJ@meta.data)
 
+  ##### Find/show cutoff values (setting quantiles=TRUE) based on the ATAC nucleosome_signal metrics respecting the TSS.enrichment
+  #colnames(SeuratOBJ@meta.data)
+  
   ##### Nucleosome Signal and NS-position classification"
   
   #table(SeuratOBJ$nucleosome_signal)
@@ -91,8 +94,13 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   
   ##### Find/show TSS enrichment scores by grouping the cells based on the score and plotting the accessibility signal over all TSS sites
   
-  DensityScatter(SeuratOBJ, x = 'nucleosome_signal', y = 'TSS.enrichment', log_x = TRUE, quantiles = TRUE)
-  
+  ## quickly find/show cutoff values (setting quantiles=TRUE) based on the ATAC nucleosome_signal metrics respecting the TSS.enrichment
+  plt_density_NS_TSS <- DensityScatter(SeuratOBJ, x = 'nucleosome_signal', y = 'TSS.enrichment', log_x = TRUE, quantiles = TRUE)
+  plt_density_NS_TSS <- plt_density_NS_TSS + labs(title = paste0("Sample: ", Seurat_base_name)) +
+    labs(caption = paste0("CellRangerARC reanalyze dataset")) +
+    theme(plot.title = element_text(size = 12, face = "bold"))
+  file_name <- here(plotDir_reanalyze, "Seurat_Signac_QC_metrics", paste0(Seurat_base_name,'_reanalysis_density_NS_TSS.png'))
+  ggsave(plt_density_NS_TSS, filename = file_name, height = 4, width = 6)
   
   ## Convert ATAC assay from Seurat to singleCellexperiment
   
