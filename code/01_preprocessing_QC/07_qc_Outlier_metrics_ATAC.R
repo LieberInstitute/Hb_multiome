@@ -219,10 +219,10 @@ message("Done!")
 #   theme_minimal()
 
 
-## Add job array
+# Add job array
 # library("slurmjobs")
 # job_single(
-#   name = "06_qc_scater_scran_metrics", memory = "30G", cores = 1, create_shell = TRUE,
+#   name = "07_qc_Outlier_metrics_ATAC", memory = "30G", cores = 1, create_shell = TRUE,
 #   task_num = 10
 # )
 
