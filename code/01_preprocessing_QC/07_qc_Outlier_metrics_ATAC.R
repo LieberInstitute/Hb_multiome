@@ -18,6 +18,7 @@ library("uwot")
 library("DropletUtils")
 library("gridExtra")
 library("EnsDb.Hsapiens.v86")
+library("stringr")
 library("sessioninfo")
 
 ## Read directories
@@ -113,75 +114,75 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   
   plt_density_NS_TSS <- plt1_a + plt1_b + plt1_c
   
-  file_name <- here(plotDir_reanalyze, "Seurat_Signac_QC_metrics", paste0(Seurat_base_name,'_reanalysis_density_NS_TSS.png'))
+  file_name <- here(plotDir_reanalyze, "Seurat_Signac_QC_metrics", paste0(str_split(Seurat_base_name, fixed("_"))[[1]][1],'_reanalysis_density_NS_TSS.png'))
   ggsave(plt_density_NS_TSS, filename = file_name, height = 4, width = 10)
   
-  ## Convert ATAC assay from Seurat to singleCellexperiment
-  
-  sce.out2 <- as.SingleCellExperiment(SeuratObj, assay = "ATAC")
-  ## Select those cells detected from custom Cell RangerARC reanalyze pipeline
-  v_reanalyze_cells <- Cells(sce.out2)
-  #dim(sce) ## [1] 181201 702703
-  #colData(sce)
-  sce <- sce[,sce$Barcode %in% c(v_reanalyze_cells)]
-  #dim(sce) #[1] 181201   5050
-  unfiltered <- sce
-  
-  total_unfiltered_cells <- dim(assay(unfiltered))[2]
-  
-  # Quality control
-  # Filtering on the mitochondrial proportion
-  is.mito <- grep("MT-", rownames(sce))
-  stats <- perCellQCMetrics(sce, subsets=list(Mito=is.mito))
-  
-  ## For reference, these are result derived from reanalyze (5050 cells) vs emptyDrops for sample S03 (5802 cells)
-  #summary(stats$subsets_Mito_percent) 
-  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-  # 0.0000  0.4765  1.0858  2.5113  2.1428 84.0290
-  
-  ## For comparison purposes: result derived from emptyDrops for sample S03
-  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-  # 0.0000  0.5258  1.1725  2.5728  2.3095 71.2544
-  #stats$subsets_Mito_percent[is.na(stats$subsets_Mito_percent)] <- 0
-
-  #stats <- perCellQCMetrics(sce, subsets=list(Mito=which(location=="MT")))
-  high.mito <- isOutlier(stats$subsets_Mito_percent, type="higher")
-  table(high.mito[high.mito==FALSE])
-  
-  sce <- sce[,!high.mito]
-  total_filtered_cells <- dim(assay(sce))[2]
-  
-  ## store this in the colData() of our SingleCellExperiment object for future reference
-  colData(unfiltered) <- cbind(colData(unfiltered), stats)
-  unfiltered$discard <- high.mito
-  # colnames(colData(unfiltered))
-  
-  csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_valid_barcodes.csv"))
-  write.csv(sce$Barcode, csv_name)
-  print(paste0("Saved valid (true) barcodes from isOutliers for sample ", Seurat_base_name))
-
-  ## Build title labels
-  out_detected <- total_unfiltered_cells - total_filtered_cells
-  out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits = 2 ) 
-  caption_label <- paste0(out_detected, " cells (", out_detected_p, "%) outliers detected from ", total_unfiltered_cells, ". ", total_filtered_cells, " True cells.")
-
-  ## Build plot
-  plot_grid <- gridExtra::grid.arrange(
-    plotColData(unfiltered, y="sum", colour_by="discard") +
-      scale_y_log10() + ggtitle("Total count"),
-    plotColData(unfiltered, y="detected", colour_by="discard") +
-      scale_y_log10() + ggtitle("Detected features"),
-    plotColData(unfiltered, y="subsets_Mito_percent",
-                colour_by="discard") + ggtitle("Mito percent"),
-    ncol = 3,
-    top = paste0(Seurat_base_name, " Outliers detected"),
-    bottom = caption_label
-  )
-
-  # Save the plot
-  plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_metrics.png"))
-  ggsave(filename = plotName, plot = plot_grid)
-  print(paste0("Saved plot from isOutliers for sample ", Seurat_base_name))
+  # ## Convert ATAC assay from Seurat to singleCellexperiment
+  # 
+  # sce.out2 <- as.SingleCellExperiment(SeuratObj, assay = "ATAC")
+  # ## Select those cells detected from custom Cell RangerARC reanalyze pipeline
+  # v_reanalyze_cells <- Cells(sce.out2)
+  # #dim(sce) ## [1] 181201 702703
+  # #colData(sce)
+  # sce <- sce[,sce$Barcode %in% c(v_reanalyze_cells)]
+  # #dim(sce) #[1] 181201   5050
+  # unfiltered <- sce
+  # 
+  # total_unfiltered_cells <- dim(assay(unfiltered))[2]
+  # 
+  # # Quality control
+  # # Filtering on the mitochondrial proportion
+  # is.mito <- grep("MT-", rownames(sce))
+  # stats <- perCellQCMetrics(sce, subsets=list(Mito=is.mito))
+  # 
+  # ## For reference, these are result derived from reanalyze (5050 cells) vs emptyDrops for sample S03 (5802 cells)
+  # #summary(stats$subsets_Mito_percent) 
+  # # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  # # 0.0000  0.4765  1.0858  2.5113  2.1428 84.0290
+  # 
+  # ## For comparison purposes: result derived from emptyDrops for sample S03
+  # # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  # # 0.0000  0.5258  1.1725  2.5728  2.3095 71.2544
+  # #stats$subsets_Mito_percent[is.na(stats$subsets_Mito_percent)] <- 0
+  # 
+  # #stats <- perCellQCMetrics(sce, subsets=list(Mito=which(location=="MT")))
+  # high.mito <- isOutlier(stats$subsets_Mito_percent, type="higher")
+  # table(high.mito[high.mito==FALSE])
+  # 
+  # sce <- sce[,!high.mito]
+  # total_filtered_cells <- dim(assay(sce))[2]
+  # 
+  # ## store this in the colData() of our SingleCellExperiment object for future reference
+  # colData(unfiltered) <- cbind(colData(unfiltered), stats)
+  # unfiltered$discard <- high.mito
+  # # colnames(colData(unfiltered))
+  # 
+  # csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_valid_barcodes.csv"))
+  # write.csv(sce$Barcode, csv_name)
+  # print(paste0("Saved valid (true) barcodes from isOutliers for sample ", Seurat_base_name))
+  # 
+  # ## Build title labels
+  # out_detected <- total_unfiltered_cells - total_filtered_cells
+  # out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits = 2 ) 
+  # caption_label <- paste0(out_detected, " cells (", out_detected_p, "%) outliers detected from ", total_unfiltered_cells, ". ", total_filtered_cells, " True cells.")
+  # 
+  # ## Build plot
+  # plot_grid <- gridExtra::grid.arrange(
+  #   plotColData(unfiltered, y="sum", colour_by="discard") +
+  #     scale_y_log10() + ggtitle("Total count"),
+  #   plotColData(unfiltered, y="detected", colour_by="discard") +
+  #     scale_y_log10() + ggtitle("Detected features"),
+  #   plotColData(unfiltered, y="subsets_Mito_percent",
+  #               colour_by="discard") + ggtitle("Mito percent"),
+  #   ncol = 3,
+  #   top = paste0(Seurat_base_name, " Outliers detected"),
+  #   bottom = caption_label
+  # )
+  # 
+  # # Save the plot
+  # plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_metrics.png"))
+  # ggsave(filename = plotName, plot = plot_grid)
+  # print(paste0("Saved plot from isOutliers for sample ", Seurat_base_name))
   
   return(sce)
 
