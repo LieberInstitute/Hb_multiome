@@ -117,6 +117,8 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   file_name <- here(plotDir_reanalyze, "Seurat_Signac_QC_metrics", paste0(str_split(Seurat_base_name, fixed("_"))[[1]][1],'_reanalysis_density_NS_TSS.png'))
   ggsave(plt_density_NS_TSS, filename = file_name, height = 4, width = 10)
   
+  FragmentHistogram(object = SeuratOBJ, group.by = 'nucleosome_position_pos')
+
   # ## Convert ATAC assay from Seurat to singleCellexperiment
   # 
   # sce.out2 <- as.SingleCellExperiment(SeuratObj, assay = "ATAC")
