@@ -8,12 +8,12 @@ library("Seurat")
 library("scuttle")
 library("here")
 library("ggplot2")
-library("ggrepel")
+# library("ggrepel") # provides geoms for ggplot2 to repel overlapping text labels
 library("scater")
-library("batchelor")
+# library("batchelor") # Implements a variety of methods for batch correction of single-cell (RNA sequencing) data
 library("scran")
 library("scry")
-library("uwot")
+# library("uwot") # An R implementation of the Uniform Manifold Approximation and Projection (UMAP)
 library("DropletUtils")
 library("gridExtra")
 library("EnsDb.Hsapiens.v86")
@@ -25,6 +25,8 @@ here::here()
 
 ## Scans arguments invoked from slurm job shell sh
 sample_tmp <- commandArgs(trailingOnly = TRUE)
+# For testing:
+# sample_tmp <- "S3_Hb_KDM_reanalysis, S3_Hb_KDM"
 sample_data = unlist(strsplit(sample_tmp,","))
 Seurat_base_name <- trimws(sample_data[[2]])
 
@@ -54,6 +56,7 @@ set.seed(11112024)
 ## Call function
 process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   # fdr_threshold = 0.001   # Only need it if you are processing empyDrops results
+  # sample_path <- "/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/cellrangerARC/S3_Hb_KDM/outs/raw_feature_bc_matrix.h5"
   
   # Load the sample data
   sce <- read10xCounts(sample_path)
@@ -62,7 +65,6 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   
   # Unifying feature names
   rownames(sce) <- uniquifyFeatureNames(rowData(sce)$ID, rowData(sce)$Symbol)
-  
   # Map the IDs
   location <- mapIds(EnsDb.Hsapiens.v86, keys=rowData(sce)$ID, column="SEQNAME", keytype="GENEID")
   
@@ -73,50 +75,69 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   # sce <- sce[,which(sce.out$FDR <= fdr_threshold)]
   # unfiltered <- sce
   
-  ## Load sce.out from cellrangerARC_reanalyze Dir
+  ## Load sce.out from cellrangerARC_reanalyze, then transform to sce object
   sce.out2 <- readRDS(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_reanalysis.rds")))
   sce.out2 <- as.SingleCellExperiment(sce.out2, assay = "RNA")
   ## Select those cells detected from custom Cell RangerARC reanalyze pipeline
   v_reanalyze_cells <- Cells(sce.out2)
   #dim(sce) ## [1] 181201 702703
   #colData(sce)
+  ## Subset to keep only valid barcodes from Cell RangerARC reanalyze
   sce <- sce[,sce$Barcode %in% c(v_reanalyze_cells)]
   #dim(sce) #[1] 181201   5050
   unfiltered <- sce
   
-  total_unfiltered_cells <- dim(assay(unfiltered))[2]
+  total_unfiltered_cells <- ncol(unfiltered) # cells in cols
   
-  # Quality control
-  # Filtering on the mitochondrial proportion
+  ## Quality control, check low quality cells
+  
+  #sce <- scuttle::logNormCounts(sce) ?
+  
+  ## High mito
   is.mito <- grep("MT-", rownames(sce))
   stats <- perCellQCMetrics(sce, subsets=list(Mito=is.mito))
-  
+  colnames(stats)
   ## For reference, these are result derived from reanalyze (5050 cells) vs emptyDrops for sample S03 (5802 cells)
   #summary(stats$subsets_Mito_percent) 
   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
   # 0.0000  0.4765  1.0858  2.5113  2.1428 84.0290
   
-  ## For comparison purposes: result derived from emptyDrops for sample S03
-  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-  # 0.0000  0.5258  1.1725  2.5728  2.3095 71.2544
-  #stats$subsets_Mito_percent[is.na(stats$subsets_Mito_percent)] <- 0
-
-  #stats <- perCellQCMetrics(sce, subsets=list(Mito=which(location=="MT")))
-  high.mito <- isOutlier(stats$subsets_Mito_percent, type="higher")
-  table(high.mito[high.mito==FALSE])
-  
-  sce <- sce[,!high.mito]
-  total_filtered_cells <- dim(assay(sce))[2]
-  
-  ## store this in the colData() of our SingleCellExperiment object for future reference
+  sce$high_mito <- isOutlier(stats$subsets_Mito_percent, nmads = 3, type = "higher") # batch = sce$Sample, running one sample at time
+  ## cells pass
+  table(sce$high_mito)
+  ## store the stats in the colData() for future reference
   colData(unfiltered) <- cbind(colData(unfiltered), stats)
-  unfiltered$discard <- high.mito
+  # unfiltered$discard <- high.mito
   # colnames(colData(unfiltered))
-  
-  csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_valid_barcodes.csv"))
-  write.csv(sce$Barcode, csv_name)
-  print(paste0("Saved valid (true) barcodes from isOutliers for sample ", Seurat_base_name))
 
+  sce <- sce[,!sce$high_mito]
+  total_filtered_cells <-  length(sce$high_mito[sce$high_mito==FALSE])
+    
+  # csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_valid_barcodes.csv"))
+  # write.csv(sce$Barcode, csv_name)
+  # print(paste0("Saved valid (true) barcodes from isOutliers for sample ", Seurat_base_name))
+
+  ## low library size
+  sce$low_sum <- isOutlier(stats$sum, log = TRUE, type = "lower") # , batch = sce$Sample
+  table(sce$low_sum)
+  # FALSE 
+  # 5050 
+  
+  ## low detected features
+  sce$low_detected <- isOutlier(stats$detected, log = TRUE, type = "lower") #, batch = sce$Sample
+  table(sce$low_detected)
+  # FALSE 
+  # 5050 
+  
+  ## All low sum are also low detected
+  table(sce$low_sum, sce$low_detected)
+  
+  ## Annotate cells to remove
+  sce$discard_auto <- sce$high_mito | sce$low_sum | sce$low_detected
+  table(sce$discard_auto)
+  # FALSE  TRUE 
+  # 4523   527 
+  
   ## Build title labels
   out_detected <- total_unfiltered_cells - total_filtered_cells
   out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits = 2 ) 
