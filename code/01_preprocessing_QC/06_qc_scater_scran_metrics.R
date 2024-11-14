@@ -110,13 +110,6 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   # unfiltered$discard <- high.mito
   # colnames(colData(unfiltered))
 
-  sce <- sce[,!sce$high_mito]
-  total_filtered_cells <-  length(sce$high_mito[sce$high_mito==FALSE])
-    
-  # csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_valid_barcodes.csv"))
-  # write.csv(sce$Barcode, csv_name)
-  # print(paste0("Saved valid (true) barcodes from isOutliers for sample ", Seurat_base_name))
-
   ## low library size
   sce$low_sum <- isOutlier(stats$sum, log = TRUE, type = "lower") # , batch = sce$Sample
   table(sce$low_sum)
@@ -138,10 +131,27 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   # FALSE  TRUE 
   # 4523   527 
   
+  ## discard 10.43 % for S03
+  100 * sum(sce$discard_auto) / ncol(sce)
+  (qc_t <- addmargins(table(sce$Sample, sce$discard_auto)))
+  ## in percentage
+  round(100 * sweep(qc_t, 1, qc_t[, 3], "/"), 1)
+  
+  # filter cells that PASS OK
+  sce <- sce[,!sce$discard_auto]
+  total_filtered_cells <-  length(sce$discard_auto[sce$discard_auto==FALSE])
+  
+  message("Total cells filtered (PASS) from sample ", Seurat_base_name, ": ", total_filtered_cells)
+
+  csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_bc_PASS_isOutliers.csv"))
+  write.csv(sce$Barcode, csv_name)
+  
+  message(paste0("Saved valid (PASS) barcodes from isOutliers for sample ", Seurat_base_name))
+  
   ## Build title labels
   out_detected <- total_unfiltered_cells - total_filtered_cells
   out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits = 2 ) 
-  caption_label <- paste0(out_detected, " cells (", out_detected_p, "%) outliers detected from ", total_unfiltered_cells, ". ", total_filtered_cells, " True cells.")
+  caption_label <- paste0(out_detected, " cells (", out_detected_p, "%) with outliers detected. Filtered ", total_filtered_cells, " from ", total_unfiltered_cells)
 
   ## Build plot
   plot_grid <- gridExtra::grid.arrange(
