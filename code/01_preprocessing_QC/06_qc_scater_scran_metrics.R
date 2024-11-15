@@ -8,12 +8,9 @@ library("Seurat")
 library("scuttle")
 library("here")
 library("ggplot2")
-# library("ggrepel") # provides geoms for ggplot2 to repel overlapping text labels
 library("scater")
-# library("batchelor") # Implements a variety of methods for batch correction of single-cell (RNA sequencing) data
 library("scran")
 library("scry")
-# library("uwot") # An R implementation of the Uniform Manifold Approximation and Projection (UMAP)
 library("DropletUtils")
 library("gridExtra")
 library("EnsDb.Hsapiens.v86")
@@ -39,7 +36,6 @@ plotDir_reanalyze <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanaly
 
 ## Load raw data
 unfiltered_path <- here(cellrangerDir_reanalyze, "raw_feature_bc_matrix.h5")
-# sce_emptydrops_path <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_droplet_scores.rds")) # sce.out
 
 # Check processed_data and plot directories exists
 if (!dir.exists(csvDir_reanalyze)) { dir.create(csvDir_reanalyze) }
@@ -73,25 +69,21 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   # load(sce_out_path, verbose = T) # load sce.out (emptyDrops derived RDS object)
   ## Subset our SingleCellExperiment object to retain only the detected cells
   # sce <- sce[,which(sce.out$FDR <= fdr_threshold)]
-  # unfiltered <- sce
   
   ## Load sce.out from cellrangerARC_reanalyze, then transform to sce object
   sce.out2 <- readRDS(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_reanalysis.rds")))
+  # head(sce.out2@meta.data["orig.ident"])
   sce.out2 <- as.SingleCellExperiment(sce.out2, assay = "RNA")
-
+  
   ## Select those cells detected from custom Cell RangerARC reanalyze pipeline
   v_reanalyze_cells <- Cells(sce.out2)
 
   ## Subset to keep only valid barcodes from Cell RangerARC reanalyze
   sce <- sce[,sce$Barcode %in% c(v_reanalyze_cells)]
-  # dim(sce) #[1] 181201   5050
-  #unfiltered <- sce
-  
+
   total_unfiltered_cells <- ncol(sce) # cells in cols
   
-  ## Quality control, check low quality cells
-  
-  #sce <- scuttle::logNormCounts(sce) ?
+  ####### Quality control, check low quality cells #######
   
   ## High mito
   is.mito <- grep("MT-", rownames(sce))
@@ -100,7 +92,9 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
     subsets = list(Mito = is.mito),
     BPPARAM = BiocParallel::MulticoreParam(4)
   )
-  
+  colnames(colData(sce))
+  ## reformat sample ID 
+  sce$Sample <- unique(sce.out2$orig.ident)
   ## For reference, these are result derived from reanalyze (5050 cells) vs emptyDrops for sample S03 (5802 cells)
   #summary(sce$subsets_Mito_percent) 
   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
@@ -109,10 +103,6 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   sce$high_mito <- isOutlier(sce$subsets_Mito_percent, nmads = 3, type = "higher") # batch = sce$Sample, running one sample at time
   ## cells pass
   table(sce$high_mito)
-  ## store the stats in the colData() for future reference
-  # colData(unfiltered) <- cbind(colData(unfiltered), stats)
-  # unfiltered$discard <- high.mito
-  # colnames(colData(unfiltered))
 
   ## low library size
   sce$low_sum <- isOutlier(sce$sum, log = TRUE, type = "lower") # , batch = sce$Sample
@@ -136,12 +126,6 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   # FALSE  TRUE 
   # 4523   527 
   
-  # ## discard 10.43 % for S03
-  # 100 * sum(sce$discard_auto) / ncol(sce)
-  # (qc_t <- addmargins(table(sce$Sample, sce$discard_auto)))
-  # ## in percentage
-  # round(100 * sweep(qc_t, 1, qc_t[, 3], "/"), 1)
-
   # Filter cells that PASS Outliers and save barcodes filtered
   sce_bc <- sce[,!sce$discard_auto]
   ncol(sce_bc)
@@ -159,6 +143,8 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits = 2 ) 
   caption_label <- paste0(out_detected, " cells (", out_detected_p, "%) with outliers detected. Filtered ", total_filtered_cells, " from ", total_unfiltered_cells)
 
+  # colnames(colData(sce))
+  
   ## Build plot
   plot_grid <- gridExtra::grid.arrange(
     plotColData(sce, x = "Sample", y = "subsets_Mito_percent", colour_by = "high_mito") + ggtitle("Mito Precent"), 
@@ -193,32 +179,7 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
 ## call function to process sample 
 process_sample(unfiltered_path, sce_emptydrops_path)
 
-message("Done!")
-
-
-# # Creating a new data frame from the given S4 object lists
-# 
-# sce.out@listData$sum
-# 
-# data <- data.frame(
-#   sum = sce.out@listData$sum,
-#   subsets_MT_percent = sce.out@listData$subsets_MT_percent
-# )
-# 
-# # Defining thresholds
-# thresholds <- attr(discard.mito, "thresholds")["higher"]
-# 
-# # Creating the plot
-# ggplot(data = data, aes(x = sum, y = subsets_MT_percent)) +
-#   geom_point() +
-#   scale_x_log10() +
-#   #geom_hline(yintercept = thresholds, color = "red") +
-#   labs(
-#     title = "Scatter plot of Total count vs. Mitochondrial %",
-#     x = "Total count",
-#     y = "Mitochondrial %"
-#   ) +
-#   theme_minimal()
+message("\nDone!")
 
 
 ## Add job array
