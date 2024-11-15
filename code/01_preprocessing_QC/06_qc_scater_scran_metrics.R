@@ -134,7 +134,7 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   message("Total cells filtered (PASS) from sample ", Seurat_base_name, ": ", total_filtered_cells, " from ", total_unfiltered_cells)
 
   csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_bc_PASS_isOutliers.csv"))
-  write.csv(sce_bc$Barcode, csv_name)
+  write.csv(sce_bc$Barcode, csv_name, row.names=FALSE)
   
   message(paste0("Saved valid (PASS) barcodes for sample ", Seurat_base_name))
   
@@ -172,12 +172,15 @@ process_sample <- function(sample_path, sce_out_path, fdr_threshold = 0.001) {
   #             colour_by = "discard_auto", point_size = 2.5, point_alpha = 0.5)
   
   
-  return(sce)
+  return(sce_bc$Barcode)
 
 }
 
 ## call function to process sample 
-process_sample(unfiltered_path, sce_emptydrops_path)
+sce_barcodes <- process_sample(unfiltered_path, sce_emptydrops_path)
+length(sce_barcodes$Barcode)
+
+
 
 message("\nDone!")
 
