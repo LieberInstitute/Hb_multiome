@@ -1,11 +1,69 @@
+library(tidyverse)
+library(dplyr)
+library(data.table)
+library(magrittr)
 library(here)
+
+here::here()
+
 
 ################## (1) Load integrated Seurat with Harmony correction
 
 
+# Check/create directories
+inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
+inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", "cvs_files_markers")
+processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
+cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze", "cvs_files_markers")
+
+## Check directories
+if (!dir.exists(processedDir)) {dir.create(processedDir)}
+if (!dir.exists(cvsDir)) {dir.create(cvsDir)}
+
+## Contains marker lists 
+source(here("code", "04_DiffExpr_Clustering_seurat", "remote_DGE_marker_gene_lists.R"))       # Call functions to read paths
+
+get_seurat <- function(name) { sobj <- readRDS(name)}
+
+
+#############################           Initials        ################################
+
+## Set count-mtx type and integration model (CCA or Harmony)
+
+#count_mtx_type <- 'data_counts'
+count_mtx_type <- 'norm_counts' 
+#Seurat_reduction <- 'CCA'
+Seurat_reduction <- 'Harmony' 
+## Minimum cells by cluster
+minCells <- 1
+
+if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts'}
+
+## Build Seurat object name. `subset` suffix means clusters with fewer cells than `minCells` had been filtered. 
+if (Seurat_reduction=='CCA') {
+  Seurat_base_name <- paste0(Seurat_base_name, '_CCA_All')
+} else {
+  Seurat_base_name <- paste0(Seurat_base_name, '_Harmony_All')
+}
+## Validate seurat exists
+if (length(list.files(inputDir, pattern = Seurat_base_name)==1)) {
+  message("Processing ", Seurat_base_name)
+} else {
+  message("Input seurat object missed!")
+  stop()
+}
+
+message("Starting cell-type identification for ", Seurat_base_name)
+
+## Load Seurat Integrated with cluster information
+SeuratOBJ <- get_seurat(here(inputDir, paste0(Seurat_base_name, ".rds")))
+## verification of the integration
+print(table(SeuratOBJ$orig.ident))
+#SeuratOBJ@reductions
+
+
 ################## (2) load vector with valid barcodes by sample
 
-here::here()
 
 ## Scans arguments invoked from slurm job shell sh
 sample_tmp <- commandArgs(trailingOnly = TRUE)
