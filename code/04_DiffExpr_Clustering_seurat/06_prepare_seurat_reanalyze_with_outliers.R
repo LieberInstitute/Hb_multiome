@@ -156,6 +156,12 @@ saveRDS(SeuratObj_subset, file = rds_name) #seurat.norm_counts_Harmony_All_cellR
 message("Saved Seurat subset data with ONLY Outliers!")
 
 
+# # slurm script reproducibility
+# library("slurmjobs")
+# job_single(
+#   name = "06_prepare_seurat_reanalyze_with_outliers", memory = "30G", cores = 2, create_shell = TRUE
+# )
+
 library("sessioninfo")
 print('Reproducibility information:')
 Sys.time()
