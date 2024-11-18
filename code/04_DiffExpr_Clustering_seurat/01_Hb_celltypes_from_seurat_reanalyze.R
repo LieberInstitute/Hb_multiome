@@ -21,12 +21,40 @@ library(here)
 
 here::here()
 
-# Check/create directories
-inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
-inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", "cvs_files_markers")
-processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
-cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze", "cvs_files_markers")
+## read input arguments
+args = commandArgs(trailingOnly=TRUE)
+cellranger_pipe <- args[2]
+## For testing:
+# cellranger_pipe <- "cellrangerARC_reanalyze"
+# cellranger_pipe <- "cellrangerARC_reanalyze_outliers"
 
+## input validations
+if (length(cellranger_pipe)) {
+  
+  message("CellRanger ARC input: ", cellranger_pipe)
+  # Check/create directories
+  
+  if (cellranger_pipe=="cellrangerARC_reanalyze") {
+    inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
+    inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", "cvs_files_markers")
+    processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
+    cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze", "cvs_files_markers")
+    
+  } else { # cellrangerARC_reanalyze_outliers
+    inputDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze_outliers") 
+    inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", "cvs_files_markers")
+    processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze_outliers")
+    cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze_outliers", "cvs_files_markers")
+  }  
+  
+} else {
+  
+  message("Input argument missed")
+  message("CellRanger input: ", cellranger_pipe)
+  stop()
+  
+}
+  
 ## Check directories
 if (!dir.exists(processedDir)) {dir.create(processedDir)}
 if (!dir.exists(cvsDir)) {dir.create(cvsDir)}
@@ -64,12 +92,20 @@ if (length(list.files(inputDir, pattern = Seurat_base_name)==1)) {
   stop()
 }
 
-message("Starting cell-type identification for ", Seurat_base_name)
+## Add suffix if called cellranger_pipeline with only outliers
+#if (cellranger_pipe == "cellrangerARC_reanalyze_outliers") {Seurat_base_name <- paste0(Seurat_base_name, "_subset_Outliers")}
+
+message("Starting cell-type identification for ", cellranger_pipe)
 
 ## Load Seurat Integrated with cluster information
-SeuratOBJ <- get_seurat(here(inputDir, paste0(Seurat_base_name, ".rds")))
+if (cellranger_pipe == "cellrangerARC_reanalyze_outliers") {
+  SeuratOBJ <- get_seurat(here(inputDir, paste0(Seurat_base_name, "_subset_Outliers", ".rds")))    
+} else {
+  SeuratOBJ <- get_seurat(here(inputDir, paste0(Seurat_base_name, ".rds")))    
+}
+
 ## verification of the integration
-print(table(SeuratOBJ$orig.ident))
+sum(table(SeuratOBJ$orig.ident))
 #SeuratOBJ@reductions
 
 ## Select gene markers lists. We have 3.
@@ -106,6 +142,7 @@ mdT <- md[, .N, by = c("orig.ident", "seurat_clusters")] %>%
     arrange(., orig.ident, seurat_clusters, .by_group = FALSE)
 df_mdT <- as.data.frame(mdT)
 #head(df_mdT)
+#sum(df_mdT$N)
 
 cvs_name <- paste0(Seurat_base_name, '_cluster_info.csv')
 ## Save clustering information; e.g: seurat.data_counts_Harmony_cluster_info.csv
@@ -116,11 +153,17 @@ write.csv(df_mdT, here(cvsDir, cvs_name))
 clusters <- unique(df_mdT$seurat_clusters)
 clusters <- as.integer(levels(clusters)[as.integer(clusters)])
 
-message('Identifing cell types for ', length(clusters),' clusters from the ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
+message('Identifing cell types for ', length(clusters),' clusters from the `', cellranger_pipe, '` dataset ', Seurat_reduction, ' reduction')
 
 ## Read DGE cvs file for all clusters for the given sample
+
 #DGE_cvs_name <- paste0(Seurat_base_name, '_',Seurat_reduction, '_Allmarkers_min', minCells, 'cells.csv')
 DGE_cvs_name <- here(inputDir_cvs, paste0(Seurat_base_name, "markers.csv")) 
+
+## We use the same DEG calculated for the full cellrangerARC_reanalyze data set
+# if (cellranger_pipe == "cellrangerARC_reanalyze_outliers") {
+#   DGE_cvs_name <- here(inputDir_cvs, paste0(stringr::str_remove(string = Seurat_base_name, pattern = "_subset_Outliers"), "markers.csv"))}
+
 seurat_clust <- as.data.frame(read.csv(DGE_cvs_name, header = TRUE))
 head(seurat_clust, n=3)
 # Seurat output from FindAllmarkers()
@@ -135,7 +178,7 @@ head(seurat_clust, n=3)
 # 2  MT-ND2         0       0
 # 3  MT-CYB         0       0
 
-message('Parsing ', length(markers.custom), ' gene-markers lists on ', length(clusters) ,' clusters in ', Seurat_base_name, ' ', Seurat_reduction, ' reduction')
+message('Parsing ', length(markers.custom), ' gene-markers lists on ', length(clusters) ,' clusters in `', cellranger_pipe, '` dataset ', Seurat_reduction, ' reduction')
 
 
 ####### Parse the 10/20 DGE genes from GEX cluster against the marker genes list provided ####### 
