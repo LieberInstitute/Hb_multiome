@@ -1,7 +1,16 @@
-#library(tidyverse)
-#library(dplyr)
-#library(data.table)
-#library(magrittr)
+########################################################################
+## Prepare a Seurat object with outliers to further identify cell-types
+##  
+## INPUT:
+##      CSV files with barcodes that passed outliers calculated only on the GEX multiome side
+## 
+## OUPUT:
+##      Seurat with only cells detected with Outliers 
+##
+## Authors. CSC 
+## Date. Nov ,2024
+########################################################################
+
 library(here)
 
 here::here()
@@ -146,5 +155,12 @@ saveRDS(SeuratObj_subset, file = rds_name) #seurat.norm_counts_Harmony_All_cellR
 
 message("Saved Seurat subset data with ONLY Outliers!")
 
+
+library("sessioninfo")
+print('Reproducibility information:')
+Sys.time()
+proc.time()
+options(width = 120)
+session_info()
 
 
