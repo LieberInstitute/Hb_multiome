@@ -11,21 +11,11 @@ here::here()
 
 
 # Check/create directories
-
-# Dir: 04_DiffExpr_Clustering_seurat
-
 inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
-outputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze") # change dir if necessary
-#inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", "cvs_files_markers")
-#processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
-#cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze", "cvs_files_markers")
+outputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze_outliers") 
 
-# ## Check directories
-# if (!dir.exists(processedDir)) {dir.create(processedDir)}
-# if (!dir.exists(cvsDir)) {dir.create(cvsDir)}
-
-# ## Contains marker lists 
-# source(here("code", "04_DiffExpr_Clustering_seurat", "remote_DGE_marker_gene_lists.R"))       # Call functions to read paths
+## Check directories
+if (!dir.exists(outputDir)) {dir.create(outputDir)}
 
 get_seurat <- function(name) { sobj <- readRDS(name)}
 
@@ -79,7 +69,7 @@ message("Loaded seurat integrated.")
 
 
 ## Read barcodes after remove outliers (PASS) and format cell-names 
-    
+
 unique(SeuratOBJ$orig.ident)[1]
 strsplit(unique(SeuratOBJ$orig.ident)[1], split = "_")
 
@@ -93,7 +83,7 @@ for (bc_file in lst_bc) {
   
   message("Barcode list: ", bc_file)
   
-  ## load PASS barcodes 
+  ## load barcodes that PASS outliers
   
   df_valid_barcodes_filtered <- read.csv(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", "csv_files", bc_file))
   len_valid_bc <- length(df_valid_barcodes_filtered$x)
@@ -101,7 +91,7 @@ for (bc_file in lst_bc) {
   head(v_valid_barcodes_filtered)
   message("Vector with ", len_valid_bc ," valid barcodes for sample `", bc_file,"` loaded")
   
-  ## format barcodes to match seurat integrated names
+  ## format barcodes to match seurat integrated barcode names
   
   ## short prefix
   prefixCell <- unlist(strsplit(bc_file, split = "_"))[1]
@@ -114,7 +104,7 @@ for (bc_file in lst_bc) {
   ## long prefix
   #prefix_cell_name <- unlist(strsplit(bc_file, split = "_bc_PASS_isOutliers.csv"))[1]
   #prefix_cell_name <- paste0(prefix_cell_name,"_reanalysis")
-
+  
 }
 
 
