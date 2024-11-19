@@ -66,7 +66,7 @@ table(sce$high_mito)
 sce$low_sum <- isOutlier(sce$sum, log = TRUE, type = "lower", batch = sce$orig.ident)
 table(sce$low_sum)
 
-## low detected features
+## low detected features/genes
 sce$low_detected <- isOutlier(sce$detected, log = TRUE, type = "lower", batch = sce$orig.ident)
 table(sce$low_detected)
 
@@ -145,6 +145,18 @@ venn.diagram(
   main.cex = 0.7,
   sub.cex = 0.4
 )
+
+# ## Detected mito vs total count
+# # Mito rate vs n detected features
+# plotColData(sce,
+#             x = "detected", y = "subsets_Mito_percent",
+#             colour_by = "discard_auto", point_size = 2, point_alpha = 0.5
+# )
+# # Detected features vs total count
+# plotColData(sce,
+#             x = "sum", y = "detected",
+#             colour_by = "discard_auto", point_size = 2, point_alpha = 0.5
+# )
 
 
 ## Save violin plots integrated plots per metric
