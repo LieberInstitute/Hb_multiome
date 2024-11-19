@@ -28,7 +28,7 @@ cellrangerDir_reanalyze <- here("processed-data", "cellrangerARC_reanalyze")
 processedDir <- here("processed-data", "01_preprocessing_QC", "cellrangerARC")
 processedDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze")
 
-plotDir_reanalyze <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanalyze")
+plotDir_reanalyze <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanalyze", "Seurat_Signac_QC_metrics")
 functionsDir <- here("code", "01_preprocessing_QC")
 
 # Check processed_data and plot directories exists
@@ -250,7 +250,7 @@ if (b_get_GEX_plots) {
     ## Calculate basic interquartile range for basic GEX stats
     source(here(functionsDir, "remote_seurat_functions_v2.R"))  # Call functions to create and handle Seurat object
     x <- get_basic_stats_GEX(SeuratOBJ, s_tissue)
-    write_csv(as.data.frame(x), here(processedDir_reanalyze, paste0(crARC_Sample_r, "_metrics_summary.csv")))
+    write_csv(as.data.frame(x), here(processedDir_reanalyze, "csv_files", paste0(crARC_Sample_r, "_metrics_summary.csv")))
 }
 
 
@@ -417,7 +417,7 @@ for (S in lst_seurats) {
     
     # Save RDS Object
     rds_name <- here(processedDir_reanalyze, paste0(crARC_Sample_r,'.rds'))
-    saveRDS(SeuratOBJ, file = rds_name)
+    #saveRDS(SeuratOBJ, file = rds_name)
     message('Seurat with chromatine ssay saved!')   
 
 }
