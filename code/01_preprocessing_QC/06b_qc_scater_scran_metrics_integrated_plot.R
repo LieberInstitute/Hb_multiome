@@ -12,6 +12,7 @@ library("ggplot2")
 library("scater")
 library("scran")
 library("scry")
+library("VennDiagram")
 library("gridExtra")
 library("stringr")
 library("sessioninfo")
@@ -82,7 +83,8 @@ table(sce$discard_auto)
 total_p <- 100 * sum(sce$discard_auto) / ncol(sce)
 # [1] 9.599
 
-(qc_t <- addmargins(table(sce$orig.ident, sce$discard_auto)))
+qc_t <- addmargins(table(sce$orig.ident, sce$discard_auto))
+qc_p <- round(100 * sweep(qc_t, 1, qc_t[, 3], "/"), 1)
 
 # Filter/subset cells that PASS Outliers and save barcodes filtered
 # sce_bc <- sce[,!sce$discard_auto]
@@ -100,7 +102,52 @@ caption_label <- paste0(out_detected, " cells (", out_detected_p, "%) with outli
 
 # colnames(colData(sce))
 
-## Save integrated plot per metric
+## Venn diagrams to cross the 3 datasets
+set_high_mito <- colnames(sce)[sce$high_mito]
+l_hm <- length(set_high_mito)
+set_low_umi <- colnames(sce)[sce$low_sum]
+l_lsum <- length(set_low_umi)
+set_low_detected <- colnames(sce)[sce$low_detected]
+l_lgene <- length(set_low_detected)
+
+# Prepare a palette of 3 colors with R colorbrewer:
+library(RColorBrewer)
+myCol <- brewer.pal(3, "Pastel2")
+
+# Chart
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_venn_diagram.png"))
+venn.diagram(
+  x = list(v_high_mito, v_low_umi, v_low_detected),
+  category.names = c(paste0("high_mito (", l_hm, ")"), 
+                     paste0("low_umi (",l_lsum, ")"), 
+                     paste0("low_genes (", l_lgene, ")")),
+  filename = plotName,
+  output = FALSE ,
+  imagetype="png" ,
+  height = 480 , 
+  width = 480 , 
+  resolution = 300,
+  compression = "lzw",
+  lwd = 1,
+  col=c("#440154ff", '#21908dff', '#0000FF'),
+  fill = c(alpha("#440154ff",0.3), alpha('#21908dff',0.3), alpha('#fde725ff',0.3)),
+  cex = 0.5,
+  fontfamily = "sans",
+  cat.cex = 0.3,
+  cat.default.pos = "outer",
+  cat.pos = c(-27, 27, 135),
+  cat.dist = c(0.055, 0.055, 0.085),
+  cat.fontfamily = "sans",
+  cat.col = c("#440154ff", '#21908dff', '#0000FF'),
+  rotation = 1,
+  main = "Outliers detected",
+  sub = "GEX - Cell RangerARC-reanalyze",
+  main.cex = 0.7,
+  sub.cex = 0.4
+)
+
+
+## Save violin plots integrated plots per metric
 caption_label <- paste("*Cells to discard: ", length(sce$discard_auto[sce$high_mito==TRUE]), " from ", total_unfiltered_cells)
 plt1 <- plotColData(sce, x = "orig.ident", y = "subsets_Mito_percent", colour_by = "high_mito") + ggtitle("Mitochondrial percentage") +
   scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)) +
