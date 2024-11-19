@@ -12,52 +12,39 @@ library("ggplot2")
 library("scater")
 library("scran")
 library("scry")
-#library("DropletUtils")
 library("gridExtra")
 library("stringr")
-#library("EnsDb.Hsapiens.v86")
 library("sessioninfo")
 
 
 here::here()
 
 ## Read directories
-
-#Seurat_base_name <- "seurat.norm_counts_Harmony_All_subset_Outliers"
-#cellrangerDir_reanalyze <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze_outliers", paste0(Seurat_base_name, ".rds"))
 Seurat_base_name <- "seurat.norm_counts_Harmony_All"
 cellrangerDir_reanalyze <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", paste0(Seurat_base_name, ".rds"))
 plotDir_reanalyze <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanalyze")
-#processed-data/03_pseudobulking/cellrangerARC_reanalyze/seurat.norm_counts_Harmony_All.rds
 
 # Check processed_data and plot directories exists
 if (!dir.exists(plotDir_reanalyze)) { dir.create(plotDir_reanalyze) }
 
 set.seed(19112024)
 
-## Load Seurat integrated `cellrangerARC_reanalyze` dataset, then transform to sce object
+## Load Seurat integrated `Cell RangerARC-reanalyze` dataset, then transform to sce object to calculate outliers
 
-sce.out2 <- readRDS(cellrangerDir_reanalyze)
+sce <- readRDS(cellrangerDir_reanalyze)
 
 ## Verify data
-print(table(sce.out2$orig.ident))
-sum(table(sce.out2$orig.ident))
+print(table(sce$orig.ident))
+sum(table(sce$orig.ident))
 
 ## transform to sce
-sce.out2 <- as.SingleCellExperiment(sce.out2, assay = "RNA")
-# colnames(colData(sce.out2))
+sce <- as.SingleCellExperiment(sce, assay = "RNA")
+# colnames(colData(sce))
 
-# ## Select those cells detected from custom Cell RangerARC reanalyze pipeline
-# v_reanalyze_cells <- Cells(sce.out2)
-# 
-# ## Subset to keep only valid barcodes from Cell RangerARC reanalyze
-# sce <- sce[,sce$Barcode %in% c(v_reanalyze_cells)]
-
-total_unfiltered_cells <- ncol(sce.out2) # cells filtered cells
+total_unfiltered_cells <- ncol(sce) # cells filtered cells
 
 message("Total cells in the dataset: ", total_unfiltered_cells)
 
-sce <- sce.out2
 
 ####### Quality control, check low quality cells #######
 
@@ -90,11 +77,9 @@ table(sce$low_sum, sce$low_detected)
 sce$discard_auto <- sce$high_mito | sce$low_sum | sce$low_detected
 
 table(sce$discard_auto)
-# FALSE  TRUE
-# 4523   527
 
 ## discard 9% of nuc
-100 * sum(sce$discard_auto) / ncol(sce)
+total_p <- 100 * sum(sce$discard_auto) / ncol(sce)
 # [1] 9.599
 
 (qc_t <- addmargins(table(sce$orig.ident, sce$discard_auto)))
@@ -115,7 +100,7 @@ caption_label <- paste0(out_detected, " cells (", out_detected_p, "%) with outli
 
 # colnames(colData(sce))
 
-## Save integrated plot by specifi feature 
+## Save integrated plot per metric
 caption_label <- paste("*Cells to discard: ", length(sce$discard_auto[sce$high_mito==TRUE]), " from ", total_unfiltered_cells)
 plt1 <- plotColData(sce, x = "orig.ident", y = "subsets_Mito_percent", colour_by = "high_mito") + ggtitle("Mitochondrial percentage") +
   scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)) +
@@ -132,6 +117,16 @@ plt1 <- plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_sum") + s
 plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_low_sum.png"))
 ggsave(filename = plotName, plot = plt1, width = 10, height = 5, bg="white")
 
+caption_label <- paste("*Cells to discard: ", length(sce$discard_auto[sce$low_detected==TRUE]), " from ", total_unfiltered_cells)
+plt1 <- plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_detected") + scale_y_log10() + ggtitle("Total genes")  +
+  scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)) +
+  xlab("Sample ID") + ylab("Sum genes") +
+  labs(caption = caption_label) 
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_low_gene.png"))
+ggsave(filename = plotName, plot = plt1, width = 10, height = 5, bg="white")
+
+## saved plot with all metrics 
+caption_label <- paste0("*Cells to discard: ", length(sce$discard_auto[sce$discard_auto==TRUE]), " (", round(total_p, digits = 2) ,"%) from ", total_unfiltered_cells)
 plot_grid <- gridExtra::grid.arrange(  
   plotColData(sce, x = "orig.ident", y = "subsets_Mito_percent", colour_by = "high_mito") + ggtitle("Mitochondrial percentage") +
     xlab("Sample ID") + ylab("Mito percent") +
@@ -139,30 +134,32 @@ plot_grid <- gridExtra::grid.arrange(
   ## low sum
   plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_sum") + scale_y_log10() + ggtitle("Total count") +
     xlab("Sample ID") + ylab("Sum UMIs") +
+    theme(axis.text.x=element_blank()),
+  ## low genes
+  plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_detected") + scale_y_log10() + ggtitle("Total feature")  +
+    scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)) +
+    xlab("Sample ID") + ylab("Sum genes") +
     scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)), 
-  # ## low genes
-  # plotColData(sce, x = "orig.ident", y = "detected", colour_by = "low_detected") + scale_y_log10() + ggtitle("Detected features") +
-  #   scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)), 
-  nrow = 2,
-  top = paste0("Outliers detected. Sample on Cell RangerARC reanalyze"),
+  nrow = 3,
+  top = paste0("Outliers detected on `Cell RangerARC-reanalyze` dataset"),
   bottom = caption_label
 )
 
 # Save the plot
-plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_ALL.png"))
-ggsave(filename = plotName, plot = plot_grid, width = 10, height = 8, bg="white")
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_all_isOutliers.png"))
+ggsave(filename = plotName, plot = plot_grid, width = 10, height = 12, bg="white")
 
 print("Saved plots with outliers!")
 
 message("Done!")
 
 
-# Add job array
-library("slurmjobs")
-job_single(
-  name = "06b_qc_scater_scran_metrics_integrated_plot", memory = "30G", cores = 1, create_shell = TRUE,
-  task_num = 10
-)
+# # Add job array
+# library("slurmjobs")
+# job_single(
+#   name = "06b_qc_scater_scran_metrics_integrated_plot", memory = "30G", cores = 1, create_shell = TRUE,
+#   task_num = 10
+# )
 
 ## Reproducibility information
 print("Reproducibility information:")
