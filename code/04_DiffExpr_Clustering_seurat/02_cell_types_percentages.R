@@ -10,6 +10,9 @@ library("janitor")
 library("scales")
 library("here")
 
+here::here()
+options(digits=2)
+
 ## read input arguments
 args = commandArgs(trailingOnly=TRUE)
 cellranger_pipe <- args[2]
@@ -18,8 +21,6 @@ marker_lst <- args[4]
 count_mtx_type <- 'norm_counts'
 Seurat_reduction <- 'Harmony'
 
-options(digits=2)
-
 ## Selected manually the clusters based on the cell-type identification gene-marker lists
 ## args opt for testing:
 # marker_lst="literature_base"
@@ -27,9 +28,10 @@ options(digits=2)
 # cellranger_pipe = "CR_crossBarcodes"
 # cellranger_pipe = "CR_complementBarcodes"
 # cellranger_pipe = "CR_arc_reanalyze"
+# cellranger_pipe = "CR_arc_reanalyze_outliers"
 
 ## input validations
-if (length(cellranger_pipe)==0 || length(marker_lst)==0) {
+if (length(cellranger_pipe)== 0 || length(marker_lst)== 0) {
   message("Cellranger pipeline or input marker list missed or not valid!")
   stop()
 } else {
@@ -37,64 +39,84 @@ if (length(cellranger_pipe)==0 || length(marker_lst)==0) {
   message("Marker list input: ", (marker_lst))
 }
 
-## CellRanger-count pipelines
-if (cellranger_pipe=="CR_crossBarcodes" || cellranger_pipe=="CR_complementBarcodes") {
-  ## path to Dir(s)
-  if (cellranger_pipe=="CR_crossBarcodes") {
-    
-    cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count")
-    suffix <- '_Harmony_All_cluster'
+##Avoid to re-run data processed before
+if (cellranger_pipe=="CR_crossBarcodes" || cellranger_pipe=="CR_complementBarcodes" || cellranger_pipe=="CR_arc_reanalyze" ) { stop() }
 
-  } else if (cellranger_pipe=="CR_complementBarcodes") {
-    
-    cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count_complement")
-    suffix <- '_Harmony_All_subset_cluster'
-    
-  }
+## path to input Directory and suffix of cluster data
+cvsDir <- case_when(
+  cellranger_pipe == "CR_crossBarcodes" ~ here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count"),
+  cellranger_pipe == "CR_complementBarcodes" ~ here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count_complement"), 
+  cellranger_pipe == "CR_arc_reanalyze" ~ here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze"),
+  cellranger_pipe == "CR_arc_reanalyze_outliers" ~ here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze_outliers")
+)
+suffix <- case_when(
+  cellranger_pipe == "CR_crossBarcodes" ~ '_Harmony_All_cluster',
+  cellranger_pipe == "CR_complementBarcodes" ~ '_Harmony_All_subset_cluster',
+  cellranger_pipe == "CR_arc_reanalyze" ~ '_Harmony_All_cluster',
+  cellranger_pipe == "CR_arc_reanalyze_outliers" ~ '_Harmony_All_cluster'
+)
+
+## CellRanger-count pipelines
+## Manually pre-selected clusters for all the available CellRanger datasets
+
+if (cellranger_pipe=="CR_crossBarcodes" || cellranger_pipe=="CR_complementBarcodes") {
   
-  ## Manually pre-selected clusters for both CellRanger-count strategies
   if (marker_lst=="literature_base") {
     neu <- c(0,1,2,5,7,8,10,13,14,17,25,26,29)
     hb <- c(0,2,5,7,10,13,14)
     thal <- c()
+    glia_other <- c()
   } else if (marker_lst=="data_driven") {
     neu <- c(0,1,2,5,7,8,9,10,13,14,15,16,26,27,28,29)
     hb <- c(2,5,7,10,13,14,16,27)
     thal <- c(1,8,15,26,28,29)
+    glia_other <- c()
   }
 
-} else if (cellranger_pipe=="CR_arc_reanalyze") {
-
-  ## path to Dir(s)
-  cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
-  suffix <- '_Harmony_All_cluster'
+} else if (cellranger_pipe=="CR_arc_reanalyze" || cellranger_pipe=="CR_arc_reanalyze_outliers") {
   
-  ## Manually pre-selected clusters for CR-arc reanalyze
-  if (marker_lst=="literature_base") {
-    neu <- c(0,3,4,5,8,9,17,22,24)
-    hb <- c(3,4,5,9)
-    thal <- c(8)
-  } else if (marker_lst=="data_driven") {
-    neu <- c(0,1,2,3,4,5,8,9,10,11,14,16,21,24,26)
-    hb <- c(2,4,5,9,14,16)
-    thal <- c(0,1,3,8,21,24)
+  if (cellranger_pipe=="CR_arc_reanalyze") {
+      if (marker_lst=="literature_base") {
+        neu <- c(0,3,4,5,8,9,17,22,24)
+        hb <- c(3,4,5,9)
+        thal <- c(8)
+        glia_other <- c()
+      } else if (marker_lst=="data_driven") {
+        neu <- c(0,1,2,3,4,5,8,9,10,11,14,16,21,24,26)
+        hb <- c(2,4,5,9,14,16)
+        thal <- c(0,1,3,8,21,24)
+        glia_other <- c()
+      }
+    
+  } else { #CR_arc_reanalyze_outliers
+    
+    if (marker_lst=="literature_base") {
+      thal <- c(8)
+      hb <- c(2,3,5,9)
+      neu <- c(0,4,15, hb, thal)
+      glia_other <- c(7,12,17,19,20,22,23,27)
+    } else if (marker_lst=="data_driven") {
+      hb <- c(2,4,5,9,14,16)
+      thal <- c(0,1,8,24)
+      neu <- c(10,21, hb, thal) 
+      glia_other <- c(3,7,12,17,19,20,22,23,28)
+    } 
   }
-
 }
 
 ## first remove previous/old files
-fr = 0 
-files_remove <- list.files(path = cvsDir, pattern = "FULL_SUMMARY_*", full.names = TRUE)
-fr <- length(files_remove)
-if (!fr==0) {file.remove(files_remove); fr<-0}
-files_remove <- list.files(path = here(cvsDir, "cvs_files_markers"), pattern = "DETAIL_*", full.names = TRUE)
-fr <- length(files_remove)
-if (!fr==0) {file.remove(files_remove); fr<-0}
-files_remove <- list.files(path = here(cvsDir, "cvs_files_markers"), pattern = "SUMMARY_*", full.names = TRUE)
-fr <- length(files_remove)
-if (!fr==0) {file.remove(files_remove); fr<-0}
+# fr = 0 
+# files_remove <- list.files(path = cvsDir, pattern = "FULL_SUMMARY_*", full.names = TRUE)
+# fr <- length(files_remove)
+# if (!fr==0) {file.remove(files_remove); fr<-0}
+# files_remove <- list.files(path = here(cvsDir, "cvs_files_markers"), pattern = "DETAIL_*", full.names = TRUE)
+# fr <- length(files_remove)
+# if (!fr==0) {file.remove(files_remove); fr<-0}
+# files_remove <- list.files(path = here(cvsDir, "cvs_files_markers"), pattern = "SUMMARY_*", full.names = TRUE)
+# fr <- length(files_remove)
+# if (!fr==0) {file.remove(files_remove); fr<-0}
 
-message("Removed previous summary reports from all datasets!")
+message("Removed previous summary reports from `", cellranger_pipe ,"` dataset!")
 
 ## Set count-mtx type and integration model (CCA or Harmony)
 if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts' }
@@ -129,6 +151,7 @@ lst_clust <- list(allTypes = allT)
 if (!is_null(neu)) { lst_clust <- append(lst_clust, list(neu = neu)) }
 if (!is_null(hb)) { lst_clust <- append(lst_clust, list(hb = hb)) }
 if (!is_null(thal)) { lst_clust <- append(lst_clust, list(thal= thal)) }
+if (!is_null(glia_other)) { lst_clust <- append(lst_clust, list(glia_other= glia_other)) }
 #lst_clust <- list(hb = hb, neu = neu, thal= thal, allTypes = allT)
 message("Group of clusters prepared: ")
 names(lst_clust)
@@ -217,7 +240,7 @@ for (i in seq_along(lst_clust)) {
   df_summary <- as.data.frame(t(df_summary)) |> row_to_names(1)
 
   cvs_name <- paste0('SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types,"_v3.csv")
-  write.csv(df_summary, here(cvsDir, "cvs_files_markers", cvs_name), row.names=FALSE)
+  write.csv(df_summary, here(cvsDir, "cvs_files_markers", cvs_name), row.names=TRUE)
 
   ## bind rows to the main table
   df_summary <- data.frame(seurat_clusters = c("Total.Cells.Sample", "Total.Cells.ALL", "Percentage.Sample"), df_summary)
@@ -236,7 +259,8 @@ message("Done!")
 # # slurm script reproducibility
 # library("slurmjobs")
 # slurmjobs::job_loop(
-#   loops = list(cellranger_pipe = c("CR_crossBarcodes", "CR_complementBarcodes", "CR_arc_reanalyze"), marker_lst = c("literature_base", "data_drive")),
+#   loops = list(cellranger_pipe = c("CR_crossBarcodes", "CR_complementBarcodes", "CR_arc_reanalyze", "CR_arc_reanalyze_outliers"), 
+#                marker_lst = c("literature_base", "data_drive")),
 #   name = "02_cell_types_percentages_v3",
 #   cores = 2,
 #   create_shell = TRUE
