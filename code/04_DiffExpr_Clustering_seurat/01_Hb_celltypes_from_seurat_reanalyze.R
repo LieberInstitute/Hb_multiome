@@ -25,8 +25,8 @@ here::here()
 args = commandArgs(trailingOnly=TRUE)
 cellranger_pipe <- args[2]
 ## For testing:
-# cellranger_pipe <- "cellrangerARC_reanalyze"
-# cellranger_pipe <- "cellrangerARC_reanalyze_outliers"
+# cellranger_pipe <- "CR_arc_reanalyze"
+# cellranger_pipe <- "CR_arc_reanalyze_outliers"
 
 ## input validations
 if (length(cellranger_pipe)) {
@@ -34,15 +34,17 @@ if (length(cellranger_pipe)) {
   message("CellRanger ARC input: ", cellranger_pipe)
   # Check/create directories
   
-  if (cellranger_pipe=="cellrangerARC_reanalyze") {
+  if (cellranger_pipe=="CR_arc_reanalyze") {
+    # stop()
     inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
     inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", "cvs_files_markers")
     processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
     cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze", "cvs_files_markers")
     
-  } else { # cellrangerARC_reanalyze_outliers
-    inputDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze_outliers") 
-    inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", "cvs_files_markers")
+  } else { # CR_arc_reanalyze_outliers
+    
+    inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze_outliers") 
+    inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze_outliers", "cvs_files_markers")
     processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze_outliers")
     cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze_outliers", "cvs_files_markers")
   }  
@@ -69,10 +71,10 @@ get_seurat <- function(name) { sobj <- readRDS(name)}
 
 ## Set count-mtx type and integration model (CCA or Harmony)
 
-#count_mtx_type <- 'data_counts'
 count_mtx_type <- 'norm_counts' 
-#Seurat_reduction <- 'CCA'
 Seurat_reduction <- 'Harmony' 
+# Seurat_reduction <- 'CCA'
+# count_mtx_type <- 'data_counts'
 ## Minimum cells by cluster
 minCells <- 1
 
@@ -86,20 +88,17 @@ if (Seurat_reduction=='CCA') {
 }
 ## Validate seurat exists
 if (length(list.files(inputDir, pattern = Seurat_base_name)==1)) {
-  message("Processing ", Seurat_base_name)
+  message("Processing ", cellranger_pipe)
 } else {
   message("Input seurat object missed!")
   stop()
 }
 
-## Add suffix if called cellranger_pipeline with only outliers
-#if (cellranger_pipe == "cellrangerARC_reanalyze_outliers") {Seurat_base_name <- paste0(Seurat_base_name, "_subset_Outliers")}
-
-message("Starting cell-type identification for ", cellranger_pipe)
+message("Starting cell-type identification for `", cellranger_pipe, "`")
 
 ## Load Seurat Integrated with cluster information
-if (cellranger_pipe == "cellrangerARC_reanalyze_outliers") {
-  SeuratOBJ <- get_seurat(here(inputDir, paste0(Seurat_base_name, "_subset_Outliers", ".rds")))    
+if (cellranger_pipe == "CR_arc_reanalyze_outliers") {
+  SeuratOBJ <- get_seurat(here(inputDir, paste0(Seurat_base_name, "_subset_Outliers", ".rds")))   
 } else {
   SeuratOBJ <- get_seurat(here(inputDir, paste0(Seurat_base_name, ".rds")))    
 }
@@ -149,34 +148,21 @@ cvs_name <- paste0(Seurat_base_name, '_cluster_info.csv')
 write.csv(df_mdT, here(cvsDir, cvs_name))
 
 ## extract unique clusters in ascending order
-## extract unique clusters in ascending order
 clusters <- unique(df_mdT$seurat_clusters)
 clusters <- as.integer(levels(clusters)[as.integer(clusters)])
 
-message('Identifing cell types for ', length(clusters),' clusters from the `', cellranger_pipe, '` dataset ', Seurat_reduction, ' reduction')
+message('Identifing cell types for ', length(clusters),' clusters from the `', cellranger_pipe, '` dataset ')
 
 ## Read DGE cvs file for all clusters for the given sample
 
 #DGE_cvs_name <- paste0(Seurat_base_name, '_',Seurat_reduction, '_Allmarkers_min', minCells, 'cells.csv')
 DGE_cvs_name <- here(inputDir_cvs, paste0(Seurat_base_name, "markers.csv")) 
 
-## We use the same DEG calculated for the full cellrangerARC_reanalyze data set
-# if (cellranger_pipe == "cellrangerARC_reanalyze_outliers") {
-#   DGE_cvs_name <- here(inputDir_cvs, paste0(stringr::str_remove(string = Seurat_base_name, pattern = "_subset_Outliers"), "markers.csv"))}
-
 seurat_clust <- as.data.frame(read.csv(DGE_cvs_name, header = TRUE))
 head(seurat_clust, n=3)
 # Seurat output from FindAllmarkers()
 # p_val avg_log2FC pct.1 pct.2 p_val_adj cluster   gene
 # 1     0  -1.836151 0.078 0.736         0     C_0  NPAS3
-
-## Subset columns of interest
-#seurat_clust_sub  <- select(seurat_clust, gene,  p_val_adj, cluster) 
-#head(seurat_clust_sub)
-# gene p_val_adj cluster
-# 1  MT-ND4         0       0
-# 2  MT-ND2         0       0
-# 3  MT-CYB         0       0
 
 message('Parsing ', length(markers.custom), ' gene-markers lists on ', length(clusters) ,' clusters in `', cellranger_pipe, '` dataset ', Seurat_reduction, ' reduction')
 
@@ -232,13 +218,6 @@ for (markers.lst in markers.custom) {
   rm("gene_match", "all_gene_match")
 }
 
-# head(all_gene_match, n=3)
-# dim(all_gene_match)
-
-# habenula_markers_cvs_name <- paste0(Seurat_base_name, '_', Seurat_reduction, '_subset_cell_types_', prefix_name)
-# habenula_markers_cvs_name <- here('processed-data', '04_DiffExpr_Clustering_seurat', 'cvs_files_markers', habenula_markers_cvs_name)
-# write.csv(all_gene_match, habenula_markers_cvs_name, row.names=FALSE)
-
 message(' Cell type identification in clusters done!')
 
 
@@ -247,8 +226,12 @@ message(' Cell type identification in clusters done!')
 # job_single(
 #   name = "01_Hb_celltypes_from_seurat_reanalyze", memory = "50G", cores = 2, create_shell = TRUE
 # )
-
-
+# slurmjobs::job_loop(
+#   loops = list(cellranger_pipe = c("CR_arc_reanalyze", "CR_arc_reanalyze_outliers")),
+#   name = "01_Hb_celltypes_from_seurat_reanalyze_v2",
+#   cores = 2,
+#   create_shell = TRUE
+# )
 
 library("sessioninfo")
 print('Reproducibility information:')
