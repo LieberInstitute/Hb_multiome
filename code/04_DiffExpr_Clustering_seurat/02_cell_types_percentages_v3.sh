@@ -7,11 +7,11 @@
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
-#SBATCH --array=1-6%20
+#SBATCH --array=1-8%20
 
 ## Define loops and appropriately subset each variable for the array task ID
-all_cellranger_pipe=(CR_crossBarcodes CR_complementBarcodes CR_arc_reanalyze)
-cellranger_pipe=${all_cellranger_pipe[$(( $SLURM_ARRAY_TASK_ID / 2 % 3 ))]}
+all_cellranger_pipe=(CR_crossBarcodes CR_complementBarcodes CR_arc_reanalyze CR_arc_reanalyze_outliers)
+cellranger_pipe=${all_cellranger_pipe[$(( $SLURM_ARRAY_TASK_ID / 2 % 4 ))]}
 
 all_marker_lst=(literature_base data_driven)
 marker_lst=${all_marker_lst[$(( $SLURM_ARRAY_TASK_ID / 1 % 2 ))]}
