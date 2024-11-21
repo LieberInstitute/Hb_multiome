@@ -87,14 +87,15 @@ sce$discard_auto <- sce$high_mito | sce$low_sum | sce$low_detected
 table(sce$discard_auto)
 
 # Filter cells that PASS Outliers and save barcodes filtered
-sce_bc <- sce[,!sce$discard_auto]
-ncol(sce_bc)
-total_filtered_cells <-  length(sce_bc$discard_auto[sce$discard_auto==FALSE])
+sce_bc <- colnames(sce)[!sce$discard_auto]
+total_filtered_cells <-  length(sce_bc)
   
 message("Total cells filtered (PASS) from sample ", Seurat_base_name, ": ", total_filtered_cells, " from ", total_unfiltered_cells)
 
+#colnames(sce)[sce$high_mito]
 csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_bc_PASS_isOutliers.csv"))
-#write.csv(sce_bc$Barcode, csv_name, row.names=FALSE)
+# NOTE. Uncommend line below if you wish to re-run de outliers barcode-detection and replace the previous csv barcode files
+#write.csv(sce_bc, csv_name, row.names=FALSE)
 
 message("Saved ", total_filtered_cells," valid (PASS) barcodes for sample ", Seurat_base_name)
 
@@ -122,7 +123,7 @@ plot_grid <- gridExtra::grid.arrange(
 plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_per_sample.png"))
 ggsave(filename = plotName, plot = plot_grid)
 
-message("Saved plot from isOutliers for sample ", Seurat_base_name)
+message("Saved plot from isOutliers GEX assay for sample ", Seurat_base_name)
   
 # # Mito rate vs n detected features
 # plotColData(sce,
@@ -133,6 +134,93 @@ message("Saved plot from isOutliers for sample ", Seurat_base_name)
 #             x = "sum", y = "detected",
 #             colour_by = "discard_auto", point_size = 2.5, point_alpha = 0.5)
   
+
+
+
+
+################ Calculate Outliers on ATAC multiome assays (By sample) ##############################################
+
+## Load sce.out from cellrangerARC_reanalyze, then transform to sce object
+
+sce <- as.SingleCellExperiment(sce, assay = "ATAC")
+
+total_unfiltered_cells <- ncol(sce) # cells in cols
+
+####### Quality control, check low quality cells #######
+
+## High mito
+#is.mito <- grep("MT-", rownames(sce))
+sce <- scuttle::addPerCellQC(
+  sce,
+  #subsets = list(Mito = is.mito),
+  BPPARAM = BiocParallel::MulticoreParam(4)
+)
+#colnames(colData(sce))
+
+table(sce$nCount_ATAC)
+
+## low counts ATAC
+sce$low_count_ATAC <- isOutlier(sce$nCount_ATAC, log = TRUE, nmads = 3, type = "lower") # batch = sce$Sample, running one sample at time
+table(sce$low_count_ATAC)
+
+## low fragments ATAC
+sce$low_feature_ATAC <- isOutlier(sce$nFeature_ATAC, log = TRUE, nmads = 3, type = "lower") # batch = sce$Sample, running one sample at time
+table(sce$low_feature_ATAC)
+
+## high NS ATAC
+sce$high_NS <- isOutlier(sce$nucleosome_signal, nmads = 3, type = "higher") # batch = sce$Sample, running one sample at time
+table(sce$low_count_ATAC)
+
+## high NS ATAC
+sce$high_NS <- isOutlier(sce$nucleosome_signal, nmads = 3, type = "higher") # batch = sce$Sample, running one sample at time
+table(sce$low_count_ATAC)
+
+# # All low sum are also low detected
+# table(sce$low_sum, sce$low_detected)
+
+## Annotate cells to remove
+sce$discard_auto_atac <- sce$low_count_ATAC | sce$low_feature_ATAC | sce$high_NS
+table(sce$discard_auto_atac)
+
+# Filter cells that PASS Outliers and save barcodes filtered
+sce_bc <- colnames(sce)[!sce$discard_auto_atac]
+total_filtered_cells <-  length(sce_bc)
+
+message("Total cells filtered (PASS) from sample ", Seurat_base_name, ": ", total_filtered_cells, " from ", total_unfiltered_cells)
+
+#colnames(sce)[sce$high_mito]
+csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_bc_PASS_ATAC_isOutliers.csv"))
+#write.csv(sce_bc$Barcode, csv_name, row.names=FALSE)
+write.csv(sce_bc, csv_name, row.names=FALSE)
+
+message("Saved ", total_filtered_cells," valid (PASS) barcodes for sample ", Seurat_base_name)
+
+## Build title labels
+out_detected <- total_unfiltered_cells - total_filtered_cells
+out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits = 2 ) 
+caption_label <- paste0(out_detected, " cells (", out_detected_p, "%) with outliers detected. Filtered ", total_filtered_cells, " from ", total_unfiltered_cells)
+
+## Build plot with mito, umi and feature outliers
+plot_grid <- gridExtra::grid.arrange(
+  plotColData(sce, x = "orig.ident", y = "nCount_ATAC", colour_by = "low_count_ATAC") + scale_y_log10() + ggtitle("Low-count ATAC") +
+    xlab("Sample ID") + ylab("nCount_ATAC"), 
+  ## low sum
+  plotColData(sce, x = "orig.ident", y = "nFeature_ATAC", colour_by = "low_feature_ATAC") + scale_y_log10() + ggtitle("Low-feature ATAC") +
+    xlab("Sample ID") + ylab("nFeature_ATAC"),    
+  ## low genes
+  plotColData(sce, x = "orig.ident", y = "nucleosome_signal", colour_by = "high_NS") + scale_y_log10() + ggtitle("High NS") +
+    xlab("Sample ID") + ylab("high_NS"), 
+  ncol = 3,
+  top = paste0("Outliers detected. Sample ", Seurat_base_name),
+  bottom = caption_label
+)
+
+
+message("Saved plot from isOutliers ATAC assay for sample ", Seurat_base_name)
+
+
+
+
 
 message("Done!")
 
