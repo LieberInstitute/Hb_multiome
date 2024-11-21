@@ -21,11 +21,12 @@ library("sessioninfo")
 ## Read directories
 
 here::here()
+myCol <- brewer.pal(3, "Pastel2")
 
 ## Scans arguments invoked from slurm job shell sh
 sample_tmp <- commandArgs(trailingOnly = TRUE)
 # For testing:
-# sample_tmp <- "4S_Hb_KDM_reanalysis, 4S_Hb_KDM"
+# sample_tmp <- "S3_Hb_KDM_reanalysis, S3_Hb_KDM"
 sample_data = unlist(strsplit(sample_tmp,","))
 Seurat_base_name <- trimws(sample_data[[2]])
 
@@ -129,7 +130,51 @@ ggsave(filename = plotName, plot = plot_grid_GEX)
 plt_GEX_low_sum <- plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_sum", point_size = 1.5) + scale_y_log10() + ggtitle("Total count") +
   xlab("Sample ID") + ylab("Sum UMIs")  + theme(legend.position="none")
 
-message("Saved plot from isOutliers GEX assay for sample ", Seurat_base_name)
+
+## Venn diagrams to cross the 3 sets of metrics
+set_high_mito <- colnames(sce)[sce$high_mito]
+l_high_mito <- length(set_high_mito)
+
+set_low_gex <- colnames(sce)[sce$low_sum]
+l_lsum_gex <- length(set_low_gex)
+
+set_low_feature_gex <- colnames(sce)[sce$low_detected]
+l_lgenes_gex <- length(set_low_feature_gex)
+
+# Venn diagram for ATAC metrics 
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_VENNd_low_counts.png"))
+venn.diagram(
+  x = list(set_high_mito, set_low_gex, set_low_feature_gex),
+  category.names = c(paste0("high_mito (", l_high_mito, ")"),
+                     paste0("low_sum (",l_lsum_gex, ")"), 
+                     paste0("low_genes (", l_lgenes_gex, ")")),
+  filename = plotName,
+  output = FALSE ,
+  imagetype="png" ,
+  height = 480 , 
+  width = 480 , 
+  resolution = 300,
+  compression = "lzw",
+  lwd = 1,
+  col=c("#440154ff", '#21908dff', '#0000FF'),
+  fill = c(alpha("#440154ff",0.3), alpha('#21908dff',0.3), alpha('#fde725ff',0.3)),
+  cex = 0.5,
+  fontfamily = "sans",
+  cat.cex = 0.3,
+  cat.default.pos = "outer",
+  cat.pos = c(-27, 27, 135),
+  cat.dist = c(0.055, 0.055, 0.085),
+  cat.fontfamily = "sans",
+  cat.col = c("#440154ff", '#21908dff', '#0000FF'),
+  rotation = 1,
+  main = "Outliers detected",
+  sub = "ATAC - Cell RangerARC-reanalyze",
+  main.cex = 0.7,
+  sub.cex = 0.4
+)
+
+
+message("Saved plots with outliers  on GEX assay sample ", Seurat_base_name)
   
 # # Mito rate vs n detected features
 # plotColData(sce,
@@ -146,14 +191,16 @@ message("Saved plot from isOutliers GEX assay for sample ", Seurat_base_name)
 
 ################ Calculate Outliers on ATAC multiome assays (By sample) ##############################################
 
+total_filtered_cells <- 0
+total_unfiltered_cells <- 0
+
 sce_atac <- as.SingleCellExperiment(SeuratOBJ, assay = "ATAC")
 
 total_unfiltered_cells <- ncol(sce_atac) # cells in cols
 
 ####### Quality control, check low quality cells #######
 
-## High mito
-#is.mito <- grep("MT-", rownames(sce_atac))
+## Perform quality metrics
 sce_atac <- scuttle::addPerCellQC(
   sce_atac,
   #subsets = list(Mito = is.mito),
@@ -165,7 +212,7 @@ sce_atac <- scuttle::addPerCellQC(
 
 ## low counts ATAC
 sce_atac$low_sum_ATAC <- isOutlier(sce_atac$nCount_ATAC, log = TRUE, nmads = 3, type = "lower") # batch = sce_atac$Sample, running one sample at time
-#table(sce_atac$low_sum_ATAC)
+table(sce_atac$low_sum_ATAC)
 
 ## low fragments ATAC
 sce_atac$low_feature_ATAC <- isOutlier(sce_atac$nFeature_ATAC, log = TRUE, nmads = 3, type = "lower") # batch = sce_atac$Sample, running one sample at time
@@ -189,7 +236,7 @@ sce$TSS.enrichment[sce_atac$low_TSS]
 sce_atac$discard_auto_atac <- sce_atac$low_sum_ATAC | sce_atac$low_feature_ATAC | sce_atac$high_NS | sce_atac$low_TSS
 table(sce_atac$discard_auto_atac)
 
-# Filter cells that PASS Outliers and save barcodes filtered
+## Filter cells that PASS Outliers and save barcodes filtered
 sce_bc_atac <- colnames(sce_atac)[!sce_atac$discard_auto_atac]
 
 total_filtered_cells <-  length(sce_bc_atac)
@@ -215,41 +262,38 @@ plot_grid_multiome <- gridExtra::grid.arrange(
     scale_y_log10() + ggtitle("Low-count ATAC") + xlab("Sample ID") + ylab("nCount_ATAC") + theme(legend.title=element_blank()), 
   ncol = 2,
   top = paste0("Outliers cells GEX and ATAC. Sample ", unlist(strsplit(Seurat_base_name, split = "_"))[1]),
-  bottom = paste(caption_label_GEX, "\n", caption_label_ATAC) 
+  bottom = paste("Total low-sum on GEX: ", length(colnames(sce)[sce$low_sum]), "\n", "Total low-sum on ATAC: ", length(colnames(sce_atac)[sce_atac$low_sum_ATAC])) 
 )
 
 # Save plot comparing total counts in RNA and ATAC
 plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_GEX_ATAC_total_counts.png"))
 ggsave(filename = plotName, plot = plot_grid_multiome, width = 8, height = 10)
 
-## Plot NS and TSS ATAC metrics
-plot_grid_multiome <- gridExtra::grid.arrange(
-  plotColData(sce_atac, x = "orig.ident", y = "nucleosome_signal", colour_by = "high_NS", point_size = 1.5) + 
-    scale_y_log10() + ggtitle("High nucleosome signal") + xlab("Sample ID") + ylab("high_NS")  + theme(legend.position="none"),
-  plotColData(sce_atac, x = "orig.ident", y = "TSS.enrichment", colour_by = "low_TSS", point_size = 1.5) + 
-    scale_y_log10() + ggtitle("Low TSS.enrichment") + xlab("Sample ID") + ylab("low_TSS") + theme(legend.title=element_blank()), 
-  ncol = 2,
-  top = paste0("Outliers cells NS and TSS. Sample ", unlist(strsplit(Seurat_base_name, split = "_"))[1]),
-  bottom = paste("High-NS:", length(colnames(sce_atac)[sce_atac$high_NS]), "Low-TSS:", length(colnames(sce_atac)[sce_atac$low_TSS])) 
-)
+# ## Plot NS and TSS ATAC metrics
+# plot_grid_multiome <- gridExtra::grid.arrange(
+#   plotColData(sce_atac, x = "orig.ident", y = "nucleosome_signal", colour_by = "high_NS", point_size = 1.5) + 
+#     scale_y_log10() + ggtitle("High nucleosome signal") + xlab("Sample ID") + ylab("high_NS")  + theme(legend.position="none"),
+#   plotColData(sce_atac, x = "orig.ident", y = "TSS.enrichment", colour_by = "low_TSS", point_size = 1.5) + 
+#     scale_y_log10() + ggtitle("Low TSS.enrichment") + xlab("Sample ID") + ylab("low_TSS") + theme(legend.title=element_blank()), 
+#   ncol = 2,
+#   top = paste0("Outliers cells NS and TSS. Sample ", unlist(strsplit(Seurat_base_name, split = "_"))[1]),
+#   bottom = paste("High-NS:", length(colnames(sce_atac)[sce_atac$high_NS]), "Low-TSS:", length(colnames(sce_atac)[sce_atac$low_TSS])) 
+# )
 
-## Venn diagrams to cross the 2 datasets
+## Venn diagrams to cross the 3 sets of metrics
 set_low_atac <- colnames(sce_atac)[sce_atac$low_sum_ATAC]
 l_lsum_atac <- length(set_low_atac)
 
-set_low_feature <- colnames(sce_atac)[sce_atac$low_feature_ATAC]
-l_lgenes_atac <- length(set_low_feature)
+set_low_feature_atac <- colnames(sce_atac)[sce_atac$low_feature_ATAC]
+l_lgenes_atac <- length(set_low_feature_atac)
 
 set_low_TSS <- colnames(sce_atac)[sce_atac$low_TSS]
 l_low_TSS <- length(set_low_TSS)
 
-
-myCol <- brewer.pal(3, "Pastel2")
-
 # Venn diagram for ATAC metrics 
-plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_VENNd_low_counts.png"))
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_ATAC_VENNd_low_counts.png"))
 venn.diagram(
-  x = list(set_low_atac, set_low_feature, set_low_TSS),
+  x = list(set_low_atac, set_low_feature_atac, set_low_TSS),
   category.names = c(paste0("low_sum (",l_lsum_atac, ")"), 
                      paste0("low_genes (", l_lgenes_atac, ")"),
                      paste0("low_tss (", l_low_TSS, ")")),
@@ -278,23 +322,27 @@ venn.diagram(
   sub.cex = 0.4
 )
 
-## Build plot with mito, umi and feature outliers
-plot_grid <- gridExtra::grid.arrange(
-  plotColData(sce_atac, x = "orig.ident", y = "nCount_ATAC", colour_by = "low_sum_ATAC") + scale_y_log10() + ggtitle("Low-count ATAC") +
-    xlab("Sample ID") + ylab("nCount_ATAC"),
-  ## low sum
-  plotColData(sce_atac, x = "orig.ident", y = "nFeature_ATAC", colour_by = "low_feature_ATAC") + scale_y_log10() + ggtitle("Low-feature ATAC") +
-    xlab("Sample ID") + ylab("nFeature_ATAC"),
-  ## low genes
-  plotColData(sce_atac, x = "orig.ident", y = "nucleosome_signal", colour_by = "high_NS") + scale_y_log10() + ggtitle("High NS") +
-    xlab("Sample ID") + ylab("high_NS"),
-  ncol = 3,
-  top = paste0("Outliers detected. Sample ", Seurat_base_name),
-  bottom = caption_label_ATAC
-)
+# ## Build plot with low counts, features and high ns
+# plot_grid <- gridExtra::grid.arrange(
+#   plotColData(sce_atac, x = "orig.ident", y = "nCount_ATAC", colour_by = "low_sum_ATAC") + scale_y_log10() + ggtitle("Low-count ATAC") +
+#     xlab("Sample ID") + ylab("nCount_ATAC"),
+#   ## low sum
+#   plotColData(sce_atac, x = "orig.ident", y = "nFeature_ATAC", colour_by = "low_feature_ATAC") + scale_y_log10() + ggtitle("Low-feature ATAC") +
+#     xlab("Sample ID") + ylab("nFeature_ATAC"),
+#   ## low genes
+#   plotColData(sce_atac, x = "orig.ident", y = "nucleosome_signal", colour_by = "high_NS") + scale_y_log10() + ggtitle("High NS") +
+#     xlab("Sample ID") + ylab("high_NS"),
+#   ncol = 3,
+#   top = paste0("Outliers detected. Sample ", Seurat_base_name),
+#   bottom = caption_label_ATAC
+# )
+# 
+# # Save plot comparing total counts in RNA and ATAC
+# plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_ATAC.png"))
+# ggsave(filename = plotName, plot = plot_grid_multiome, width = 8, height = 10)
 
 
-message("Saved plot from isOutliers ATAC assay for sample ", Seurat_base_name)
+message("Saved plots with outliers on ATAC assay sample ", Seurat_base_name)
 
 
 
