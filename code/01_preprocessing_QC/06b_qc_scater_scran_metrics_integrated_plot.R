@@ -117,7 +117,7 @@ myCol <- brewer.pal(3, "Pastel2")
 # Chart
 plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_venn_diagram.png"))
 venn.diagram(
-  x = list(v_high_mito, v_low_umi, v_low_detected),
+  x = list(set_high_mito, set_low_umi, set_low_detected),
   category.names = c(paste0("high_mito (", l_hm, ")"), 
                      paste0("low_umi (",l_lsum, ")"), 
                      paste0("low_genes (", l_lgene, ")")),
