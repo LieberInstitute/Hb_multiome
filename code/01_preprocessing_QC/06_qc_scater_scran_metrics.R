@@ -102,7 +102,7 @@ message("Saved ", total_filtered_cells," valid (PASS) barcodes for sample ", Seu
 ## Build title labels
 out_detected <- total_unfiltered_cells - total_filtered_cells
 out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits = 2 ) 
-caption_label <- paste0(out_detected, " cells (", out_detected_p, "%) with outliers detected. Filtered ", total_filtered_cells, " from ", total_unfiltered_cells)
+caption_label_GEX <- paste0(out_detected, " outliers (", out_detected_p, "%) detected. Filtered ", total_filtered_cells, " from ", total_unfiltered_cells)
 
 ## Build plot with mito, umi and feature outliers
 plot_grid_GEX <- gridExtra::grid.arrange(
@@ -116,7 +116,7 @@ plot_grid_GEX <- gridExtra::grid.arrange(
     xlab("Sample ID") + ylab("Sum genes"), 
   ncol = 3,
   top = paste0("Outliers detected. Sample ", Seurat_base_name),
-  bottom = caption_label
+  bottom = caption_label_GEX
 )
 
 # Save the plot
@@ -197,10 +197,16 @@ message("Saved ", total_filtered_cells," valid (PASS) barcodes for sample ", Seu
 ## Build title labels
 out_detected <- total_unfiltered_cells - total_filtered_cells
 out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits = 2 ) 
-caption_label <- paste0(out_detected, " cells (", out_detected_p, "%) with outliers detected. Filtered ", total_filtered_cells, " from ", total_unfiltered_cells)
+caption_label_ATAC <- paste0(out_detected, " outliers (", out_detected_p, "%) detected. Filtered ", total_filtered_cells, " from ", total_unfiltered_cells)
 
-plt_ATAC_low_sum <- plotColData(sce, x = "orig.ident", y = "nCount_ATAC", colour_by = "low_count_ATAC", point_size = 1.5) + 
-  scale_y_log10() + ggtitle("Low-count ATAC") + xlab("Sample ID") + ylab("nCount_ATAC")
+plot_grid <- gridExtra::grid.arrange(
+  plt_GEX_low_sum,
+  plotColData(sce, x = "orig.ident", y = "nCount_ATAC", colour_by = "low_count_ATAC", point_size = 1.5) + 
+    scale_y_log10() + ggtitle("Low-count ATAC") + xlab("Sample ID") + ylab("nCount_ATAC"), 
+  ncol = 2,
+  top = paste0("Outliers cells GEX and ATAC. Sample ", Seurat_base_name),
+  bottom = paste(caption_label_GEX, "\n", caption_label_ATAC)
+)
 
 # ## Build plot with mito, umi and feature outliers
 # plot_grid <- gridExtra::grid.arrange(
