@@ -50,9 +50,9 @@ set.seed(11112024)
 ################ Calculate Outliers on GEX multiome assays (By sample) ##############################################
 
 ## Load sce.out from cellrangerARC_reanalyze, then transform to sce object
-sce <- readRDS(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_reanalysis.rds")))
+SeuratOBJ <- readRDS(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_reanalysis.rds")))
 # head(sce@meta.data["orig.ident"])
-sce <- as.SingleCellExperiment(sce, assay = "RNA")
+sce <- as.SingleCellExperiment(SeuratOBJ, assay = "RNA")
 
 total_unfiltered_cells <- ncol(sce) # cells in cols
 
@@ -87,15 +87,15 @@ sce$discard_auto <- sce$high_mito | sce$low_sum | sce$low_detected
 table(sce$discard_auto)
 
 # Filter cells that PASS Outliers and save barcodes filtered
-sce_bc <- colnames(sce)[!sce$discard_auto]
+sce_bc_gex <- colnames(sce)[!sce$discard_auto]
 total_filtered_cells <-  length(sce_bc)
   
-message("Total cells filtered (PASS) from sample ", Seurat_base_name, ": ", total_filtered_cells, " from ", total_unfiltered_cells)
+message("Total cells GEX filtered (PASS) from sample ", Seurat_base_name, ": ", total_filtered_cells, " from ", total_unfiltered_cells)
 
 #colnames(sce)[sce$high_mito]
 csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_bc_PASS_isOutliers.csv"))
 # NOTE. Uncommend line below if you wish to re-run de outliers barcode-detection and replace the previous csv barcode files
-#write.csv(sce_bc, csv_name, row.names=FALSE)
+#write.csv(sce_bc_gex, csv_name, row.names=FALSE)
 
 message("Saved ", total_filtered_cells," valid (PASS) barcodes for sample ", Seurat_base_name)
 
@@ -105,14 +105,14 @@ out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits =
 caption_label <- paste0(out_detected, " cells (", out_detected_p, "%) with outliers detected. Filtered ", total_filtered_cells, " from ", total_unfiltered_cells)
 
 ## Build plot with mito, umi and feature outliers
-plot_grid <- gridExtra::grid.arrange(
-  plotColData(sce, x = "orig.ident", y = "subsets_Mito_percent", colour_by = "high_mito") + ggtitle("Mitochondrial percentage") +
+plot_grid_GEX <- gridExtra::grid.arrange(
+  plotColData(sce, x = "orig.ident", y = "subsets_Mito_percent", colour_by = "high_mito", point_size = 1.5) + ggtitle("Mitochondrial percentage") +
     xlab("Sample ID") + ylab("Mito percent"), 
   ## low sum
-  plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_sum") + scale_y_log10() + ggtitle("Total count") +
+  plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_sum", point_size = 1.5) + scale_y_log10() + ggtitle("Total count") +
     xlab("Sample ID") + ylab("Sum UMIs"),    
   ## low genes
-  plotColData(sce, x = "orig.ident", y = "detected", colour_by = "low_detected") + scale_y_log10() + ggtitle("Total genes") +
+  plotColData(sce, x = "orig.ident", y = "detected", colour_by = "low_detected", point_size = 1.5) + scale_y_log10() + ggtitle("Total genes") +
     xlab("Sample ID") + ylab("Sum genes"), 
   ncol = 3,
   top = paste0("Outliers detected. Sample ", Seurat_base_name),
@@ -121,7 +121,10 @@ plot_grid <- gridExtra::grid.arrange(
 
 # Save the plot
 plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_per_sample.png"))
-ggsave(filename = plotName, plot = plot_grid)
+ggsave(filename = plotName, plot = plot_grid_GEX)
+
+plt_GEX_low_sum <- plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_sum", point_size = 1.5) + scale_y_log10() + ggtitle("Total count") +
+  xlab("Sample ID") + ylab("Sum UMIs")
 
 message("Saved plot from isOutliers GEX assay for sample ", Seurat_base_name)
   
@@ -142,7 +145,7 @@ message("Saved plot from isOutliers GEX assay for sample ", Seurat_base_name)
 
 ## Load sce.out from cellrangerARC_reanalyze, then transform to sce object
 
-sce <- as.SingleCellExperiment(sce, assay = "ATAC")
+sce <- as.SingleCellExperiment(SeuratOBJ, assay = "ATAC")
 
 total_unfiltered_cells <- ncol(sce) # cells in cols
 
@@ -171,10 +174,6 @@ table(sce$low_feature_ATAC)
 sce$high_NS <- isOutlier(sce$nucleosome_signal, nmads = 3, type = "higher") # batch = sce$Sample, running one sample at time
 table(sce$low_count_ATAC)
 
-## high NS ATAC
-sce$high_NS <- isOutlier(sce$nucleosome_signal, nmads = 3, type = "higher") # batch = sce$Sample, running one sample at time
-table(sce$low_count_ATAC)
-
 # # All low sum are also low detected
 # table(sce$low_sum, sce$low_detected)
 
@@ -183,15 +182,15 @@ sce$discard_auto_atac <- sce$low_count_ATAC | sce$low_feature_ATAC | sce$high_NS
 table(sce$discard_auto_atac)
 
 # Filter cells that PASS Outliers and save barcodes filtered
-sce_bc <- colnames(sce)[!sce$discard_auto_atac]
+sce_bc_atac <- colnames(sce)[!sce$discard_auto_atac]
 total_filtered_cells <-  length(sce_bc)
 
-message("Total cells filtered (PASS) from sample ", Seurat_base_name, ": ", total_filtered_cells, " from ", total_unfiltered_cells)
+message("Total cells ATAC filtered (PASS) from sample ", Seurat_base_name, ": ", total_filtered_cells, " from ", total_unfiltered_cells)
 
 #colnames(sce)[sce$high_mito]
 csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_bc_PASS_ATAC_isOutliers.csv"))
 #write.csv(sce_bc$Barcode, csv_name, row.names=FALSE)
-write.csv(sce_bc, csv_name, row.names=FALSE)
+write.csv(sce_bc_atac, csv_name, row.names=FALSE)
 
 message("Saved ", total_filtered_cells," valid (PASS) barcodes for sample ", Seurat_base_name)
 
@@ -200,20 +199,23 @@ out_detected <- total_unfiltered_cells - total_filtered_cells
 out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits = 2 ) 
 caption_label <- paste0(out_detected, " cells (", out_detected_p, "%) with outliers detected. Filtered ", total_filtered_cells, " from ", total_unfiltered_cells)
 
-## Build plot with mito, umi and feature outliers
-plot_grid <- gridExtra::grid.arrange(
-  plotColData(sce, x = "orig.ident", y = "nCount_ATAC", colour_by = "low_count_ATAC") + scale_y_log10() + ggtitle("Low-count ATAC") +
-    xlab("Sample ID") + ylab("nCount_ATAC"), 
-  ## low sum
-  plotColData(sce, x = "orig.ident", y = "nFeature_ATAC", colour_by = "low_feature_ATAC") + scale_y_log10() + ggtitle("Low-feature ATAC") +
-    xlab("Sample ID") + ylab("nFeature_ATAC"),    
-  ## low genes
-  plotColData(sce, x = "orig.ident", y = "nucleosome_signal", colour_by = "high_NS") + scale_y_log10() + ggtitle("High NS") +
-    xlab("Sample ID") + ylab("high_NS"), 
-  ncol = 3,
-  top = paste0("Outliers detected. Sample ", Seurat_base_name),
-  bottom = caption_label
-)
+plt_ATAC_low_sum <- plotColData(sce, x = "orig.ident", y = "nCount_ATAC", colour_by = "low_count_ATAC", point_size = 1.5) + 
+  scale_y_log10() + ggtitle("Low-count ATAC") + xlab("Sample ID") + ylab("nCount_ATAC")
+
+# ## Build plot with mito, umi and feature outliers
+# plot_grid <- gridExtra::grid.arrange(
+#   plotColData(sce, x = "orig.ident", y = "nCount_ATAC", colour_by = "low_count_ATAC") + scale_y_log10() + ggtitle("Low-count ATAC") +
+#     xlab("Sample ID") + ylab("nCount_ATAC"), 
+#   ## low sum
+#   plotColData(sce, x = "orig.ident", y = "nFeature_ATAC", colour_by = "low_feature_ATAC") + scale_y_log10() + ggtitle("Low-feature ATAC") +
+#     xlab("Sample ID") + ylab("nFeature_ATAC"),    
+#   ## low genes
+#   plotColData(sce, x = "orig.ident", y = "nucleosome_signal", colour_by = "high_NS") + scale_y_log10() + ggtitle("High NS") +
+#     xlab("Sample ID") + ylab("high_NS"), 
+#   ncol = 3,
+#   top = paste0("Outliers detected. Sample ", Seurat_base_name),
+#   bottom = caption_label
+# )
 
 
 message("Saved plot from isOutliers ATAC assay for sample ", Seurat_base_name)
