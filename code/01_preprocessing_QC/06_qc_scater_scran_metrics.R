@@ -104,7 +104,7 @@ message("Saved ", total_filtered_cells," valid (PASS) barcodes for sample ", Seu
 ## Build title labels
 out_detected <- total_unfiltered_cells - total_filtered_cells
 out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits = 2 ) 
-caption_label_GEX <- paste0(out_detected, " outliers (", out_detected_p, "%) detected on GEX. ", total_filtered_cells, " good quality cells from ", total_unfiltered_cells)
+caption_label_GEX <- paste0("GEX: ", out_detected, " (", out_detected_p, "%)", " outliers detected. ", total_filtered_cells, " good quality cells of ", total_unfiltered_cells)
 
 ## Build plot with mito, umi and feature outliers
 plot_grid_GEX <- gridExtra::grid.arrange(
@@ -117,7 +117,7 @@ plot_grid_GEX <- gridExtra::grid.arrange(
   plotColData(sce, x = "orig.ident", y = "detected", colour_by = "low_detected", point_size = 1.5) + scale_y_log10() + ggtitle("Total genes") +
     xlab("Sample ID") + ylab("Sum genes"), 
   ncol = 3,
-  top = paste0("Outliers detected. Sample ", Seurat_base_name),
+  top = paste0("Outliers detected. Sample ", unlist(strsplit(Seurat_base_name, split = "_"))[1]),
   bottom = caption_label_GEX
 )
 
@@ -127,7 +127,7 @@ ggsave(filename = plotName, plot = plot_grid_GEX)
 
 ## build plot with low-counts for GEX to compare later
 plt_GEX_low_sum <- plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_sum", point_size = 1.5) + scale_y_log10() + ggtitle("Total count") +
-  xlab("Sample ID") + ylab("Sum UMIs")
+  xlab("Sample ID") + ylab("Sum UMIs")  + theme(legend.position="none")
 
 message("Saved plot from isOutliers GEX assay for sample ", Seurat_base_name)
   
@@ -175,11 +175,18 @@ sce_atac$low_feature_ATAC <- isOutlier(sce_atac$nFeature_ATAC, log = TRUE, nmads
 max(sce_atac$nucleosome_signal); min(sce_atac$nucleosome_signal)
 sce_atac$high_NS <- isOutlier(sce_atac$nucleosome_signal, nmads = 3, type = "higher") # batch = sce_atac$Sample, running one sample at time
 table(sce_atac$high_NS)
-sce$nucleosome_signal[sce_atac$high_NS]
+sce_atac$nucleosome_signal[sce_atac$high_NS]
 #[1] 1.440824 1.396084 1.466782 1.432133 1.540221
 
+## Low TSS.enrichment
+max(sce_atac$TSS.enrichment); min(sce_atac$TSS.enrichment)
+sce_atac$low_TSS <- isOutlier(sce_atac$TSS.enrichment, nmads = 3, type = "lower") # batch = sce_atac$Sample, running one sample at time
+table(sce_atac$low_TSS)
+sce$TSS.enrichment[sce_atac$low_TSS]
+#[1] 0.9571824 1.1462222 1.1901142 1.0215137 1.1916909
+#pmatch(colnames(sce_atac)[sce_atac$high_NS], colnames(sce_atac)[sce_atac$low_TSS])
 ## Annotate cells to remove
-sce_atac$discard_auto_atac <- sce_atac$low_sum_ATAC | sce_atac$low_feature_ATAC | sce_atac$high_NS
+sce_atac$discard_auto_atac <- sce_atac$low_sum_ATAC | sce_atac$low_feature_ATAC | sce_atac$high_NS | sce_atac$low_TSS
 table(sce_atac$discard_auto_atac)
 
 # Filter cells that PASS Outliers and save barcodes filtered
@@ -198,56 +205,78 @@ message("Saved ", total_filtered_cells," valid (PASS) barcodes for sample ", Seu
 ## Build title labels
 out_detected <- total_unfiltered_cells - total_filtered_cells
 out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits = 2 ) 
-caption_label_ATAC <- paste0(out_detected, " outliers (", out_detected_p, "%) detected on ATAC. ", total_filtered_cells, " good quality cells from ", total_unfiltered_cells)
+caption_label_ATAC <- paste0("ATAC: ", out_detected, " (", out_detected_p, "%) outliers detected. ", total_filtered_cells, " good quality cells of ",
+                             total_unfiltered_cells)
 
-plot_grid <- gridExtra::grid.arrange(
+## Plot GEX total-counts and ATAC total-counts
+plot_grid_multiome <- gridExtra::grid.arrange(
   plt_GEX_low_sum,
   plotColData(sce_atac, x = "orig.ident", y = "nCount_ATAC", colour_by = "low_sum_ATAC", point_size = 1.5) + 
-    scale_y_log10() + ggtitle("Low-count ATAC") + xlab("Sample ID") + ylab("nCount_ATAC"), 
+    scale_y_log10() + ggtitle("Low-count ATAC") + xlab("Sample ID") + ylab("nCount_ATAC") + theme(legend.title=element_blank()), 
   ncol = 2,
-  top = paste0("Outliers cells GEX and ATAC. Sample ", Seurat_base_name),
-  bottom = paste(caption_label_GEX, "\n", caption_label_ATAC)
+  top = paste0("Outliers cells GEX and ATAC. Sample ", unlist(strsplit(Seurat_base_name, split = "_"))[1]),
+  bottom = paste(caption_label_GEX, "\n", caption_label_ATAC) 
 )
 
+# Save plot comparing total counts in RNA and ATAC
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_isOutliers_GEX_ATAC_total_counts.png"))
+ggsave(filename = plotName, plot = plot_grid_multiome, width = 8, height = 10)
+
+## Plot NS and TSS ATAC metrics
+plot_grid_multiome <- gridExtra::grid.arrange(
+  plotColData(sce_atac, x = "orig.ident", y = "nucleosome_signal", colour_by = "high_NS", point_size = 1.5) + 
+    scale_y_log10() + ggtitle("High nucleosome signal") + xlab("Sample ID") + ylab("high_NS")  + theme(legend.position="none"),
+  plotColData(sce_atac, x = "orig.ident", y = "TSS.enrichment", colour_by = "low_TSS", point_size = 1.5) + 
+    scale_y_log10() + ggtitle("Low TSS.enrichment") + xlab("Sample ID") + ylab("low_TSS") + theme(legend.title=element_blank()), 
+  ncol = 2,
+  top = paste0("Outliers cells NS and TSS. Sample ", unlist(strsplit(Seurat_base_name, split = "_"))[1]),
+  bottom = paste("High-NS:", length(colnames(sce_atac)[sce_atac$high_NS]), "Low-TSS:", length(colnames(sce_atac)[sce_atac$low_TSS])) 
+)
 
 ## Venn diagrams to cross the 2 datasets
-set_low_umi_gex <- colnames(sce)[sce$low_sum]
-l_lsum_gex <- length(set_low_umi_gex)
+set_low_atac <- colnames(sce_atac)[sce_atac$low_sum_ATAC]
+l_lsum_atac <- length(set_low_atac)
 
-set_low_umi_atac <- colnames(sce_atac)[sce_atac$low_sum_ATAC]
-l_lsum_atac <- length(set_low_umi_atac)
+set_low_feature <- colnames(sce_atac)[sce_atac$low_feature_ATAC]
+l_lgenes_atac <- length(set_low_feature)
+
+set_low_TSS <- colnames(sce_atac)[sce_atac$low_TSS]
+l_low_TSS <- length(set_low_TSS)
+
 
 myCol <- brewer.pal(3, "Pastel2")
 
-# Chart
-plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_multiome_venn_diagram_low_counts.png"))
+# Venn diagram for ATAC metrics 
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_VENNd_low_counts.png"))
 venn.diagram(
-  x = list(set_low_umi_gex, set_low_umi_atac),
-  category.names = c(paste0("low_umi_gex (",l_lsum_gex, ")"), 
-                     paste0("low_umi_atac (", l_lsum_atac, ")")),
+  x = list(set_low_atac, set_low_feature, set_low_TSS),
+  category.names = c(paste0("low_sum (",l_lsum_atac, ")"), 
+                     paste0("low_genes (", l_lgenes_atac, ")"),
+                     paste0("low_tss (", l_low_TSS, ")")),
   filename = plotName,
-  output=TRUE
+  output = FALSE ,
+  imagetype="png" ,
+  height = 480 , 
+  width = 480 , 
+  resolution = 300,
+  compression = "lzw",
+  lwd = 1,
+  col=c("#440154ff", '#21908dff', '#0000FF'),
+  fill = c(alpha("#440154ff",0.3), alpha('#21908dff',0.3), alpha('#fde725ff',0.3)),
+  cex = 0.5,
+  fontfamily = "sans",
+  cat.cex = 0.3,
+  cat.default.pos = "outer",
+  cat.pos = c(-27, 27, 135),
+  cat.dist = c(0.055, 0.055, 0.085),
+  cat.fontfamily = "sans",
+  cat.col = c("#440154ff", '#21908dff', '#0000FF'),
+  rotation = 1,
+  main = "Outliers detected",
+  sub = "ATAC - Cell RangerARC-reanalyze",
+  main.cex = 0.7,
+  sub.cex = 0.4
 )
-  # height = 480 , 
-  # width = 480 , 
-  # resolution = 300,
-  # compression = "lzw",
-  # lwd = 1,
-  # col=c("#440154ff", '#21908dff'),
-  # fill = c(alpha("#440154ff",0.3), alpha('#21908dff',0.3)),
-  # cex = 0.5,
-  # fontfamily = "sans",
-  # cat.cex = 0.3,
-  # cat.default.pos = "outer",
-  # cat.pos = c(-27, 27, 135),
-  # cat.dist = c(0.055, 0.055, 0.085),
-  # cat.fontfamily = "sans",
-  # cat.col = c("#440154ff", '#21908dff'),
-  # rotation = 1,
-  # main = "Outliers detected",
-  # sub = "GEX+ATAC - Cell RangerARC-reanalyze"#,
-  # main.cex = 0.7,
-  # sub.cex = 0.4
 
 ## Build plot with mito, umi and feature outliers
 plot_grid <- gridExtra::grid.arrange(
