@@ -49,17 +49,17 @@ message("Reading raw feature barcode data corresponding to sample: ", Seurat_bas
 set.seed(11112024)
 
 
-################ Calculate Outliers on GEX multiome assays (By sample) ##############################################
-
 ## Load sce.out from cellrangerARC_reanalyze, then transform to sce object
+
 SeuratOBJ <- readRDS(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", paste0(Seurat_base_name, "_reanalysis.rds")))
 # head(sce@meta.data["orig.ident"])
 sce <- as.SingleCellExperiment(SeuratOBJ, assay = "RNA")
 
 total_unfiltered_cells <- ncol(sce) # cells in cols
 
-####### Quality control, check low quality cells #######
-  
+
+################ Calculate Outliers on GEX multiome assays (By sample) ##############################################
+
 ## High mito
 is.mito <- grep("MT-", rownames(sce))
 sce <- scuttle::addPerCellQC(
@@ -104,7 +104,7 @@ message("Saved ", total_filtered_cells," valid (PASS) barcodes for sample ", Seu
 ## Build title labels
 out_detected <- total_unfiltered_cells - total_filtered_cells
 out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits = 2 ) 
-caption_label_GEX <- paste0(out_detected, " outliers (", out_detected_p, "%) detected. Filtered ", total_filtered_cells, " from ", total_unfiltered_cells)
+caption_label_GEX <- paste0(out_detected, " outliers (", out_detected_p, "%) detected on GEX. ", total_filtered_cells, " good quality cells from ", total_unfiltered_cells)
 
 ## Build plot with mito, umi and feature outliers
 plot_grid_GEX <- gridExtra::grid.arrange(
@@ -146,8 +146,6 @@ message("Saved plot from isOutliers GEX assay for sample ", Seurat_base_name)
 
 ################ Calculate Outliers on ATAC multiome assays (By sample) ##############################################
 
-## Load sce.out from cellrangerARC_reanalyze, then transform to sce object
-
 sce_atac <- as.SingleCellExperiment(SeuratOBJ, assay = "ATAC")
 
 total_unfiltered_cells <- ncol(sce_atac) # cells in cols
@@ -174,11 +172,11 @@ sce_atac$low_feature_ATAC <- isOutlier(sce_atac$nFeature_ATAC, log = TRUE, nmads
 #table(sce_atac$low_feature_ATAC)
 
 ## high NS ATAC
+max(sce_atac$nucleosome_signal); min(sce_atac$nucleosome_signal)
 sce_atac$high_NS <- isOutlier(sce_atac$nucleosome_signal, nmads = 3, type = "higher") # batch = sce_atac$Sample, running one sample at time
-#table(sce_atac$high_NS)
-
-# # All low sum are also low detected
-# table(sce_atac$low_sum, sce_atac$low_detected)
+table(sce_atac$high_NS)
+sce$nucleosome_signal[sce_atac$high_NS]
+#[1] 1.440824 1.396084 1.466782 1.432133 1.540221
 
 ## Annotate cells to remove
 sce_atac$discard_auto_atac <- sce_atac$low_sum_ATAC | sce_atac$low_feature_ATAC | sce_atac$high_NS
@@ -200,7 +198,7 @@ message("Saved ", total_filtered_cells," valid (PASS) barcodes for sample ", Seu
 ## Build title labels
 out_detected <- total_unfiltered_cells - total_filtered_cells
 out_detected_p <- round( ((out_detected*100) / total_unfiltered_cells), digits = 2 ) 
-caption_label_ATAC <- paste0(out_detected, " outliers (", out_detected_p, "%) detected. Filtered ", total_filtered_cells, " from ", total_unfiltered_cells)
+caption_label_ATAC <- paste0(out_detected, " outliers (", out_detected_p, "%) detected on ATAC. ", total_filtered_cells, " good quality cells from ", total_unfiltered_cells)
 
 plot_grid <- gridExtra::grid.arrange(
   plt_GEX_low_sum,
