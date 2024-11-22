@@ -28,7 +28,8 @@ Seurat_reduction <- 'Harmony'
 # cellranger_pipe = "CR_crossBarcodes"
 # cellranger_pipe = "CR_complementBarcodes"
 # cellranger_pipe = "CR_arc_reanalyze"
-# cellranger_pipe = "CR_arc_reanalyze_outliers"
+# cellranger_pipe = "CR_arc_reanalyze_outliers" 
+# cellranger_pipe = "CR_arc_reanalyze_outliers" # new argument for process ATAC outliers
 
 ## input validations
 if (length(cellranger_pipe)== 0 || length(marker_lst)== 0) {
@@ -39,7 +40,7 @@ if (length(cellranger_pipe)== 0 || length(marker_lst)== 0) {
   message("Marker list input: ", (marker_lst))
 }
 
-##Avoid to re-run data processed before
+## Avoid to re-run data processed before
 if (cellranger_pipe=="CR_crossBarcodes" || cellranger_pipe=="CR_complementBarcodes" || cellranger_pipe=="CR_arc_reanalyze" ) { stop() }
 
 ## path to input Directory and suffix of cluster data
@@ -76,11 +77,13 @@ if (cellranger_pipe=="CR_crossBarcodes" || cellranger_pipe=="CR_complementBarcod
 } else if (cellranger_pipe=="CR_arc_reanalyze" || cellranger_pipe=="CR_arc_reanalyze_outliers") {
   
   if (cellranger_pipe=="CR_arc_reanalyze") {
+    
       if (marker_lst=="literature_base") {
         neu <- c(0,3,4,5,8,9,17,22,24)
         hb <- c(3,4,5,9)
         thal <- c(8)
         glia_other <- c()
+        
       } else if (marker_lst=="data_driven") {
         neu <- c(0,1,2,3,4,5,8,9,10,11,14,16,21,24,26)
         hb <- c(2,4,5,9,14,16)
@@ -91,46 +94,57 @@ if (cellranger_pipe=="CR_crossBarcodes" || cellranger_pipe=="CR_complementBarcod
   } else { #CR_arc_reanalyze_outliers
     
     if (marker_lst=="literature_base") {
-      thal <- c(8)
       hb <- c(2,3,5,9)
+      thal <- c(8)
       neu <- c(0,4,15, hb, thal)
-      glia_other <- c(7,12,17,19,20,22,23,27)
+      glia <- c(7,12,17,19,20,22)
+      undeterminated <- c()
+      endo <- c(23, 27) #endo
+      
     } else if (marker_lst=="data_driven") {
       hb <- c(2,4,5,9,14,16)
       thal <- c(0,1,8,24)
-      neu <- c(10,21, hb, thal) 
-      glia_other <- c(3,7,12,17,19,20,22,23,28)
+      neu <- c(10, hb, thal) 
+      glia <- c(3,7,12,17,19,20,22,28)
+      undeterminated <- c(6,21) # glia ^ neuron)
+      endo <- c(23) # endo 
     } 
   }
 }
 
-## first remove previous/old files
-# fr = 0 
-# files_remove <- list.files(path = cvsDir, pattern = "FULL_SUMMARY_*", full.names = TRUE)
-# fr <- length(files_remove)
-# if (!fr==0) {file.remove(files_remove); fr<-0}
-# files_remove <- list.files(path = here(cvsDir, "cvs_files_markers"), pattern = "DETAIL_*", full.names = TRUE)
-# fr <- length(files_remove)
-# if (!fr==0) {file.remove(files_remove); fr<-0}
-# files_remove <- list.files(path = here(cvsDir, "cvs_files_markers"), pattern = "SUMMARY_*", full.names = TRUE)
-# fr <- length(files_remove)
-# if (!fr==0) {file.remove(files_remove); fr<-0}
-
-message("Removed previous summary reports from `", cellranger_pipe ,"` dataset!")
+# message("Removed previous summary reports from `", cellranger_pipe ,"` dataset!")
 
 ## Set count-mtx type and integration model (CCA or Harmony)
 if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts' }
 
 ## Build CSV file with DEG from corresponding Seurat processed before
-input_csv <- here(cvsDir, "cvs_files_markers", paste0(Seurat_base_name, suffix))
-if (marker_lst=="literature_base") {
-  suffix_clust_names <- '_Harmony_All_cellTypes_literature_base_top20.csv'
-} else if (marker_lst=="data_driven") {
-  suffix_clust_names <- '_Harmony_All_cellTypes_data_driven_top20.csv'
-}
+input_csv <- here(cvsDir, "cvs_files_markers", paste0(Seurat_base_name, suffix, "_info"))
+## add suffix to read the corresponding file
+input_csv <- case_when(
+  cellranger_pipe == "CR_crossBarcodes" || cellranger_pipe == "CR_complementBarcodes" || cellranger_pipe == "CR_arc_reanalyze" ~ input_csv,
+  cellranger_pipe == "CR_arc_reanalyze_outliers" ~ paste0(input_csv, "_GEX"),
+  cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" ~ paste0(input_csv, "_ATAC")
+)
+input_csv <- paste0(input_csv, ".csv")
+basename(input_csv)
+# seurat.norm_counts_Harmony_All_cluster_info_GEX.csv
 
-input_csv <- paste0(input_csv, "_info.csv")
-# ~/processed-data/04_DiffExpr_Clustering_seurat/cellrangerARC_reanalyze/cvs_files_markers
+## build file name for cell-types annotations
+if (marker_lst=="literature_base") {
+  suffix_clust_names <- '_Harmony_All_cellTypes_literature_base_top20'
+} else if (marker_lst=="data_driven") {
+  suffix_clust_names <- '_Harmony_All_cellTypes_data_driven_top20'
+}
+## add suffix to read the corresponding file
+suffix_clust_names <- case_when(
+  cellranger_pipe == "CR_crossBarcodes" || cellranger_pipe == "CR_complementBarcodes" || cellranger_pipe == "CR_arc_reanalyze" ~ suffix_clust_names,
+  cellranger_pipe == "CR_arc_reanalyze_outliers" ~ paste0(suffix_clust_names, "_GEX"),
+  cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" ~ paste0(suffix_clust_names, "_ATAC")
+)
+suffix_clust_names <- paste0(suffix_clust_names, ".csv")
+basename(suffix_clust_names)
+# "_Harmony_All_cellTypes_literature_base_top20_GEX.csv"
+
 message("Calculating percentage of neurons, habenula and thalamus cell types")
 message("Active gene marker list ref: ", marker_lst)
 
@@ -148,10 +162,13 @@ allT <- c(sort(unique(df_mdT[["seurat_clusters"]])))
 
 ## Build the list with cluster to parse
 lst_clust <- list(allTypes = allT)
-if (!is_null(neu)) { lst_clust <- append(lst_clust, list(neu = neu)) }
 if (!is_null(hb)) { lst_clust <- append(lst_clust, list(hb = hb)) }
 if (!is_null(thal)) { lst_clust <- append(lst_clust, list(thal= thal)) }
-if (!is_null(glia_other)) { lst_clust <- append(lst_clust, list(glia_other= glia_other)) }
+if (!is_null(neu)) { lst_clust <- append(lst_clust, list(neu = neu)) }
+if (!is_null(glia)) { lst_clust <- append(lst_clust, list(glia = glia)) }
+if (!is_null(undeterminated)) { lst_clust <- append(lst_clust, list(undeterminated = undeterminated)) }
+if (!is_null(endo)) { lst_clust <- append(lst_clust, list(endo = endo)) }
+
 #lst_clust <- list(hb = hb, neu = neu, thal= thal, allTypes = allT)
 message("Group of clusters prepared: ")
 names(lst_clust)
@@ -219,10 +236,8 @@ for (i in seq_along(lst_clust)) {
   totals_grp_clusters <- merge(totals_grp_clusters, df_cluster_names, by = "seurat_clusters", all.x = TRUE, sort = FALSE)
   totals_grp_clusters["total_clust.y"] <- list(NULL) ## Delete column
 
-  cvs_name <- paste0("DETAIL_", marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types ,"_v3.csv")
-  #write.csv(grp_clusters, here(cvsDir, cvs_name))
-  write.csv(totals_grp_clusters, here(cvsDir, "cvs_files_markers", cvs_name))
-
+  # cvs_name <- paste0("DETAIL_", marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types ,"_v3.csv")    
+  # write.csv(totals_grp_clusters, here(cvsDir, "cvs_files_markers", cvs_name))
 
   ########  Calculate perceptual values by SAMPLE ########
 
@@ -239,8 +254,8 @@ for (i in seq_along(lst_clust)) {
   df_summary <- rename(df_summary, all_of(c(Total.Cells.Sample = "total_sample.x", Total.Cells.ALL = "total_sample.y") ))
   df_summary <- as.data.frame(t(df_summary)) |> row_to_names(1)
 
-  cvs_name <- paste0('SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types,"_v3.csv")
-  write.csv(df_summary, here(cvsDir, "cvs_files_markers", cvs_name), row.names=TRUE)
+  # cvs_name <- paste0('SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types,"_v3.csv")
+  # write.csv(df_summary, here(cvsDir, "cvs_files_markers", cvs_name), row.names=TRUE)
 
   ## bind rows to the main table
   df_summary <- data.frame(seurat_clusters = c("Total.Cells.Sample", "Total.Cells.ALL", "Percentage.Sample"), df_summary)
@@ -248,7 +263,13 @@ for (i in seq_along(lst_clust)) {
   df_summary <- df_summary |> mutate(!!!new_columns)
   df_summary <- rbind(totals_grp_clusters, df_summary)
 
-  cvs_name <- paste0('FULL_SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types,"_v3.csv")
+  ## add suffix to read the corresponding file
+  if (cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC") {
+    cvs_name <- paste0('FULL_SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types,"_ATAC_v3.csv")
+  } else {
+    cvs_name <- paste0('FULL_SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types,"_v3.csv")
+  }
+  # cvs_name <- paste0('FULL_SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types,"_v3.csv")
   write.csv(df_summary, here(cvsDir, cvs_name), row.names=FALSE)
 
 }
