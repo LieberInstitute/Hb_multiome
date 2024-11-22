@@ -142,7 +142,7 @@ set_low_feature_gex <- colnames(sce)[sce$low_detected]
 l_lgenes_gex <- length(set_low_feature_gex)
 
 # Venn diagram for ATAC metrics 
-plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_VENNd_low_counts.png"))
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_VENNd_outliers_detected.png"))
 venn.diagram(
   x = list(set_high_mito, set_low_gex, set_low_feature_gex),
   category.names = c(paste0("high_mito (", l_high_mito, ")"),
@@ -233,7 +233,7 @@ sce$TSS.enrichment[sce_atac$low_TSS]
 #[1] 0.9571824 1.1462222 1.1901142 1.0215137 1.1916909
 #pmatch(colnames(sce_atac)[sce_atac$high_NS], colnames(sce_atac)[sce_atac$low_TSS])
 ## Annotate cells to remove
-sce_atac$discard_auto_atac <- sce_atac$low_sum_ATAC | sce_atac$low_feature_ATAC | sce_atac$high_NS | sce_atac$low_TSS
+sce_atac$discard_auto_atac <- sce_atac$low_sum_ATAC | sce_atac$low_feature_ATAC | sce_atac$low_TSS #| sce_atac$high_NS
 table(sce_atac$discard_auto_atac)
 
 ## Filter cells that PASS Outliers and save barcodes filtered
@@ -291,7 +291,7 @@ set_low_TSS <- colnames(sce_atac)[sce_atac$low_TSS]
 l_low_TSS <- length(set_low_TSS)
 
 # Venn diagram for ATAC metrics 
-plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_ATAC_VENNd_low_counts.png"))
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_ATAC_VENNd_outliers_detected.png"))
 venn.diagram(
   x = list(set_low_atac, set_low_feature_atac, set_low_TSS),
   category.names = c(paste0("low_sum (",l_lsum_atac, ")"), 
