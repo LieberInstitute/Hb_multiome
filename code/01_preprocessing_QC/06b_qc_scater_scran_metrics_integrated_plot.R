@@ -329,55 +329,56 @@ venn.diagram(
 #rm seurat.norm_counts_Harmony_All_ATAC_VENNd_outliers_detected.png.2024-11-21_21-27-16.933048.log
 
 ## Save violin plots with all samples integrated per metric
-caption_label <- paste("*Cells to discard: ", length(sce$discard_auto[sce$high_mito]), " from ", total_unfiltered_cells)
-plt_hm <- plotColData(sce, x = "orig.ident", y = "subsets_Mito_percent", colour_by = "high_mito", point_size = 0.5) + 
-  ggtitle("Mitochondrial percentage") +
-  scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)) +
-  xlab("Sample ID") + ylab("Mito percent") +
-  labs(caption = caption_label) 
-plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_OUTLIERS_high_mito.png"))
-ggsave(filename = plotName, plot = plt_hm, width = 10, height = 5, bg="white")
 
-caption_label <- paste("*Cells to discard: ", length(sce$discard_auto[sce$low_sum]), " from ", total_unfiltered_cells)
-plt_low_sum_gex <- plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_sum", point_size = 0.5) + scale_y_log10() +
-  ggtitle("Total count")  +
+caption_label <- paste("*Cells to discard: ", l_latac, " from ", total_unfiltered_cells)
+plt_low_atac <- plotColData(sce_atac, x = "orig.ident", y = "nCount_ATAC", colour_by = "low_sum_ATAC", point_size = 0.5) + 
+  ggtitle("Low nCount ATAC") +
   scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)) +
-  xlab("Sample ID") + ylab("Sum UMIs") +
+  xlab("Sample ID") + ylab("nCount_ATAC") +
   labs(caption = caption_label) 
-plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_OUTLIERS_low_sum.png"))
-ggsave(filename = plotName, plot = plt_low_sum_gex, width = 10, height = 5, bg="white")
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_ATAC_OUTLIERS_low_sum.png"))
+ggsave(filename = plotName, plot = plt_low_atac, width = 10, height = 5, bg="white")
 
-caption_label <- paste("*Cells to discard: ", length(sce$discard_auto[sce$low_detected]), " from ", total_unfiltered_cells)
-plt_low_genes_gex <- plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_detected", point_size = 0.5) + scale_y_log10() + 
-  ggtitle("Total genes")  +
+caption_label <- paste("*Cells to discard: ", l_lsum_atac, " from ", total_unfiltered_cells)
+plt_low_sum_atac <- plotColData(sce_atac, x = "orig.ident", y = "nFeature_ATAC", colour_by = "low_feature_ATAC", point_size = 0.5) + scale_y_log10() +
+  ggtitle("Low nFeature_ATAC")  +
   scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)) +
-  xlab("Sample ID") + ylab("Sum genes") +
+  xlab("Sample ID") + ylab("nFeature_ATAC") +
   labs(caption = caption_label) 
-plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_OUTLIERS_low_gene.png"))
-ggsave(filename = plotName, plot = plt_low_genes_gex, width = 10, height = 5, bg="white")
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_ATAC_OUTLIERS_low_gene.png"))
+ggsave(filename = plotName, plot = plt_low_sum_atac, width = 10, height = 5, bg="white")
+
+caption_label <- paste("*Cells to discard: ", l_lTSS, " from ", total_unfiltered_cells)
+plt_low_TSS <- plotColData(sce_atac, x = "orig.ident", y = "TSS.enrichment", colour_by = "low_TSS", point_size = 0.5) + scale_y_log10() + 
+  ggtitle("Low TSS.enrichment")  +
+  scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)) +
+  xlab("Sample ID") + ylab("TSS.enrichment") +
+  labs(caption = caption_label) 
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_ATAC_OUTLIERS_low_TSS.png"))
+ggsave(filename = plotName, plot = plt_low_TSS, width = 10, height = 5, bg="white")
 
 ## saved plot with all metrics 
-caption_label <- paste0("*Cells to discard: ", length(sce$discard_auto[sce$discard_auto]), " (", round(total_p, digits = 2) ,"%) from ", total_unfiltered_cells)
+caption_label <- paste0("*Cells to discard: ", sum(l_latac+l_lsum_atac+l_lTSS), " (", round(total_p, digits = 2) ,"%) from ", total_unfiltered_cells)
 plot_grid <- gridExtra::grid.arrange(  
-  plt_hm + ggtitle("Mitochondrial percentage") + labs(caption = "") +
+  plt_low_atac + ggtitle("Low nCount ATAC") + labs(caption = "") +
     theme(axis.text.x=element_blank()),
-  plt_low_sum_gex + ggtitle("Total count") + labs(caption = "") +
+  plt_low_sum_atac + ggtitle("Low nFeature_ATAC") + labs(caption = "") +
     theme(axis.text.x=element_blank()),
-  plt_low_genes_gex + ggtitle("Total feature") + labs(caption = "") +
+  plt_low_TSS + ggtitle("Low TSS.enrichment") + labs(caption = "") +
     scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)) +
     scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)), 
   nrow = 3,
-  top = paste0("Outliers detected on GEX `Cell RangerARC-reanalyze` dataset"),
+  top = paste0("Outliers detected on ATAC `Cell RangerARC-reanalyze` dataset"),
   bottom = caption_label
 )
 
 # Save the plot
-plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_ALL_OUTLIERS.png"))
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_ATAC_ALL_OUTLIERS.png"))
 ggsave(filename = plotName, plot = plot_grid, width = 10, height = 12, bg="white")
 
-print("Saved GEX plots with outliers!")
+print("Saved ATAC plots with outliers!")
 
-message("ATAC Done!")
+message("ALL Done!")
 
 
 # # Add job array
