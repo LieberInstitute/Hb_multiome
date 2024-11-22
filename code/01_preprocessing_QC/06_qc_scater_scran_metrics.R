@@ -168,7 +168,7 @@ venn.diagram(
   cat.col = c("#440154ff", '#21908dff', '#0000FF'),
   rotation = 1,
   main = "Outliers detected",
-  sub = "ATAC - Cell RangerARC-reanalyze",
+  sub = "GEX - Cell RangerARC-reanalyze",
   main.cex = 0.7,
   sub.cex = 0.4
 )
