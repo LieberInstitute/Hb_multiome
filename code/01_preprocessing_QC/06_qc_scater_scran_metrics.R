@@ -96,7 +96,7 @@ total_filtered_cells <-  length(sce_bc_gex)
 message("Total cells GEX filtered (PASS) from sample ", Seurat_base_name, ": ", total_filtered_cells, " from ", total_unfiltered_cells)
 
 #colnames(sce)[sce$high_mito]
-csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_bc_PASS_isOutliers.csv"))
+csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_bc_PASS_GEX_isOutliers.csv"))
 # NOTE. Uncommend line below if you wish to re-run de outliers barcode-detection and replace the previous csv barcode files
 #write.csv(sce_bc_gex, csv_name, row.names=FALSE)
 
