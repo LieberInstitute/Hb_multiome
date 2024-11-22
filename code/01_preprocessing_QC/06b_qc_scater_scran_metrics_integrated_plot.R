@@ -13,12 +13,16 @@ library("scater")
 library("scran")
 library("scry")
 library("VennDiagram")
+library("RColorBrewer")
 library("gridExtra")
 library("stringr")
 library("sessioninfo")
 
 
 here::here()
+# Prepare a palette of 3 colors with R colorbrewer:
+myCol <- brewer.pal(3, "Pastel2")
+
 
 ## Read directories
 Seurat_base_name <- "seurat.norm_counts_Harmony_All"
@@ -37,6 +41,9 @@ sce <- readRDS(cellrangerDir_reanalyze)
 ## Verify data
 print(table(sce$orig.ident))
 sum(table(sce$orig.ident))
+# [1] 62950
+
+################ Prepare plots to visualize outliers on GEX multiome assays ###################
 
 ## transform to sce
 sce <- as.SingleCellExperiment(sce, assay = "RNA")
@@ -93,7 +100,7 @@ qc_p <- round(100 * sweep(qc_t, 1, qc_t[, 3], "/"), 1)
 
 total_filtered_cells <- length(sce$discard_auto[sce$discard_auto==FALSE])
 
-message("Total cells with no outliers on `Cell RangerARC-reanalyze` dataset: ", total_filtered_cells, " from ", total_unfiltered_cells)
+message("Cells without outliers: ", total_filtered_cells, " from ", total_unfiltered_cells)
 
 ## Build title labels
 out_detected <- total_unfiltered_cells - total_filtered_cells
@@ -110,12 +117,9 @@ l_lsum <- length(set_low_umi)
 set_low_detected <- colnames(sce)[sce$low_detected]
 l_lgene <- length(set_low_detected)
 
-# Prepare a palette of 3 colors with R colorbrewer:
-library(RColorBrewer)
-myCol <- brewer.pal(3, "Pastel2")
 
-# Chart
-plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_venn_diagram.png"))
+## Prepare and plot Venn diagram with GEX high mito, low-umi and low-feature detected
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_VENNd_outliers_detected.png"))
 venn.diagram(
   x = list(set_high_mito, set_low_umi, set_low_detected),
   category.names = c(paste0("high_mito (", l_hm, ")"), 
@@ -159,53 +163,51 @@ venn.diagram(
 # )
 
 
-## Save violin plots integrated plots per metric
-caption_label <- paste("*Cells to discard: ", length(sce$discard_auto[sce$high_mito==TRUE]), " from ", total_unfiltered_cells)
-plt1 <- plotColData(sce, x = "orig.ident", y = "subsets_Mito_percent", colour_by = "high_mito") + ggtitle("Mitochondrial percentage") +
+## Save violin plots with all samples integrated per metric
+caption_label <- paste("*Cells to discard: ", length(sce$discard_auto[sce$high_mito]), " from ", total_unfiltered_cells)
+plt_hm <- plotColData(sce, x = "orig.ident", y = "subsets_Mito_percent", colour_by = "high_mito", point_size = 0.5) + 
+  ggtitle("Mitochondrial percentage") +
   scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)) +
   xlab("Sample ID") + ylab("Mito percent") +
   labs(caption = caption_label) 
-plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_high_mito.png"))
-ggsave(filename = plotName, plot = plt1, width = 10, height = 5, bg="white")
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_OUTLIERS_high_mito.png"))
+ggsave(filename = plotName, plot = plt_hm, width = 10, height = 5, bg="white")
 
-caption_label <- paste("*Cells to discard: ", length(sce$discard_auto[sce$low_sum==TRUE]), " from ", total_unfiltered_cells)
-plt1 <- plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_sum") + scale_y_log10() + ggtitle("Total count")  +
+caption_label <- paste("*Cells to discard: ", length(sce$discard_auto[sce$low_sum]), " from ", total_unfiltered_cells)
+plt_low_sum_gex <- plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_sum", point_size = 0.5) + scale_y_log10() +
+  ggtitle("Total count")  +
   scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)) +
   xlab("Sample ID") + ylab("Sum UMIs") +
   labs(caption = caption_label) 
-plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_low_sum.png"))
-ggsave(filename = plotName, plot = plt1, width = 10, height = 5, bg="white")
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_OUTLIERS_low_sum.png"))
+ggsave(filename = plotName, plot = plt_low_sum_gex, width = 10, height = 5, bg="white")
 
-caption_label <- paste("*Cells to discard: ", length(sce$discard_auto[sce$low_detected==TRUE]), " from ", total_unfiltered_cells)
-plt1 <- plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_detected") + scale_y_log10() + ggtitle("Total genes")  +
+caption_label <- paste("*Cells to discard: ", length(sce$discard_auto[sce$low_detected]), " from ", total_unfiltered_cells)
+plt_low_genes_gex <- plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_detected", point_size = 0.5) + scale_y_log10() + 
+  ggtitle("Total genes")  +
   scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)) +
   xlab("Sample ID") + ylab("Sum genes") +
   labs(caption = caption_label) 
-plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_low_gene.png"))
-ggsave(filename = plotName, plot = plt1, width = 10, height = 5, bg="white")
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_OUTLIERS_low_gene.png"))
+ggsave(filename = plotName, plot = plt_low_genes_gex, width = 10, height = 5, bg="white")
 
 ## saved plot with all metrics 
-caption_label <- paste0("*Cells to discard: ", length(sce$discard_auto[sce$discard_auto==TRUE]), " (", round(total_p, digits = 2) ,"%) from ", total_unfiltered_cells)
+caption_label <- paste0("*Cells to discard: ", length(sce$discard_auto[sce$discard_auto]), " (", round(total_p, digits = 2) ,"%) from ", total_unfiltered_cells)
 plot_grid <- gridExtra::grid.arrange(  
-  plotColData(sce, x = "orig.ident", y = "subsets_Mito_percent", colour_by = "high_mito") + ggtitle("Mitochondrial percentage") +
-    xlab("Sample ID") + ylab("Mito percent") +
+  plt_hm + ggtitle("Mitochondrial percentage") + labs(caption = "") +
     theme(axis.text.x=element_blank()),
-  ## low sum
-  plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_sum") + scale_y_log10() + ggtitle("Total count") +
-    xlab("Sample ID") + ylab("Sum UMIs") +
+  plt_low_sum_gex + ggtitle("Total count") + labs(caption = "") +
     theme(axis.text.x=element_blank()),
-  ## low genes
-  plotColData(sce, x = "orig.ident", y = "sum", colour_by = "low_detected") + scale_y_log10() + ggtitle("Total feature")  +
+  plt_low_genes_gex + ggtitle("Total feature") + labs(caption = "") +
     scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)) +
-    xlab("Sample ID") + ylab("Sum genes") +
     scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)), 
   nrow = 3,
-  top = paste0("Outliers detected on `Cell RangerARC-reanalyze` dataset"),
+  top = paste0("Outliers detected on GEX `Cell RangerARC-reanalyze` dataset"),
   bottom = caption_label
 )
 
 # Save the plot
-plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_all_isOutliers.png"))
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_ALL_OUTLIERS.png"))
 ggsave(filename = plotName, plot = plot_grid, width = 10, height = 12, bg="white")
 
 print("Saved plots with outliers!")
