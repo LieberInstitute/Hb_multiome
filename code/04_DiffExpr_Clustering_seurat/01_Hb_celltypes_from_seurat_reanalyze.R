@@ -13,11 +13,11 @@
 ########################################################################
 
 ## load libraries
-library(tidyverse)
-library(dplyr)
-library(data.table)
-library(magrittr)
-library(here)
+library("tidyverse")
+library("dplyr")
+library("data.table")
+library("magrittr")
+library("here")
 
 here::here()
 
@@ -28,7 +28,7 @@ cellranger_pipe <- args[2]
 # cellranger_pipe <- "CR_arc_reanalyze"
 # cellranger_pipe <- "CR_arc_reanalyze_outliers"
 
-## input validations
+## input directories
 if (length(cellranger_pipe)) {
   
   message("CellRanger ARC input: ", cellranger_pipe)
@@ -40,6 +40,7 @@ if (length(cellranger_pipe)) {
     inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", "cvs_files_markers")
     processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
     cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze", "cvs_files_markers")
+    #stop()
     
   } else { # CR_arc_reanalyze_outliers
     
@@ -94,14 +95,16 @@ if (length(list.files(inputDir, pattern = Seurat_base_name)==1)) {
   stop()
 }
 
-message("Starting cell-type identification for `", cellranger_pipe, "`")
+message("Starting cell-type identification for GEX side on `", cellranger_pipe, "`")
 
 ## Load Seurat Integrated with cluster information
 if (cellranger_pipe == "CR_arc_reanalyze_outliers") {
-  SeuratOBJ <- get_seurat(here(inputDir, paste0(Seurat_base_name, "_subset_Outliers", ".rds")))   
+  seurat_RDSname <- here(inputDir, paste0(Seurat_base_name, "_GEX_subset_Outliers", ".rds"))
 } else {
-  SeuratOBJ <- get_seurat(here(inputDir, paste0(Seurat_base_name, ".rds")))    
+  seurat_RDSname <-here(inputDir, paste0(Seurat_base_name, ".rds"))
 }
+seurat_RDSname
+SeuratOBJ <- get_seurat(seurat_RDSname)   
 
 ## verification of the integration
 sum(table(SeuratOBJ$orig.ident))
@@ -143,28 +146,26 @@ df_mdT <- as.data.frame(mdT)
 #head(df_mdT)
 #sum(df_mdT$N)
 
-cvs_name <- paste0(Seurat_base_name, '_cluster_info.csv')
+cvs_name <- here(cvsDir, paste0(Seurat_base_name, '_GEX_cluster_info.csv'))
 ## Save clustering information; e.g: seurat.data_counts_Harmony_cluster_info.csv
-write.csv(df_mdT, here(cvsDir, cvs_name))
+write.csv(df_mdT, cvs_name)
 
 ## extract unique clusters in ascending order
 clusters <- unique(df_mdT$seurat_clusters)
 clusters <- as.integer(levels(clusters)[as.integer(clusters)])
 
-message('Identifing cell types for ', length(clusters),' clusters from the `', cellranger_pipe, '` dataset ')
+message('Identifing cell types for ', length(clusters),' clusters from `', cellranger_pipe, '` dataset (ONLY GEX) ')
 
 ## Read DGE cvs file for all clusters for the given sample
 
-#DGE_cvs_name <- paste0(Seurat_base_name, '_',Seurat_reduction, '_Allmarkers_min', minCells, 'cells.csv')
-DGE_cvs_name <- here(inputDir_cvs, paste0(Seurat_base_name, "markers.csv")) 
+DGE_cvs_name <- here(inputDir_cvs, paste0(Seurat_base_name, "markers_GEX.csv")) 
+#seurat.norm_counts_Harmony_Allmarkers_GEX.csv
 
 seurat_clust <- as.data.frame(read.csv(DGE_cvs_name, header = TRUE))
 head(seurat_clust, n=3)
-# Seurat output from FindAllmarkers()
-# p_val avg_log2FC pct.1 pct.2 p_val_adj cluster   gene
-# 1     0  -1.836151 0.078 0.736         0     C_0  NPAS3
 
-message('Parsing ', length(markers.custom), ' gene-markers lists on ', length(clusters) ,' clusters in `', cellranger_pipe, '` dataset ', Seurat_reduction, ' reduction')
+message('Parsing ', length(markers.custom), ' gene-markers lists on ', length(clusters) ,' clusters in `', cellranger_pipe, '` dataset ', 
+        Seurat_reduction, ' reduction')
 
 
 ####### Parse the 10/20 DGE genes from GEX cluster against the marker genes list provided ####### 
@@ -218,14 +219,9 @@ for (markers.lst in markers.custom) {
   rm("gene_match", "all_gene_match")
 }
 
-message(' Cell type identification in clusters done!')
+message(' Cell type identification in GEX clusters done!')
 
 
-## slurm script reproducibility
-# library("slurmjobs")
-# job_single(
-#   name = "01_Hb_celltypes_from_seurat_reanalyze", memory = "50G", cores = 2, create_shell = TRUE
-# )
 # slurmjobs::job_loop(
 #   loops = list(cellranger_pipe = c("CR_arc_reanalyze", "CR_arc_reanalyze_outliers")),
 #   name = "01_Hb_celltypes_from_seurat_reanalyze_v2",
