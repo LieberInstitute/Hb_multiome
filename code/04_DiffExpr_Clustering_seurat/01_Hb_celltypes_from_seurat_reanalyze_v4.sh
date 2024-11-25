@@ -1,20 +1,20 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=50G
-#SBATCH --job-name=01_Hb_celltypes_from_seurat_reanalyze_v2
+#SBATCH --job-name=01_Hb_celltypes_from_seurat_reanalyze_v4
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
-#SBATCH --array=1-2%20
+#SBATCH --array=1-3%20
 
 ## Define loops and appropriately subset each variable for the array task ID
-all_cellranger_pipe=(CR_arc_reanalyze CR_arc_reanalyze_outliers)
-cellranger_pipe=${all_cellranger_pipe[$(( $SLURM_ARRAY_TASK_ID / 1 % 2 ))]}
+all_cellranger_pipe=(CR_arc_reanalyze CR_arc_reanalyze_outliers CR_arc_reanalyze_outliers_ATAC)
+cellranger_pipe=${all_cellranger_pipe[$(( $SLURM_ARRAY_TASK_ID / 1 % 3 ))]}
 
 ## Explicitly pipe script output to a log
-log_path=logs/01_Hb_celltypes_from_seurat_reanalyze_v2_${cellranger_pipe}_${SLURM_ARRAY_TASK_ID}.txt
+log_path=logs/01_Hb_celltypes_from_seurat_reanalyze_v4_${cellranger_pipe}_${SLURM_ARRAY_TASK_ID}.txt
 
 {
 set -e
