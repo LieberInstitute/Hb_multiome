@@ -1,0 +1,5 @@
+"seurat_clusters","S03_Hb_r","S04_Hb_r","S06_Hb_r","S08_Hb_r","S10_Hb_r","S12_Hb_r","total_clust.x","Perc.Cluster","cell.types"
+"23","1","38","89","9","1","4",142,9.6862210095498,"***DD_Endo(5)"
+"Total.Cells.Sample"," 1","38","89"," 9"," 1"," 4",NA,NA,NA
+"Total.Cells.ALL"," 12","539","671"," 84","  1"," 98",NA,NA,NA
+"Percentage.Sample","  8.3","  7.1"," 13.3"," 10.7","100.0","  4.1",NA,NA,NA

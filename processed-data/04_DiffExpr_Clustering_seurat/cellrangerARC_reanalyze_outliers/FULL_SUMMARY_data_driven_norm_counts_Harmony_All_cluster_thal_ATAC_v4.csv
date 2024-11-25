@@ -1,0 +1,7 @@
+"seurat_clusters","S04_Hb_r","S05_Hb_r","S06_Hb_r","S08_Hb_r","S11_Hb_r","S12_Hb_r","total_clust.x","Perc.Cluster","cell.types"
+"0","61","2","99","3","0","0",165,11.2551159618008,"***DD_Inhib.Thal(12)"
+"15","49","0","22","3","3","0",77,5.25238744884038,"***DD_Inhib.Thal(1)"
+"18","30","0","24","0","0","1",55,3.75170532060027,"***DD_Excit.Thal(1)"
+"Total.Cells.Sample","140","  2","145","  6","  3","  1",NA,NA,NA
+"Total.Cells.ALL","539"," 35","671"," 84"," 26"," 98",NA,NA,NA
+"Percentage.Sample","26.0"," 5.7","21.6"," 7.1","11.5"," 1.0",NA,NA,NA
