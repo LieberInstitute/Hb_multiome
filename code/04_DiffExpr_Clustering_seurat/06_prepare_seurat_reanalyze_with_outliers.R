@@ -29,8 +29,6 @@ cvsDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze_ou
 if (!dir.exists(outputDir)) {dir.create(outputDir)}
 if (!dir.exists(cvsDir)) {dir.create(cvsDir)}
 
-get_seurat <- function(name) { sobj <- readRDS(name)}
-
 
 #############################           Initials        ################################
 
@@ -54,9 +52,9 @@ if (length(list.files(inputDir, pattern = Seurat_base_name)==1)) {
 message("Starting cell-type identification for ", Seurat_base_name)
 
 ## Load Seurat Integrated with cluster information
-SeuratOBJ <- get_seurat(here(inputDir, paste0(Seurat_base_name, ".rds")))
-## verification of the integration
-print(table(SeuratOBJ$orig.ident))
+SeuratOBJ <- readRDS(here(inputDir, paste0(Seurat_base_name, ".rds")))
+## verification
+table(SeuratOBJ$orig.ident)
 # 4S_Hb_KDM_reanalysis  5S_Hb_KDM_reanalysis  6S_Hb_KDM_reanalysis 
 # 7345                  2179                  8084 
 # S10_Hb_KDM_reanalysis S11_Hb_KDM_reanalysis S12_Hb_KDM_reanalysis 
@@ -66,7 +64,7 @@ print(table(SeuratOBJ$orig.ident))
 # S9_Hb_KDM_reanalysis 
 # 7139 
 
-message("Loaded seurat integrated with ", sum(table(SeuratOBJ$orig.ident)), " cells.")
+message("Loaded seurat integrated with ", length(Cells(SeuratOBJ)), " cells.")
 # Loaded seurat integrated with 62950 cells
 
 
@@ -118,6 +116,8 @@ for (bc_file in lst_bc) {
   
 }
 
+length(all_bc_to_remove)
+
 
 ################## (3) kept only cells with Outliers 
 
@@ -127,14 +127,15 @@ message("Barcodes to remove on GEX side: ", length(all_bc_to_remove))
 
 SeuratObj_subset <- subset(SeuratOBJ, cells = all_bc_to_remove, invert = TRUE)
 
-message("CellRangerARC-reanalyze GEX Seurat with ONLY outlier done!")
+message("CellRangerARC-reanalyze GEX Seurat with ONLY outliers done!")
 
 #print(table(SeuratObj_subset$orig.ident))
 
-message(sum(table(SeuratObj_subset$orig.ident)), " outliers found on GEX")
+message(length(Cells(SeuratObj_subset)), " outliers found on GEX")
 
 #table(Idents(SeuratObj_subset))
 #rm("SeuratOBJ")
+
 
 
 ################## (4) Find DEG and save Seurat with ONLY OUTLIER cells (barcodes) to identify cell types later
@@ -162,6 +163,108 @@ rds_name <- here(outputDir, rds_name)
 saveRDS(SeuratObj_subset, file = rds_name) 
 
 message("Saved Seurat subset data with ONLY Outliers!")
+
+
+
+################## (5) load vector with valid barcodes by sample ONLY for ATAC assays
+
+## Read barcodes and build a Seurat to keep only barcodes detected as outliers. Format cell-names too. 
+
+#unique(SeuratOBJ$orig.ident)[1]
+
+csvDir_barcodes <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", "csv_files")
+lst_bc <- list.files(csvDir_barcodes, pattern = "*_bc_PASS_ATAC_isOutliers.csv")
+# [1] "4S_Hb_KDM_bc_PASS_ATAC_isOutliers.csv" 
+# [2] "5S_Hb_KDM_bc_PASS_ATAC_isOutliers.csv" 
+# [3] "6S_Hb_KDM_bc_PASS_ATAC_isOutliers.csv" 
+# [4] "S10_Hb_KDM_bc_PASS_ATAC_isOutliers.csv"
+# [5] "S11_Hb_KDM_bc_PASS_ATAC_isOutliers.csv"
+# [6] "S12_Hb_KDM_bc_PASS_ATAC_isOutliers.csv"
+# [7] "S3_Hb_KDM_bc_PASS_ATAC_isOutliers.csv" 
+# [8] "S7_Hb_KDM_bc_PASS_ATAC_isOutliers.csv" 
+# [9] "S8_Hb_KDM_bc_PASS_ATAC_isOutliers.csv" 
+# [10] "S9_Hb_KDM_bc_PASS_ATAC_isOutliers.csv" 
+
+all_bc_to_remove <- c()
+
+## Track total number of valid cells
+names(table(SeuratOBJ$orig.ident))
+as.list(as.vector(table(SeuratOBJ$orig.ident)))
+
+## build the vector of cells to remove to build the ATAC isOutliers dataset 
+
+for (bc_file in lst_bc) {
+  # bc_file <- lst_bc[1]
+  message("Barcode list: ", bc_file)
+  
+  ## load barcodes that PASS outliers ATAC
+  
+  df_valid_barcodes_filtered <- read.csv(here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", "csv_files", bc_file))
+  len_valid_bc <- length(df_valid_barcodes_filtered$x)
+  v_valid_barcodes_filtered <- df_valid_barcodes_filtered$x
+  head(v_valid_barcodes_filtered)
+  message("Vector with ", len_valid_bc ," valid barcodes for sample `", bc_file,"` loaded")
+  
+  ## format barcodes to match seurat integrated barcode names
+  
+  ## short prefix
+  prefixCell <- unlist(strsplit(bc_file, split = "_"))[1]
+  barcodes_to_remove <- paste(prefixCell, "_", v_valid_barcodes_filtered, sep="")
+  
+  message("Cells to remove on multiome GEX side: ", length(barcodes_to_remove), " in sample ", prefixCell)
+  
+  all_bc_to_remove <- append(all_bc_to_remove, barcodes_to_remove)
+  
+}
+
+length(all_bc_to_remove)
+# [1] 61484 ATAC
+
+## remove cells from integrated seurat
+
+message("Barcodes to remove on ATAC side: ", length(all_bc_to_remove))
+
+table(SeuratOBJ$orig.ident)
+SeuratObj_subset_atac <- subset(SeuratOBJ, cells = all_bc_to_remove, invert = TRUE)
+table(SeuratObj_subset_atac$orig.ident)
+
+message("CellRangerARC-reanalyze ATAC Seurat with ONLY outliers done!")
+
+
+
+message(length(Cells(SeuratObj_subset)), " outliers found on ATAC")
+
+#table(Idents(SeuratObj_subset))
+#rm("SeuratOBJ")
+
+
+################## (4) Find DEG and save Seurat with ONLY ATAC OUTLIER cells (barcodes) to identify cell types later
+
+## Find DEG in the integrated Seurat for ALL clusters (BEFORE pseudobulk)
+#table(SeuratOBJ[["seurat_clusters"]])
+all.markers <- FindAllMarkers(object = SeuratObj_subset)
+#head(all.markers, n=3)
+
+cvs_file <- paste0(Seurat_base_name, "markers_ATAC.csv") 
+#seurat.norm_counts_Harmony_Allmarkers_GEX.csv
+cvs_file <- here(cvsDir, cvs_file)
+write.csv(all.markers, cvs_file)
+
+message(" FindAllMarkers done!")
+
+## Save Seurat with outlier cells
+
+Seurat_base_name <- paste0(Seurat_base_name, "_ATAC_subset_Outliers")
+
+## Save new Seurat-subset 
+rds_name <- paste0(Seurat_base_name, ".rds")
+rds_name <- here(outputDir, rds_name)
+saveRDS(SeuratObj_subset, file = rds_name) 
+
+message("Saved Seurat subset data with ONLY Outliers!")
+
+
+
 
 
 # # slurm script reproducibility
