@@ -1,5 +1,10 @@
 ########################################################################
-## Calculate standard quality control metrics based on the singleCellExperiment assay in Seurat's GEX assays
+## Calculate metrics based on standard quality control applied to singleCellExperiment
+##  - Input data are GEX or ATAC assays from Seurat Objects
+##  - Outputs are individual QC plots from GEX and ATAC data by sample
+##  - Output CSV files containing barcodes with cells that pass isOutliers on both GEX and ATAC
+##
+##
 ## CSC. Nov-2024
 ########################################################################
 
@@ -26,7 +31,7 @@ myCol <- brewer.pal(3, "Pastel2")
 ## Scans arguments invoked from slurm job shell sh
 sample_tmp <- commandArgs(trailingOnly = TRUE)
 # For testing:
-# sample_tmp <- "S3_Hb_KDM_reanalysis, S3_Hb_KDM"
+# sample_tmp <- "S10_Hb_KDM_reanalysis, S10_Hb_KDM"
 sample_data = unlist(strsplit(sample_tmp,","))
 Seurat_base_name <- trimws(sample_data[[2]])
 
@@ -36,9 +41,6 @@ message("Reading CellRangerARC reanalyze sample: ", Seurat_base_name)
 cellrangerDir_reanalyze <- here("processed-data", "cellrangerARC", Seurat_base_name, "outs")  
 csvDir_reanalyze <- here("processed-data", "01_preprocessing_QC", "cellrangerARC_reanalyze", "csv_files")
 plotDir_reanalyze <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanalyze", "plots_by_sample")
-
-## Load raw data
-#unfiltered_path <- here(cellrangerDir_reanalyze, "raw_feature_bc_matrix.h5")
 
 # Check processed_data and plot directories exists
 if (!dir.exists(csvDir_reanalyze)) { dir.create(csvDir_reanalyze) }
@@ -98,7 +100,7 @@ message("Total cells GEX filtered (PASS) from sample ", Seurat_base_name, ": ", 
 #colnames(sce)[sce$high_mito]
 csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_bc_PASS_GEX_isOutliers.csv"))
 # NOTE. Uncommend line below if you wish to re-run de outliers barcode-detection and replace the previous csv barcode files
-#write.csv(sce_bc_gex, csv_name, row.names=FALSE)
+# write.csv(sce_bc_gex, csv_name, row.names=FALSE)
 
 message("Saved ", total_filtered_cells," valid (PASS) barcodes for sample ", Seurat_base_name)
 
@@ -229,11 +231,12 @@ sce_atac$nucleosome_signal[sce_atac$high_NS]
 max(sce_atac$TSS.enrichment); min(sce_atac$TSS.enrichment)
 sce_atac$low_TSS <- isOutlier(sce_atac$TSS.enrichment, nmads = 3, type = "lower") # batch = sce_atac$Sample, running one sample at time
 table(sce_atac$low_TSS)
-sce$TSS.enrichment[sce_atac$low_TSS]
+sce_atac$TSS.enrichment[sce_atac$low_TSS]
 #[1] 0.9571824 1.1462222 1.1901142 1.0215137 1.1916909
 #pmatch(colnames(sce_atac)[sce_atac$high_NS], colnames(sce_atac)[sce_atac$low_TSS])
+
 ## Annotate cells to remove
-sce_atac$discard_auto_atac <- sce_atac$low_sum_ATAC | sce_atac$low_feature_ATAC | sce_atac$low_TSS #| sce_atac$high_NS
+sce_atac$discard_auto_atac <- sce_atac$low_sum_ATAC | sce_atac$low_feature_ATAC | sce_atac$low_TSS 
 table(sce_atac$discard_auto_atac)
 
 ## Filter cells that PASS Outliers and save barcodes filtered
@@ -243,7 +246,6 @@ total_filtered_cells <-  length(sce_bc_atac)
 
 message("Total cells ATAC filtered (PASS) from sample ", Seurat_base_name, ": ", total_filtered_cells, " from ", total_unfiltered_cells)
 
-#colnames(sce_atac)[sce_atac$high_mito]
 csv_name <- here(csvDir_reanalyze, paste0(Seurat_base_name, "_bc_PASS_ATAC_isOutliers.csv"))
 write.csv(sce_bc_atac, csv_name, row.names=FALSE)
 
