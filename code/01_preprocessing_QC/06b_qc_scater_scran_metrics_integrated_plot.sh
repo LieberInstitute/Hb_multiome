@@ -1,13 +1,13 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=60G
+#SBATCH --mem=80G
 #SBATCH --job-name=06b_qc_scater_scran_metrics_integrated_plot
 #SBATCH -c 1
 #SBATCH -t 1-00:00:00
 #SBATCH -o logs/06b_qc_scater_scran_metrics_integrated_plot.%a.txt
 #SBATCH -e logs/06b_qc_scater_scran_metrics_integrated_plot.%a.txt
 # SBATCH --mail-type=ALL
-#SBATCH --array=1-10%20
+# SBATCH --array=1-10%20
 
 set -e
 
