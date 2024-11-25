@@ -8,11 +8,14 @@
 ## OUPUT:
 ##      1) A csv files with clusters cell-type identification
 ##
+## NOTE. This pipeline only identify cell-types for cellRangerARC-reanalyze datasets
+##
 ## Authors. CSC 
-## Date. Feb 27th, 2024 / last md. August 2024
+## Date. Feb 27th, 2024
 ########################################################################
 
 ## load libraries
+library("Seurat")
 library("tidyverse")
 library("dplyr")
 library("data.table")
@@ -25,11 +28,15 @@ here::here()
 args = commandArgs(trailingOnly=TRUE)
 cellranger_pipe <- args[2]
 ## For testing:
-# cellranger_pipe <- "CR_arc_reanalyze"
-# cellranger_pipe <- "CR_arc_reanalyze_outliers"
+# cellranger_pipe <- "CR_arc_reanalyze" # This is multiome not QCed
+# cellranger_pipe <- "CR_arc_reanalyze_outliers" # This is for only GEX
+# cellranger_pipe <- "CR_arc_reanalyze_outliers_ATAC" # This is for only ATAC
 
 ## input directories
 if (length(cellranger_pipe)) {
+  
+  ## Avoid to re-run data processed before
+  if (cellranger_pipe=="CR_arc_reanalyze_outliers" || cellranger_pipe=="CR_arc_reanalyze" ) { stop() }
   
   message("CellRanger ARC input: ", cellranger_pipe)
   # Check/create directories
@@ -40,9 +47,8 @@ if (length(cellranger_pipe)) {
     inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", "cvs_files_markers")
     processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
     cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze", "cvs_files_markers")
-    #stop()
     
-  } else { # CR_arc_reanalyze_outliers
+  } else { # CR_arc_reanalyze_outliers (GEX) or CR_arc_reanalyze_outliers_ATAC 
     
     inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze_outliers") 
     inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze_outliers", "cvs_files_markers")
@@ -65,8 +71,6 @@ if (!dir.exists(cvsDir)) {dir.create(cvsDir)}
 ## Contains marker lists 
 source(here("code", "04_DiffExpr_Clustering_seurat", "remote_DGE_marker_gene_lists.R"))       # Call functions to read paths
 
-get_seurat <- function(name) { sobj <- readRDS(name)}
-
 
 #############################           Initials        ################################
 
@@ -74,19 +78,16 @@ get_seurat <- function(name) { sobj <- readRDS(name)}
 
 count_mtx_type <- 'norm_counts' 
 Seurat_reduction <- 'Harmony' 
+minCells <- 1
 # Seurat_reduction <- 'CCA'
 # count_mtx_type <- 'data_counts'
 ## Minimum cells by cluster
-minCells <- 1
 
-if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts'}
+if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts' }
 
 ## Build Seurat object name. `subset` suffix means clusters with fewer cells than `minCells` had been filtered. 
-if (Seurat_reduction=='CCA') {
-  Seurat_base_name <- paste0(Seurat_base_name, '_CCA_All')
-} else {
-  Seurat_base_name <- paste0(Seurat_base_name, '_Harmony_All')
-}
+ifelse (Seurat_reduction=='CCA', Seurat_base_name <- paste0(Seurat_base_name, '_CCA_All'), Seurat_base_name <- paste0(Seurat_base_name, '_Harmony_All'))
+                                                             
 ## Validate seurat exists
 if (length(list.files(inputDir, pattern = Seurat_base_name)==1)) {
   message("Processing ", cellranger_pipe)
@@ -95,20 +96,23 @@ if (length(list.files(inputDir, pattern = Seurat_base_name)==1)) {
   stop()
 }
 
-message("Starting cell-type identification for GEX side on `", cellranger_pipe, "`")
+message("Starting cell-type identification for `", cellranger_pipe, "`")
 
 ## Load Seurat Integrated with cluster information
-if (cellranger_pipe == "CR_arc_reanalyze_outliers") {
-  seurat_RDSname <- here(inputDir, paste0(Seurat_base_name, "_GEX_subset_Outliers", ".rds"))
-} else {
-  seurat_RDSname <-here(inputDir, paste0(Seurat_base_name, ".rds"))
-}
-seurat_RDSname
-SeuratOBJ <- get_seurat(seurat_RDSname)   
-
-## verification of the integration
-sum(table(SeuratOBJ$orig.ident))
-#SeuratOBJ@reductions
+seurat_RDSname <- case_when(
+  cellranger_pipe == "CR_arc_reanalyze_outliers" ~ here(inputDir, paste0(Seurat_base_name, "_GEX_subset_Outliers.rds")),
+  cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" ~ here(inputDir, paste0(Seurat_base_name, "_ATAC_subset_Outliers.rds")),
+  .default = as.character(here(inputDir, paste0(Seurat_base_name, ".rds")))
+)
+# if (cellranger_pipe == "CR_arc_reanalyze_outliers" || cellranger_pipe == "CR_arc_reanalyze_outliers") {
+#   seurat_RDSname <- here(inputDir, paste0(Seurat_base_name, "_GEX_subset_Outliers.rds"))
+# } else {
+#   seurat_RDSname <-here(inputDir, paste0(Seurat_base_name, ".rds"))
+# }
+basename(seurat_RDSname)
+SeuratOBJ <- readRDS(seurat_RDSname)
+## verification
+length(Cells(x = SeuratOBJ))
 
 ## Select gene markers lists. We have 3.
 markers.custom = list()
@@ -137,6 +141,8 @@ n_slice <- 20
 #############################  Set the DGE list to parse  ################################
 
 ## Extract cluster data
+unique(SeuratOBJ@meta.data$orig.ident)
+
 md <- SeuratOBJ@meta.data %>% as.data.table
 
 ## Apply vertical format to unique cluster with number of UMIs, arranged by sample and cluster number
@@ -146,19 +152,28 @@ df_mdT <- as.data.frame(mdT)
 #head(df_mdT)
 #sum(df_mdT$N)
 
-cvs_name <- here(cvsDir, paste0(Seurat_base_name, '_GEX_cluster_info.csv'))
-## Save clustering information; e.g: seurat.data_counts_Harmony_cluster_info.csv
+## Save cluster information
+cvs_name <- case_when(
+  cellranger_pipe == "CR_arc_reanalyze_outliers" ~ here(cvsDir, paste0(Seurat_base_name, '_cluster_info_GEX.csv')),
+  cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" ~ here(cvsDir, paste0(Seurat_base_name, '_cluster_info_ATAC.csv')),
+  .default = as.character( here(cvsDir, paste0(Seurat_base_name, '_cluster_info.csv')))
+)
+## e.g: seurat.data_counts_Harmony_cluster_info.csv
 write.csv(df_mdT, cvs_name)
 
 ## extract unique clusters in ascending order
 clusters <- unique(df_mdT$seurat_clusters)
 clusters <- as.integer(levels(clusters)[as.integer(clusters)])
 
-message('Identifing cell types for ', length(clusters),' clusters from `', cellranger_pipe, '` dataset (ONLY GEX) ')
+message('Identifing cell types for ', length(clusters),' clusters from `', cellranger_pipe, '` dataset')
 
-## Read DGE cvs file for all clusters for the given sample
-
-DGE_cvs_name <- here(inputDir_cvs, paste0(Seurat_base_name, "markers_GEX.csv")) 
+## Read All markers CVS file for all clusters
+DGE_cvs_name <- case_when(
+  cellranger_pipe == "CR_arc_reanalyze_outliers" ~ here(inputDir_cvs, paste0(Seurat_base_name, "markers_GEX.csv")) ,
+  cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" ~ here(inputDir_cvs, paste0(Seurat_base_name, "markers_ATAC.csv")) ,
+  .default = as.character(here(inputDir_cvs, paste0(Seurat_base_name, "markers.csv")) )
+)
+#DGE_cvs_name <- here(inputDir_cvs, paste0(Seurat_base_name, "markers_GEX.csv")) 
 #seurat.norm_counts_Harmony_Allmarkers_GEX.csv
 
 seurat_clust <- as.data.frame(read.csv(DGE_cvs_name, header = TRUE))
@@ -171,7 +186,6 @@ message('Parsing ', length(markers.custom), ' gene-markers lists on ', length(cl
 ####### Parse the 10/20 DGE genes from GEX cluster against the marker genes list provided ####### 
 
 ## Build df to save cell-types that match with the gene-marker-list
-#all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("Feature.ID", "Feature.Name", "Cluster.Adjusted.p.value", "cell-type", "cluster"))
 names(markers.custom) #[1] "literature_base" "data_driven" 
 idx_lst <- 0 
 
@@ -181,11 +195,20 @@ for (markers.lst in markers.custom) {
   
   all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("Feature.ID", "Feature.Name", "Cluster.Adjusted.p.value", "cell-type", "cluster"))
   
-  idx_lst <- idx_lst+1
-  prefix_name <- paste0(names(markers.custom[idx_lst]), '_top', n_slice)
-  print(paste("Searching markers for : ", names(markers.lst)))
+  idx_lst <- idx_lst + 1
   
-  # Read x cluster and extract the top 10 genes
+  message("\nSearching cell-types for ")
+  names(markers.lst)
+  
+  ## Compose file name with cell-types identified, for every group of clusters defined above, for every marker-list reference provided 
+  prefix_name <- case_when(
+    cellranger_pipe == "CR_arc_reanalyze_outliers" ~ paste0(names(markers.custom[idx_lst]), '_top', n_slice, "_GEX"),
+    cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" ~ paste0(names(markers.custom[idx_lst]), '_top', n_slice, "_ATAC"),
+    .default = as.character(paste0(names(markers.custom[idx_lst]), '_top', n_slice))
+  )
+  #prefix_name <- paste0(names(markers.custom[idx_lst]), '_top', n_slice, "_GEX")
+  
+  # Parse every cluster and extract the top <n_slice> genes
   for (clust in clusters) {
     # Testing: clust <- 0
     message("Parsing cluster ", as.character(clust))
@@ -219,12 +242,12 @@ for (markers.lst in markers.custom) {
   rm("gene_match", "all_gene_match")
 }
 
-message(' Cell type identification in GEX clusters done!')
+message(' Cell type identification done!')
 
 
 # slurmjobs::job_loop(
-#   loops = list(cellranger_pipe = c("CR_arc_reanalyze", "CR_arc_reanalyze_outliers")),
-#   name = "01_Hb_celltypes_from_seurat_reanalyze_v2",
+#   loops = list(cellranger_pipe = c("CR_arc_reanalyze", "CR_arc_reanalyze_outliers", "CR_arc_reanalyze_outliers_ATAC")),
+#   name = "01_Hb_celltypes_from_seurat_reanalyze_v4",
 #   cores = 2,
 #   create_shell = TRUE
 # )
@@ -236,144 +259,3 @@ proc.time()
 options(width = 120)
 session_info()
 
-
-# > library("sessioninfo")
-# > print('Reproducibility information:')
-# [1] "Reproducibility information:"
-# > # Last modification
-#     > Sys.time()
-# [1] "2024-02-27 20:41:05 EST"
-# > #"2023-04-04 12:42:26 EDT"
-#     > proc.time()
-# user   system  elapsed 
-# 52.926    7.828 2838.397 
-# > options(width = 120)
-# > session_info()
-# CRAN (R 4.3.1)
-# BPCells            0.1.0      2023-10-02 [1] Github (bnprks/BPCells@ac4376d)
-# cellranger         1.1.0      2016-07-27 [2] CRAN (R 4.3.1)
-# cli                3.6.1      2023-03-23 [2] CRAN (R 4.3.1)
-# cluster            2.1.4      2022-08-22 [3] CRAN (R 4.3.1)
-# codetools          0.2-19     2023-02-01 [3] CRAN (R 4.3.1)
-# colorspace         2.1-0      2023-01-23 [2] CRAN (R 4.3.1)
-# cowplot            1.1.1      2020-12-30 [2] CRAN (R 4.3.1)
-# data.table       * 1.14.8     2023-02-17 [2] CRAN (R 4.3.1)
-# deldir             1.0-9      2023-05-17 [2] CRAN (R 4.3.1)
-# digest             0.6.33     2023-07-07 [2] CRAN (R 4.3.1)
-# dotCall64          1.1-1      2023-11-28 [1] CRAN (R 4.3.1)
-# dplyr            * 1.1.4      2023-11-17 [1] CRAN (R 4.3.1)
-# ellipsis           0.3.2      2021-04-29 [2] CRAN (R 4.3.1)
-# fansi              1.0.6      2023-12-08 [1] CRAN (R 4.3.1)
-# fastDummies        1.7.3      2023-07-06 [1] CRAN (R 4.3.1)
-# fastmap            1.1.1      2023-02-24 [2] CRAN (R 4.3.1)
-# fitdistrplus       1.1-11     2023-04-25 [1] CRAN (R 4.3.1)
-# forcats          * 1.0.0      2023-01-29 [2] CRAN (R 4.3.1)
-# future             1.33.0     2023-07-01 [2] CRAN (R 4.3.1)
-# future.apply       1.11.1     2023-12-21 [1] CRAN (R 4.3.1)
-# generics           0.1.3      2022-07-05 [2] CRAN (R 4.3.1)
-# GenomeInfoDb       1.36.3     2023-09-07 [2] Bioconductor
-# GenomeInfoDbData   1.2.10     2023-07-20 [2] Bioconductor
-# GenomicRanges      1.52.0     2023-04-25 [2] Bioconductor
-# ggplot2          * 3.5.0      2024-02-23 [1] CRAN (R 4.3.1)
-# ggrepel            0.9.5      2024-01-10 [1] CRAN (R 4.3.1)
-# ggridges           0.5.4      2022-09-26 [2] CRAN (R 4.3.1)
-# globals            0.16.2     2022-11-21 [2] CRAN (R 4.3.1)
-# glue               1.6.2      2022-02-24 [2] CRAN (R 4.3.1)
-# goftest            1.2-3      2021-10-07 [1] CRAN (R 4.3.1)
-# gridExtra          2.3        2017-09-09 [1] CRAN (R 4.3.1)
-# gtable             0.3.4      2023-08-21 [2] CRAN (R 4.3.1)
-# here             * 1.0.1      2020-12-13 [2] CRAN (R 4.3.1)
-# hms                1.1.3      2023-03-21 [2] CRAN (R 4.3.1)
-# htmltools          0.5.7      2023-11-03 [1] CRAN (R 4.3.1)
-# htmlwidgets        1.6.2      2023-03-17 [2] CRAN (R 4.3.1)
-# httpuv             1.6.14     2024-01-26 [1] CRAN (R 4.3.1)
-# httr               1.4.7      2023-08-15 [2] CRAN (R 4.3.1)
-# ica                1.0-3      2022-07-08 [1] CRAN (R 4.3.1)
-# igraph             1.5.1      2023-08-10 [2] CRAN (R 4.3.1)
-# IRanges            2.34.1     2023-06-22 [2] Bioconductor
-# irlba              2.3.5.1    2022-10-03 [2] CRAN (R 4.3.1)
-# jsonlite           1.8.7      2023-06-29 [2] CRAN (R 4.3.1)
-# KernSmooth         2.23-22    2023-07-10 [3] CRAN (R 4.3.1)
-# later              1.3.1      2023-05-02 [2] CRAN (R 4.3.1)
-# lattice            0.21-8     2023-04-05 [3] CRAN (R 4.3.1)
-# lazyeval           0.2.2      2019-03-15 [2] CRAN (R 4.3.1)
-# leiden             0.4.3.1    2023-11-17 [1] CRAN (R 4.3.1)
-# lifecycle          1.0.4      2023-11-07 [1] CRAN (R 4.3.1)
-# listenv            0.9.0      2022-12-16 [2] CRAN (R 4.3.1)
-# lmtest             0.9-40     2022-03-21 [2] CRAN (R 4.3.1)
-# lubridate        * 1.9.3      2023-09-27 [1] CRAN (R 4.3.1)
-# magrittr         * 2.0.3      2022-03-30 [2] CRAN (R 4.3.1)
-# MASS               7.3-60     2023-05-04 [3] CRAN (R 4.3.1)
-# Matrix             1.6-5      2024-01-11 [1] CRAN (R 4.3.1)
-# matrixStats        1.2.0      2023-12-11 [1] CRAN (R 4.3.1)
-# mime               0.12       2021-09-28 [2] CRAN (R 4.3.1)
-# miniUI             0.1.1.1    2018-05-18 [2] CRAN (R 4.3.1)
-# munsell            0.5.0      2018-06-12 [2] CRAN (R 4.3.1)
-# nlme               3.1-163    2023-08-09 [3] CRAN (R 4.3.1)
-# parallelly         1.36.0     2023-05-26 [2] CRAN (R 4.3.1)
-# patchwork          1.1.3      2023-08-14 [2] CRAN (R 4.3.1)
-# pbapply            1.7-2      2023-06-27 [2] CRAN (R 4.3.1)
-# pillar             1.9.0      2023-03-22 [2] CRAN (R 4.3.1)
-# pkgconfig          2.0.3      2019-09-22 [2] CRAN (R 4.3.1)
-# plotly             4.10.4     2024-01-13 [1] CRAN (R 4.3.1)
-# plyr               1.8.9      2023-10-02 [1] CRAN (R 4.3.1)
-# png                0.1-8      2022-11-29 [1] CRAN (R 4.3.1)
-# polyclip           1.10-6     2023-09-27 [1] CRAN (R 4.3.1)
-# progressr          0.14.0     2023-08-10 [1] CRAN (R 4.3.1)
-# promises           1.2.1      2023-08-10 [2] CRAN (R 4.3.1)
-# purrr            * 1.0.2      2023-08-10 [2] CRAN (R 4.3.1)
-# R6                 2.5.1      2021-08-19 [2] CRAN (R 4.3.1)
-# RANN               2.6.1      2019-01-08 [2] CRAN (R 4.3.1)
-# RColorBrewer       1.1-3      2022-04-03 [2] CRAN (R 4.3.1)
-# Rcpp               1.0.11     2023-07-06 [2] CRAN (R 4.3.1)
-# RcppAnnoy          0.0.21     2023-07-02 [2] CRAN (R 4.3.1)
-# RcppHNSW           0.5.0      2023-09-19 [2] CRAN (R 4.3.1)
-# RCurl              1.98-1.12  2023-03-27 [2] CRAN (R 4.3.1)
-# readr            * 2.1.4      2023-02-10 [2] CRAN (R 4.3.1)
-# readxl           * 1.4.3      2023-07-06 [2] CRAN (R 4.3.1)
-# reshape2           1.4.4      2020-04-09 [2] CRAN (R 4.3.1)
-# reticulate         1.35.0     2024-01-31 [1] CRAN (R 4.3.1)
-# rlang              1.1.3      2024-01-10 [1] CRAN (R 4.3.1)
-# ROCR               1.0-11     2020-05-02 [2] CRAN (R 4.3.1)
-# rprojroot          2.0.4      2023-11-05 [1] CRAN (R 4.3.1)
-# RSpectra           0.16-1     2022-04-24 [2] CRAN (R 4.3.1)
-# Rtsne              0.16       2022-04-17 [2] CRAN (R 4.3.1)
-# S4Vectors          0.38.2     2023-09-22 [1] Bioconductor
-# scales             1.3.0      2023-11-28 [1] CRAN (R 4.3.1)
-# scattermore        1.2        2023-06-12 [1] CRAN (R 4.3.1)
-# sctransform        0.4.1      2023-10-19 [1] CRAN (R 4.3.1)
-# sessioninfo      * 1.2.2      2021-12-06 [2] CRAN (R 4.3.1)
-# Seurat             4.9.9.9067 2023-10-02 [1] Github (satijalab/seurat@99b9ded)
-# SeuratObject       5.0.1      2023-11-17 [1] CRAN (R 4.3.1)
-# shiny              1.8.0      2023-11-17 [1] CRAN (R 4.3.1)
-# sp                 2.1-1      2023-10-16 [1] CRAN (R 4.3.1)
-# spam               2.10-0     2023-10-23 [1] CRAN (R 4.3.1)
-# spatstat.data      3.0-4      2024-01-15 [1] CRAN (R 4.3.1)
-# spatstat.explore   3.2-5      2023-10-22 [1] CRAN (R 4.3.1)
-# spatstat.geom      3.2-7      2023-10-20 [1] CRAN (R 4.3.1)
-# spatstat.random    3.2-1      2023-10-21 [1] CRAN (R 4.3.1)
-# spatstat.sparse    3.0-3      2023-10-24 [1] CRAN (R 4.3.1)
-# spatstat.utils     3.0-4      2023-10-24 [1] CRAN (R 4.3.1)
-# stringi            1.8.3      2023-12-11 [1] CRAN (R 4.3.1)
-# stringr          * 1.5.1      2023-11-14 [1] CRAN (R 4.3.1)
-# survival           3.5-7      2023-08-14 [3] CRAN (R 4.3.1)
-# tensor             1.5        2012-05-05 [1] CRAN (R 4.3.1)
-# tibble           * 3.2.1      2023-03-20 [2] CRAN (R 4.3.1)
-# tidyr            * 1.3.0      2023-01-24 [2] CRAN (R 4.3.1)
-# tidyselect         1.2.0      2022-10-10 [2] CRAN (R 4.3.1)
-# tidyverse        * 2.0.0      2023-02-22 [2] CRAN (R 4.3.1)
-# timechange         0.2.0      2023-01-11 [2] CRAN (R 4.3.1)
-# tzdb               0.4.0      2023-05-12 [2] CRAN (R 4.3.1)
-# utf8               1.2.4      2023-10-22 [1] CRAN (R 4.3.1)
-# uwot               0.1.16     2023-06-29 [2] CRAN (R 4.3.1)
-# vctrs              0.6.5      2023-12-01 [1] CRAN (R 4.3.1)
-# viridisLite        0.4.2      2023-05-02 [2] CRAN (R 4.3.1)
-# withr              3.0.0      2024-01-16 [1] CRAN (R 4.3.1)
-# xtable             1.8-4      2019-04-21 [2] CRAN (R 4.3.1)
-# XVector            0.40.0     2023-04-25 [2] Bioconductor
-# zlibbioc           1.46.0     2023-04-25 [2] Bioconductor
-# zoo                1.8-12     2023-04-13 [2] CRAN (R 4.3.1)
-# 
-# [1] /users/csoto/R/4.3
-# [2] /jhpce/shared/community/core/conda_R/4.3/R/lib64/R/site-library
-# [3] /jhpce/shared/community/core/conda_R/4.3/R/lib64/R/library
