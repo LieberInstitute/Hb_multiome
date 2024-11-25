@@ -1,23 +1,23 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=10G
-#SBATCH --job-name=02_cell_types_percentages_v3
+#SBATCH --job-name=02_cell_types_percentages_v4
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
-#SBATCH --array=1-8%20
+#SBATCH --array=1-10%20
 
 ## Define loops and appropriately subset each variable for the array task ID
-all_cellranger_pipe=(CR_crossBarcodes CR_complementBarcodes CR_arc_reanalyze CR_arc_reanalyze_outliers)
-cellranger_pipe=${all_cellranger_pipe[$(( $SLURM_ARRAY_TASK_ID / 2 % 4 ))]}
+all_cellranger_pipe=(CR_crossBarcodes CR_complementBarcodes CR_arc_reanalyze CR_arc_reanalyze_outliers CR_arc_reanalyze_outliers_ATAC)
+cellranger_pipe=${all_cellranger_pipe[$(( $SLURM_ARRAY_TASK_ID / 2 % 5 ))]}
 
 all_marker_lst=(literature_base data_driven)
 marker_lst=${all_marker_lst[$(( $SLURM_ARRAY_TASK_ID / 1 % 2 ))]}
 
 ## Explicitly pipe script output to a log
-log_path=logs/02_cell_types_percentages_v3_${cellranger_pipe}_${marker_lst}_${SLURM_ARRAY_TASK_ID}.txt
+log_path=logs/02_cell_types_percentages_v4_${cellranger_pipe}_${marker_lst}_${SLURM_ARRAY_TASK_ID}.txt
 
 {
 set -e
