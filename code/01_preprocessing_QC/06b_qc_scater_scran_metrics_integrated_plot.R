@@ -91,8 +91,9 @@ total_p <- 100 * sum(sce$discard_auto) / ncol(sce)
 # [1] 9.599
 
 qc_t <- addmargins(table(sce$orig.ident, sce$discard_auto))
+qc_t
 qc_p <- round(100 * sweep(qc_t, 1, qc_t[, 3], "/"), 1)
-
+qc_p
 # Filter/subset cells that PASS Outliers and save barcodes filtered
 # sce_bc <- sce[,!sce$discard_auto]
 # ncol(sce_bc)
@@ -238,28 +239,29 @@ sce_atac <- scuttle::addPerCellQC(
 #table(sce_atac$nCount_ATAC)
 
 ## low counts ATAC
-sce_atac$low_sum_ATAC <- isOutlier(sce_atac$nCount_ATAC, log = TRUE, nmads = 3, type = "lower", batch = sce$orig.ident) 
+sce_atac$low_sum_ATAC <- isOutlier(sce_atac$nCount_ATAC, log = TRUE, nmads = 3, type = "lower", batch = sce_atac$orig.ident) 
 table(sce_atac$low_sum_ATAC)
 
 ## low fragments ATAC
-sce_atac$low_feature_ATAC <- isOutlier(sce_atac$nFeature_ATAC, log = TRUE, nmads = 3, type = "lower", batch = sce$orig.ident)
+sce_atac$low_feature_ATAC <- isOutlier(sce_atac$nFeature_ATAC, log = TRUE, nmads = 3, type = "lower", batch = sce_atac$orig.ident)
 #table(sce_atac$low_feature_ATAC)
 
 ## high NS ATAC
 max(sce_atac$nucleosome_signal); min(sce_atac$nucleosome_signal)
-sce_atac$high_NS <- isOutlier(sce_atac$nucleosome_signal, nmads = 3, type = "higher", batch = sce$orig.ident)
+sce_atac$high_NS <- isOutlier(sce_atac$nucleosome_signal, nmads = 3, type = "higher", batch = sce_atac$orig.ident)
 table(sce_atac$high_NS)
 #sce_atac$nucleosome_signal[sce_atac$high_NS]
 
 ## Low TSS.enrichment
 max(sce_atac$TSS.enrichment); min(sce_atac$TSS.enrichment)
-sce_atac$low_TSS <- isOutlier(sce_atac$TSS.enrichment, nmads = 3, type = "lower") # batch = sce_atac$Sample, running one sample at time
+sce_atac$low_TSS <- isOutlier(sce_atac$TSS.enrichment, nmads = 3, type = "lower", batch = sce_atac$orig.ident)
 table(sce_atac$low_TSS)
-sce$TSS.enrichment[sce_atac$low_TSS]
+sce_atac$TSS.enrichment[sce_atac$low_TSS]
 #[1] 0.9571824 1.1462222 1.1901142 1.0215137 1.1916909
 #pmatch(colnames(sce_atac)[sce_atac$high_NS], colnames(sce_atac)[sce_atac$low_TSS])
+
 ## Annotate cells to remove
-sce_atac$discard_auto_atac <- sce_atac$low_sum_ATAC | sce_atac$low_feature_ATAC | sce_atac$low_TSS #sce_atac$high_NS
+sce_atac$discard_auto_atac <- sce_atac$low_sum_ATAC | sce_atac$low_feature_ATAC | sce_atac$low_TSS 
 table(sce_atac$discard_auto_atac)
 
 ## discard 9% of nuc
@@ -267,7 +269,9 @@ total_p <- 100 * sum(sce_atac$discard_auto_atac) / ncol(sce_atac)
 #[1] 2.27641
 
 qc_t <- addmargins(table(sce_atac$orig.ident, sce_atac$discard_auto_atac))
-qc_p <- round(100 * sweep(qc_t, 1, qc_t[, 3], "/"), 1)
+qc_t
+qc_p <- round(100 * sweep(qc_t, 1, qc_t[, 3], "/"), 2)
+qc_p
 
 # Filter/subset cells that PASS Outliers and save barcodes filtered
 # sce_bc <- sce[,!sce$discard_auto]
@@ -358,7 +362,7 @@ plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_ATAC_OUTLIERS_low
 ggsave(filename = plotName, plot = plt_low_TSS, width = 10, height = 5, bg="white")
 
 ## saved plot with all metrics 
-caption_label <- paste0("*Cells to discard: ", sum(l_latac+l_lsum_atac+l_lTSS), " (", round(total_p, digits = 2) ,"%) from ", total_unfiltered_cells)
+caption_label <- paste0("*Cells to discard: ", length(sce_atac$discard_auto_atac[sce_atac$discard_auto_atac]), " (",  " (", round(total_p, digits = 2) ,"%) from ", total_unfiltered_cells)
 plot_grid <- gridExtra::grid.arrange(  
   plt_low_atac + ggtitle("Low nCount ATAC") + labs(caption = "") +
     theme(axis.text.x=element_blank()),
@@ -377,6 +381,53 @@ plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_ATAC_ALL_OUTLIERS
 ggsave(filename = plotName, plot = plot_grid, width = 10, height = 12, bg="white")
 
 print("Saved ATAC plots with outliers!")
+
+
+
+## Prepare and plot Venn diagram comparind GEX vs ATAC
+
+## Venn diagrams to cross the 3 datasets
+set_gex_discard <- colnames(sce)[sce$discard_auto]
+l_discard_gex <- length(set_gex_discard)
+
+set_atac_discard <- colnames(sce_atac)[sce_atac$discard_auto_atac]
+l_discard_atac <- length(set_atac_discard)
+
+## Prepare and plot Venn diagram with GEX high mito, low-umi and low-feature detected
+plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_ALL_VENNd_outliers_detected.png"))
+venn.diagram(
+  x = list(set_gex_discard, set_atac_discard),
+  category.names = c(paste0("outliers_gex (", l_discard_gex, ")"), 
+                     paste0("outliers_atac (",l_discard_atac, ")")),
+  filename = plotName,
+  output = FALSE ,
+  imagetype="png" ,
+  height = 480 , 
+  width = 480 , 
+  resolution = 300,
+  compression = "lzw",
+  lwd = 1,
+  col=c("#440154ff", '#21908dff'),
+  fill = c(alpha("#440154ff",0.3), alpha('#21908dff',0.3)),
+  cex = 0.5,
+  fontfamily = "sans",
+  cat.cex = 0.3,
+  cat.default.pos = "outer",
+  cat.pos = c(-27, 27),
+  cat.dist = c(0.055, 0.055),
+  cat.fontfamily = "sans",
+  cat.col = c("#440154ff", '#21908dff'),
+  # rotation = 1,
+  main = "Outliers detected",
+  sub = "GEX vs ATAC - Cell RangerARC-reanalyze",
+  main.cex = 0.7,
+  sub.cex = 0.4
+)
+
+## remove log files created automatically by venn diagrams
+to_be_deleted <- paste0(here(plotDir_reanalyze, list.files(plotDir_reanalyze, pattern = "*.log")))
+file.remove(to_be_deleted)
+
 
 message("ALL Done!")
 
