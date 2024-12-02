@@ -12,6 +12,7 @@
 ########################################################################
 
 library("Seurat")
+library("Signac") 
 library("here")
 
 here::here()
