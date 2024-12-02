@@ -130,7 +130,7 @@ length(all_rna_bc_to_keep)
 message("Valid barcodes on RNA side: ", length(all_rna_bc_to_keep))
 # Valid barcodes on RNA side: 56907
 
-# SeuratObj_subset <- subset(SeuratOBJ, cells = all_bc_to_keep)
+# SeuratObj_subset <- subset(SeuratOBJ, cells = all_rna_bc_to_keep)
 
 # message("CellRangerARC-reanalyze GEX Seurat with ONLY outliers done!")
 
@@ -190,7 +190,7 @@ lst_bc <- list.files(csvDir_barcodes, pattern = "*_bc_PASS_ATAC_isOutliers.csv")
 # [9] "S8_Hb_KDM_bc_PASS_ATAC_isOutliers.csv" 
 # [10] "S9_Hb_KDM_bc_PASS_ATAC_isOutliers.csv" 
 
-all_bc_to_keep <- c()
+all_atac_bc_to_keep <- c()
 
 ## Track total number of valid cells
 names(table(SeuratOBJ$orig.ident))
@@ -200,7 +200,7 @@ as.list(as.vector(table(SeuratOBJ$orig.ident)))
 
 for (bc_file in lst_bc) {
   # bc_file <- lst_bc[1]
-  message("Barcode list: ", bc_file)
+  message("Valid barcode list: ", bc_file)
   
   ## load barcodes that PASS outliers ATAC
   
@@ -216,31 +216,44 @@ for (bc_file in lst_bc) {
   prefixCell <- unlist(strsplit(bc_file, split = "_"))[1]
   barcodes_to_remove <- paste(prefixCell, "_", v_valid_barcodes_filtered, sep="")
   
-  message("Cells to remove on multiome GEX side: ", length(barcodes_to_remove), " in sample ", prefixCell)
+  message("Cells to keep on multiome ATAC side: ", length(barcodes_to_remove), " in sample ", prefixCell)
   
-  all_bc_to_keep <- append(all_bc_to_keep, barcodes_to_remove)
+  all_atac_bc_to_keep <- append(all_atac_bc_to_keep, barcodes_to_remove)
   
 }
 
-length(all_bc_to_keep)
+length(all_atac_bc_to_keep)
 # [1] 61484 ATAC
 
 ## remove cells from integrated seurat
 
-message("Barcodes to remove on ATAC side: ", length(all_bc_to_keep))
+message("Barcodes to keep on ATAC side: ", length(all_atac_bc_to_keep))
+# Barcodes to keep on ATAC side: 61484
 
 table(SeuratOBJ$orig.ident)
-SeuratObj_subset_atac <- subset(SeuratOBJ, cells = all_bc_to_keep, invert = TRUE)
-table(SeuratObj_subset_atac$orig.ident)
 
-message("CellRangerARC-reanalyze ATAC Seurat with ONLY outliers done!")
+all_rna_atac_bc_to_keep <- union(all_rna_bc_to_keep, all_atac_bc_to_keep)
+
+message(length(all_rna_atac_bc_to_keep), " common barcodes to keep")
+# 62689 common barcodes to keep
+
+SeuratObj_subset <- subset(SeuratOBJ, cells = all_rna_atac_bc_to_keep)
+rm("SeuratOBJ")
+
+table(SeuratObj_subset$orig.ident)
+
+## Save Seurat with outlier cells
+
+Seurat_base_name <- paste0(Seurat_base_name, "_ARC_reanalize_qced")
+
+## Save new Seurat-subset
+rds_name <- paste0(Seurat_base_name, ".rds")
+rds_name <- here(outputDir, rds_name)
+saveRDS(SeuratObj_subset, file = rds_name)
+
+message("Saved Seurat subset data QCed!")
 
 
-
-message(length(Cells(SeuratObj_subset)), " outliers found on ATAC")
-
-#table(Idents(SeuratObj_subset))
-#rm("SeuratOBJ")
 
 
 ################## (4) Find DEG and save Seurat with ONLY ATAC OUTLIER cells (barcodes) to identify cell types later
