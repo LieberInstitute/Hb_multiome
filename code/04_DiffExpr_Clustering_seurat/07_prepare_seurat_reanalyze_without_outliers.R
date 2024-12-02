@@ -1,17 +1,20 @@
 ########################################################################
-## Prepare a Seurat object with OUTLIERS to identify cell-types for both GEX and ATAC muliome Seurats
+## Prepare a Seurat object WITHOUT OUTLIERS to identify cell-types for both GEX and ATAC muliome dataset
 ##  
 ## INPUT:
-##      CSV files with barcodes that passed outliers calculated only on the GEX multiome side
+##      CSV files with barcodes that passed outliers calculated on both GEX and ATAC data
 ## 
 ## OUPUT:
-##      Seurat with only cells detected with Outliers 
+##      Seurat with valid cells (good quality) detected
+## NOTE:
+##      For +60k cells request 60G free-mem
 ##
 ## Authors. CSC 
-## Date. Nov ,2024
+## Date. Dec 2024
 ########################################################################
 
 library("Seurat")
+library("Signac") 
 library("here")
 
 here::here()
@@ -89,12 +92,13 @@ lst_bc <- list.files(csvDir_barcodes, pattern = "*_bc_PASS_GEX_isOutliers.csv")
 # [9] "S8_Hb_KDM_bc_PASS_GEX_isOutliers.csv" 
 # [10] "S9_Hb_KDM_bc_PASS_GEX_isOutliers.csv" 
 
-all_bc_to_remove <- c()
+all_rna_bc_to_keep <- c()
 
+## Parse csv files containing valid barcodes
 
 for (bc_file in lst_bc) {
-  
-  message("Barcode list: ", bc_file)
+  # testing: bc_file <- lst_bc[1]
+  message("Valid barcodes list: ", bc_file)
   
   ## load barcodes that PASS outliers
   
@@ -110,59 +114,60 @@ for (bc_file in lst_bc) {
   prefixCell <- unlist(strsplit(bc_file, split = "_"))[1]
   barcodes_to_remove <- paste(prefixCell, "_", v_valid_barcodes_filtered, sep="")
   
-  message("Cells to remove on multiome GEX side: ", length(barcodes_to_remove), " in sample ", prefixCell)
+  message("Cells to keep on multiome GEX side: ", length(barcodes_to_remove), " in sample ", prefixCell)
   
-  all_bc_to_remove <- append(all_bc_to_remove, barcodes_to_remove) 
+  all_rna_bc_to_keep <- append(all_rna_bc_to_keep, barcodes_to_remove) 
   
 }
 
-length(all_bc_to_remove)
+length(all_rna_bc_to_keep)
 
 
 ################## (3) kept only cells with Outliers 
 
 ## remove cells from integrated seurat
 
-message("Barcodes to remove on GEX side: ", length(all_bc_to_remove))
+message("Valid barcodes on RNA side: ", length(all_rna_bc_to_keep))
+# Valid barcodes on RNA side: 56907
 
-SeuratObj_subset <- subset(SeuratOBJ, cells = all_bc_to_remove, invert = TRUE)
+# SeuratObj_subset <- subset(SeuratOBJ, cells = all_bc_to_keep)
 
-message("CellRangerARC-reanalyze GEX Seurat with ONLY outliers done!")
+# message("CellRangerARC-reanalyze GEX Seurat with ONLY outliers done!")
 
-#print(table(SeuratObj_subset$orig.ident))
+# print(table(SeuratObj_subset$orig.ident))
 
-message(length(Cells(SeuratObj_subset)), " outliers found on GEX")
+# message(length(Cells(SeuratObj_subset)), " valid barcodes for RNA side")
 
 #table(Idents(SeuratObj_subset))
 #rm("SeuratOBJ")
 
 
 
-################## (4) Find DEG and save Seurat with ONLY OUTLIER cells (barcodes) to identify cell types later
-
-## Find DEG in the integrated Seurat for ALL clusters (BEFORE pseudobulk)
-#table(SeuratOBJ[["seurat_clusters"]])
-all.markers <- FindAllMarkers(object = SeuratObj_subset)
-#head(all.markers, n=3)
-
-# cvs_file <- paste0(Seurat_base_name, '_', integration_model, '_Allmarkers.csv')
-cvs_file <- paste0(Seurat_base_name, "markers_GEX.csv") 
-#seurat.norm_counts_Harmony_Allmarkers_GEX.csv
-cvs_file <- here(cvsDir, cvs_file)
-write.csv(all.markers, cvs_file)
-
-message(" FindAllMarkers done!")
-
-## Save Seurat with outlier cells
-
-Seurat_base_name <- paste0(Seurat_base_name, "_GEX_subset_Outliers")
-
-## Save new Seurat-subset 
-rds_name <- paste0(Seurat_base_name, ".rds")
-rds_name <- here(outputDir, rds_name)
-saveRDS(SeuratObj_subset, file = rds_name) 
-
-message("Saved Seurat subset data with ONLY Outliers!")
+# ################## (4) Find DEG and save Seurat with ONLY OUTLIER cells (barcodes) to identify cell types later
+# 
+# ## Find DEG in the integrated Seurat for ALL clusters (BEFORE pseudobulk)
+# #table(SeuratOBJ[["seurat_clusters"]])
+# all.markers <- FindAllMarkers(object = SeuratObj_subset)
+# #head(all.markers, n=3)
+# 
+# # cvs_file <- paste0(Seurat_base_name, '_', integration_model, '_Allmarkers.csv')
+# cvs_file <- paste0(Seurat_base_name, "markers_GEX.csv") 
+# #seurat.norm_counts_Harmony_Allmarkers_GEX.csv
+# cvs_file <- here(cvsDir, cvs_file)
+# write.csv(all.markers, cvs_file)
+# 
+# message(" FindAllMarkers done!")
+# 
+# ## Save Seurat with outlier cells
+# 
+# Seurat_base_name <- paste0(Seurat_base_name, "_GEX_subset_Outliers")
+# 
+# ## Save new Seurat-subset 
+# rds_name <- paste0(Seurat_base_name, ".rds")
+# rds_name <- here(outputDir, rds_name)
+# saveRDS(SeuratObj_subset, file = rds_name) 
+# 
+# message("Saved Seurat subset data with ONLY Outliers!")
 
 
 
@@ -185,7 +190,7 @@ lst_bc <- list.files(csvDir_barcodes, pattern = "*_bc_PASS_ATAC_isOutliers.csv")
 # [9] "S8_Hb_KDM_bc_PASS_ATAC_isOutliers.csv" 
 # [10] "S9_Hb_KDM_bc_PASS_ATAC_isOutliers.csv" 
 
-all_bc_to_remove <- c()
+all_bc_to_keep <- c()
 
 ## Track total number of valid cells
 names(table(SeuratOBJ$orig.ident))
@@ -213,19 +218,19 @@ for (bc_file in lst_bc) {
   
   message("Cells to remove on multiome GEX side: ", length(barcodes_to_remove), " in sample ", prefixCell)
   
-  all_bc_to_remove <- append(all_bc_to_remove, barcodes_to_remove)
+  all_bc_to_keep <- append(all_bc_to_keep, barcodes_to_remove)
   
 }
 
-length(all_bc_to_remove)
+length(all_bc_to_keep)
 # [1] 61484 ATAC
 
 ## remove cells from integrated seurat
 
-message("Barcodes to remove on ATAC side: ", length(all_bc_to_remove))
+message("Barcodes to remove on ATAC side: ", length(all_bc_to_keep))
 
 table(SeuratOBJ$orig.ident)
-SeuratObj_subset_atac <- subset(SeuratOBJ, cells = all_bc_to_remove, invert = TRUE)
+SeuratObj_subset_atac <- subset(SeuratOBJ, cells = all_bc_to_keep, invert = TRUE)
 table(SeuratObj_subset_atac$orig.ident)
 
 message("CellRangerARC-reanalyze ATAC Seurat with ONLY outliers done!")
