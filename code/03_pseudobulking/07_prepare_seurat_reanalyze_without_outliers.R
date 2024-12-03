@@ -191,46 +191,34 @@ tail(Cells(SeuratObj_subset), n=5)
 message(length(Cells(SeuratObj_subset)), " cells retained and formatted for further analysis.")
 
 
-
-################## (4) Find DEG and save Seurat with ONLY ATAC OUTLIER cells (barcodes) to identify cell types later
-
-## Find DEG in the integrated Seurat for ALL clusters (BEFORE pseudobulk)
-#table(SeuratOBJ[["seurat_clusters"]])
-all.markers <- FindAllMarkers(object = SeuratObj_subset)
-#head(all.markers, n=3)
-
-cvs_file <- paste0(Seurat_base_name, "QCed_markers_RNA_ATAC.csv") 
-cvs_file <- here(cvsDir, cvs_file)
-write.csv(all.markers, cvs_file)
-
-message(" FindAllMarkers done!")
-
 ## Save Seurat without outlier cells
 
-# ## Format sample IDs and cell-name IDs
-# 
-# Cells(SeuratObj_subset)[1:10]
-# extract_numeric(Cells(SeuratObj_subset)[1:10])
-# df_mdT$orig.ident  <- sprintf("S%02d_Hb_r", extract_numneric(df_mdT$orig.ident))
-# df_mdT$orig.ident  <- sprintf("S%02d_Hb_r", extract_numneric(df_mdT$orig.ident))
-
-Seurat_base_name <- paste0(Seurat_base_name, "_ARC_reanalize_QCed")
-
-## Save new Seurat-subset
-rds_name <- paste0(Seurat_base_name, ".rds")
-rds_name <- here(outputDir, rds_name)
+if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts'}
+rds_name <- here(outputDir, paste0(Seurat_base_name, "_Harmony_ARCr_QCed.rds"))
 saveRDS(SeuratObj_subset, file = rds_name)
 
 message("Saved Seurat subset data QCed!")
 
 
 
+################## (5) Find DEG and save Seurat 
+
+## Find DEG in the integrated Seurat for ALL clusters (BEFORE pseudobulk)
+# table(SeuratOBJ[["seurat_clusters"]])
+# all.markers <- FindAllMarkers(object = SeuratObj_subset)
+# head(all.markers, n=3)
+
+# cvs_file <- paste0(Seurat_base_name, "QCed_markers_RNA_ATAC.csv") 
+# cvs_file <- here(cvsDir, cvs_file)
+# write.csv(all.markers, cvs_file)
+# 
+# message(" FindAllMarkers done!")
 
 
-# # slurm script reproducibility
+# slurm script reproducibility
 # library("slurmjobs")
 # job_single(
-#   name = "06_prepare_seurat_reanalyze_with_outliers", memory = "30G", cores = 2, create_shell = TRUE
+#   name = "07_prepare_seurat_reanalyze_without_outliers", memory = "30G", cores = 2, create_shell = TRUE
 # )
 
 library("sessioninfo")
