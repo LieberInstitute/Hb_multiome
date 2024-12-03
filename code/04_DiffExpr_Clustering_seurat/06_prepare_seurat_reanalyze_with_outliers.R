@@ -212,7 +212,7 @@ for (bc_file in lst_bc) {
   prefixCell <- unlist(strsplit(bc_file, split = "_"))[1]
   barcodes_to_remove <- paste(prefixCell, "_", v_valid_barcodes_filtered, sep="")
   
-  message("Cells to remove on multiome GEX side: ", length(barcodes_to_remove), " in sample ", prefixCell)
+  message("Cells to remove on multiome ATAC side: ", length(barcodes_to_remove), " in sample ", prefixCell)
   
   all_bc_to_remove <- append(all_bc_to_remove, barcodes_to_remove)
   
