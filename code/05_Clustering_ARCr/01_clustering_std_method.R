@@ -1,55 +1,61 @@
 #########################################################################
 ##
-## RstatClub_2: Multiome Analysis with Seurat and Signac #2
+## Clustering in CellRangerARC_reanalyze filtered data ()
 ##
-## Input: Truncated H5, meta-data.cvs and fragments.tvs
-## Output: rds Seurat objects with ATAC assay, one with QCs and other w/o QCs
-##.        GEX and ATAC plots
-## Clustering Determination
+## Input:  Seurat with ATAC data (rds/h5), meta-data and fragments
+## Output: Seurat objects with clustering with standard Seurat workflow --PCA/LSI/WNN 
+## 
+## Note (1) I apply standard Seurat workflow, data were not normalize with SCT
+## Note (2) For +60k cells request 60G free-mem
 ##
-
 ## Authors. CSC 
-## From: https://satijalab.org/seurat/articles/weighted_nearest_neighbor_analysis#wnn-analysis-of-10x-multiome-rna-atac
-##
+## Ref: https://satijalab.org/seurat/articles/weighted_nearest_neighbor_analysis#wnn-analysis-of-10x-multiome-rna-atac
+## Copied from my own adaptation: https://github.com/cyntsc/RStatClub_Seurat_Signac/blob/main/code/02_Clustering.R  
+## Date: Dec 2024
 ########################################################################
 
-# load libraries
-library(Seurat)                                 # 4.9.9.9045 2023-05-17 [1] Github (satijalab/seurat@7d1094c)
-library(Signac)                                 # 1.9.0.9000 2023-05-08 [1] Github (stuart-lab/signac@cf31022)
-library(here)
-set.seed(1234)
+library("Seurat")                                
+library("Signac")                                
+library("here")
 
 here::here()
 
+## Preparing directories
+inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
+outputRDS_Dir <- here("processed-data", "05_Clustering_ARCr")
+outputCVS_Dir <- here("processed-data", "05_Clustering_ARCr", "cvs_files")
+plotDir <- here("plots", "05_Clustering_ARCr")
+
 
 ## Check if processed_data directory exists, if not create it
-if (!dir.exists(here("processed-data/GEX_ATAC_preprocessing/"))) {
-  dir.create(here("processed-data/GEX_ATAC_preprocessing/"))
-}
-if (!dir.exists(here("plots/GEX_ATAC_preprocessing/"))) {
-  dir.create(here("plots/GEX_ATAC_preprocessing/"))
-}
+if (!dir.exists(inputDir)) { message("RDS input data missed!"); stop() }
+if (!dir.exists(outputRDS_Dir)) { dir.create(outputRDS_Dir) }
+if (!dir.exists(outputCVS_Dir)) { dir.create(outputCVS_Dir) }
+if (!dir.exists(plotDir)) { dir.create(plotDir) }
 
 
-########################    Initials.  ########################  
+########################    Initials. (1) load data  ########################  
 
-## Sample: Flash-Frozen Human Healthy Brain Tissue (3k)
+count_mtx_type <- 'norm_counts' 
+Seurat_reduction <- 'Harmony' 
+minCells <- 1
+if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts'}
+Seurat_base_name <-  paste0(Seurat_base_name, "_Harmony_ARCr_QCed")
+rds_name <- here(inputDir, paste0(Seurat_base_name, ".rds"))
 
-## Load pre-existing Seurat object
-
-sample_sample <- 'FFB_Healthy'
-# 'FFB_Healthy_QC_QCed.rds'
-# 'FFB_Healthy_QC_GEX_ATAC.rds'
-
-messageage('Loading sample: ',sample_sample)
-
-rds_name <- here('processed-data/GEX_ATAC_preprocessing', paste0(sample_sample,'_QC_GEX_ATAC.rds'))
+## load seurat QC'ed
 SeuratOBJ <- readRDS(rds_name)
 
-message('Seurat with ATAC object loaded!')   
+message('Seurat object loaded!')   
 
 print(SeuratOBJ)
+table(SeuratOBJ$orig.ident)
+# S03_Hb_r S04_Hb_r S05_Hb_r S06_Hb_r S07_Hb_r S08_Hb_r S09_Hb_r S10_Hb_r 
+# 4375     6364     1990     7059     7207     4735     5959     5914 
+# S11_Hb_r S12_Hb_r 
+# 8054     4045
 
+message("Clustering ", length(Cells(SeuratOBJ)), " cells")
 
 
 ######## Clustering for RNA
@@ -63,6 +69,8 @@ print(SeuratOBJ)
 
 
 ## (1) Standard seurat workflow
+
+set.seed(03122024)
 
 DefaultAssay(SeuratOBJ) <- "RNA"
 
