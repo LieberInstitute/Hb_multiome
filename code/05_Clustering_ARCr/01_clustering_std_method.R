@@ -65,7 +65,7 @@ Reductions(SeuratOBJ)
 #ElbowPlot(SeuratOBJ)
 plt1 <- DimHeatmap(SeuratOBJ, reduction = 'pca', nfeatures = 30, fast = FALSE) + labs(title = paste0("Heatmap PCA")) +
   labs(subtitle = "CellRangerARC-reanalyze Human Habenula dataset") #
-ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_pca_heatmap.png')), height = 5, width = 5) 
+ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_pca_heatmap.png')), height = 8, width = 8) 
 
 plt1 <- DimPlot(SeuratOBJ, reduction = "pca") + labs(title = paste0("Clustering of ", length(Cells(SeuratOBJ)), " cells")) +
   labs(subtitle = "CellRangerARC-reanalyze Human Habenula dataset") +
@@ -170,7 +170,10 @@ colnames(SeuratOBJ_2@meta.data)
 tail(SeuratOBJ_2[["seurat_clusters"]], n=3)
 tail(SeuratOBJ_2[["C.Lovain"]], n=3)
 
-DimPlot(SeuratOBJ_2, reduction = "umap.lovain")
+plt1 <- DimPlot(SeuratOBJ_2, reduction = "umap.lovain") + labs(title = paste0("UMAP Lovain res=0.8")) +
+  labs(subtitle = "CellRangerARC-reanalyze Human Hb") #
+ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_UMAP_lovain_0.8.png')), height = 8, width = 8) 
+
  
 # SeuratOBJ <- FindClusters(SeuratOBJ_2, 
 #                           resolution = 2,
