@@ -56,6 +56,22 @@ table(SeuratOBJ$orig.ident)
 # 8054     4045
 
 message("Clustering ", length(Cells(SeuratOBJ)), " cells")
+SeuratOBJ
+
+## Plot before re-cluster data for comparison
+
+Reductions(SeuratOBJ)
+#ElbowPlot(SeuratOBJ)
+plt1 <- DimHeatmap(SeuratOBJ, reduction = 'pca', nfeatures = 30, fast = FALSE) + labs(title = paste0("Heatmap PCA")) +
+  labs(subtitle = "CellRangerARC-reanalyze Human Habenula dataset") #
+ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_pca_heatmap.png')), height = 5, width = 5) 
+
+plt1 <- DimPlot(SeuratOBJ, reduction = "pca") + labs(title = paste0("Clustering of ", length(Cells(SeuratOBJ)), " cells")) +
+  labs(subtitle = "CellRangerARC-reanalyze Human Habenula dataset") +
+  DimPlot(SeuratOBJ, reduction = "umap.unintegrated") + 
+  DimPlot(SeuratOBJ, reduction = "integrated.harmony")
+ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_pca_umaps.png')), height = 6, width = 20) 
+
 
 
 ######## Clustering for RNA
@@ -68,7 +84,7 @@ message("Clustering ", length(Cells(SeuratOBJ)), " cells")
 ##       Function replaces NormalizeData(), ScaleData(), and FindVariableFeatures()
 
 
-## (1) Standard seurat workflow
+## (1) Standard Seurat workflow
 
 set.seed(03122024)
 
