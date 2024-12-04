@@ -15,7 +15,8 @@
 ########################################################################
 
 library("Seurat")                                
-library("Signac")                                
+library("Signac")   
+library("tidyverse")
 library("here")
 
 here::here()
@@ -90,95 +91,97 @@ set.seed(03122024)
 
 DefaultAssay(SeuratOBJ) <- "RNA"
 
-SeuratOBJ <- NormalizeData(SeuratOBJ, 
-                           normalization.method = "LogNormalize", 
-                           scale.factor = 10000)
-# In the LogNormalize method, Feature counts for each cell are divided by the total counts for that cell and multiplied by the scale.factor
-
-tail(SeuratOBJ[["RNA"]]$data, n=3)
-
-SeuratOBJ <- FindVariableFeatures(SeuratOBJ, 
-                                  selection.method = "vst", 
-                                  nfeatures = 2000) 
-# nfeatures define the top variable features to use
-# only used when selection.method is set to 'dispersion' or 'vst'
-
-# Identify the 10 most highly variable genes
-top10 <- head(VariableFeatures(SeuratOBJ), 10)
-
-# plot variable features with and without labels
-plot1 <- VariableFeaturePlot(SeuratOBJ, raster=FALSE)
-plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
-plot2
-
+# SeuratOBJ <- NormalizeData(SeuratOBJ, 
+#                            normalization.method = "LogNormalize", 
+#                            scale.factor = 10000)
+# # In the LogNormalize method, Feature counts for each cell are divided by the total counts for that cell and multiplied by the scale.factor
+# 
+# tail(SeuratOBJ[["RNA"]]$data, n=3)
+# 
+# SeuratOBJ <- FindVariableFeatures(SeuratOBJ, 
+#                                   selection.method = "vst", 
+#                                   nfeatures = 2000) 
+# # nfeatures define the top variable features to use
+# # only used when selection.method is set to 'dispersion' or 'vst'
+# 
+# # Identify the 10 most highly variable genes
+# top10 <- head(VariableFeatures(SeuratOBJ), 10)
+# 
+# # plot variable features with and without labels
+# plot1 <- VariableFeaturePlot(SeuratOBJ, raster=FALSE)
+# plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
 
 ## Scales and centers features in the dataset
 ## If variables are provided in vars.to.regress, they are individually regressed against each feature
 
-all.genes <- rownames(SeuratOBJ)
-SeuratOBJ <- ScaleData(SeuratOBJ, features = all.genes,
-                       vars.to.regress = NULL)
-
-
-
+# all.genes <- rownames(SeuratOBJ)
+# SeuratOBJ <- ScaleData(SeuratOBJ, features = all.genes,
+#                        vars.to.regress = NULL)
 
 ## Perform linear dimensional reduction
 
-# We perform PCA on the scaled data
-
-SeuratOBJ <- RunPCA(SeuratOBJ, features = VariableFeatures(object = SeuratOBJ))
-# Outputs a list of genes with the most positive and negative loadings, representing modules of genes that exhibit either correlation across single-cells in the dataset
-
-SeuratOBJ[['pca']]
-head(Embeddings(SeuratOBJ, reduction = "pca")[, 1:5])
-#head(Stdev(SeuratOBJ, reduction = "pca")[1:5])
-
-##  To visualize both cells and features that define the PCA
-DimHeatmap(SeuratOBJ, dims = 1, cells = 300, balanced = TRUE)
-# cells and features are ordered according to their PCA scores.
+# # We perform PCA on the scaled data
+# 
+# SeuratOBJ <- RunPCA(SeuratOBJ, features = VariableFeatures(object = SeuratOBJ))
+# DimHeatmap(SeuratOBJ, dims = 1, cells = 300, balanced = TRUE)
+# VizDimLoadings(SeuratOBJ, dims = 1:2, reduction = "pca")
+# DimPlot(SeuratOBJ)  + NoLegend()
+# ElbowPlot(SeuratOBJ)
 
 
-VizDimLoadings(SeuratOBJ, dims = 1:2, reduction = "pca")
+## Cluster the cells using original Lovain algorithm 
 
-#DimPlot(SeuratOBJ)  + NoLegend()
+SeuratOBJ_2 <- FindNeighbors(SeuratOBJ, dims = 1:10)
 
-## Determine the ‘dimensionality’ of the dataset
-ElbowPlot(SeuratOBJ)
-
-
-## Cluster the cells
-
-SeuratOBJ <- FindNeighbors(SeuratOBJ, dims = 1:10)
-
-SeuratOBJ <- FindClusters(SeuratOBJ, 
+SeuratOBJ_2 <- FindClusters(SeuratOBJ_2, 
                           resolution = 0.8,
                           algorithm = 1,
                           cluster.name ='C.Lovain')
 # Returns a Seurat where the idents have been updated with new cluster info
 # latest clustering results will be stored in object metadata under 'seurat_clusters'. 
-# Note that 'seurat_clusters' will be overwritten everytime FindClusters is run
+# Note that 'seurat_clusters' will be overwritten every time FindClusters is run
 
-table(Idents(SeuratOBJ))
+message("\nClustering after remove atypical cells")
+df1 <- as.data.frame(table(Idents(SeuratOBJ)))
+message("\nRe-clustering after remove atypical cells")
+df2 <- as.data.frame(table(Idents(SeuratOBJ_2)))
+df_clusters_compare <- merge(df1, df2, by = "Var1")
+df_clusters_compare |>
+  arrange((Var1)) |>
+  mutate(diff_size = (`Freq.x`-`Freq.y`))
+#      Var1 Freq.x Freq.y diff_size
+# 1     0   5539   5300       239
+# 2     1   4255   4805      -550
+# 3     2   4236   3291       945
+# 4     3   3800   3180       620
+# 5     4   3607   3014       593
+# 6     5   3384   2874       510
+# 7     6   3255   2674       581
+# 8     7   2440   2570      -130
+# 9     8   2825   2562       263
+# 10    9   2828   2541       287
+# ...
+# 30   29    101     93         8
+# 31   30     61     80       -19
 
-SeuratOBJ <- RunUMAP(SeuratOBJ, dims = 1:10, reduction = "pca", reduction.name = "umap.lovain")
+SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2, dims = 1:10, reduction = "pca", reduction.name = "umap.lovain")
 
-colnames(SeuratOBJ@meta.data)
-head(SeuratOBJ, n=3)
+colnames(SeuratOBJ_2@meta.data)
+tail(SeuratOBJ_2[["seurat_clusters"]], n=3)
+tail(SeuratOBJ_2[["C.Lovain"]], n=3)
 
-DimPlot(SeuratOBJ, reduction = "umap.lovain")
+DimPlot(SeuratOBJ_2, reduction = "umap.lovain")
+ 
+# SeuratOBJ <- FindClusters(SeuratOBJ_2, 
+#                           resolution = 2,
+#                           algorithm = 1,
+#                           cluster.name ='C.Lovain.r2')
+# 
+# SeuratOBJ <- RunUMAP(SeuratOBJ, dims = 1:10, reduction = "pca", reduction.name = "umap.lovain.2")
 
-SeuratOBJ <- FindClusters(SeuratOBJ, 
-                          resolution = 2,
-                          algorithm = 1,
-                          cluster.name ='C.Lovain.r2')
-
-SeuratOBJ <- RunUMAP(SeuratOBJ, dims = 1:10, reduction = "pca", reduction.name = "umap.lovain.2")
-
-## run the non-linear dimensional reduction (UMAP/tSNE)
-
-SeuratOBJ@reductions
-
-DimPlot(SeuratOBJ, reduction = "umap.lovain.2")
+# ## run the non-linear dimensional reduction (UMAP/tSNE)
+#
+# DimPlot(SeuratOBJ_2, reduction = "umap.lovain.2")
 
 
 
