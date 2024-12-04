@@ -17,6 +17,7 @@
 library("Seurat")                                
 library("Signac")   
 library("tidyverse")
+library('ggplot2')
 library("here")
 
 here::here()
@@ -171,7 +172,7 @@ tail(SeuratOBJ_2[["seurat_clusters"]], n=3)
 tail(SeuratOBJ_2[["C.Lovain"]], n=3)
 
 plt1 <- DimPlot(SeuratOBJ_2, reduction = "umap.lovain") + labs(title = paste0("UMAP Lovain res=0.8")) +
-  labs(subtitle = "CellRangerARC-reanalyze Human Hb") #
+  labs(subtitle = "CellRangerARC-reanalyze Human Hb")
 ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_UMAP_lovain_0.8.png')), height = 8, width = 8) 
 
  
@@ -194,21 +195,22 @@ ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_UMAP_lovain_0.8
 # ATAC analysis
 # We exclude the first dimension as this is typically correlated with sequencing depth
 
-DefaultAssay(SeuratOBJ) <- "ATAC"
+DefaultAssay(SeuratOBJ_2) <- "ATAC"
 
-SeuratOBJ <- RunTFIDF(SeuratOBJ,
-                      method = 1,
+SeuratOBJ_2 <- RunTFIDF(SeuratOBJ_2,
+                      method = 1,  # computes log(𝑇𝐹×𝐼𝐷𝐹).
                       scale.factor = 10000)
 
-SeuratOBJ <- FindTopFeatures(SeuratOBJ, 
+SeuratOBJ_2 <- FindTopFeatures(SeuratOBJ_2, 
                              min.cutoff = 'q5',
                              verbose = TRUE)
 # Set 'q5':  include 95% most common features as the VariableFeatures.
 # Set 10:  include features with >10 total counts in the set of VariableFeatures
 
-SeuratOBJ <- RunSVD(SeuratOBJ)
+SeuratOBJ_2 <- RunSVD(SeuratOBJ_2)
 
-SeuratOBJ <- RunUMAP(SeuratOBJ, 
+Reductions(SeuratOBJ_2)
+SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2, 
                      reduction = 'lsi', 
                      dims = 2:50, 
                      reduction.name = "umap.atac", reduction.key = "atacUMAP_")
@@ -217,79 +219,39 @@ SeuratOBJ <- RunUMAP(SeuratOBJ,
 
 ## Calculate a WNN graph, representing a weighted combination of RNA and ATAC-seq modalities. We use this graph for UMAP visualization and clustering
 
-SeuratOBJ <- FindMultiModalNeighbors(SeuratOBJ, 
+SeuratOBJ_2 <- FindMultiModalNeighbors(SeuratOBJ_2, 
                                      reduction.list = list("pca", "lsi"),
                                      dims.list = list(1:50, 2:50))
 
-SeuratOBJ <- RunUMAP(SeuratOBJ, 
+SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2, 
                      nn.name = "weighted.nn", 
                      reduction.name = "wnn.umap", 
                      reduction.key = "wnnUMAP_")
 
-SeuratOBJ <- FindClusters(SeuratOBJ, 
+SeuratOBJ_2 <- FindClusters(SeuratOBJ_2, 
                           graph.name = "wsnn", 
-                          algorithm = 3, verbose = FALSE)
+                          algorithm = 1, # 1 = original Louvain algorithm
+                          verbose = FALSE)
 
-SeuratOBJ@reductions
+Reductions(SeuratOBJ_2)
+table(Idents(SeuratOBJ_2))
+# 0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15 
+# 3745 3679 2997 2601 2266 2266 2200 2108 2080 1907 1844 1696 1620 1582 1497 1412 
+# 16   17   18   19   20   21   22   23   24   25   26   27   28   29   30   31 
+# 1334 1296 1281 1244 1115 1091 1086  983  918  874  874  822  707  690  657  644 
+# 32   33   34   35   36   37   38   39   40   41   42   43   44 
+# 619  569  542  508  409  406  269  257  251  246  217  211   82 
 
-library('ggplot2')
-
-p1 <- DimPlot(SeuratOBJ, reduction = "umap.lovain.2", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("RNA")
-p2 <- DimPlot(SeuratOBJ, reduction = "umap.atac", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("ATAC")
-p3 <- DimPlot(SeuratOBJ, reduction = "wnn.umap", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("WNN")
-pALL <- p1 + p2 + p3 & NoLegend() & theme(plot.title = element_text(hjust = 0.5))
-
-table(Idents(SeuratOBJ))
-
-## Base name to save plots
-base_name <- levels(SeuratOBJ$`orig.ident`[1])
-
-png_file <- paste0(base_name,'_CLuster_ALL_mt.png')
-png_name <- here('plots/GEX_ATAC_preprocessing', png_file)
-ggsave(pALL, filename = png_name, height = 4, width = 8)
-
-
-## perform sub-clustering on a specific clusterto find additional structure
-
-SeuratOBJ <- FindSubCluster(SeuratOBJ, 
-    cluster = 0,
-    graph.name = 'wsnn', #Name of graph to use for the clustering algorithm
-    subcluster.name = "sub.cluster", #name of sub cluster added in the meta.data
-    resolution = 0.5,
-    algorithm = 1) #1 = original Louvain algorithm
-
-Idents(SeuratOBJ) <- "sub.cluster"
-
-colnames(SeuratOBJ@meta.data)
-
-table(SeuratOBJ@meta.data[['seurat_clusters']])
-
-table(SeuratOBJ@meta.data[['sub.cluster']])
-
-
-# add annotations
-SeuratOBJ <- RenameIdents(SeuratOBJ, '0_0' = 'CD14-A', '0_1' ='CD14-B')
-SeuratOBJ$celltype <- Idents(SeuratOBJ)
-
-
-p1 <- DimPlot(SeuratOBJ, reduction = "umap.lovain.2", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("RNA")
-p2 <- DimPlot(SeuratOBJ, reduction = "umap.atac", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("ATAC")
-p3 <- DimPlot(SeuratOBJ, reduction = "wnn.umap", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("WNN")
-pALL2 <- p1 + p2 + p3 & NoLegend() & theme(plot.title = element_text(hjust = 0.5))
-
-table(Idents(SeuratOBJ))
-
-## Base name to save plots
-base_name <- levels(SeuratOBJ$`orig.ident`[1])
-
-png_file <- paste0(base_name,'_CLuster_ALL2_mt.png')
-png_name <- here('plots/GEX_ATAC_preprocessing', png_file)
-ggsave(pALL, filename = png_name, height = 4, width = 8)
+plt1 <- DimPlot(SeuratOBJ_2, reduction = "umap.lovain", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("RNA")
+plt2 <- DimPlot(SeuratOBJ_2, reduction = "umap.atac", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("ATAC") 
+plt3 <- DimPlot(SeuratOBJ_2, reduction = "wnn.umap", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("WNN") 
+pltALL <- plt1 + plt2 + plt3 & NoLegend() & theme(plot.title = element_text(hjust = 0.5))
+ggsave(pltALL, filename = here(plotDir, paste0(Seurat_base_name, '_UMAPS_PCA_LSI_WNN.png')), height = 7, width = 20) 
 
 
 ## Save RDS Object
-rds_name <- here('processed-data/GEX_ATAC_preprocessing', paste0(base_name,'_Clusters_mt.rds'))
-saveRDS(SeuratOBJ, file = rds_name)
+rds_name <- here(outputRDS_Dir, paste0(Seurat_base_name,'_WNN_clusters.rds'))
+saveRDS(SeuratOBJ_2, file = rds_name)
 message('Seurat with ATAC clusters saved!')  
 
 
