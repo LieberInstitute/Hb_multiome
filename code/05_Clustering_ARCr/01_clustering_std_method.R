@@ -63,7 +63,7 @@ SeuratOBJ
 ## Plot before re-cluster data for comparison
 
 Reductions(SeuratOBJ)
-#ElbowPlot(SeuratOBJ)
+
 plt1 <- DimHeatmap(SeuratOBJ, reduction = 'pca', nfeatures = 30, fast = FALSE) + labs(title = paste0("Heatmap PCA")) +
   labs(subtitle = "CellRangerARC-reanalyze Human Habenula dataset") #
 ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_pca_heatmap.png')), height = 8, width = 8) 
@@ -123,7 +123,7 @@ DefaultAssay(SeuratOBJ) <- "RNA"
 
 # # We perform PCA on the scaled data
 # 
-# SeuratOBJ <- RunPCA(SeuratOBJ, features = VariableFeatures(object = SeuratOBJ))
+SeuratOBJ <- RunPCA(SeuratOBJ, features = VariableFeatures(object = SeuratOBJ))
 # DimHeatmap(SeuratOBJ, dims = 1, cells = 300, balanced = TRUE)
 # VizDimLoadings(SeuratOBJ, dims = 1:2, reduction = "pca")
 # DimPlot(SeuratOBJ)  + NoLegend()
@@ -147,9 +147,8 @@ df1 <- as.data.frame(table(Idents(SeuratOBJ)))
 message("\nRe-clustering after remove atypical cells")
 df2 <- as.data.frame(table(Idents(SeuratOBJ_2)))
 df_clusters_compare <- merge(df1, df2, by = "Var1")
-df_clusters_compare |>
-  arrange((Var1)) |>
-  mutate(diff_size = (`Freq.x`-`Freq.y`))
+df_compare <- df_clusters_compare |> arrange((Var1)) |> mutate(diff_size = (`Freq.x`-`Freq.y`))
+print(df_compare, row.names = FALSE)
 #      Var1 Freq.x Freq.y diff_size
 # 1     0   5539   5300       239
 # 2     1   4255   4805      -550
@@ -164,6 +163,7 @@ df_clusters_compare |>
 # ...
 # 30   29    101     93         8
 # 31   30     61     80       -19
+## save as dataframe (raw.names = FALSE)
 
 SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2, dims = 1:10, reduction = "pca", reduction.name = "umap.lovain")
 
@@ -197,9 +197,10 @@ ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_UMAP_lovain_0.8
 
 DefaultAssay(SeuratOBJ_2) <- "ATAC"
 
-SeuratOBJ_2 <- RunTFIDF(SeuratOBJ_2,
-                      method = 1,  # computes log(𝑇𝐹×𝐼𝐷𝐹).
-                      scale.factor = 10000)
+# Run term frequency inverse document frequency (TF-IDF) normalization on a matrix.
+# SeuratOBJ_2 <- RunTFIDF(SeuratOBJ_2,
+#                       method = 1,  # computes log(𝑇𝐹×𝐼𝐷𝐹).
+#                       scale.factor = 10000)
 
 SeuratOBJ_2 <- FindTopFeatures(SeuratOBJ_2, 
                              min.cutoff = 'q5',
@@ -235,12 +236,14 @@ SeuratOBJ_2 <- FindClusters(SeuratOBJ_2,
 
 Reductions(SeuratOBJ_2)
 table(Idents(SeuratOBJ_2))
-# 0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15 
-# 3745 3679 2997 2601 2266 2266 2200 2108 2080 1907 1844 1696 1620 1582 1497 1412 
-# 16   17   18   19   20   21   22   23   24   25   26   27   28   29   30   31 
-# 1334 1296 1281 1244 1115 1091 1086  983  918  874  874  822  707  690  657  644 
-# 32   33   34   35   36   37   38   39   40   41   42   43   44 
-# 619  569  542  508  409  406  269  257  251  246  217  211   82 
+# 0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15
+# 3745 3679 2997 2601 2266 2266 2200 2108 2080 1907 1844 1696 1620 1582 1497 1412
+# 16   17   18   19   20   21   22   23   24   25   26   27   28   29   30   31
+# 1334 1296 1281 1244 1115 1091 1086  983  918  874  874  822  707  690  657  644
+# 32   33   34   35   36   37   38   39   40   41   42   43   44
+# 619  569  542  508  409  406  269  257  251  246  217  211   82
+
+print(as.data.frame(table(Idents(SeuratOBJ_2))), row.names = FALSE)
 
 plt1 <- DimPlot(SeuratOBJ_2, reduction = "umap.lovain", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("RNA")
 plt2 <- DimPlot(SeuratOBJ_2, reduction = "umap.atac", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("ATAC") 
@@ -255,14 +258,23 @@ saveRDS(SeuratOBJ_2, file = rds_name)
 message('Seurat with ATAC clusters saved!')  
 
 
+## Find DEG in the integrated Seurat for ALL clusters
+table(SeuratOBJ_2[["seurat_clusters"]])
+all.markers <- FindAllMarkers(object = SeuratOBJ_2)
+#head(all.markers, n=3)
 
+cvs_file <- paste0(Seurat_base_name, "_markers_WNN.csv") 
+cvs_file <- here(cvsDir, cvs_file)
+write.csv(all.markers, cvs_file)
+
+message(" FindAllMarkers done!")
+
+message("All tasks done!")
 
 
 library("sessioninfo")
 print('Reproducibility information:')
-# Last modification
 Sys.time()
-#"2023-04-04 12:42:26 EDT"
 proc.time()
 options(width = 120)
 session_info()
