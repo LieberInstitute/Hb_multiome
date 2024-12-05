@@ -63,6 +63,9 @@ SeuratOBJ
 ## Plot before re-cluster data for comparison
 
 Reductions(SeuratOBJ)
+plt1 <- ElbowPlot(SeuratOBJ, ndims = 30, reduction = "pca") + ggtitle("PCA reduction")
+plt2 <- ElbowPlot(SeuratOBJ, ndims = 30, reduction = "integrated.harmony") + ggtitle("Harmony reduction")
+ggsave((plt1 + plt2), filename = here(plotDir, paste0(Seurat_base_name, '_elbow_pca_harmony.png')), height = 5, width = 15) 
 
 plt1 <- DimHeatmap(SeuratOBJ, reduction = 'pca', nfeatures = 30, fast = FALSE) + labs(title = paste0("Heatmap PCA")) +
   labs(subtitle = "CellRangerARC-reanalyze Human Habenula dataset") #
