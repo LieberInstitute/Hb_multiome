@@ -63,9 +63,8 @@ SeuratOBJ
 ## Plot before re-cluster data for comparison
 
 Reductions(SeuratOBJ)
-plt1 <- ElbowPlot(SeuratOBJ, ndims = 30, reduction = "pca") + ggtitle("PCA reduction")
-plt2 <- ElbowPlot(SeuratOBJ, ndims = 30, reduction = "integrated.harmony") + ggtitle("Harmony reduction")
-ggsave((plt1 + plt2), filename = here(plotDir, paste0(Seurat_base_name, '_elbow_pca_harmony.png')), height = 5, width = 15) 
+plt_elbow1 <- ElbowPlot(SeuratOBJ, ndims = 30, reduction = "pca") + ggtitle("PCA reduction")
+plt_elbow2 <- ElbowPlot(SeuratOBJ, ndims = 30, reduction = "integrated.harmony") + ggtitle("Harmony reduction")
 
 plt1 <- DimHeatmap(SeuratOBJ, reduction = 'pca', nfeatures = 30, fast = FALSE) + labs(title = paste0("Heatmap PCA")) +
   labs(subtitle = "CellRangerARC-reanalyze Human Habenula dataset") #
@@ -126,7 +125,7 @@ DefaultAssay(SeuratOBJ) <- "RNA"
 
 # # We perform PCA on the scaled data
 # 
-SeuratOBJ <- RunPCA(SeuratOBJ, features = VariableFeatures(object = SeuratOBJ))
+# SeuratOBJ <- RunPCA(SeuratOBJ, features = VariableFeatures(object = SeuratOBJ))
 # DimHeatmap(SeuratOBJ, dims = 1, cells = 300, balanced = TRUE)
 # VizDimLoadings(SeuratOBJ, dims = 1:2, reduction = "pca")
 # DimPlot(SeuratOBJ)  + NoLegend()
@@ -135,10 +134,10 @@ SeuratOBJ <- RunPCA(SeuratOBJ, features = VariableFeatures(object = SeuratOBJ))
 
 ## Cluster the cells using original Lovain algorithm 
 
-SeuratOBJ_2 <- FindNeighbors(SeuratOBJ, dims = 1:10)
+SeuratOBJ_2 <- FindNeighbors(SeuratOBJ, dims = 1:20)
 
 SeuratOBJ_2 <- FindClusters(SeuratOBJ_2, 
-                          resolution = 0.8,
+                          resolution = 1,
                           algorithm = 1,
                           cluster.name ='C.Lovain')
 # Returns a Seurat where the idents have been updated with new cluster info
@@ -149,8 +148,8 @@ message("\nClustering after remove atypical cells")
 df1 <- as.data.frame(table(Idents(SeuratOBJ)))
 message("\nRe-clustering after remove atypical cells")
 df2 <- as.data.frame(table(Idents(SeuratOBJ_2)))
-df_clusters_compare <- merge(df1, df2, by = "Var1")
-df_compare <- df_clusters_compare |> arrange((Var1)) |> mutate(diff_size = (`Freq.x`-`Freq.y`))
+df_clusters_compare <- merge(df1, df2, by = "Var1", all = TRUE)
+df_compare <- df_clusters_compare |> arrange((Var1)) # |> mutate(diff_size = (`Freq.x`-`Freq.y`))
 print(df_compare, row.names = FALSE)
 #      Var1 Freq.x Freq.y diff_size
 # 1     0   5539   5300       239
@@ -168,30 +167,17 @@ print(df_compare, row.names = FALSE)
 # 31   30     61     80       -19
 ## save as dataframe (raw.names = FALSE)
 
-SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2, dims = 1:10, reduction = "pca", reduction.name = "umap.lovain")
+SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2, dims = 1:20, reduction = "pca", reduction.name = "umap.lovain")
 
 colnames(SeuratOBJ_2@meta.data)
 tail(SeuratOBJ_2[["seurat_clusters"]], n=3)
 tail(SeuratOBJ_2[["C.Lovain"]], n=3)
 
-plt1 <- DimPlot(SeuratOBJ_2, reduction = "umap.lovain") + labs(title = paste0("UMAP Lovain res=0.8")) +
+plt1 <- DimPlot(SeuratOBJ_2, reduction = "umap.lovain") + labs(title = paste0("RNA UMAP (Lovain res=1)")) +
   labs(subtitle = "CellRangerARC-reanalyze Human Hb")
-ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_UMAP_lovain_0.8.png')), height = 8, width = 8) 
+ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_UMAP_lovain_res1.png')), height = 8, width = 8) 
 
  
-# SeuratOBJ <- FindClusters(SeuratOBJ_2, 
-#                           resolution = 2,
-#                           algorithm = 1,
-#                           cluster.name ='C.Lovain.r2')
-# 
-# SeuratOBJ <- RunUMAP(SeuratOBJ, dims = 1:10, reduction = "pca", reduction.name = "umap.lovain.2")
-
-# ## run the non-linear dimensional reduction (UMAP/tSNE)
-#
-# DimPlot(SeuratOBJ_2, reduction = "umap.lovain.2")
-
-
-
 
 ########### Next run ATAC analysis. ###########
 
@@ -201,9 +187,9 @@ ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_UMAP_lovain_0.8
 DefaultAssay(SeuratOBJ_2) <- "ATAC"
 
 # Run term frequency inverse document frequency (TF-IDF) normalization on a matrix.
-# SeuratOBJ_2 <- RunTFIDF(SeuratOBJ_2,
-#                       method = 1,  # computes log(𝑇𝐹×𝐼𝐷𝐹).
-#                       scale.factor = 10000)
+SeuratOBJ_2 <- RunTFIDF(SeuratOBJ_2,
+                      method = 1,  # computes log(𝑇𝐹×𝐼𝐷𝐹).
+                      scale.factor = 10000)
 
 SeuratOBJ_2 <- FindTopFeatures(SeuratOBJ_2, 
                              min.cutoff = 'q5',
@@ -214,9 +200,12 @@ SeuratOBJ_2 <- FindTopFeatures(SeuratOBJ_2,
 SeuratOBJ_2 <- RunSVD(SeuratOBJ_2)
 
 Reductions(SeuratOBJ_2)
+plt_elbow3 <- ElbowPlot(SeuratOBJ_2, ndims = 30, reduction = "lsi") + ggtitle("LSI reduction")
+ggsave((plt_elbow1 + plt_elbow2 + plt_elbow3), filename = here(plotDir, paste0(Seurat_base_name, '_elbows.png')), height = 5, width = 20) 
+
 SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2, 
                      reduction = 'lsi', 
-                     dims = 2:50, 
+                     dims = 2:30, 
                      reduction.name = "umap.atac", reduction.key = "atacUMAP_")
 
 
@@ -224,8 +213,9 @@ SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2,
 ## Calculate a WNN graph, representing a weighted combination of RNA and ATAC-seq modalities. We use this graph for UMAP visualization and clustering
 
 SeuratOBJ_2 <- FindMultiModalNeighbors(SeuratOBJ_2, 
-                                     reduction.list = list("pca", "lsi"),
-                                     dims.list = list(1:50, 2:50))
+                                       reduction.list = list("pca", "lsi"), 
+                                       #reduction.list = list("integrated.harmony", "lsi"), 
+                                       dims.list = list(1:30, 2:30))
 
 SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2, 
                      nn.name = "weighted.nn", 
@@ -234,8 +224,8 @@ SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2,
 
 SeuratOBJ_2 <- FindClusters(SeuratOBJ_2, 
                           graph.name = "wsnn", 
-                          algorithm = 1, # 1 = original Louvain algorithm
-                          verbose = FALSE)
+                          resolution = 1,
+                          algorithm = 1)
 
 Reductions(SeuratOBJ_2)
 table(Idents(SeuratOBJ_2))
@@ -252,11 +242,12 @@ plt1 <- DimPlot(SeuratOBJ_2, reduction = "umap.lovain", label = TRUE, label.size
 plt2 <- DimPlot(SeuratOBJ_2, reduction = "umap.atac", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("ATAC") 
 plt3 <- DimPlot(SeuratOBJ_2, reduction = "wnn.umap", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("WNN") 
 pltALL <- plt1 + plt2 + plt3 & NoLegend() & theme(plot.title = element_text(hjust = 0.5))
+pltALL
 ggsave(pltALL, filename = here(plotDir, paste0(Seurat_base_name, '_UMAPS_PCA_LSI_WNN.png')), height = 7, width = 20) 
 
 
 ## Save RDS Object
-rds_name <- here(outputRDS_Dir, paste0(Seurat_base_name,'_WNN_clusters.rds'))
+rds_name <- here(outputRDS_Dir, paste0(Seurat_base_name,'_WNN_lovain_lsi_clusters.rds'))
 saveRDS(SeuratOBJ_2, file = rds_name)
 message('Seurat with ATAC clusters saved!')  
 
