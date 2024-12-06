@@ -22,6 +22,24 @@ library("here")
 
 here::here()
 
+## read input arguments
+args = commandArgs(trailingOnly=TRUE)
+# clust_method = c(2,3,4), clust_res = c(0.8, 1, 2), clust_knn = c(20, 30, 40)
+clust_method <- args[2]
+# 1 = original Louvain algorithm
+# 2 = Louvain algorithm with multilevel refinement
+# 3 = SLM algorithm
+# 4 = Leiden algorithm
+clust_res <- args[4]
+clust_knn <- args[6]
+
+if (length(clust_method) || length(clust_res)) ) ||  length(clust_knn)) {
+  message("Processing clustering with method ", clust_method, " at ", clust_res, " resolution with k.nn = ", clust_knn)
+} else {
+  message("Input arguments missed")
+  stop()
+}
+
 ## Preparing directories
 inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
 outputRDS_Dir <- here("processed-data", "05_Clustering_ARCr")
@@ -276,6 +294,17 @@ write.csv(all.markers, cvs_file)
 message(" FindAllMarkers done!")
 
 message("All tasks done!")
+
+
+library("slurmjobs")
+slurmjobs::job_loop(
+  loops = list(clust_method = c("2","3","4"), 
+               clust_res = c("0.8", "1", "2"), knn = c("20", "30", "40")),
+  name = "01_clustering_std_method",
+  cores = 2,
+  create_shell = TRUE
+)
+
 
 
 library("sessioninfo")
