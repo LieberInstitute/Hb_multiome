@@ -26,19 +26,19 @@ here::here()
 args = commandArgs(trailingOnly=TRUE)
 # clust_method = c(2,3,4), clust_res = c(0.8, 1, 2), clust_knn = c(20, 30, 40)
 clust_method <- args[2]
-# 1 = original Louvain algorithm
-# 2 = Louvain algorithm with multilevel refinement
-# 3 = SLM algorithm
-# 4 = Leiden algorithm
 clust_res <- args[4]
 clust_knn <- args[6]
 
-if (length(clust_method) || length(clust_res)) ) ||  length(clust_knn)) {
-  message("Processing clustering with method ", clust_method, " at ", clust_res, " resolution with k.nn = ", clust_knn)
+# ## For testing use:
+# clust_method = 2
+# clust_res = 0.8
+# clust_knn = 30
+
+if (length(clust_method) && length(clust_res) &&  length(clust_knn)) {
+  message("\n ====== Processing clustering with method ", clust_method, " at resolution=", clust_res," with k.nn = ", clust_knn, " ======\n")
 } else {
   message("Input arguments missed")
-  stop()
-}
+  stop() }
 
 ## Preparing directories
 inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
@@ -54,10 +54,10 @@ if (!dir.exists(outputCVS_Dir)) { dir.create(outputCVS_Dir) }
 if (!dir.exists(plotDir)) { dir.create(plotDir) }
 
 
-########################    Initials. (1) load data  ########################  
+########################    Initials. (1) load data  ########################
 
-count_mtx_type <- 'norm_counts' 
-Seurat_reduction <- 'Harmony' 
+count_mtx_type <- 'norm_counts'
+Seurat_reduction <- 'Harmony'
 minCells <- 1
 if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts'}
 Seurat_base_name <-  paste0(Seurat_base_name, "_Harmony_ARCr_QCed")
@@ -66,12 +66,12 @@ rds_name <- here(inputDir, paste0(Seurat_base_name, ".rds"))
 ## load seurat QC'ed
 SeuratOBJ <- readRDS(rds_name)
 
-message('Seurat object loaded!')   
+message('Seurat object loaded!')
 
 table(SeuratOBJ$orig.ident)
-# S03_Hb_r S04_Hb_r S05_Hb_r S06_Hb_r S07_Hb_r S08_Hb_r S09_Hb_r S10_Hb_r 
-# 4375     6364     1990     7059     7207     4735     5959     5914 
-# S11_Hb_r S12_Hb_r 
+# S03_Hb_r S04_Hb_r S05_Hb_r S06_Hb_r S07_Hb_r S08_Hb_r S09_Hb_r S10_Hb_r
+# 4375     6364     1990     7059     7207     4735     5959     5914
+# S11_Hb_r S12_Hb_r
 # 8054     4045
 
 message("Clustering ", length(Cells(SeuratOBJ)), " cells")
@@ -80,31 +80,31 @@ SeuratOBJ
 ## Plot before re-cluster data for comparison
 
 Reductions(SeuratOBJ)
-plt_elbow1 <- ElbowPlot(SeuratOBJ, ndims = 50, reduction = "pca") + ggtitle("PCA reduction") + 
+plt_elbow1 <- ElbowPlot(SeuratOBJ, ndims = 50, reduction = "pca") + ggtitle("PCA reduction") +
   geom_vline(xintercept = 30, color="red", linetype="dashed")
-plt_elbow2 <- ElbowPlot(SeuratOBJ, ndims = 50, reduction = "integrated.harmony") + ggtitle("Harmony reduction") + 
+plt_elbow2 <- ElbowPlot(SeuratOBJ, ndims = 50, reduction = "integrated.harmony") + ggtitle("Harmony reduction") +
   geom_vline(xintercept = 30, color="red", linetype="dashed")
-ggsave((plt_elbow1 + plt_elbow2), filename = here(plotDir, paste0(Seurat_base_name, '_rna_elbow.png')), height = 6, width = 15) 
+ggsave((plt_elbow1 + plt_elbow2), filename = here(plotDir, paste0(Seurat_base_name, '_rna_elbow.png')), height = 6, width = 15)
 
 plt1 <- DimHeatmap(SeuratOBJ, reduction = 'pca', nfeatures = 30, fast = FALSE) + labs(title = paste0("Heatmap PCA")) +
-  labs(subtitle = "CellRangerARC-reanalyze Human Habenula dataset") 
+  labs(subtitle = "CellRangerARC-reanalyze Human Habenula dataset")
 plt2 <- DimHeatmap(SeuratOBJ, reduction = "integrated.harmony", nfeatures = 30, fast = FALSE) + labs(title = paste0("Heatmap PCA.Harmony")) +
   labs(subtitle = "CellRangerARC-reanalyze Human Habenula dataset") #
-ggsave((plt1/plt2), filename = here(plotDir, paste0(Seurat_base_name, '_pca_harm_heatmap.png')), height = 8, width = 10) 
+ggsave((plt1/plt2), filename = here(plotDir, paste0(Seurat_base_name, '_pca_harmony_heatmap.png')), height = 8, width = 10)
 
 plt1 <- DimPlot(SeuratOBJ, reduction = "pca") + labs(title = paste0("Clustering of ", length(Cells(SeuratOBJ)), " cells")) +
   labs(subtitle = "CellRangerARC-reanalyze Human Habenula dataset") +
-  DimPlot(SeuratOBJ, reduction = "umap.unintegrated") + 
+  DimPlot(SeuratOBJ, reduction = "umap.unintegrated") +
   DimPlot(SeuratOBJ, reduction = "integrated.harmony")
-ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_redDim_umaps.png')), height = 6, width = 20) 
+ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_redDim_umaps.png')), height = 6, width = 20)
 
 
 
-######## Clustering for RNA
+####### Clustering for RNA
 
-## There are two approaches for running the RNA analysis
+## There are two approaches for running the RNA analysis, in this script we use 
 ##    (1) Standard seurat workflow
-##    (2) SCTransform 
+##    (2) SCTransform
 
 ## SCTransform model normalization is followed by PCA and UMAP dimensionality reduction
 ##       Function replaces NormalizeData(), ScaleData(), and FindVariableFeatures()
@@ -116,22 +116,22 @@ set.seed(03122024)
 
 DefaultAssay(SeuratOBJ) <- "RNA"
 
-# SeuratOBJ <- NormalizeData(SeuratOBJ, 
-#                            normalization.method = "LogNormalize", 
+# SeuratOBJ <- NormalizeData(SeuratOBJ,
+#                            normalization.method = "LogNormalize",
 #                            scale.factor = 10000)
 # # In the LogNormalize method, Feature counts for each cell are divided by the total counts for that cell and multiplied by the scale.factor
-# 
+#
 # tail(SeuratOBJ[["RNA"]]$data, n=3)
-# 
-# SeuratOBJ <- FindVariableFeatures(SeuratOBJ, 
-#                                   selection.method = "vst", 
-#                                   nfeatures = 2000) 
+#
+# SeuratOBJ <- FindVariableFeatures(SeuratOBJ,
+#                                   selection.method = "vst",
+#                                   nfeatures = 2000)
 # # nfeatures define the top variable features to use
 # # only used when selection.method is set to 'dispersion' or 'vst'
-# 
+#
 # # Identify the 10 most highly variable genes
 # top10 <- head(VariableFeatures(SeuratOBJ), 10)
-# 
+#
 # # plot variable features with and without labels
 # plot1 <- VariableFeaturePlot(SeuratOBJ, raster=FALSE)
 # plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
@@ -146,7 +146,7 @@ DefaultAssay(SeuratOBJ) <- "RNA"
 ## Perform linear dimensional reduction
 
 # # We perform PCA on the scaled data
-# 
+#
 # SeuratOBJ <- RunPCA(SeuratOBJ, features = VariableFeatures(object = SeuratOBJ))
 # DimHeatmap(SeuratOBJ, dims = 1, cells = 300, balanced = TRUE)
 # VizDimLoadings(SeuratOBJ, dims = 1:2, reduction = "pca")
@@ -154,17 +154,30 @@ DefaultAssay(SeuratOBJ) <- "RNA"
 # ElbowPlot(SeuratOBJ)
 
 
-## Cluster the cells using original Lovain algorithm 
+## Cluster the cells using original Lovain algorithm
 
 #SeuratOBJ_2 <- FindNeighbors(SeuratOBJ, dims = 1:20)
 SeuratOBJ_2 <- FindNeighbors(SeuratOBJ, dims = 1:30, reduction = "integrated.harmony")
 
-SeuratOBJ_2 <- FindClusters(SeuratOBJ_2, 
-                          resolution = 1,
-                          algorithm = 1,
-                          cluster.name ='C.Lovain')
+## get proper name to save the clustering results
+clust_name <- case_when(
+  clust_method == 1 ~ "C.louvain",
+  clust_method == 2 ~ "C.louvainM",
+  clust_method == 3 ~ "C.SLM",
+  clust_method == 4 ~ "C.leiden")
+
+## Seurat methods:
+# 1 = original Louvain algorithm
+# 2 = Louvain algorithm with multilevel refinement
+# 3 = SLM algorithm
+# 4 = Leiden algorithm
+
+SeuratOBJ_2 <- FindClusters(SeuratOBJ_2,
+                          resolution = as.integer(clust_res),
+                          algorithm = as.integer(clust_method),
+                          cluster.name = clust_name)
 # Returns a Seurat where the idents have been updated with new cluster info
-# latest clustering results will be stored in object metadata under 'seurat_clusters'. 
+# latest clustering results will be stored in object metadata under 'seurat_clusters'.
 # Note that 'seurat_clusters' will be overwritten every time FindClusters is run
 
 message("\nClustering after remove atypical cells")
@@ -192,18 +205,28 @@ print(df_compare, row.names = FALSE)
 # 30   29    101     93         8
 # 31   30     61     80       -19
 
+## get proper name to save umap accordingly with clustering method
+umap_rna_name <- case_when(
+  clust_method == "1" ~ "umap.lovain",
+  clust_method == "2" ~ "umap.lovainM",
+  clust_method == "3" ~ "umap.SLM",
+  clust_method == "4" ~ "umap.leiden")
 
 #SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2, dims = 1:20, reduction = "pca", reduction.name = "umap.lovain")
-SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2, dims = 1:30, reduction = "integrated.harmony", reduction.name = "umap.lovain")
+SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2, dims = 1:30, 
+                       reduction = "integrated.harmony", 
+                       reduction.name = umap_rna_name) # umap.lovain
+
 #colnames(SeuratOBJ_2@meta.data)
 tail(SeuratOBJ_2[["seurat_clusters"]], n=3)
-tail(SeuratOBJ_2[["C.Lovain"]], n=3)
-Reductions(SeuratOBJ_2)
-plt1 <- DimPlot(SeuratOBJ_2, reduction = "umap.lovain") + labs(title = paste0("RNA-UMAP (Lovain at res=1)")) +
-  labs(subtitle = "CellRangerARC-reanalyze Human Hb")
-ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_UMAP-rna_lovain_r1.png')), height = 8, width = 8) 
+tail(SeuratOBJ_2[[clust_name]], n=3)
 
- 
+Reductions(SeuratOBJ_2)
+plt1 <- DimPlot(SeuratOBJ_2, reduction = umap_rna_name) + labs(title = paste0(umap_rna_name, " at resolution = ", clust_res)) +
+  labs(subtitle = "CellRangerARC-reanalyze Human Hb")
+ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, "_", umap_rna_name, "_r", clust_res,".png")), height = 8, width = 8)
+
+
 
 ########### Next run ATAC analysis. ###########
 
@@ -217,7 +240,7 @@ SeuratOBJ_2 <- RunTFIDF(SeuratOBJ_2,
                       method = 1,  # computes log(𝑇𝐹×𝐼𝐷𝐹).
                       scale.factor = 10000)
 
-SeuratOBJ_2 <- FindTopFeatures(SeuratOBJ_2, 
+SeuratOBJ_2 <- FindTopFeatures(SeuratOBJ_2,
                              min.cutoff = 'q5',
                              verbose = TRUE)
 # Set 'q5':  include 95% most common features as the VariableFeatures.
@@ -226,84 +249,95 @@ SeuratOBJ_2 <- FindTopFeatures(SeuratOBJ_2,
 SeuratOBJ_2 <- RunSVD(SeuratOBJ_2)
 
 Reductions(SeuratOBJ_2)
-plt_elbow3 <- ElbowPlot(SeuratOBJ_2, ndims = 50, reduction = "lsi") + ggtitle("LSI reduction") + 
+plt_elbow3 <- ElbowPlot(SeuratOBJ_2, ndims = 50, reduction = "lsi") + ggtitle("LSI reduction") +
   geom_vline(xintercept = 20, color="red", linetype="dashed")
-ggsave((plt_elbow1 + plt_elbow2 + plt_elbow3), filename = here(plotDir, paste0(Seurat_base_name, '_all_elbows.png')), height = 5, width = 20) 
+ggsave((plt_elbow1 + plt_elbow2 + plt_elbow3), filename = here(plotDir, paste0(Seurat_base_name, '_all_elbows.png')), height = 5, width = 20)
 
-SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2, 
-                     reduction = 'lsi', 
-                     dims = 2:20, 
+SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2,
+                     reduction = 'lsi',
+                     dims = 2:20,
                      reduction.name = "umap.atac", reduction.key = "atacUMAP_")
 
-plt1 <- DimPlot(SeuratOBJ_2, reduction = "umap.atac") + labs(title = paste0("ATAC UMAP")) +
+plt1 <- DimPlot(SeuratOBJ_2, reduction = "umap.atac") + labs(title = paste0("ATAC-UMAP (LSI)")) +
   labs(subtitle = "CellRangerARC-reanalyze Human Hb")
-ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_UMAP_lsi_r1.png')), height = 8, width = 8) 
+ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, "_umap.lsi.png")), height = 8, width = 8)
 
 
 
 ## Calculate a WNN graph, representing a weighted combination of RNA and ATAC-seq modalities. We use this graph for UMAP visualization and clustering
 
-SeuratOBJ_2 <- FindMultiModalNeighbors(SeuratOBJ_2, 
-                                       #reduction.list = list("pca", "lsi"), 
-                                       k.nn = 30,
-                                       reduction.list = list("integrated.harmony", "lsi"), 
+SeuratOBJ_2 <- FindMultiModalNeighbors(SeuratOBJ_2,
+                                       #reduction.list = list("pca", "lsi"),
+                                       k.nn = as.integer(clust_knn),
+                                       reduction.list = list("integrated.harmony", "lsi"),
                                        dims.list = list(1:30, 2:20))
 
 SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2,
-                       n.neighbors = 30, # Default n.neighbors=30
-                       nn.name = "weighted.nn", 
-                       reduction.name = "wnn.umap", 
+                       n.neighbors = as.integer(clust_knn), # Default n.neighbors=30
+                       nn.name = "weighted.nn",
+                       reduction.name = "wnn.umap",
                        reduction.key = "wnnUMAP_")
 
-SeuratOBJ_2 <- FindClusters(SeuratOBJ_2, 
-                          graph.name = "wsnn", 
+SeuratOBJ_2 <- FindClusters(SeuratOBJ_2,
+                          graph.name = "wsnn",
                           method = "igraph",
                           random.seed = 06122024,
-                          resolution = 1,
-                          algorithm = 1)
+                          resolution = as.integer(clust_res),
+                          algorithm = as.integer(clust_method))
 
 Reductions(SeuratOBJ_2)
+str(SeuratOBJ_2$wnn.umap)
 table(Idents(SeuratOBJ_2))
 
 # print(as.data.frame(table(Idents(SeuratOBJ_2))), row.names = FALSE)
 
-plt1 <- DimPlot(SeuratOBJ_2, reduction = "umap.lovain", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("RNA") & NoLegend()
-plt2 <- DimPlot(SeuratOBJ_2, reduction = "umap.atac", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("ATAC") & NoLegend()
-plt3 <- DimPlot(SeuratOBJ_2, reduction = "wnn.umap", label = TRUE, label.size = 2.5) + ggtitle("WNN") 
+plt1 <- DimPlot(SeuratOBJ_2, reduction = umap_rna_name, label = TRUE, label.size = 2.5, repel = TRUE) + 
+  ggtitle(paste0("RNA (", clust_name, " at res=", clust_res,")")) & NoLegend() # reduction = "umap.lovain"
+plt2 <- DimPlot(SeuratOBJ_2, reduction = "umap.atac", label = TRUE, label.size = 2.5, repel = TRUE) + 
+  ggtitle(paste0("ATAC (LSI)")) & NoLegend()
+plt3 <- DimPlot(SeuratOBJ_2, reduction = "wnn.umap", label = TRUE, label.size = 2.5) + 
+  ggtitle(paste0("WNN (knn=", clust_knn, ", res=", as.character(clust_res), ")"))
 pltALL <- plt1 + plt2 + plt3 & theme(plot.title = element_text(hjust = 0.5)) # & NoLegend()
-pltALL
-ggsave(pltALL, filename = here(plotDir, paste0(Seurat_base_name, '_UMAP_WNN_lov_lsi_r1.png')), height = 7, width = 20) 
+#pltALL
+sufix_name <- paste0("k", clust_knn, "_", clust_name,"_lsi_r", clust_res)
+ggsave(pltALL, filename = here(plotDir, paste0(Seurat_base_name, "_UMAP_WNN_", sufix_name, ".png")), height = 7, width = 20)
 
 
 ## Find DEG and save Seurat with ONLY ATAC OUTLIER cells (barcodes) to identify cell types later
 
 ## Save RDS Object
-rds_name <- here(outputRDS_Dir, paste0(Seurat_base_name,'_WNN_lov_lsi_r1.rds'))
+rds_name <- here(outputRDS_Dir, paste0(Seurat_base_name, "_WNN_", sufix_name, ".rds"))
 saveRDS(SeuratOBJ_2, file = rds_name)
-message('Seurat with ATAC clusters saved!')
+
+message("\nSeurat with WNN saved: ", basename(rds_name))
+message("WNN completed!")
 
 ## Find DEG in the integrated Seurat for ALL clusters
 table(SeuratOBJ_2[["seurat_clusters"]])
 all.markers <- FindAllMarkers(object = SeuratOBJ_2)
 #head(all.markers, n=3)
 
-cvs_file <- paste0(Seurat_base_name, "_markers_WNN_lov_lsi_r1.csv")
-cvs_file <- here(cvsDir, cvs_file)
+cvs_file <- paste0(Seurat_base_name, "_markers_WNN_", sufix_name,".csv")
+cvs_file <- here(outputCVS_Dir, cvs_file)
 write.csv(all.markers, cvs_file)
 
-message(" FindAllMarkers done!")
+message("\nMarkers saved: ", basename(cvs_file))
 
-message("All tasks done!")
+message("\nFindAllMarkers completed!")
+
+message("\All tasks done!")
+
+message("\****END****")
 
 
-library("slurmjobs")
-slurmjobs::job_loop(
-  loops = list(clust_method = c("2","3","4"), 
-               clust_res = c("0.8", "1", "2"), knn = c("20", "30", "40")),
-  name = "01_clustering_std_method",
-  cores = 2,
-  create_shell = TRUE
-)
+# library("slurmjobs")
+# slurmjobs::job_loop(
+#   loops = list(clust_method = c("1","2","3","4"),
+#                clust_res = c("0.8", "1", "1.5","2"), knn = c("20", "30", "40")),
+#   name = "01_clustering_std_method",
+#   cores = 2,
+#   create_shell = TRUE
+# )
 
 
 
