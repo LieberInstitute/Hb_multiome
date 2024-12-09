@@ -1,17 +1,17 @@
 ########################################################################
 ## Read Seurat clusters to search cell-types based on a custom marker gene list
 ## INPUT:
-##      A Seurat batch corrected data with `min_cells` by cluster filtered
-##      A csv file with Gene-marker list.
-##      A csv file with DGE from a Seurat Harmony/CCA data (not pseudo-bulked)
+##      A Seurat Harmony corrected dataset
+##      A csv file with Gene-marker list
+##      A csv file with DGE from a Seurat Harmony (not pseudo-bulked)
 ## 
 ## OUPUT:
 ##      1) A csv files with clusters cell-type identification
 ##
-## NOTE. This pipeline only identify cell-types for cellRangerARC-reanalyze datasets
+## NOTE. Identify cell-types on WNN clusters from CellRangerARC-reanalyze filtered datasets
 ##
 ## Authors. CSC 
-## Date. Feb 27th, 2024
+## Date. Dec 09th, 2024
 ########################################################################
 
 ## load libraries
@@ -33,37 +33,28 @@ cellranger_pipe <- args[2]
 # cellranger_pipe <- "CR_arc_reanalyze_outliers_ATAC" # This is for only ATAC
 
 ## input directories
-if (length(cellranger_pipe)) {
-  
-  ## Avoid to re-run data processed before
-  if (cellranger_pipe=="CR_arc_reanalyze_outliers" || cellranger_pipe=="CR_arc_reanalyze" ) { stop() }
-  
-  message("CellRanger ARC input: ", cellranger_pipe)
-  # Check/create directories
-  
-  if (cellranger_pipe=="CR_arc_reanalyze") {
-    # stop()
-    inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
-    inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", "cvs_files_markers")
-    processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze")
-    cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze", "cvs_files_markers")
-    
-  } else { # CR_arc_reanalyze_outliers (GEX) or CR_arc_reanalyze_outliers_ATAC 
-    
-    inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze_outliers") 
-    inputDir_cvs <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze_outliers", "cvs_files_markers")
-    processedDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze_outliers")
-    cvsDir <- here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze_outliers", "cvs_files_markers")
-  }  
-  
-} else {
-  
-  message("Input argument missed")
-  message("CellRanger input: ", cellranger_pipe)
-  stop()
-  
-}
-  
+
+message("Reading files to annotate cell-types in WNN clusters")
+# Check/create directories
+
+# knn = 20
+knn = 30
+# knn = 40
+methodWNN = "C.leiden_lsi_r"
+# method = "C.SLM_lsi_r"
+# method = "C.louvain_lsi_r"
+# method = "C.louvainM_lsi_r"
+# res = 0.8 
+resolution = 1
+# res = 1.5
+# res = 2
+
+inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
+inputDir_cvs <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method", "cvs_files")
+processedDir <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze")
+cvsDir <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze", "cvs_files_markers")
+
+
 ## Check directories
 if (!dir.exists(processedDir)) {dir.create(processedDir)}
 if (!dir.exists(cvsDir)) {dir.create(cvsDir)}
@@ -74,42 +65,20 @@ source(here("code", "04_DiffExpr_Clustering_seurat", "remote_DGE_marker_gene_lis
 
 #############################           Initials        ################################
 
-## Set count-mtx type and integration model (CCA or Harmony)
+prefix_Seurat_name = "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k" #30_C.leiden_lsi_r1.rds
+seurat_RDSname = paste0(prefix_Seurat_name, knn, "_", methodWNN, resolution, ".rds")
 
-count_mtx_type <- 'norm_counts' 
-Seurat_reduction <- 'Harmony' 
-minCells <- 1
-# Seurat_reduction <- 'CCA'
-# count_mtx_type <- 'data_counts'
-## Minimum cells by cluster
-
-if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts' }
-
-## Build Seurat object name. `subset` suffix means clusters with fewer cells than `minCells` had been filtered. 
-ifelse (Seurat_reduction=='CCA', Seurat_base_name <- paste0(Seurat_base_name, '_CCA_All'), Seurat_base_name <- paste0(Seurat_base_name, '_Harmony_All'))
-                                                             
 ## Validate seurat exists
-if (length(list.files(inputDir, pattern = Seurat_base_name)==1)) {
-  message("Processing ", cellranger_pipe)
+if (length(list.files(inputRDS_Dir, pattern = seurat_RDSname)==1)) {
+  message("Processing ", Seurat_base_name)
 } else {
   message("Input seurat object missed!")
   stop()
 }
+seurat_RDSname <- here(inputRDS_Dir, seurat_RDSname)
 
-message("Starting cell-type identification for `", cellranger_pipe, "`")
+message("Starting cell-type identification")
 
-## Load Seurat Integrated with cluster information
-seurat_RDSname <- case_when(
-  cellranger_pipe == "CR_arc_reanalyze_outliers" ~ here(inputDir, paste0(Seurat_base_name, "_GEX_subset_Outliers.rds")),
-  cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" ~ here(inputDir, paste0(Seurat_base_name, "_ATAC_subset_Outliers.rds")),
-  .default = as.character(here(inputDir, paste0(Seurat_base_name, ".rds")))
-)
-# if (cellranger_pipe == "CR_arc_reanalyze_outliers" || cellranger_pipe == "CR_arc_reanalyze_outliers") {
-#   seurat_RDSname <- here(inputDir, paste0(Seurat_base_name, "_GEX_subset_Outliers.rds"))
-# } else {
-#   seurat_RDSname <-here(inputDir, paste0(Seurat_base_name, ".rds"))
-# }
-basename(seurat_RDSname)
 SeuratOBJ <- readRDS(seurat_RDSname)
 ## verification
 length(Cells(x = SeuratOBJ))
