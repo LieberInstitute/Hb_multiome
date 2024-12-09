@@ -16,6 +16,15 @@
 
 library("Seurat")                                
 library("Signac")   
+library("igraph")
+library("reticulate")
+# ```
+# reticulate::py_module_available(module='leidenalg')
+# reticulate::import('leidenalg')
+# 
+# ```
+library("leiden")
+#library("leidenAlg")
 library("tidyverse")
 library('ggplot2')
 library("here")
@@ -30,9 +39,9 @@ clust_res <- args[4]
 clust_knn <- args[6]
 
 # ## For testing use:
-# clust_method = 2
-# clust_res = 0.8
-# clust_knn = 30
+# clust_method = 4
+# clust_res = 1
+# clust_knn = 20
 
 if (length(clust_method) && length(clust_res) &&  length(clust_knn)) {
   message("\n ====== Processing clustering with method ", clust_method, " at resolution=", clust_res," with k.nn = ", clust_knn, " ======\n")
@@ -42,9 +51,9 @@ if (length(clust_method) && length(clust_res) &&  length(clust_knn)) {
 
 ## Preparing directories
 inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
-outputRDS_Dir <- here("processed-data", "05_Clustering_ARCr")
-outputCVS_Dir <- here("processed-data", "05_Clustering_ARCr", "cvs_files")
-plotDir <- here("plots", "05_Clustering_ARCr")
+outputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
+outputCVS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method", "cvs_files")
+plotDir <- here("plots", "05_Clustering_ARCr", "01_clustering_std_method")
 
 
 ## Check if processed_data directory exists, if not create it
@@ -172,8 +181,11 @@ clust_name <- case_when(
 # 3 = SLM algorithm
 # 4 = Leiden algorithm
 
+
 SeuratOBJ_2 <- FindClusters(SeuratOBJ_2,
                           resolution = as.integer(clust_res),
+                          method = "igraph",
+                          random.seed = 06122024,
                           algorithm = as.integer(clust_method),
                           cluster.name = clust_name)
 # Returns a Seurat where the idents have been updated with new cluster info
@@ -313,9 +325,12 @@ message("\nSeurat with WNN saved: ", basename(rds_name))
 message("WNN completed!")
 
 ## Find DEG in the integrated Seurat for ALL clusters
+
+DefaultAssay(SeuratOBJ_2) <- "RNA"
+
 table(SeuratOBJ_2[["seurat_clusters"]])
 all.markers <- FindAllMarkers(object = SeuratOBJ_2)
-#head(all.markers, n=3)
+head(all.markers, n=3)
 
 cvs_file <- paste0(Seurat_base_name, "_markers_WNN_", sufix_name,".csv")
 cvs_file <- here(outputCVS_Dir, cvs_file)
