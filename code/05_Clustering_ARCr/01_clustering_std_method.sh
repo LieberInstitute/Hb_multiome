@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=60G
+#SBATCH --mem=100G
 #SBATCH --job-name=01_clustering_std_method
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
