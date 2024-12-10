@@ -298,7 +298,7 @@ SeuratOBJ_2 <- FindClusters(SeuratOBJ_2,
                           algorithm = as.integer(clust_method))
 
 Reductions(SeuratOBJ_2)
-str(SeuratOBJ_2$wnn.umap)
+#str(SeuratOBJ_2$wnn.umap)
 table(Idents(SeuratOBJ_2))
 
 # print(as.data.frame(table(Idents(SeuratOBJ_2))), row.names = FALSE)
@@ -332,7 +332,7 @@ table(SeuratOBJ_2[["seurat_clusters"]])
 all.markers <- FindAllMarkers(object = SeuratOBJ_2)
 head(all.markers, n=3)
 
-cvs_file <- paste0(Seurat_base_name, "_markers_WNN_", sufix_name,".csv")
+cvs_file <- paste0(Seurat_base_name, "_WNN_", sufix_name,"_markers.csv")
 cvs_file <- here(outputCVS_Dir, cvs_file)
 write.csv(all.markers, cvs_file)
 
@@ -340,9 +340,9 @@ message("\nMarkers saved: ", basename(cvs_file))
 
 message("\nFindAllMarkers completed!")
 
-message("\All tasks done!")
+message("\nAll tasks done!")
 
-message("\****END****")
+message("\n****END****")
 
 
 # library("slurmjobs")
