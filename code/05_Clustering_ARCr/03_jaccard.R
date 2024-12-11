@@ -1,45 +1,120 @@
+########################################################################
+## Compares pre-selected Seurats including WNN clusters with different methods, resolutions and knn-connectivity settings
+## INPUT:
+##      (1) First Seurat with WNN to compare
+##      (2) Second Seurat with WNN to compare
+##
+## OUPUT:
+##      1) Jaccard Index Heatmap
+##
+## Authors. CSC 
+## Date. Dec 11, 2024
+## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
+########################################################################
+
+library("Seurat")
+library("Signac")
 library("here")
-library("spatialLIBD")
+#library("spatialLIBD")
 library("dplyr")
 library("bluster")
 library("ComplexHeatmap")
 library("viridisLite")
-library("sessioninfo")
 
-#### Plot Setup ####
-plot_dir <- here("plots", "08_spatial_registration")
-if (!dir.exists(plot_dir)) {
-    dir.create(plot_dir)
-}
+## input directories
+
+# Check/create directories
+inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
+plotDir <- here("plots", "05_Clustering_ARCr", "03_jaccard")
+
+## Check directories
+if (!dir.exists(plotDir)) {dir.create(plotDir)}
+
+## Load the Seurats with WNN clusters
+
+message("Reading Seurat to compute Jaccard Index on WNN clusters")
+
+## Main arguments to specify which WNN clustering results to compare
+
+Seurat_base_name = "seurat.norm_counts_Harmony_ARCr_QCed"
+# knn = 20
+knn = 30
+# knn = 40
+# methodWNN = "C.leiden_lsi_r"
+# methodWNN = "C.SLM_lsi_r"
+methodWNN = "C.louvain_lsi_r"
+# methodWNN = "C.louvainM_lsi_r"
+# res = 0.8 
+resolution = 1
+# res = 1.5
+# res = 2
+
+Seurat_base_name_1 = paste0(Seurat_base_name, "_WNN_k", knn, "_", methodWNN, resolution)
+seurat_RDSname_1 = paste0(Seurat_base_name_1, ".rds")
+if ( !length(list.files(inputRDS_Dir, pattern = seurat_RDSname_1)==1) ) { message("Seurat object missed!");  stop() }
 
 
-## Load the SPE with clusters
-Sys.time()
-load(
-    here(
-        "processed-data",
-        "rdata",
-        "spe",
-        "01_build_spe",
-        "spe_filtered_final_with_clusters.Rdata"
-    ),
-    verbose = TRUE
-)
-Sys.time()
+## Load FIRST Seurat with WNN clustering 
 
-## Read the layers
-bayes_layers <-
-    get(load(
-        here(
-            "processed-data",
-            "rdata",
-            "spe",
-            "08_spatial_registration",
-            "bayesSpace_layer_annotations.Rdata"
-        )
-    )) |>
-    select(Annotation = bayesSpace, layer_long = cluster, layer_combo) |>
-    filter(Annotation %in% c("k09", "k16", "k28"))
+seurat_RDSname_1 <- here(inputRDS_Dir, seurat_RDSname_1)
+SeuratOBJ_1 <- readRDS(seurat_RDSname_1)
+# length(Cells(x = SeuratOBJ))
+message("\nFirst Seurat with WNN loaded: `", Seurat_base_name_1, "`")
+
+
+## Prepare arguments for SECOND WNN data clustering 
+
+methodWNN = "C.leiden_lsi_r"
+
+Seurat_base_name_2 = paste0(Seurat_base_name, "_WNN_k", knn, "_", methodWNN, resolution)
+seurat_RDSname_2 = paste0(Seurat_base_name_2, ".rds")
+if ( !length(list.files(inputRDS_Dir, pattern = seurat_RDSname_2)==1) ) { message("Seurat object missed!");  stop() }
+
+
+## Load SECOND Seurat with WNN clustering 
+
+seurat_RDSname2 <- here(inputRDS_Dir, seurat_RDSname_2)
+SeuratOBJ_2 <- readRDS(seurat_RDSname_2)
+# length(Cells(x = SeuratOBJ))
+message("\nSecond Seurat with WNN loaded: `", Seurat_base_name_2, "`")
+
+
+## Some fast checking
+
+Reductions(SeuratOBJ_1)
+colnames(SeuratOBJ_1@meta.data)
+tail(SeuratOBJ_1[["seurat_clusters"]], n=3)
+tail(SeuratOBJ_1[["wsnn_res.1"]], n=3)
+
+message("Starting Jaccard Index Processing ...")
+
+
+# Sys.time()
+# load(
+#     here(
+#         "processed-data",
+#         "rdata",
+#         "spe",
+#         "01_build_spe",
+#         "spe_filtered_final_with_clusters.Rdata"
+#     ),
+#     verbose = TRUE
+# )
+# Sys.time()
+
+# ## Read the layers
+# bayes_layers <-
+#     get(load(
+#         here(
+#             "processed-data",
+#             "rdata",
+#             "spe",
+#             "08_spatial_registration",
+#             "bayesSpace_layer_annotations.Rdata"
+#         )
+#     )) |>
+#     select(Annotation = bayesSpace, layer_long = cluster, layer_combo) |>
+#     filter(Annotation %in% c("k09", "k16", "k28"))
 
 
 ## Compute the jaccard matrices, just like at
@@ -165,6 +240,7 @@ Heatmap(
 dev.off()
 
 ## Reproducibility information
+library("sessioninfo")
 print("Reproducibility information:")
 Sys.time()
 proc.time()
