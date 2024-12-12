@@ -29,10 +29,12 @@ library("viridisLite")
 
 # Check/create directories
 inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
+outputCVS_Dir <- here("processed-data", "05_Clustering_ARCr")
 plotDir <- here("plots", "05_Clustering_ARCr", "03_jaccard")
 
 ## Check directories
 if (!dir.exists(plotDir)) {dir.create(plotDir)}
+if (!dir.exists(outputCVS_Dir)) {dir.create(outputCVS_Dir)}
 
 ## Load the Seurats with WNN clusters
 
@@ -116,6 +118,7 @@ message("Starting Jaccard Index Processing ...")
 
 
 ## Plot approximate silhouette for evaluating cluster separation
+## Identified and save closest neighboring cluster for each cell in each cluster 
 
 plot_approxSilhouette <- function(sce, name_reduction, name_method, re, k){
   
@@ -126,14 +129,19 @@ plot_approxSilhouette <- function(sce, name_reduction, name_method, re, k){
   sil.data$closest <- factor(ifelse(sil.data$width > 0, colData(sce)$seurat_clusters, sil.data$other))
   sil.data$cluster <- colData(sce)$seurat_clusters
   
+  ## identified the closest neighboring cluster for each cell in each cluster
+  tbl_aprox_sil <- table(Cluster=colData(sce)$seurat_clusters, sil.data$closest)
+  cvs_file <- paste0("Silhouette_closest_neighboring_cluster_tbl_", name_method, "_r", re, "_knn", k, ".cvs")
+  cvs_file <- here(outputCVS_Dir, cvs_file)
+  write.csv(tbl_aprox_sil, cvs_file)
+  
   plt1 <- ggplot(sil.data, aes(x=cluster, y=width, colour=closest)) +
-    ggbeeswarm::geom_quasirandom(method="smiley") + labs(title = paste0(methodWNN, " at resolution = ", re, " with k.nn=", k)) +
-    labs(subtitle = "CellRangerARC-reanalyze Human Hb")
-  ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name_1, "_Silhouette_r", re, "_knn", k, ".png")), height = 6, width = 10)
+    ggbeeswarm::geom_quasirandom(method="smiley") + labs(title = paste0(name_method, " at resolution = ", re, " with k.nn=", k))
+    #+ labs(subtitle = "CellRangerARC-reanalyze Human Hb")
+  ggsave(plt1, filename = here(plotDir, paste0("Silhouette_", name_method, "_r", re, "_knn", k, ".png")), height = 6, width = 10)
   
   return(plt1)
 }
-
 
 sce.1 <- as.SingleCellExperiment(SeuratOBJ_1, assay = "RNA")
 reducedDimNames(sce.1)
@@ -141,17 +149,23 @@ reducedDimNames(sce.1)
 # [4] "UMAP"               "INTEGRATED.HARMONY" "UMAP.LOVAIN"       
 # [7] "LSI"                "UMAP.ATAC"          "WNN.UMAP"
 spe1.red_name <-  "UMAP.LOVAIN"
+rm("SeuratOBJ_1")
 
 sce.2 <- as.SingleCellExperiment(SeuratOBJ_2, assay = "RNA")
 reducedDimNames(sce.2)
 spe2.red_name <-  "UMAP.LEIDEN"
+rm("SeuratOBJ_2")
 
-substring(spe1.red_name, 5, length(spe2.red_name))
+## Prepare Silhoutte plot
 plt_lov <- plot_approxSilhouette(sce.1, spe1.red_name, substring(spe1.red_name, 6, nchar(spe1.red_name)), resolution, knn)
 plt_leid <- plot_approxSilhouette(sce.2, spe2.red_name, substring(spe2.red_name, 6, nchar(spe2.red_name)), resolution, knn)
 plt1 <- plt_lov / plt_leid
-ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name_1, "_Silhouette_r1_knn30.png")), height = 12, width = 10)
+tmp_name <- paste0(substring(spe1.red_name, 6, nchar(spe1.red_name)), "_", substring(spe2.red_name, 6, nchar(spe2.red_name)))
+tmp_name <- paste0("Silhouette_", tmp_name, "_r", resolution, "_knn", knn, ".png")
+ggsave(plt1, filename = here(plotDir, tmp_name), height = 12, width = 10)
 
+
+## Comparing different clusterings
 
 # Sys.time()
 # load(
