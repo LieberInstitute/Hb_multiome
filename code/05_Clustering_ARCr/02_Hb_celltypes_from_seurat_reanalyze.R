@@ -194,12 +194,10 @@ for (markers.lst in markers.custom) {
 
 message(' Cell type identification done!')
 
-
-# slurmjobs::job_loop(
-#   loops = list(cellranger_pipe = c("CR_arc_reanalyze", "CR_arc_reanalyze_outliers", "CR_arc_reanalyze_outliers_ATAC")),
-#   name = "01_Hb_celltypes_from_seurat_reanalyze_v4",
-#   cores = 2,
-#   create_shell = TRUE
+# library("slurmjobs")
+# slurmjobs::job_single(
+#   name = "02_Hb_celltypes_from_seurat_reanalyze", memory = "30G", cores = 2, create_shell = TRUE,
+#   task_num = 8
 # )
 
 library("sessioninfo")
