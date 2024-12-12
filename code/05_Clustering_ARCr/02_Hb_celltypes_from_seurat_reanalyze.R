@@ -16,6 +16,7 @@
 
 ## load libraries
 library("Seurat")
+library("Signac")
 library("tidyverse")
 library("dplyr")
 library("data.table")
@@ -24,36 +25,17 @@ library("here")
 
 here::here()
 
-## read input arguments
+## read input arguments ( name of RDS Seurat file with wnn clustering to parse )
 args = commandArgs(trailingOnly=TRUE)
-cellranger_pipe <- args[2]
-## For testing:
-# cellranger_pipe <- "CR_arc_reanalyze" # This is multiome not QCed
-# cellranger_pipe <- "CR_arc_reanalyze_outliers" # This is for only GEX
-# cellranger_pipe <- "CR_arc_reanalyze_outliers_ATAC" # This is for only ATAC
+Seurat_base_name <- args[2]
 
 ## input directories
 
-message("Reading files to annotate cell-types in WNN clusters")
 # Check/create directories
-
-# knn = 20
-knn = 30
-# knn = 40
-methodWNN = "C.leiden_lsi_r"
-# method = "C.SLM_lsi_r"
-# method = "C.louvain_lsi_r"
-# method = "C.louvainM_lsi_r"
-# res = 0.8 
-resolution = 1
-# res = 1.5
-# res = 2
-
 inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
 inputDir_cvs <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method", "cvs_files")
 processedDir <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze")
 cvsDir <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze", "cvs_files_markers")
-
 
 ## Check directories
 if (!dir.exists(processedDir)) {dir.create(processedDir)}
@@ -65,8 +47,22 @@ source(here("code", "04_DiffExpr_Clustering_seurat", "remote_DGE_marker_gene_lis
 
 #############################           Initials        ################################
 
-prefix_Seurat_name = "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k" #30_C.leiden_lsi_r1.rds
-seurat_RDSname = paste0(prefix_Seurat_name, knn, "_", methodWNN, resolution, ".rds")
+message("Reading files to annotate cell-types in WNN clusters")
+
+## Some WNN clustering results of interest
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1.rds
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r2.rds
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1.rds
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r2.rds
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r1.rds
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r2.rds
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.SLM_lsi_r1.rds
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.SLM_lsi_r2.rds
+
+# testing
+# Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1"
+
+seurat_RDSname = paste0(Seurat_base_name, ".rds")
 
 ## Validate seurat exists
 if (length(list.files(inputRDS_Dir, pattern = seurat_RDSname)==1)) {
@@ -77,11 +73,12 @@ if (length(list.files(inputRDS_Dir, pattern = seurat_RDSname)==1)) {
 }
 seurat_RDSname <- here(inputRDS_Dir, seurat_RDSname)
 
-message("Starting cell-type identification")
-
 SeuratOBJ <- readRDS(seurat_RDSname)
 ## verification
 length(Cells(x = SeuratOBJ))
+nrow(unique(SeuratOBJ[["seurat_clusters"]]))
+
+message("Seurat loaded! Starting cell-type identification")
 
 ## Select gene markers lists. We have 3.
 markers.custom = list()
@@ -122,11 +119,7 @@ df_mdT <- as.data.frame(mdT)
 #sum(df_mdT$N)
 
 ## Save cluster information
-cvs_name <- case_when(
-  cellranger_pipe == "CR_arc_reanalyze_outliers" ~ here(cvsDir, paste0(Seurat_base_name, '_cluster_info_GEX.csv')),
-  cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" ~ here(cvsDir, paste0(Seurat_base_name, '_cluster_info_ATAC.csv')),
-  .default = as.character( here(cvsDir, paste0(Seurat_base_name, '_cluster_info.csv')))
-)
+cvs_name <- here(cvsDir, paste0(Seurat_base_name, '_cluster_info.csv'))
 ## e.g: seurat.data_counts_Harmony_cluster_info.csv
 write.csv(df_mdT, cvs_name)
 
@@ -134,22 +127,15 @@ write.csv(df_mdT, cvs_name)
 clusters <- unique(df_mdT$seurat_clusters)
 clusters <- as.integer(levels(clusters)[as.integer(clusters)])
 
-message('Identifing cell types for ', length(clusters),' clusters from `', cellranger_pipe, '` dataset')
+message('Identifing cell types for ', length(clusters),' clusters from CR_reanalyze QCed dataset')
 
 ## Read All markers CVS file for all clusters
-DGE_cvs_name <- case_when(
-  cellranger_pipe == "CR_arc_reanalyze_outliers" ~ here(inputDir_cvs, paste0(Seurat_base_name, "markers_GEX.csv")) ,
-  cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" ~ here(inputDir_cvs, paste0(Seurat_base_name, "markers_ATAC.csv")) ,
-  .default = as.character(here(inputDir_cvs, paste0(Seurat_base_name, "markers.csv")) )
-)
-#DGE_cvs_name <- here(inputDir_cvs, paste0(Seurat_base_name, "markers_GEX.csv")) 
-#seurat.norm_counts_Harmony_Allmarkers_GEX.csv
+DGE_cvs_name <- here(inputDir_cvs, paste0(Seurat_base_name, "_markers.csv"))
 
 seurat_clust <- as.data.frame(read.csv(DGE_cvs_name, header = TRUE))
 head(seurat_clust, n=3)
 
-message('Parsing ', length(markers.custom), ' gene-markers lists on ', length(clusters) ,' clusters in `', cellranger_pipe, '` dataset ', 
-        Seurat_reduction, ' reduction')
+message('Parsing ', length(markers.custom), ' gene-markers lists on ', length(clusters) ,' clusters in CR_reanalyze QCed dataset ')
 
 
 ####### Parse the 10/20 DGE genes from GEX cluster against the marker genes list provided ####### 
@@ -170,12 +156,7 @@ for (markers.lst in markers.custom) {
   names(markers.lst)
   
   ## Compose file name with cell-types identified, for every group of clusters defined above, for every marker-list reference provided 
-  prefix_name <- case_when(
-    cellranger_pipe == "CR_arc_reanalyze_outliers" ~ paste0(names(markers.custom[idx_lst]), '_top', n_slice, "_GEX"),
-    cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" ~ paste0(names(markers.custom[idx_lst]), '_top', n_slice, "_ATAC"),
-    .default = as.character(paste0(names(markers.custom[idx_lst]), '_top', n_slice))
-  )
-  #prefix_name <- paste0(names(markers.custom[idx_lst]), '_top', n_slice, "_GEX")
+  prefix_name <- paste0(names(markers.custom[idx_lst]), '_top', n_slice)
   
   # Parse every cluster and extract the top <n_slice> genes
   for (clust in clusters) {
