@@ -14,11 +14,15 @@
 
 library("Seurat")
 library("Signac")
-library("here")
+library("scran")
+library("bluster")
+library("SingleCellExperiment")
 #library("spatialLIBD")
 library("dplyr")
 library("bluster")
 library("ComplexHeatmap")
+library("ggplot2")
+library("here")
 library("viridisLite")
 
 ## input directories
@@ -32,7 +36,7 @@ if (!dir.exists(plotDir)) {dir.create(plotDir)}
 
 ## Load the Seurats with WNN clusters
 
-message("Reading Seurat to compute Jaccard Index on WNN clusters")
+message("Reading Seurat(s) to compute Jaccard Index on WNN clusters")
 
 ## Main arguments to specify which WNN clustering results to compare
 
@@ -49,6 +53,7 @@ resolution = 1
 # res = 1.5
 # res = 2
 
+
 Seurat_base_name_1 = paste0(Seurat_base_name, "_WNN_k", knn, "_", methodWNN, resolution)
 seurat_RDSname_1 = paste0(Seurat_base_name_1, ".rds")
 if ( !length(list.files(inputRDS_Dir, pattern = seurat_RDSname_1)==1) ) { message("Seurat object missed!");  stop() }
@@ -59,34 +64,93 @@ if ( !length(list.files(inputRDS_Dir, pattern = seurat_RDSname_1)==1) ) { messag
 seurat_RDSname_1 <- here(inputRDS_Dir, seurat_RDSname_1)
 SeuratOBJ_1 <- readRDS(seurat_RDSname_1)
 # length(Cells(x = SeuratOBJ))
+n_clust <- nrow(unique(SeuratOBJ_1[["seurat_clusters"]]))
 message("\nFirst Seurat with WNN loaded: `", Seurat_base_name_1, "`")
+message(n_clust ," clusters")
+table(SeuratOBJ_1[["seurat_clusters"]])
+# 0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15 
+# 5519 3930 3647 3112 2653 2277 2272 2265 2130 2100 2049 2044 1739 1697 1640 1614 
+# 16   17   18   19   20   21   22   23   24   25   26   27   28   29   30   31 
+# 1518 1500 1497 1392 1268 1165  990  833  833  702  616  559  466  292  284  238 
+# 32   33   34   35   36   37 
+# 236  202  194  104   77   48
 
 
 ## Prepare arguments for SECOND WNN data clustering 
 
+# Seurat_base_name = "seurat.norm_counts_Harmony_ARCr_QCed"
 methodWNN = "C.leiden_lsi_r"
 
 Seurat_base_name_2 = paste0(Seurat_base_name, "_WNN_k", knn, "_", methodWNN, resolution)
 seurat_RDSname_2 = paste0(Seurat_base_name_2, ".rds")
-if ( !length(list.files(inputRDS_Dir, pattern = seurat_RDSname_2)==1) ) { message("Seurat object missed!");  stop() }
-
+if ( !length(list.files(inputRDS_Dir, pattern = seurat_RDSname_2)==1) ) { message("Seurat 2 object missed!");  stop() }
 
 ## Load SECOND Seurat with WNN clustering 
 
-seurat_RDSname2 <- here(inputRDS_Dir, seurat_RDSname_2)
+seurat_RDSname_2 <- here(inputRDS_Dir, seurat_RDSname_2)
 SeuratOBJ_2 <- readRDS(seurat_RDSname_2)
 # length(Cells(x = SeuratOBJ))
+n_clust <- nrow(unique(SeuratOBJ_2[["seurat_clusters"]]))
 message("\nSecond Seurat with WNN loaded: `", Seurat_base_name_2, "`")
-
+message(n_clust ," clusters")
+table(SeuratOBJ_2[["seurat_clusters"]])
+# 1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16 
+# 5516 5240 3041 3023 2378 2330 2295 2261 2123 2077 2041 1971 1809 1758 1743 1700 
+# 17   18   19   20   21   22   23   24   25   26   27   28   29   30   31   32 
+# 1694 1641 1485 1396 1256 1193  968  892  831  706  615  556  450  238  202  195 
+# 33 
+# 78 
 
 ## Some fast checking
 
-Reductions(SeuratOBJ_1)
+Reductions(SeuratOBJ_1) #umap.lovain
+Reductions(SeuratOBJ_2) #umap.leiden
 colnames(SeuratOBJ_1@meta.data)
-tail(SeuratOBJ_1[["seurat_clusters"]], n=3)
+colnames(SeuratOBJ_2@meta.data)
+#tail(SeuratOBJ_1[["seurat_clusters"]], n=3)
 tail(SeuratOBJ_1[["wsnn_res.1"]], n=3)
+#tail(SeuratOBJ_2[["seurat_clusters"]], n=3)
+tail(SeuratOBJ_2[["wsnn_res.1"]], n=3)
 
 message("Starting Jaccard Index Processing ...")
+
+
+## Plot approximate silhouette for evaluating cluster separation
+
+plot_approxSilhouette <- function(sce, name_reduction, name_method, re, k){
+  
+  sil.approx <- approxSilhouette(reducedDim(sce, name_reduction), clusters=colData(sce)$seurat_clusters)
+  #sil.approx <- approxSilhouette(reducedDim(sce.pbmc, "PCA"), clusters=colLabels(sce.pbmc))
+  sil.approx
+  sil.data <- as.data.frame(sil.approx)
+  sil.data$closest <- factor(ifelse(sil.data$width > 0, colData(sce)$seurat_clusters, sil.data$other))
+  sil.data$cluster <- colData(sce)$seurat_clusters
+  
+  plt1 <- ggplot(sil.data, aes(x=cluster, y=width, colour=closest)) +
+    ggbeeswarm::geom_quasirandom(method="smiley") + labs(title = paste0(methodWNN, " at resolution = ", re, " with k.nn=", k)) +
+    labs(subtitle = "CellRangerARC-reanalyze Human Hb")
+  ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name_1, "_Silhouette_r", re, "_knn", k, ".png")), height = 6, width = 10)
+  
+  return(plt1)
+}
+
+
+sce.1 <- as.SingleCellExperiment(SeuratOBJ_1, assay = "RNA")
+reducedDimNames(sce.1)
+# [1] "PCA"                "UMAP.UNINTEGRATED"  "INTEGRATED.CCA"    
+# [4] "UMAP"               "INTEGRATED.HARMONY" "UMAP.LOVAIN"       
+# [7] "LSI"                "UMAP.ATAC"          "WNN.UMAP"
+spe1.red_name <-  "UMAP.LOVAIN"
+
+sce.2 <- as.SingleCellExperiment(SeuratOBJ_2, assay = "RNA")
+reducedDimNames(sce.2)
+spe2.red_name <-  "UMAP.LEIDEN"
+
+substring(spe1.red_name, 5, length(spe2.red_name))
+plt_lov <- plot_approxSilhouette(sce.1, spe1.red_name, substring(spe1.red_name, 6, nchar(spe1.red_name)), resolution, knn)
+plt_leid <- plot_approxSilhouette(sce.2, spe2.red_name, substring(spe2.red_name, 6, nchar(spe2.red_name)), resolution, knn)
+plt1 <- plt_lov / plt_leid
+ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name_1, "_Silhouette_r1_knn30.png")), height = 12, width = 10)
 
 
 # Sys.time()
@@ -119,6 +183,9 @@ message("Starting Jaccard Index Processing ...")
 
 ## Compute the jaccard matrices, just like at
 ## https://github.com/LieberInstitute/DLPFC_snRNAseq/blob/4b94e5bf1986df546bdb8624769e2ab746c23e70/code/05_explore_sce/06_explore_azimuth_annotations.R#L109
+
+SeuratOBJ_1@meta.data
+
 jacc.mat <-
     with(
         colData(spe),
