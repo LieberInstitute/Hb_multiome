@@ -26,8 +26,13 @@ library("here")
 here::here()
 
 ## read input arguments ( name of RDS Seurat file with wnn clustering to parse )
-args = commandArgs(trailingOnly=TRUE)
-Seurat_base_name <- args[2]
+Seurat_base_name <- commandArgs(trailingOnly = TRUE)
+
+# testing:
+# Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1"
+
+
+message(" Reading: ", Seurat_base_name)
 
 ## input directories
 
@@ -50,27 +55,24 @@ source(here("code", "04_DiffExpr_Clustering_seurat", "remote_DGE_marker_gene_lis
 message("Reading files to annotate cell-types in WNN clusters")
 
 ## Some WNN clustering results of interest
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1.rds
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r2.rds
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1.rds
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r2.rds
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r1.rds
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r2.rds
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.SLM_lsi_r1.rds
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.SLM_lsi_r2.rds
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r1
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.SLM_lsi_r1
 
 # testing
 # Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1"
 
 seurat_RDSname = paste0(Seurat_base_name, ".rds")
 
-## Validate seurat exists
+# Validate seurat exists
 if (length(list.files(inputRDS_Dir, pattern = seurat_RDSname)==1)) {
-  message("Processing ", Seurat_base_name)
+  message("Processing: ", Seurat_base_name)
 } else {
   message("Input seurat object missed!")
   stop()
 }
+
 seurat_RDSname <- here(inputRDS_Dir, seurat_RDSname)
 
 SeuratOBJ <- readRDS(seurat_RDSname)
@@ -78,7 +80,7 @@ SeuratOBJ <- readRDS(seurat_RDSname)
 length(Cells(x = SeuratOBJ))
 nrow(unique(SeuratOBJ[["seurat_clusters"]]))
 
-message("Seurat loaded! Starting cell-type identification")
+message("Seurat loaded! Starting cell-type identification ...")
 
 ## Select gene markers lists. We have 3.
 markers.custom = list()
@@ -87,9 +89,14 @@ markers.custom = list()
 markers.custom[["data_driven"]] <- get_Top50r_markers_genes_Hb()
 markers.custom[["literature_base"]] <- get_erik_and_Hb_markers_genes()  
 
+all_marker_lists <- append((markers.custom[["data_driven"]]), (markers.custom[["literature_base"]]))
+all_marker_lists
+length(marker_lists)
+
 ## sub-population list
-#names(markers.custom$literature_base)
-#names(markers.custom)
+# names(markers.custom$literature_base)
+# names(markers.custom$data_driven)
+# names(markers.custom)
 
 ## Check unique marker genes
 # x <- markers.custom[["literature_base"]]
@@ -101,7 +108,7 @@ markers.custom[["literature_base"]] <- get_erik_and_Hb_markers_genes()
 prefix_name <- 'all_gm'                                    # prefix to save matched markers found in the clusters
 
 ## set the number of top DGE genes to pick up
-n_slice <- 20  
+n_slice <- 50  
 
 
 #############################  Set the DGE list to parse  ################################
@@ -134,6 +141,10 @@ DGE_cvs_name <- here(inputDir_cvs, paste0(Seurat_base_name, "_markers.csv"))
 
 seurat_clust <- as.data.frame(read.csv(DGE_cvs_name, header = TRUE))
 head(seurat_clust, n=3)
+# X p_val avg_log2FC pct.1 pct.2 p_val_adj cluster       gene
+# 1      CPNE4     0  -3.229510 0.222 0.693         0       1      CPNE4
+# 2       VAV3     0  -3.692433 0.184 0.640         0       1       VAV3
+# 3 AC119673.2     0  -4.193924 0.029 0.460         0       1 AC119673.2
 
 message('Parsing ', length(markers.custom), ' gene-markers lists on ', length(clusters) ,' clusters in CR_reanalyze QCed dataset ')
 
