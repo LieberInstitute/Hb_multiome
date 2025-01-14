@@ -97,12 +97,6 @@ get_erik_and_Hb_markers_genes <- function() {
     
     # ONLY literature marker gene list 
     
-    # markersTop50 <- get_Top50r_markers_genes_Hb()
-    # MHb_putative = c(markersTop50$MHb_putative)
-    # LHb_putative = c(markersTop50$LHb_putative)
-    # ThalE_putative = c(markersTop50$Thal_excit_putative)
-    # ThalI_putative = c(markersTop50$Thal_inhib_putative)
-    
     markers.custom = list(
         'neuron' = c('SYT1', 'SNAP25'), #'SNAP25', 'GRIN1','MAP2'),
         'excitatory_neuron' = c('SLC17A6', 'SLC17A7'), # 'SLC17A8'),
@@ -120,13 +114,11 @@ get_erik_and_Hb_markers_genes <- function() {
         "Thalamus/MDm/Endo" =  "GBX2",
         "Thalamus/MDm/Endo-" =  "TNNT1",
         "Thalamus/MDm" =  "MEIS2"
-        # 'MHb_putative' = MHb_putative,
-        # 'LHb_putative' = LHb_putative,
-        # 'ThalE_putative' = ThalE_putative,
-        # 'ThalI_putative' = ThalI_putative
     )
     
-    markers.custom
+    names(markers.custom)
+    length(names(markers.custom))
+    names(markers.custom) <- paste0("LB_", names(markers.custom))
     
     return(markers.custom)
     
