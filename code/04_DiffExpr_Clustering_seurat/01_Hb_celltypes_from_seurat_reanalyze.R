@@ -35,8 +35,8 @@ cellranger_pipe <- args[2]
 ## input directories
 if (length(cellranger_pipe)) {
   
-  ## Avoid to re-run data processed before
-  if (cellranger_pipe=="CR_arc_reanalyze_outliers" || cellranger_pipe=="CR_arc_reanalyze" ) { stop() }
+  ## Avoid to re-run cell-types for outliers -- processed before
+  if (cellranger_pipe=="CR_arc_reanalyze_outliers" || cellranger_pipe=="CR_arc_reanalyze_outliers_ATAC" ) { stop() }
   
   message("CellRanger ARC input: ", cellranger_pipe)
   # Check/create directories
@@ -104,11 +104,7 @@ seurat_RDSname <- case_when(
   cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" ~ here(inputDir, paste0(Seurat_base_name, "_ATAC_subset_Outliers.rds")),
   .default = as.character(here(inputDir, paste0(Seurat_base_name, ".rds")))
 )
-# if (cellranger_pipe == "CR_arc_reanalyze_outliers" || cellranger_pipe == "CR_arc_reanalyze_outliers") {
-#   seurat_RDSname <- here(inputDir, paste0(Seurat_base_name, "_GEX_subset_Outliers.rds"))
-# } else {
-#   seurat_RDSname <-here(inputDir, paste0(Seurat_base_name, ".rds"))
-# }
+
 basename(seurat_RDSname)
 SeuratOBJ <- readRDS(seurat_RDSname)
 ## verification
