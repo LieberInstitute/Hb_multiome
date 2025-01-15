@@ -86,7 +86,7 @@ get_Top50r_markers_genes_Hb <- function() {
                             select(c(cellType.target, Symbol)) |>
                            pull(Symbol)) 
                             
-    message("Added ", names(markersDD.list), " to Data-Driven markers list")
+    message("Added ", names(markersDD.list), " to Data-Driven gene markers list")
 
     return(markersDD.list)
     
@@ -116,10 +116,27 @@ get_erik_and_Hb_markers_genes <- function() {
         "Thalamus/MDm" =  "MEIS2"
     )
     
-    names(markers.custom)
-    length(names(markers.custom))
-    names(markers.custom) <- paste0("LB_", names(markers.custom))
+    message("Added ", tmp, " to Literature-Based gene markers list")
     
     return(markers.custom)
     
+}
+
+
+get_multiple_markers_genes_lst <- function() {
+
+  # Join DD and LB gene markers lists
+  ## Gene markers lists
+  markers.custom = list()
+  markers.LB = list()
+  markers.custom[["all_markers"]] <- get_Top50r_markers_genes_Hb()
+  markers.custom[["all_markers"]]
+  
+  markers.LB = get_erik_and_Hb_markers_genes()
+  markers.ALL <- append(markers.custom[["all_markers"]], markers.LB) 
+  length(markers.ALL)
+  names(markers.ALL)
+  
+  return(markers.ALL)
+
 }
