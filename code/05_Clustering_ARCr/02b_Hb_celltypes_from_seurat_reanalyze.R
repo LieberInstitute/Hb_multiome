@@ -89,11 +89,11 @@ markers.custom = list()
 markers.custom[["data_driven"]] <- get_Top50r_markers_genes_Hb()
 markers.custom[["literature_base"]] <- get_erik_and_Hb_markers_genes()  
 
-# ## New function to join LB and DD gene markers lists -- moved to 02b_Hb_celltypes_from_seurat_reanalyze.R
-# markers.custom <- get_multiple_markers_genes_lst()
-# tmp <- names(markers.custom)
-# tmp <- paste(tmp, collapse=', ')
-# message("Processing ", length(markers.custom), " categories of gene-markers list \n *****(", tmp, ")*****")
+## New function to join LB and DD gene markers lists
+markers.custom <- get_multiple_markers_genes_lst()
+tmp <- names(markers.custom)
+tmp <- paste(tmp, collapse=', ')
+message("Processing ", length(markers.custom), " categories of gene-markers list \n *****(", tmp, ")*****")
 
 ## sub-population list
 # names(markers.custom$literature_base)
