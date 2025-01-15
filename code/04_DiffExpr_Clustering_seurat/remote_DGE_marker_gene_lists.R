@@ -116,6 +116,11 @@ get_erik_and_Hb_markers_genes <- function() {
         "Thalamus/MDm" =  "MEIS2"
     )
     
+    names(markers.custom)
+    length(names(markers.custom))
+    names(markers.custom) <- paste0("LB_", names(markers.custom))
+    tmp <- names(markers.custom)
+    tmp <- paste(tmp, collapse=', ')
     message("Added ", tmp, " to Literature-Based gene markers list")
     
     return(markers.custom)
