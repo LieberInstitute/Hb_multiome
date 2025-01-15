@@ -89,9 +89,11 @@ markers.custom = list()
 markers.custom[["data_driven"]] <- get_Top50r_markers_genes_Hb()
 markers.custom[["literature_base"]] <- get_erik_and_Hb_markers_genes()  
 
-all_marker_lists <- append((markers.custom[["data_driven"]]), (markers.custom[["literature_base"]]))
-all_marker_lists
-length(marker_lists)
+## New function to join LB and DD gene markers lists
+markers.custom <- get_multiple_markers_genes_lst()
+tmp <- names(markers.custom)
+tmp <- paste(tmp, collapse=', ')
+message("Processing ", length(markers.custom), " categories of gene-markers list \n *****(", tmp, ")*****")
 
 ## sub-population list
 # names(markers.custom$literature_base)
