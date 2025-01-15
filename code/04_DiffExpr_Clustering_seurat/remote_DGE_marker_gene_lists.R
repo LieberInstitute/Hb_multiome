@@ -85,8 +85,10 @@ get_Top50r_markers_genes_Hb <- function() {
                             dplyr::filter(cellType.target == .x & ratio > 1) |> 
                             select(c(cellType.target, Symbol)) |>
                            pull(Symbol)) 
-                            
-    message("Added ", names(markersDD.list), " to Data-Driven gene markers list")
+
+    tmp <- names(markersDD.list)
+    tmp <- paste(tmp, collapse=', ')                            
+    message("Added ", tmp, " to Data-Driven gene markers list")
 
     return(markersDD.list)
     
