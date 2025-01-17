@@ -19,6 +19,7 @@ library("Seurat")
 library("Signac")
 library("tidyverse")
 library("dplyr")
+library("stringr")
 library("data.table")
 library("magrittr")
 library("here")
@@ -38,9 +39,9 @@ message(" Reading: ", Seurat_base_name)
 
 # Check/create directories
 inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
-inputDir_cvs <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method", "cvs_files")
-processedDir <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze")
-cvsDir <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze", "cvs_files_markers")
+inputDir_cvs <- here(inputRDS_Dir, "cvs_files")
+processedDir <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze_v2")
+cvsDir <- here(processedDir, "cvs_files_markers")
 
 ## Check directories
 if (!dir.exists(processedDir)) {dir.create(processedDir)}
@@ -113,7 +114,7 @@ md <- SeuratOBJ@meta.data %>% as.data.table
 
 ## Apply vertical format to unique cluster with number of UMIs, arranged by sample and cluster number
 mdT <- md[, .N, by = c("orig.ident", "seurat_clusters")] %>%
-    arrange(., orig.ident, seurat_clusters, .by_group = FALSE)
+  arrange(., orig.ident, seurat_clusters, .by_group = FALSE)
 df_mdT <- as.data.frame(mdT)
 head(df_mdT)
 sum(df_mdT$N)
@@ -179,12 +180,12 @@ gm_lst <- as.vector(as.list(markers.lst))
 ## tbl to save top 50 genes by cluster
 all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), 
                            c("Feature.ID", "Feature.Name", "p_val_adj", "cell-type", "cluster")) #Cluster.Adjusted.p.value
-  
+
 message("\nSearching cell-types for all gene markers lists")
 
 ## Compose file name with cell-types identified, for every group of clusters defined above, for every marker-list reference provided
 prefix_name <- paste0('DD_LB_top', n_slice)
-  
+
 ## Annotate cell types based on the reference of gene markers DD+LB
 
 for (clust in clusters) {
@@ -211,7 +212,7 @@ for (clust in clusters) {
   #   }
   # }
 }
-  
+
 # habenula_markers_cvs_name <- here(cvsDir, 
 #                                   paste0(Seurat_base_name, '_cellTypes_', prefix_name, ".csv"))
 # print(paste("Printing results in ", habenula_markers_cvs_name))
@@ -219,12 +220,6 @@ for (clust in clusters) {
 
 message(' Cell type identification done!')
 
-
-# library("slurmjobs")
-# slurmjobs::job_single(
-#   name = "02_Hb_celltypes_from_seurat_reanalyze", memory = "30G", cores = 2, create_shell = TRUE,
-#   task_num = 8
-# )
 
 library("sessioninfo")
 print('Reproducibility information:')
