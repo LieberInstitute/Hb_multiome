@@ -2,7 +2,7 @@
 ## Read Seurat clusters to search cell-types based on a custom marker gene list
 ## INPUT:
 ##      A Seurat Harmony corrected dataset
-##      A csv file with Gene-marker list
+##      A csv file with Gene-marker list. INTEGRATE ALL GENE MARKERS IN ONE LIST
 ##      A csv file with DGE from a Seurat Harmony (not pseudo-bulked)
 ## 
 ## OUPUT:
