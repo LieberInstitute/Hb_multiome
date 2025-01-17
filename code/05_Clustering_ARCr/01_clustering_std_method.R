@@ -47,7 +47,8 @@ if (length(clust_method) && length(clust_res) &&  length(clust_knn)) {
   message("\n ====== Processing clustering with method ", clust_method, " at resolution=", clust_res," with k.nn = ", clust_knn, " ======\n")
 } else {
   message("Input arguments missed")
-  stop() }
+  stop() 
+}
 
 ## Preparing directories
 inputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
@@ -74,6 +75,7 @@ rds_name <- here(inputDir, paste0(Seurat_base_name, ".rds"))
 
 ## load seurat QC'ed
 SeuratOBJ <- readRDS(rds_name)
+SeuratOBJ
 
 message('Seurat object loaded!')
 
@@ -84,7 +86,6 @@ table(SeuratOBJ$orig.ident)
 # 8054     4045
 
 message("Clustering ", length(Cells(SeuratOBJ)), " cells")
-SeuratOBJ
 
 ## Plot before re-cluster data for comparison
 
@@ -123,49 +124,12 @@ ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_redDim_umaps.pn
 
 set.seed(03122024)
 
+# Note data set were previously normalized and scaled 
+
 DefaultAssay(SeuratOBJ) <- "RNA"
-
-# SeuratOBJ <- NormalizeData(SeuratOBJ,
-#                            normalization.method = "LogNormalize",
-#                            scale.factor = 10000)
-# # In the LogNormalize method, Feature counts for each cell are divided by the total counts for that cell and multiplied by the scale.factor
-#
-# tail(SeuratOBJ[["RNA"]]$data, n=3)
-#
-# SeuratOBJ <- FindVariableFeatures(SeuratOBJ,
-#                                   selection.method = "vst",
-#                                   nfeatures = 2000)
-# # nfeatures define the top variable features to use
-# # only used when selection.method is set to 'dispersion' or 'vst'
-#
-# # Identify the 10 most highly variable genes
-# top10 <- head(VariableFeatures(SeuratOBJ), 10)
-#
-# # plot variable features with and without labels
-# plot1 <- VariableFeaturePlot(SeuratOBJ, raster=FALSE)
-# plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
-
-## Scales and centers features in the dataset
-## If variables are provided in vars.to.regress, they are individually regressed against each feature
-
-# all.genes <- rownames(SeuratOBJ)
-# SeuratOBJ <- ScaleData(SeuratOBJ, features = all.genes,
-#                        vars.to.regress = NULL)
-
-## Perform linear dimensional reduction
-
-# # We perform PCA on the scaled data
-#
-# SeuratOBJ <- RunPCA(SeuratOBJ, features = VariableFeatures(object = SeuratOBJ))
-# DimHeatmap(SeuratOBJ, dims = 1, cells = 300, balanced = TRUE)
-# VizDimLoadings(SeuratOBJ, dims = 1:2, reduction = "pca")
-# DimPlot(SeuratOBJ)  + NoLegend()
-# ElbowPlot(SeuratOBJ)
-
 
 ## Cluster the cells using original Lovain algorithm
 
-#SeuratOBJ_2 <- FindNeighbors(SeuratOBJ, dims = 1:20)
 SeuratOBJ_2 <- FindNeighbors(SeuratOBJ, dims = 1:30, reduction = "integrated.harmony")
 
 ## get proper name to save the clustering results
@@ -223,6 +187,10 @@ umap_rna_name <- case_when(
   clust_method == "2" ~ "umap.lovainM",
   clust_method == "3" ~ "umap.SLM",
   clust_method == "4" ~ "umap.leiden")
+
+message("Clustering method: ", clust_name, "\n", 
+        "Clustering resolution: ", as.integer(clust_res), "\n",
+        "Clustering knn: ", clust_knn)
 
 #SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2, dims = 1:20, reduction = "pca", reduction.name = "umap.lovain")
 SeuratOBJ_2 <- RunUMAP(SeuratOBJ_2, dims = 1:30, 
@@ -341,8 +309,6 @@ message("\nMarkers saved: ", basename(cvs_file))
 message("\nFindAllMarkers completed!")
 
 message("\nAll tasks done!")
-
-message("\n****END****")
 
 
 # library("slurmjobs")
