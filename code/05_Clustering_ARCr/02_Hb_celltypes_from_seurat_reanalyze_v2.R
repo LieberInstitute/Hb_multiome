@@ -88,7 +88,7 @@ tmp <- paste(tmp, collapse=', ')
 message("Processing ", length(markers.custom), " categories of gene-markers list \n *****(", tmp, ")*****")
 
 ## sub gene markers list
-print(names(markers.custom))
+# print(names(markers.custom))
 
 ## Check unique and number of duplicate marker genes
 # x <- markers.custom
@@ -120,8 +120,13 @@ head(df_mdT)
 sum(df_mdT$N)
 
 ## Save cluster information
-cvs_name <- here(cvsDir, paste0(Seurat_base_name, '_cluster_info.csv'))
-## e.g: seurat.data_counts_Harmony_cluster_info.csv
+
+# Extract base name to easily identify files  
+
+tmp <- str_extract(Seurat_base_name, "ARC+.+")
+# Ex. ARCr_QCed_WNN_k30_C.leiden_lsi_r1
+
+cvs_name <- here(processedDir, paste0(tmp, '_cluster_info.csv'))
 write.csv(df_mdT, cvs_name)
 
 ## extract unique clusters in ascending order
@@ -131,7 +136,7 @@ clusters <- as.integer(levels(clusters)[as.integer(clusters)])
 ## Read All markers CVS file for all clusters
 DGE_cvs_name <- here(inputDir_cvs, paste0(Seurat_base_name, "_markers.csv"))
 
-message('Identifying cell types for ', length(clusters),' clusters using `', basename(DGE_cvs_name), "`")
+message('/nSaved cluster info. \nIdentifying cell types for ', length(clusters),' clusters using `', basename(DGE_cvs_name), "`")
 # Identifying cell types for 33 clusters using `seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1_markers.csv`
 
 seurat_clust_DEG <- read.csv(DGE_cvs_name, header = TRUE) #seurat_clust_DEG <- as.data.frame(read.csv(DGE_cvs_name, header = TRUE))
@@ -151,15 +156,16 @@ top_DGE_clust <- seurat_clust_DEG |>
   arrange(cluster, p_val_adj)
 tail(top_DGE_clust)
 
-tmp <- str_extract("seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1", "ARC+.+")
-all_markers_cvs_name <- here(cvsDir, paste0("ALLL_DEG_Top50_WNN_", tmp, ".csv"))
+all_markers_cvs_name <- here(processedDir, paste0(tmp, "_all_DEG_Top50_WNN.csv"))
 write.csv(top_DGE_clust, all_markers_cvs_name)
+
+message("\nSaved CVS file with Top50 DEG from: ", tmp)
 
 
 ####### Parse the 10/20 DGE genes from GEX cluster against the marker genes list provided ####### 
 
 ## Build df to save cell-types that match with the gene-marker-list
-names(markers.custom) #[1] "literature_base" and "data_driven" in the same list
+# names(markers.custom) #[1] "literature_base" and "data_driven" in the same list
 # [1] "DD_Astrocyte"                 "DD_Endo"                     
 # [3] "DD_Excit.Thal"                "DD_Inhib.Thal"               
 # [5] "DD_LHb"                       "DD_MHb"                      
@@ -178,7 +184,7 @@ markers.lst <- markers.custom
 gm_lst <- as.vector(as.list(markers.lst))
 
 ## tbl to save top 50 genes by cluster
-all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), 
+all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)),
                            c("Feature.ID", "Feature.Name", "p_val_adj", "cell-type", "cluster")) #Cluster.Adjusted.p.value
 
 message("\nSearching cell-types for all gene markers lists")
