@@ -121,10 +121,10 @@ sum(df_mdT$N)
 
 # Extract base name to easily identify files  
 
-tmp <- str_extract(Seurat_base_name, "ARC+.+")
+tmp_file_name <- str_extract(Seurat_base_name, "ARC+.+")
 # Ex. ARCr_QCed_WNN_k30_C.leiden_lsi_r1
 
-cvs_name <- here(processedDir, paste0(tmp, '_cluster_info.csv'))
+cvs_name <- here(processedDir, paste0(tmp_file_name, '_cluster_info.csv'))
 write.csv(df_mdT, cvs_name)
 
 ## extract unique clusters in ascending order
@@ -154,10 +154,10 @@ top_DGE_clust <- seurat_clust_DEG |>
   arrange(cluster, p_val_adj)
 tail(top_DGE_clust)
 
-all_markers_cvs_name <- here(cvsDir, paste0(tmp, "_all_DEG_Top50_WNN.csv"))
+all_markers_cvs_name <- here(cvsDir, paste0(tmp_file_name, "_DEG_Top50_WNN.csv"))
 write.csv(top_DGE_clust, all_markers_cvs_name)
 
-message("\nSaved CVS file with Top50 DEG from: ", tmp)
+message("\nSaved CVS file with Top50 DEG from: ", basename(all_markers_cvs_name))
 
 
 ####### Parse the 10/20 DGE genes from GEX cluster against the marker genes list provided ####### 
@@ -224,12 +224,11 @@ for (clust in clusters) {
 
 message(nrow(all_gene_match), " total matches.")
 
-all_markers_cvs_name <- here(cvsDir, paste0(tmp, "_all_DEG_Top50_WNN_DD_LB_top50_matching_markers.csv"))
-message("Printing results in ", all_markers_cvs_name)
+all_markers_cvs_name <- here(cvsDir, paste0(tmp_file_name, "_DEG_Top50_WNN_DD_LB_matching_markers.csv"))
 
 write.csv(all_gene_match, all_markers_cvs_name, row.names=FALSE)
 
-message(' Cell type identification completed!')
+message("\nSaved CVS file with matching genes on: ", basename(all_markers_cvs_name))
 
 
 ## Joint Top50 DEG and add matching genes - Annotate cell types based on the reference of gene markers DD+LB
@@ -257,10 +256,13 @@ print(integrate_tbl, n=50)
 
 message(nrow(integrate_tbl), " total matches.")
 
-all_markers_cvs_name <- here(processedDir, paste0(tmp, "_all_DEG_Top50_WNN_DD_LB_matching_markers.csv"))
-message("Printing results in ", all_markers_cvs_name)
+all_markers_cvs_name <- here(processedDir, paste0(tmp_file_name, "_DEG_Top50_WNN_DD_LB_matching_markers_integrated.csv"))
 
 write.csv(integrate_tbl, all_markers_cvs_name, row.names=FALSE)
+
+message("\nSaved CVS file with Top50 matching genes integrated on: ", basename(all_markers_cvs_name))
+message(' Cell type identification completed!')
+
 
 
 library("sessioninfo")
