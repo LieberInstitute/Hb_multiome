@@ -1,15 +1,19 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=50G
-#SBATCH --job-name=02_Hb_celltypes_ARCr_v2
+#SBATCH --mem=80G
+#SBATCH --job-name=02_v2_Hb_celltypes_ARCr
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
-#SBATCH -o logs/02_Hb_celltypes_ARCr_v2_.%a.txt
-#SBATCH -e logs/02_Hb_celltypes_ARCr_v2_e.%a.txt
+#SBATCH -o /dev/null
+#SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
 #SBATCH --array=1-8%20
 id=$(sed -n ${SLURM_ARRAY_TASK_ID}p input_wnn_rds_names.txt)
 
+## Explicitly pipe script output to a log
+log_path=logs/02_v2_Hb_celltypes_ARCr_${id}.txt
+
+{
 set -e
 
 echo "**** Job starts ****"
@@ -24,7 +28,7 @@ echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 echo "WNN file name: $id"
 
 ## Load the R module
-module load conda_R/4.4.x
+module load conda_R/4.3.x
 
 ## List current modules for reproducibility
 module list
@@ -34,3 +38,7 @@ Rscript 02_Hb_celltypes_from_seurat_reanalyze_v2.R $id
 
 echo "**** Job ends ****"
 date
+
+} > $log_path 2>&1
+
+
