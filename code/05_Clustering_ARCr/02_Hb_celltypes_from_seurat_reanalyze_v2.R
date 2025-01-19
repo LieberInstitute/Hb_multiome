@@ -181,7 +181,7 @@ markers.lst <- markers.custom
 
 ## tbl to save top 50 genes by cluster
 all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)),
-                           c("Feature.ID", "Feature.Name", "p_val_adj", "cell-type", "cluster")) #Cluster.Adjusted.p.value
+                           c("Feature.ID", "Feature.Name", "p_val_adj", "cell_type", "cluster")) #Cluster.Adjusted.p.value
 
 message("\nSearching cell-types for all gene markers lists")
 
@@ -211,7 +211,7 @@ for (clust in clusters) {
       # add matched genes to a dataframe
       if (nrow(gene_match) > 0 ) {
         names(gene_match)[names(gene_match) == clust ] <- "Cluster.Adjusted.p.value" # rename cols to rbind
-        gene_match['cell-type']  <- gm_cell_type
+        gene_match['cell_type']  <- gm_cell_type # md.csc 'cell_type' by 'cell-type'
         gene_match['cluster']  <- clust
         all_gene_match <- rbind(all_gene_match, gene_match)
       }
@@ -223,7 +223,6 @@ for (clust in clusters) {
 }
 
 message(nrow(all_gene_match), " total matches.")
-tail(all_gene_match)
 
 all_markers_cvs_name <- here(cvsDir, paste0(tmp, "_all_DEG_Top50_WNN_DD_LB_top50_matching_markers.csv"))
 message("Printing results in ", all_markers_cvs_name)
@@ -231,6 +230,37 @@ message("Printing results in ", all_markers_cvs_name)
 write.csv(all_gene_match, all_markers_cvs_name, row.names=FALSE)
 
 message(' Cell type identification completed!')
+
+
+## Joint Top50 DEG and add matching genes - Annotate cell types based on the reference of gene markers DD+LB
+
+nrow(top_DGE_clust)
+# [1] 1650
+nrow(all_gene_match)
+# [1] 375
+# delete columns with redundant data
+gene_match_subset <- all_gene_match |> select(gene, cell_type)
+
+# keeps all observations in the top50 DEG and add `cell_type` column of matching genes
+integrate_tbl <- left_join(top_DGE_clust, gene_match_subset, by = c("cluster", "gene"))
+nrow(integrate_tbl)
+print(integrate_tbl, n=50)
+#    p_val avg_log2FC pct.1 pct.2 p_val_adj cluster gene       cell_type
+#     <dbl>      <dbl> <dbl> <dbl>     <dbl>   <int> <chr>      <chr>    
+# 1     0      -3.23 0.222 0.693         0       1 CPNE4      NA       
+# 2     0      -3.69 0.184 0.64          0       1 VAV3       NA  
+# 19     0     -2.07  0.399 0.752         0       1 FAT3       NA           
+# 20     0     -2.48  0.09  0.441         0       1 PDE3A      NA           
+# 21     0     -2.08  0.268 0.618         0       1 SNCA       NA           
+# 22     0     -1.87  0.293 0.639         0       1 ST6GALNAC3 NA           
+# 23     0      1.66  0.628 0.285         0       1 GABRG3     DD_Excit.Thal
+
+message(nrow(integrate_tbl), " total matches.")
+
+all_markers_cvs_name <- here(processedDir, paste0(tmp, "_all_DEG_Top50_WNN_DD_LB_matching_markers.csv"))
+message("Printing results in ", all_markers_cvs_name)
+
+write.csv(integrate_tbl, all_markers_cvs_name, row.names=FALSE)
 
 
 library("sessioninfo")
