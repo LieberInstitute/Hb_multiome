@@ -98,8 +98,6 @@ message("Processing ", length(markers.custom), " categories of gene-markers list
 # sum(x1, na.rm=TRUE)
 # summary(table(unname(unlist(x))))
 
-prefix_name <- 'all_gm'                                    # prefix to save matched markers found in the clusters
-
 ## set the number of top DGE genes to pick up
 
 n_slice <- 50  
@@ -156,7 +154,7 @@ top_DGE_clust <- seurat_clust_DEG |>
   arrange(cluster, p_val_adj)
 tail(top_DGE_clust)
 
-all_markers_cvs_name <- here(processedDir, paste0(tmp, "_all_DEG_Top50_WNN.csv"))
+all_markers_cvs_name <- here(cvsDir, paste0(tmp, "_all_DEG_Top50_WNN.csv"))
 write.csv(top_DGE_clust, all_markers_cvs_name)
 
 message("\nSaved CVS file with Top50 DEG from: ", tmp)
@@ -180,8 +178,6 @@ message("\nSaved CVS file with Top50 DEG from: ", tmp)
 # [23] "LB_Thalamus/MDm/Endo-"        "LB_Thalamus/MDm"  
 
 markers.lst <- markers.custom
-# get a vector with all cell-types with their marker genes
-gm_lst <- as.vector(as.list(markers.lst))
 
 ## tbl to save top 50 genes by cluster
 all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)),
@@ -189,42 +185,52 @@ all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)),
 
 message("\nSearching cell-types for all gene markers lists")
 
-## Compose file name with cell-types identified, for every group of clusters defined above, for every marker-list reference provided
-prefix_name <- paste0('DD_LB_top', n_slice)
 
 ## Annotate cell types based on the reference of gene markers DD+LB
 
 for (clust in clusters) {
-  # # Testing:
-  # # clust <- 0
-  # message("Parsing cluster ", as.character(clust))
-  # top_DGE_clust <- seurat_clust_DEG |>
-  #   dplyr::filter(cluster == clust, p_val_adj < 0.05) |> slice_head(n = n_slice)
-  # top_DGE_clust
-  # 
-  # i_pos <- 0      # reset gene-marker list position
-  # 
-  # for ( gm in gm_lst ) {
-  #   #for testing: gm <- gm_lst[[3]]
-  #   i_pos <- i_pos+1                        # control cell type position
-  #   # Match top N genes with the marker genes for the cell-type x
-  #   gene_match <- top_DGE_clust |> filter_all(any_vars(. %in% gm))
-  #   # add matched genes to a dataframe
-  #   if ( nrow(gene_match) > 0 ) {
-  #     names(gene_match)[names(gene_match) == clust ] <- "Cluster.Adjusted.p.value" # rename cols to rbind
-  #     gene_match['cell-type']  <- names(gm_lst[i_pos])
-  #     gene_match['cluster']  <- clust
-  #     all_gene_match <- rbind(all_gene_match, gene_match)
-  #   }
-  # }
+  # Test: clust <- 3
+  
+  message("Parsing cluster ", clust)
+
+  DGE_by_clust <- top_DGE_clust |> filter(cluster == clust)
+
+  if (!nrow(DGE_by_clust) > 0) {
+    
+    message("No information available for the cluster: ", clust)
+    
+  } else {
+    
+    for (gm_idx in seq_along(markers.lst) ) {
+      # Test: gm_idx = 3
+      gm_lst = markers.lst[[gm_idx]]
+      gm_cell_type = names(markers.lst[gm_idx])
+      # Match top N genes with the marker genes for the cell-type x
+      gene_match <- DGE_by_clust |> filter_all(any_vars(. %in% gm_lst))
+      gene_match
+      # add matched genes to a dataframe
+      if (nrow(gene_match) > 0 ) {
+        names(gene_match)[names(gene_match) == clust ] <- "Cluster.Adjusted.p.value" # rename cols to rbind
+        gene_match['cell-type']  <- gm_cell_type
+        gene_match['cluster']  <- clust
+        all_gene_match <- rbind(all_gene_match, gene_match)
+      }
+      
+    }
+    
+  }
+  
 }
 
-# habenula_markers_cvs_name <- here(cvsDir, 
-#                                   paste0(Seurat_base_name, '_cellTypes_', prefix_name, ".csv"))
-# print(paste("Printing results in ", habenula_markers_cvs_name))
-# write.csv(all_gene_match, habenula_markers_cvs_name, row.names=FALSE)
+message(nrow(all_gene_match), " total matches.")
+tail(all_gene_match)
 
-message(' Cell type identification done!')
+all_markers_cvs_name <- here(cvsDir, paste0(tmp, "_all_DEG_Top50_WNN_DD_LB_top50_matching_markers.csv"))
+message("Printing results in ", all_markers_cvs_name)
+
+write.csv(all_gene_match, all_markers_cvs_name, row.names=FALSE)
+
+message(' Cell type identification completed!')
 
 
 library("sessioninfo")
