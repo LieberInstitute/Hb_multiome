@@ -2,7 +2,10 @@
 **/logs/
 **/tmp/
 **/old_scripts/
+**/old/
 **/recycler/
+**/*.log
+**/*.rds
 
 # cellranger arc files 
 #code/cellranger/logs/
@@ -12,6 +15,13 @@ code/cellrangerARC_reanalyze/__*.mro
 ### Cellranger-arc raw data symbolic links
 **/raw-data/
 
+### Scripts with data not longer referred in this project (were used during testing, preliminar exploration on pilot S1 ans S2)
+processed-data/01_preprocessing_QC/pilot_results/
+processed-data/01_preprocessing_QC/csv_files/
+processed-data/02_merge_seurats/csv_files/pilot_results/
+processed-data/03_pseudobulking/cvs_files_markers/pilot_results/
+processed-data/03_pseudobulking/cvs_files_markers/
+
 ### Big files
 # Here lived the main results of the cellranger-count pipeline. We do not control version this results.  
 Nextflow/
@@ -20,4 +30,6 @@ processed-data/cellrangerARC/
 processed-data/cellrangerARC_reanalyze/
 processed-data/cellrangerGEX/
 processed-data/cellrangerATAC/
+processed-data/05_Clustering_ARCr/01_clustering_std_method/
 processed-data/**/*.rds
+processed-data/**/*.RDS
