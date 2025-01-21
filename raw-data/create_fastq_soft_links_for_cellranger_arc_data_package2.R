@@ -138,3 +138,40 @@ if (b_scATAC_lib) {
 message(' Tree of softlinks created in ', main_subdir)
 system(paste0('tree -L 2 ', main_subdir))
 
+
+
+
+
+######### This chunk is ONLY for samples S7 and S8 GERX. These are located in other Dir  #########
+
+## point to GEX
+main_subdir <- here(main_dir, "GEX")  
+## soft-link to fastq raw data
+snRNAseq_path <- here("raw-data", path_rna_name)
+# dir_list <- list.files(path=snRNAseq_path, pattern="*C_Hb*", full.names=FALSE, recursive = FALSE)
+dir_list <- c("7C_Hb_KDM", "8C_Hb_KDM")
+  
+## Parse the GEX files into the sub-directory
+for (new_subdir in dir_list) {
+  if (!new_subdir==fasta_subdir) { 
+    fasta_subdir <- new_subdir 
+    if (!file.exists(file.path(main_subdir, fasta_subdir))) { dir.create(file.path(main_subdir, fasta_subdir)) }  
+  }
+  ## get all Fastq files found recursively in the given directory
+  file_list <- list.files(path=paste0(snRNAseq_path, '/', new_subdir), pattern = "*.fastq.gz", full.names=FALSE, recursive = TRUE)
+  file_list
+  raw_path <- paste0(snRNAseq_path, new_subdir, '/')
+  # create soft links to each GEX Fastq file
+  for (f in file_list) {
+    # in this case we do not require rename files, so we only assign the symbolic link to the file
+    source_file <-  here(raw_path, f)
+    target_file <-  here(main_subdir, new_subdir, basename(f))
+    sys_command <- paste('ln -s ', source_file, target_file)
+    system(sys_command)
+  }
+}
+
+message(' Tree of softlinks created in ', main_subdir)
+system(paste0('tree -L 2 ', main_subdir))
+
+
