@@ -1,5 +1,5 @@
 ########################################################################
-## Compares pre-selected Seurats including WNN clusters with different methods, resolutions and knn-connectivity settings
+## Compares GEX clustering results against pre-selected WNN clustering results
 ## INPUT:
 ##      (1) First Seurat with WNN to compare
 ##      (2) Second Seurat with WNN to compare
@@ -23,6 +23,7 @@ library("bluster")
 library("pheatmap")
 #library("ComplexHeatmap")
 library("ggplot2")
+library("stringr")
 library("here")
 library("viridisLite")
 
@@ -88,10 +89,9 @@ resolution = 1
 ## Load FIRST Seurat with RNA clustering 
 
 SeuratOBJ_1 <- readRDS(seurat_RDSname_1) # 84177 cells
-# length(Cells(x = SeuratOBJ_1))
+message("GEX clustering loaded!\nCells: ", length(Cells(x = SeuratOBJ_1)))
 n_clust <- nrow(unique(SeuratOBJ_1[["seurat_clusters"]]))
-message("\nFirst Seurat with SNN loaded: `", Seurat_base_name_1, "`")
-message(n_clust ," clusters")
+message("\nSNN `", Seurat_base_name_1, "` containing ", n_clust, " clusters")
 table(SeuratOBJ_1[["seurat_clusters"]])
 # 0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15 
 # 5519 3930 3647 3112 2653 2277 2272 2265 2130 2100 2049 2044 1739 1697 1640 1614 
@@ -114,10 +114,9 @@ if ( !length(list.files(inputRDS_Dir, pattern = seurat_RDSname_2)==1) ) { messag
 
 seurat_RDSname_2 <- here(inputRDS_Dir, seurat_RDSname_2)
 SeuratOBJ_2 <- readRDS(seurat_RDSname_2)
-# length(Cells(x = SeuratOBJ))
+message("WNN clustering loaded!\nCells: ", length(Cells(x = SeuratOBJ_2)))
 n_clust <- nrow(unique(SeuratOBJ_2[["seurat_clusters"]]))
-message("\nSecond Seurat with WNN loaded: `", Seurat_base_name_2, "`")
-message(n_clust ," clusters")
+message("\nWNN `", Seurat_base_name_2, "` containing ", n_clust, " clusters")
 table(SeuratOBJ_2[["seurat_clusters"]])
 # 1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16 
 # 5516 5240 3041 3023 2378 2330 2295 2261 2123 2077 2041 1971 1809 1758 1743 1700 
@@ -128,15 +127,10 @@ table(SeuratOBJ_2[["seurat_clusters"]])
 
 ## Some fast checking
 
-Reductions(SeuratOBJ_1) #umap.lovain
-Reductions(SeuratOBJ_2) #umap.leiden
+Reductions(SeuratOBJ_1) 
+Reductions(SeuratOBJ_2) 
 colnames(SeuratOBJ_1@meta.data)
 colnames(SeuratOBJ_2@meta.data)
-tail(SeuratOBJ_1[["seurat_clusters"]], n=3)
-#tail(SeuratOBJ_1[["wsnn_res.1"]], n=3)
-#tail(SeuratOBJ_2[["seurat_clusters"]], n=3)
-tail(SeuratOBJ_2[["wsnn_res.1"]], n=3)
-
 
 message("\nStarting approximate-silhouette for evaluating cluster separation ...")
 
@@ -144,54 +138,79 @@ message("\nStarting approximate-silhouette for evaluating cluster separation ...
 ## (1) Plot approximate silhouette for evaluating cluster separation
 ## (2) Identified and save closest neighboring cluster for each cell in each cluster 
 
-plot_approxSilhouette <- function(sce, name_reduction, name_method, re, k){
-  
-  sil.approx <- approxSilhouette(reducedDim(sce, name_reduction), clusters=colData(sce)$seurat_clusters)
-  #sil.approx <- approxSilhouette(reducedDim(sce.pbmc, "PCA"), clusters=colLabels(sce.pbmc))
-  sil.approx
+#plot_approxSilhouette <- function(sce, name_reduction, name_method, re, k){
+plot_approxSilhouette <- function(SObj, fn){
+
+  # sil.approx <- approxSilhouette(reducedDim(sce, name_reduction), clusters=colData(sce)$seurat_clusters)
+  sil.approx <- approxSilhouette(Embeddings(SObj, reduction = "integrated.harmony"), clusters = SObj$seurat_clusters)
+  #sil.approx
+  # DataFrame with 84177 rows and 3 columns
+  # cluster    other      width
+  # <factor> <factor>  <numeric>
+  # 10C_AAACAGCCAATCATGT-1       5        13  0.2307765
+  # 10C_AAACAGCCACTTCACT-1       16       2   0.4228183
+  # 10C_AAACAGCCAGGACCTT-1       0        6   0.1671839
   sil.data <- as.data.frame(sil.approx)
-  sil.data$closest <- factor(ifelse(sil.data$width > 0, colData(sce)$seurat_clusters, sil.data$other))
-  sil.data$cluster <- colData(sce)$seurat_clusters
+  #sil.data$closest <- factor(ifelse(sil.data$width > 0, colData(sce)$seurat_clusters, sil.data$other))
+  sil.data$closest <- factor(ifelse(sil.data$width > 0, SObj$seurat_clusters, sil.data$other))
+  #sil.data$cluster <- colData(sce)$seurat_clusters
+  sil.data$cluster <- SObj$seurat_clusters
   
   ## identified the closest neighboring cluster for each cell in each cluster
-  tbl_aprox_sil <- table(Cluster=colData(sce)$seurat_clusters, sil.data$closest)
-  cvs_file <- paste0("Silhouette_closest_neighboring_cluster_tbl_", name_method, "_r", re, "_knn", k, ".cvs")
+  # tbl_aprox_sil <- table(Cluster=colData(sce)$seurat_clusters, sil.data$closest)
+  tbl_aprox_sil <- table(Cluster = SObj$seurat_clusters, sil.data$closest)
+  cvs_file <- paste0("Silhouette_", fn, ".cvs")
   cvs_file <- here(outputCVS_Dir, cvs_file)
   write.csv(tbl_aprox_sil, cvs_file)
+  message("approximate silhouette cvs saved!")
   
   plt1 <- ggplot(sil.data, aes(x=cluster, y=width, colour=closest)) +
-    ggbeeswarm::geom_quasirandom(method="smiley") + labs(title = paste0(name_method, " at resolution = ", re, " with k.nn=", k))
+    ggbeeswarm::geom_quasirandom(method="smiley") + labs(title = fn)
     #+ labs(subtitle = "CellRangerARC-reanalyze Human Hb")
-  ggsave(plt1, filename = here(plotDir, paste0("Silhouette_", name_method, "_r", re, "_knn", k, ".png")), height = 6, width = 10)
+  ggsave(plt1, filename = here(plotDir, paste0("Silhouette_", file_name,".png")), height = 6, width = 10)
   
   return(plt1)
+  
 }
 
-sce.1 <- as.SingleCellExperiment(SeuratOBJ_1, assay = "RNA")
-reducedDimNames(sce.1)
-# [1] "PCA"                "UMAP.UNINTEGRATED"  "INTEGRATED.HARMONY"
-# [4] "UMAP"   
-spe1.red_name <-  "INTEGRATED.HARMONY"
-rm("SeuratOBJ_1")
+# sce.1 <- as.SingleCellExperiment(SeuratOBJ_1, assay = "RNA")
+# reducedDimNames(sce.1)
+# # [1] "PCA"                "UMAP.UNINTEGRATED"  "INTEGRATED.HARMONY"
+# # [4] "UMAP"   
+# spe1.red_name <-  "INTEGRATED.HARMONY"
+# rm("SeuratOBJ_1")
+# 
+# sce.2 <- as.SingleCellExperiment(SeuratOBJ_2, assay = "RNA")
+# reducedDimNames(sce.2)
+# 
+# "WNN" %in% reducedDimNames(sce.2)
+# spe2.red_name <-  "UMAP.LEIDEN"
+# rm("SeuratOBJ_2")
 
-sce.2 <- as.SingleCellExperiment(SeuratOBJ_2, assay = "RNA")
-reducedDimNames(sce.2)
-"WNN" %in% reducedDimNames(sce.2)
-spe2.red_name <-  "UMAP.LEIDEN"
-rm("SeuratOBJ_2")
+##  compute an approximate silhouette width for each observation and plot Silhouette plot
+# plt_rna <- plot_approxSilhouette(sce.1, spe1.red_name, substring(spe1.red_name, 6, nchar(spe1.red_name)), resolution, knn)
+# Embeddings(SeuratOBJ_1, reduction = "integrated.harmony")
+# SeuratOBJ_1[["seurat_clusters"]]
 
-## Prepare Silhoutte plot
-plt_rna <- plot_approxSilhouette(sce.1, spe1.red_name, substring(spe1.red_name, 6, nchar(spe1.red_name)), resolution, knn)
-plt_leid <- plot_approxSilhouette(sce.2, spe2.red_name, substring(spe2.red_name, 6, nchar(spe2.red_name)), resolution, knn)
-plt1 <- plt_rna / plt_leid
-tmp_name <- paste0(substring(spe1.red_name, 6, nchar(spe1.red_name)), "_", substring(spe2.red_name, 6, nchar(spe2.red_name)))
-tmp_name <- paste0("Silhouette_", tmp_name, "_r", resolution, "_knn", knn, ".png")
+
+file_name <- "RNA_Harmony"
+plt_rna <- plot_approxSilhouette(SeuratOBJ_1, "RNA_Harmony")
+
+file_name <- str_extract(Seurat_base_name_2, "ARC+.+")
+plt_wnn <- plot_approxSilhouette(SeuratOBJ_2, file_name)
+
+
+
+#plt_leid <- plot_approxSilhouette(sce.2, spe2.red_name, substring(spe2.red_name, 6, nchar(spe2.red_name)), resolution, knn)
+plt1 <- plt_rna / plt_wnn
+tmp_name <- paste0("RNA_", file_name)
+tmp_name <- paste0("Silhouette_", tmp_name, ".png")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 12, width = 10)
 
 
 
 
-## Comparing different clusterings
+## Comparing the clustering data sets 
 
 message("Starting Jaccard Index Processing ...")
 
