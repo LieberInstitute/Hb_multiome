@@ -167,7 +167,7 @@ plot_approxSilhouette <- function(SObj, fn){
   plt1 <- ggplot(sil.data, aes(x=cluster, y=width, colour=closest)) +
     ggbeeswarm::geom_quasirandom(method="smiley") + labs(title = fn)
     #+ labs(subtitle = "CellRangerARC-reanalyze Human Hb")
-  ggsave(plt1, filename = here(plotDir, paste0("Silhouette_", file_name,".png")), height = 6, width = 10)
+  # ggsave(plt1, filename = here(plotDir, paste0("Silhouette_", file_name,".png")), height = 6, width = 10)
   
   return(plt1)
   
@@ -199,15 +199,10 @@ plt_rna <- plot_approxSilhouette(SeuratOBJ_1, "RNA_Harmony")
 file_name <- str_extract(Seurat_base_name_2, "ARC+.+")
 plt_wnn <- plot_approxSilhouette(SeuratOBJ_2, file_name)
 
-
-
-#plt_leid <- plot_approxSilhouette(sce.2, spe2.red_name, substring(spe2.red_name, 6, nchar(spe2.red_name)), resolution, knn)
 plt1 <- plt_rna / plt_wnn
 tmp_name <- paste0("RNA_", file_name)
 tmp_name <- paste0("Silhouette_", tmp_name, ".png")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 12, width = 10)
-
-
 
 
 ## Comparing the clustering data sets 
@@ -215,183 +210,42 @@ ggsave(plt1, filename = here(plotDir, tmp_name), height = 12, width = 10)
 message("Starting Jaccard Index Processing ...")
 
 #https://bioconductor.org/books/3.14/OSCA.advanced/clustering-redux.html
-clust.louvain <- sce.1[["seurat_clusters"]]
-# sce.1[["wsnn_res.1"]]
-clust.leiden <- sce.2[["seurat_clusters"]]
+# sce.1 <- as.SingleCellExperiment(SeuratOBJ_1, assay = "RNA")
+# clust.louvain <- sce.1[["seurat_clusters"]]
+# sce.2 <- as.SingleCellExperiment(SeuratOBJ_2, assay = "RNA")
+# clust.leiden <- sce.2[["seurat_clusters"]]
+# tab <- table(Louvain=clust.louvain, Leiden=clust.leiden)
 
-tab <- table(Louvain=clust.louvain, Leiden=clust.leiden)
-rownames(tab) <- paste("Louvain", rownames(tab))
-colnames(tab) <- paste("Leiden", colnames(tab))
+clust.rna <- SeuratOBJ_1$seurat_clusters
+levels(clust.rna)
+clust.wnn <- SeuratOBJ_2$seurat_clusters
+levels(clust.wnn)
+table(RNA=clust.rna, WNN=clust.wnn)
+tab <- table(RNA=clust.rna, WNN=clust.wnn)
+
+# Error in base::table(...) : all arguments must have the same length
+
+rownames(tab) <- paste("WNN", rownames(tab))
+colnames(tab) <- paste("RNA", colnames(tab))
 
 pheatmap(log10(tab+10), color=viridis::viridis(100), cluster_cols=FALSE, cluster_rows=FALSE)
 
-jacc.mat <- linkClustersMatrix(clust.louvain, clust.leiden)
-rownames(jacc.mat) <- paste("Louvain", rownames(jacc.mat))
-colnames(jacc.mat) <- paste("Leiden", colnames(jacc.mat))
+
+
+jacc.mat <- linkClustersMatrix(clust.rna, clust.wnn)
+rownames(jacc.mat) <- paste("WNN", rownames(jacc.mat))
+colnames(jacc.mat) <- paste("RNA", colnames(jacc.mat))
 plt1 <- pheatmap(jacc.mat, color=viridis::viridis(100), cluster_cols=FALSE, cluster_rows=FALSE)
 
 tmp_name <- paste0(substring(spe1.red_name, 6, nchar(spe1.red_name)), "_", substring(spe2.red_name, 6, nchar(spe2.red_name)))
-tmp_name <- paste0("Jaccard_", tmp_name, "_r", resolution, "_knn", knn, ".png")
+tmp_name <- paste0("Jaccard_", Seurat_base_name_2, ".png")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 10, width = 10)
-
-
-## Identify the best corresponding clusters based on the largest Jaccard index along each row.
-
-
-## Comparing different clusterings
-
-# Sys.time()
-# load(
-#     here(
-#         "processed-data",
-#         "rdata",
-#         "spe",
-#         "01_build_spe",
-#         "spe_filtered_final_with_clusters.Rdata"
-#     ),
-#     verbose = TRUE
-# )
-# Sys.time()
-
-# ## Read the layers
-# bayes_layers <-
-#     get(load(
-#         here(
-#             "processed-data",
-#             "rdata",
-#             "spe",
-#             "08_spatial_registration",
-#             "bayesSpace_layer_annotations.Rdata"
-#         )
-#     )) |>
-#     select(Annotation = bayesSpace, layer_long = cluster, layer_combo) |>
-#     filter(Annotation %in% c("k09", "k16", "k28"))
 
 
 ## Compute the jaccard matrices, just like at
 ## https://github.com/LieberInstitute/DLPFC_snRNAseq/blob/4b94e5bf1986df546bdb8624769e2ab746c23e70/code/05_explore_sce/06_explore_azimuth_annotations.R#L109
 
-SeuratOBJ_1@meta.data
 
-jacc.mat <-
-    with(
-        colData(spe),
-        linkClustersMatrix(bayesSpace_harmony_9, bayesSpace_harmony_16)
-    )
-
-## Mark 0s as NAs
-jacc.mat[jacc.mat == 0] <- NA
-
-Sp09_order <- bayes_layers |>
-    filter(Annotation == "k09") |>
-    select(layer_combo) |>
-    (`[[`)("layer_combo") |>
-    as.character()
-
-Sp16_order <- bayes_layers |>
-    filter(Annotation == "k16") |>
-    select(layer_combo) |>
-    (`[[`)("layer_combo") |>
-    as.character()
-
-rownames(jacc.mat) <- sort(Sp09_order)
-colnames(jacc.mat) <- sort(Sp16_order)
-
-
-domain_colors_k09 <-
-    setNames(
-        Polychrome::palette36.colors(9),
-        rownames(jacc.mat)
-    )
-row_ha <- rowAnnotation(
-    df = data.frame(Sp09 = Sp09_order),
-    col = list(Sp09 = domain_colors_k09[Sp09_order]),
-    show_legend = c(FALSE)
-)
-domain_colors_k16 <-
-    setNames(
-        Polychrome::palette36.colors(16),
-        colnames(jacc.mat)
-    )
-col_ha <-
-    HeatmapAnnotation(
-        df = data.frame(Sp16 = Sp16_order),
-        col = list(Sp16 = domain_colors_k16[Sp16_order]),
-        annotation_name_side = "left",
-        show_legend = c(FALSE)
-    )
-
-pdf(here(plot_dir, "Sp09_vs_Sp16_complex.pdf"),
-    height = 8,
-    width = 12
-)
-Heatmap(
-    jacc.mat[Sp09_order, ][, Sp16_order],
-    name = "Correspondence",
-    right_annotation = row_ha,
-    bottom_annotation = col_ha,
-    col = viridisLite::plasma(101),
-    na_col = "black",
-    cluster_rows = FALSE,
-    cluster_columns = FALSE
-)
-dev.off()
-
-
-
-
-
-
-## Repeat but for k09 vs k28
-jacc.mat <-
-    with(
-        colData(spe),
-        linkClustersMatrix(bayesSpace_harmony_9, bayesSpace_harmony_28)
-    )
-
-## Mark 0s as NAs
-jacc.mat[jacc.mat == 0] <- NA
-
-## Note that not all k28 domains are present: 18 and 21 are missing
-present_col <- as.integer(colnames(jacc.mat))
-Sp28_order <- bayes_layers |>
-    filter(Annotation == "k28") |>
-    select(layer_combo) |>
-    (`[[`)("layer_combo") |>
-    as.character()
-
-
-rownames(jacc.mat) <- sort(Sp09_order)
-colnames(jacc.mat) <- sort(Sp28_order)
-
-domain_colors_k28 <-
-    setNames(
-        Polychrome::palette36.colors(28)[present_col],
-        colnames(jacc.mat)
-    )
-col_ha <-
-    HeatmapAnnotation(
-        df = data.frame(Sp28 = Sp28_order),
-        col = list(Sp28 = domain_colors_k28[Sp28_order]),
-        annotation_name_side = "left",
-        show_legend = c(FALSE)
-    )
-
-pdf(here(plot_dir, "Sp09_vs_Sp28_complex.pdf"),
-    height = 8,
-    width = 12
-)
-Heatmap(
-    jacc.mat[Sp09_order, ][, Sp28_order],
-    name = "Correspondence",
-    right_annotation = row_ha,
-    bottom_annotation = col_ha,
-    col = viridisLite::plasma(101),
-    na_col = "black",
-    cluster_rows = FALSE,
-    cluster_columns =
-    )
-dev.off()
 
 ## Reproducibility information
 library("sessioninfo")
