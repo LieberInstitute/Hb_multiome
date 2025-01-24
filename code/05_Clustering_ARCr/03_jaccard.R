@@ -30,9 +30,9 @@ library("viridisLite")
 ## input directories
 
 # Check/create directories
-rna_inputRDS_Dir  <- here("processed-data", "03_pseudobulking", "cellranger_count")
+# rna_inputRDS_Dir  <- here("processed-data", "03_pseudobulking", "cellranger_count")
 inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
-outputCVS_Dir <- here("processed-data", "05_Clustering_ARCr")
+outputCVS_Dir <- here("processed-data", "05_Clustering_ARCr", "03_jaccard")
 plotDir <- here("plots", "05_Clustering_ARCr", "03_jaccard")
 
 ## Check directories
@@ -42,55 +42,42 @@ if (!dir.exists(outputCVS_Dir)) {dir.create(outputCVS_Dir)}
 
 ## Load ONLY RNA data to make comparison
 
-#seurat_RDSname_1 <- rna_inputRDS_Dir
-if ( !length(list.files(rna_inputRDS_Dir, pattern = "seurat.norm_counts_Harmony_All.rds")==1) ) { message("Seurat object missed!");  stop() }
-seurat_RDSname_1 <- here(rna_inputRDS_Dir, "seurat.norm_counts_Harmony_All.rds")
-Seurat_base_name_1 <- "CR_count"
+# #seurat_RDSname_1 <- rna_inputRDS_Dir
+# if ( !length(list.files(rna_inputRDS_Dir, pattern = "seurat.norm_counts_Harmony_All.rds")==1) ) { message("Seurat object missed!");  stop() }
+# seurat_RDSname_1 <- here(rna_inputRDS_Dir, "seurat.norm_counts_Harmony_All.rds")
+# Seurat_base_name_1 <- "CR_count"
 
 ## Load input with RDS wnn to compare
 
 ## read input arguments ( name of RDS Seurat file with wnn clustering to parse )
-Seurat_base_name_2 <- commandArgs(trailingOnly = TRUE)
+Seurat_base_name <- commandArgs(trailingOnly = TRUE)
 ## Some WNN clustering results of interest
 ## For testing:
-Seurat_base_name_2 <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1"
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r2
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r2
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r1
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r2
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.SLM_lsi_r1
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.SLM_lsi_r2
+Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1, 
+seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r1"
 
+## Prepare RDS seurat names and file names 
+Seurat_base_name_1 <- strsplit(Seurat_base_name, ", ")[[1]][1]
+Seurat_base_name_2 <- strsplit(Seurat_base_name, ", ")[[1]][2]
+seurat_RDSname_1 <- here(inputRDS_Dir, paste0(Seurat_base_name_1, ".rds"))
+seurat_RDSname_2 <- here(inputRDS_Dir, paste0(Seurat_base_name_2, ".rds"))
+Seurat_base_name_1 <- str_extract(Seurat_base_name_1, regex("C\\.\\w+")) #C.louvain_lsi_r1
+Seurat_base_name_2 <- str_extract(Seurat_base_name_2, regex("C\\.\\w+")) #C.louvainM_lsi_r1
+file_name_all  <- paste0(Seurat_base_name_1, "-", Seurat_base_name_2)
 
 ## Load the Seurats with WNN clusters
 
-message("Reading Seurat(s) to compute Jaccard Index on WNN clusters")
-
-## Main arguments to specify which WNN clustering results to compare
-
-Seurat_base_name = "seurat.norm_counts_Harmony_ARCr_QCed"
-# knn = 20
-knn = 30
-# knn = 40
-# methodWNN = "C.leiden_lsi_r"
-# methodWNN = "C.SLM_lsi_r"
-# methodWNN = "C.louvain_lsi_r"
-# methodWNN = "C.louvainM_lsi_r"
-# res = 0.8
-resolution = 1
-# res = 1.5
-# res = 2
-
-# Seurat_base_name_1 = paste0(Seurat_base_name, "_WNN_k", knn, "_", methodWNN, resolution)
-# seurat_RDSname_1 = paste0(Seurat_base_name, ".rds")
+message("Reading Seurat(s) to evalute WNN-Clusters and compute Jaccard Index:\nWNN.1: ",
+        Seurat_base_name_1, "\nWNN.2: ", Seurat_base_name_2)
 
 
-## Load FIRST Seurat with RNA clustering 
+## Load FIRST Seurat with WNN to compare clustering 
+
+if ( !length(list.files(inputRDS_Dir, basename(seurat_RDSname_1))==1) ) { message("Seurat 1 object missed!");  stop() }
 
 SeuratOBJ_1 <- readRDS(seurat_RDSname_1) # 84177 cells
 message("GEX clustering loaded!\nCells: ", length(Cells(x = SeuratOBJ_1)))
-n_clust <- nrow(unique(SeuratOBJ_1[["seurat_clusters"]]))
+n_clust <- nrow(unique(SeuratOBJ_1[["seurat_clusters"]])) # Cells: 55702
 message("\nSNN `", Seurat_base_name_1, "` containing ", n_clust, " clusters")
 table(SeuratOBJ_1[["seurat_clusters"]])
 # 0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15 
@@ -103,16 +90,8 @@ table(SeuratOBJ_1[["seurat_clusters"]])
 
 ## Prepare arguments for SECOND WNN data clustering 
 
-# Seurat_base_name = "seurat.norm_counts_Harmony_ARCr_QCed"
-methodWNN = "C.leiden_lsi_r"
+if ( !length(list.files(inputRDS_Dir, basename(seurat_RDSname_2))==1) ) { message("Seurat 2 object missed!");  stop() }
 
-# Seurat_base_name_2 = paste0(Seurat_base_name_2, "_WNN_k", knn, "_", methodWNN, resolution)
-seurat_RDSname_2 = paste0(Seurat_base_name_2, ".rds")
-if ( !length(list.files(inputRDS_Dir, pattern = seurat_RDSname_2)==1) ) { message("Seurat 2 object missed!");  stop() }
-
-## Load SECOND Seurat with WNN clustering 
-
-seurat_RDSname_2 <- here(inputRDS_Dir, seurat_RDSname_2)
 SeuratOBJ_2 <- readRDS(seurat_RDSname_2)
 message("WNN clustering loaded!\nCells: ", length(Cells(x = SeuratOBJ_2)))
 n_clust <- nrow(unique(SeuratOBJ_2[["seurat_clusters"]]))
@@ -167,7 +146,7 @@ plot_approxSilhouette <- function(SObj, fn){
   plt1 <- ggplot(sil.data, aes(x=cluster, y=width, colour=closest)) +
     ggbeeswarm::geom_quasirandom(method="smiley") + labs(title = fn)
     #+ labs(subtitle = "CellRangerARC-reanalyze Human Hb")
-  # ggsave(plt1, filename = here(plotDir, paste0("Silhouette_", file_name,".png")), height = 6, width = 10)
+  ggsave(plt1, filename = here(plotDir, paste0("Silhouette_", fn,".png")), height = 6, width = 10)
   
   return(plt1)
   
@@ -192,16 +171,11 @@ plot_approxSilhouette <- function(SObj, fn){
 # Embeddings(SeuratOBJ_1, reduction = "integrated.harmony")
 # SeuratOBJ_1[["seurat_clusters"]]
 
-
-file_name <- "RNA_Harmony"
-plt_rna <- plot_approxSilhouette(SeuratOBJ_1, "RNA_Harmony")
-
-file_name <- str_extract(Seurat_base_name_2, "ARC+.+")
-plt_wnn <- plot_approxSilhouette(SeuratOBJ_2, file_name)
+plt_rna <- plot_approxSilhouette(SeuratOBJ_1, paste0("WW.", Seurat_base_name_1))
+plt_wnn <- plot_approxSilhouette(SeuratOBJ_2, paste0("WW.", Seurat_base_name_2))
 
 plt1 <- plt_rna / plt_wnn
-tmp_name <- paste0("RNA_", file_name)
-tmp_name <- paste0("Silhouette_", tmp_name, ".png")
+tmp_name <- paste0("Silhouette_WW.", file_name_all, ".png")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 12, width = 10)
 
 
@@ -216,17 +190,14 @@ message("Starting Jaccard Index Processing ...")
 # clust.leiden <- sce.2[["seurat_clusters"]]
 # tab <- table(Louvain=clust.louvain, Leiden=clust.leiden)
 
-clust.rna <- SeuratOBJ_1$seurat_clusters
-levels(clust.rna)
-clust.wnn <- SeuratOBJ_2$seurat_clusters
-levels(clust.wnn)
-table(RNA=clust.rna, WNN=clust.wnn)
-tab <- table(RNA=clust.rna, WNN=clust.wnn)
+clust.wnn1 <- SeuratOBJ_1$seurat_clusters
+levels(clust.wnn1)
+clust.wnn2 <- SeuratOBJ_2$seurat_clusters
+levels(clust.wnn2)
 
-# Error in base::table(...) : all arguments must have the same length
-
-rownames(tab) <- paste("WNN", rownames(tab))
-colnames(tab) <- paste("RNA", colnames(tab))
+tab <- table(WNN1=clust.wnn1, WNN2=clust.wnn2)
+rownames(tab) <- paste("WNN1", rownames(tab))
+colnames(tab) <- paste("WNN2", colnames(tab))
 
 pheatmap(log10(tab+10), color=viridis::viridis(100), cluster_cols=FALSE, cluster_rows=FALSE)
 
