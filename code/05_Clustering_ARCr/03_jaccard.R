@@ -42,12 +42,13 @@ if (!dir.exists(outputCVS_Dir)) {dir.create(outputCVS_Dir)}
 Seurat_base_name <- commandArgs(trailingOnly = TRUE)
 ## Some WNN clustering results of interest
 ## For testing:
-# Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1, 
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r1"
+# Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1,seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r1"
+
+message("Start processing: ", Seurat_base_name)
 
 ## Prepare RDS seurat names and file names 
-Seurat_base_name_1 <- trimws(strsplit(Seurat_base_name, ", ")[[1]][1])
-Seurat_base_name_2 <- trimws(strsplit(Seurat_base_name, ", ")[[1]][2])
+Seurat_base_name_1 <- trimws(strsplit(Seurat_base_name, ",")[[1]][1])
+Seurat_base_name_2 <- trimws(strsplit(Seurat_base_name, ",")[[1]][2])
 seurat_RDSname_1 <- here(inputRDS_Dir, paste0(Seurat_base_name_1, ".rds"))
 seurat_RDSname_2 <- here(inputRDS_Dir, paste0(Seurat_base_name_2, ".rds"))
 Seurat_base_name_1 <- str_extract(Seurat_base_name_1, regex("C\\.\\w+")) #C.louvain_lsi_r1
