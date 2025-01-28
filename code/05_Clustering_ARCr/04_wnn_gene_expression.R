@@ -49,7 +49,7 @@ f_plt_violin <- function(seurat_name){
           axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
           plot.title=element_text(hjust=0.5)) 
     
-  tmp_name <- paste0("Vplot_POU4F1_GPR151_", Seurat_base_name,".pdf")
+  tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_VlnPlot.pdf")
   ggsave(plt1, filename = here(plotDir, tmp_name), height = 4, width = 17)
   
   return(plt1)
@@ -68,15 +68,12 @@ Vplot_lst <- map(wnn_file_names_lst, ~ f_plt_violin(.x))
 length(Vplot_lst)
 # Vplot_lst[[1]]
 
-pdf(file = here(plotDir, "Vplot_WNN.POU4F1_GPR151.pdf"))
-par(mfrow=c(2,2))
+tmp_name <- paste0(Seurat_base_name, "_ALL_POU4F1_GPR151_VlnPlot.pdf")
+pdf(file = here(plotDir, tmp_name))
 
-for(i in seq(Vplot_lst)) {
-  Vplot_lst[[i]]
-}
+plt_Vplots_cols <- Reduce("/", Vplot_lst)
+print(plt_Vplots_cols)
 
-# Vplot_lst[[1]] / Vplot_lst[[2]] # / Vplot_lst[[3]] / Vplot_lst[[4]]
-# Vplot_lst[[1]] / Vplot_lst[[2]] / Vplot_lst[[3]] / Vplot_lst[[4]]
 dev.off()
 
 # walk(seq_along(Vplot_lst), ~ {

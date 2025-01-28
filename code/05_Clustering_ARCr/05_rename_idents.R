@@ -1,14 +1,25 @@
+########################################################################
+## Rename WNN Clusters Hb clusters (Idents) with cell-types identified with the annotation
+## INPUT:
+##      (1) GEX DEG annotation
+##      (2) Seurat with wnn 
+## OUPUT:
+##      (1) Seurat with re-named idents
+##      (2) Plots for exploration     
+## Authors. CSC 
+## Date. Jan, 2024
+## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
+########################################################################
+
 library("Seurat")
 library("Signac")
 library("ggplot2")
-library("purrr")
 library("dplyr")
 library("stringr")
 library("here")
 
 ## input directories
 
-# Check/create directories
 inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
 inputCVS_Dir_Ann <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze_v2")
 outputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents")
@@ -19,7 +30,11 @@ if (!dir.exists(plotDir)) {dir.create(plotDir)}
 if (!dir.exists(outputRDS_Dir)) {dir.create(outputRDS_Dir)}
 
 ## read input arguments ( name of RDS Seurat file with wnn clustering to parse )
-# Seurat_base_name <- commandArgs(trailingOnly = TRUE)
+Seurat_base_name <- commandArgs(trailingOnly = TRUE)
+
+Seurat_base_name <- Seurat_base_name[[2]]
+
+message("Processing ", Seurat_base_name)
 
 
 ##### (1) Load Seurat with WNN idents given by default 
@@ -30,14 +45,15 @@ seurat_RDSname <- here(inputRDS_Dir, paste0(Seurat_base_name, ".rds"))
      
 SeuratOBJ <- readRDS(seurat_RDSname)
 ## verification
-length(Cells(x = SeuratOBJ))
+# length(Cells(x = SeuratOBJ))
 
 message("Renaming ", nrow(unique(SeuratOBJ[["seurat_clusters"]])), " clusters for ", Seurat_base_name)
 
 
 
-##### (1) Load DEG with ident annotation
+##### (2) Load DEG with ident annotation
 
+## extract a shorter name to save files 
 tmp_wd <- str_extract(Seurat_base_name, pattern = "WNN\\w*\\.\\w*")
 # WNN_k30_C.louvain_lsi_r1
 deg_file <- paste0("ARCr_QCed_", tmp_wd, "_DEG_Top50_WNN_DD_LB_matching_markers_integrated.csv")
@@ -75,7 +91,7 @@ head(collapsed_cell_types)
 # 6    C.08 LB_Hb neur
 
 
-##### (3) extract idents (clusters) to prepare the new ident names
+##### (3) original idents (clusters) and prepare the new ident names to rename Seurat clusters
 
 Seurat_clusterIDS <- as.integer(levels(SeuratOBJ$seurat_clusters))
 Seurat_clusterIDS <- paste0("C.", sprintf('%02d',Seurat_clusterIDS))
@@ -132,9 +148,16 @@ saveRDS(SeuratOBJ, rds_file_name)
 
 ##### (4) Some visualizations
 
-# DimPlot(SeuratOBJ, label = TRUE) + NoLegend()
+# Reductions(SeuratOBJ)
+## extract a shorter name to save files 
+seurat_name <- str_extract(Seurat_base_name, pattern = "C\\.\\w*")
 
-## Vplots for the features selected
+plt1 <- DimPlot(SeuratOBJ, label = TRUE, reduction = "wnn.umap", label.size = 3) + NoLegend() +
+  labs(title = paste0("**Clusters from WNN: ", seurat_name))
+tmp_name <- paste0(seurat_name, "_DimPlot_renamed.pdf")
+ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
+
+## Violin plots for the features selected
 
 DefaultAssay(SeuratOBJ) <- "RNA"
 
@@ -176,3 +199,38 @@ tmp_name <- paste0(seurat_name, "_POU4F1_GPR151_DotPlot.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
 
 message("Plots Completed!")
+
+library("slurmjobs")
+job_loop(
+  loops = list(clustering_name = c("x1", "x2", "x3", "x4")),
+  name = "05_rename_idents",
+  cores = 2,
+  create_shell = TRUE,
+  partition = "katun"
+)
+
+
+## Additional plots prepared to  TLDR slides 2025
+
+# features <- "GPR151"
+# features <- "POU4F1"
+# features <- "CDH4"
+# idents_to_plt <- c("C.00 DD_MHb", "C.01 DD_LHb", "C.02 DD_MHb","C.03 DD_LHb","C.04", "C.05", "C.06 DD_MHb", "C.07", "C.08 DD_MHb", "C.09 LB_Hb ne", "C.10 DD_LHb", "C.11 DD_MHb")  
+# idents_to_plt <- c("C.00 DD_MHb", "C.01 DD_LHb", "C.02 DD_MHb","C.03 DD_LHb","C.08 DD_MHb","C.28","C.20","C.21","C.22","C.23","C.24","C.25")  
+# 
+# plt1 <- CoveragePlot(
+#   object = SeuratOBJ,
+#   region = features,
+#   features = features,
+#   expression.assay = "RNA",
+#   extend.upstream = 500,
+#   extend.downstream = 500,
+#   idents = idents_to_plt
+# )  +
+#   labs(title = paste0("**Clusters from WNN: ", seurat_name)) +
+#   theme(text = element_text(size = 8), 
+#         axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
+#         plot.title=element_text(hjust=0.5)) 
+# tmp_name <- paste0(seurat_name, "_", features, "_CoveragePlt.pdf")
+# ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
+
