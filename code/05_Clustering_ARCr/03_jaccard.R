@@ -12,12 +12,12 @@
 ########################################################################
 
 library("Seurat")
-library("scran")
+library("Signac")
+# library("scran")
 library("bluster")
-library("SingleCellExperiment")
-library("dplyr")
-library("bluster")
+# library("SingleCellExperiment")
 library("pheatmap")
+library("dplyr")
 library("ggplot2")
 library("stringr")
 library("here")
@@ -194,6 +194,7 @@ ggsave(plt1, filename = here(plotDir, tmp_name), height = 10, width = 10)
 
 
 ## Reproducibility information
+
 library("sessioninfo")
 print("Reproducibility information:")
 Sys.time()
