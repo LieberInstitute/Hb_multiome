@@ -127,8 +127,52 @@ levels(SeuratOBJ)
 rds_file_name <- here(outputRDS_Dir, paste0(Seurat_base_name, ".rds"))
 saveRDS(SeuratOBJ, rds_file_name)
 
+
+
+
 ##### (4) Some visualizations
 
-DimPlot(SeuratOBJ, label = TRUE) + NoLegend()
+# DimPlot(SeuratOBJ, label = TRUE) + NoLegend()
+
+## Vplots for the features selected
+
+DefaultAssay(SeuratOBJ) <- "RNA"
+
+seurat_name <- str_extract(Seurat_base_name, regex("C\\.\\w+"))
+features <- c("POU4F1", "GPR151") # "TAC3"
+  
+plt1 <- VlnPlot(object = SeuratOBJ, layer = "data",
+                features = features,
+                pt.size = 0) +
+  labs(x = paste0("**Clusters from WNN: ", seurat_name)) &
+  theme(text = element_text(size = 8), 
+        axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7)) 
+
+tmp_name <- paste0(seurat_name, "_POU4F1_GPR151_Violin_plot.pdf")
+ggsave(plt1, filename = here(plotDir, tmp_name), height = 4, width = 17)
+  
+
+## Feature plot - visualize feature expression in low-dimensional space
+Reductions(SeuratOBJ)
+# FeaturePlot(SeuratOBJ, features = features, reduction = "wnn.umap")
+# Visualize co-expression of two features simultaneously
+plt1 <- FeaturePlot(SeuratOBJ, features = features, reduction = "wnn.umap", blend = TRUE) +
+  labs(title = paste0("**Clusters from WNN: ", seurat_name)) &
+  theme(text = element_text(size = 8), 
+        axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
+        plot.title=element_text(hjust=0.5)) 
+tmp_name <- paste0(seurat_name, "_POU4F1_GPR151_FeaturePlot.pdf")
+ggsave(plt1, filename = here(plotDir, tmp_name), height = 3, width = 10)
 
 
+## Dot plots - the size of the dot corresponds to the percentage of cells expressing the
+# feature in each cluster. The color represents the average expression level
+plt1 <- DotPlot(SeuratOBJ, features = c(features, "TAC3")) + RotatedAxis()  +
+  labs(title = paste0("**Clusters from WNN: ", seurat_name)) &
+  theme(text = element_text(size = 8), 
+        axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
+        plot.title=element_text(hjust=0.5)) 
+tmp_name <- paste0(seurat_name, "_POU4F1_GPR151_DotPlot.pdf")
+ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
+
+message("Plots Completed!")
