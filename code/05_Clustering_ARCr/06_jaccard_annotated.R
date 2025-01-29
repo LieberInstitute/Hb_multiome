@@ -5,9 +5,9 @@
 ##      (1) First Seurat with WNN to compare
 ##      (2) Second Seurat with WNN to compare
 ## OUPUT:
-##      1) Jaccard Index Heatmap
+##      1) Jacccard index heat-map  and approximate silhouette (plot and cvs files) 
 ## Authors. CSC 
-## Date. Dec 11, 2024
+## Date. Jan 29, 2025
 ## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
 ########################################################################
 
@@ -23,9 +23,9 @@ library("viridisLite")
 
 ## input directories
 
-inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
-outputCVS_Dir <- here("processed-data", "05_Clustering_ARCr", "03_jaccard")
-plotDir <- here("plots", "05_Clustering_ARCr", "03_jaccard")
+inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents")
+outputCVS_Dir <- here("processed-data", "05_Clustering_ARCr", "06_jaccard_annotated")
+plotDir <- here("plots", "05_Clustering_ARCr", "06_jaccard_annotated")
 
 ## Check directories
 
