@@ -13,9 +13,7 @@
 
 library("Seurat")
 library("Signac")
-# library("scran")
 library("bluster")
-# library("SingleCellExperiment")
 library("pheatmap")
 library("dplyr")
 library("ggplot2")
