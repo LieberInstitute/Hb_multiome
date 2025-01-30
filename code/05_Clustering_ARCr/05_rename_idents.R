@@ -13,6 +13,7 @@
 
 library("Seurat")
 library("Signac")
+library("purrr")
 library("ggplot2")
 library("dplyr")
 library("stringr")
@@ -44,8 +45,8 @@ message("Processing ", Seurat_base_name)
 seurat_RDSname <- here(inputRDS_Dir, paste0(Seurat_base_name, ".rds"))
      
 SeuratOBJ <- readRDS(seurat_RDSname)
-## verification
-# length(Cells(x = SeuratOBJ))
+
+total_cells <- length(Cells(x = SeuratOBJ))
 
 message("Renaming ", nrow(unique(SeuratOBJ[["seurat_clusters"]])), " clusters for ", Seurat_base_name)
 
@@ -72,7 +73,34 @@ head(file_ann)
 ## get unique annotated cell-types (clusters) containing the 'Hb' word
 get_hb_words <- as.data.frame(file_ann) |> filter(grepl('Hb', cell_type))
 get_hb_words <- unique(get_hb_words[c("cluster", "cell_type")])
+
+
+## Calculate % of cells by cluster
+
+f_get_percent_label <- function(cl) {
+  ## for testing:  cl = 0
+  clust_size <- length(SeuratOBJ$seurat_clusters[SeuratOBJ[["seurat_clusters"]]==cl])
+  ## longer label
+  # clust_label <- paste0("[", clustSize = clust_size, " / ", paste0(round(((clust_size*100) / total_cells), 2), "%"), "]")
+  ## shorter label
+  clust_label <- paste0("(", paste0(round(((clust_size*100) / total_cells), 2), "%"), ")")
+  return(clust_label)               
+}
+
+v_unique_hb_clust <- unlist(unique(get_hb_words["cluster"]))
+cells_percents <- map(v_unique_hb_clust, ~ f_get_percent_label(.x))
+df_hb <- data.frame(
+  cluster = c(v_unique_hb_clust),
+  percent = c(unlist(cells_percents)))
+df_hb
+# cluster percent
+# cluster1        0 (9.91%)
+# cluster2        1 (7.06%)
+# cluster3        2 (6.55%)
+
+
 ## collapse the redundancy clusters
+
 collapsed_cell_types <- aggregate(cell_type ~ cluster, data = get_hb_words, FUN = function(x) paste(x, collapse = ", "))
 ## set pad of 2 digits to clusters
 collapsed_cell_types$cluster <- paste0("C.", sprintf('%02d', collapsed_cell_types$cluster))
@@ -80,6 +108,8 @@ collapsed_cell_types$cluster <- paste0("C.", sprintf('%02d', collapsed_cell_type
 v_hb_short_cell_types <- substr(collapsed_cell_types$cell_type, 1, 8)
 collapsed_cell_types$cell_type <- c(v_hb_short_cell_types)
 collapsed_cell_types$cell_type <- trimws(gsub(",", "", collapsed_cell_types$cell_type))
+
+collapsed_cell_types$cell_type <- paste(collapsed_cell_types$cell_type, df_hb$percent)
 
 head(collapsed_cell_types)
 # cluster  cell_type
@@ -91,7 +121,7 @@ head(collapsed_cell_types)
 # 6    C.08 LB_Hb neur
 
 
-##### (3) original idents (clusters) and prepare the new ident names to rename Seurat clusters
+##### (3) extract original idents (clusters) and prepare the new ident names to rename Seurat clusters
 
 Seurat_clusterIDS <- as.integer(levels(SeuratOBJ$seurat_clusters))
 Seurat_clusterIDS <- paste0("C.", sprintf('%02d',Seurat_clusterIDS))
@@ -113,13 +143,13 @@ Seurat_clusterIDS_new <- merge(Seurat_clusterIDS, collapsed_cell_types, all.x = 
 ## replace NAs   
 Seurat_clusterIDS_new[is.na(Seurat_clusterIDS_new)] <- " "
 head(Seurat_clusterIDS_new)
-# cluster cell_type
-# 1    C.00    DD_MHb
-# 2    C.01    DD_LHb
-# 3    C.02    DD_MHb
-# 4    C.03    DD_LHb
-# 5    C.04          
-# 6    C.05          
+# cluster      cell_type
+# 1    C.00 DD_MHb (9.91%)
+# 2    C.01 DD_LHb (7.06%)
+# 3    C.02 DD_MHb (6.55%)
+# 4    C.03 DD_LHb (5.59%)
+# 5    C.04               
+# 6    C.05       
 
 v_new_clusterIDS <- trimws(paste(Seurat_clusterIDS_new$cluster, Seurat_clusterIDS_new$cell_type))
 
@@ -132,21 +162,26 @@ new_names <- c(v_new_clusterIDS)
 names(new_names) <- levels(SeuratOBJ)
 
 ## rename idents 
+Idents(SeuratOBJ)
 SeuratOBJ <- RenameIdents(object = SeuratOBJ, new_names)
 levels(SeuratOBJ)
-# [1] "C.00 DD_MHb"   "C.01 DD_LHb"   "C.02 DD_MHb"   "C.03 DD_LHb"  
-# [5] "C.04"          "C.05"          "C.06 DD_MHb"   "C.07"         
-# [9] "C.08 DD_MHb"   "C.09 LB_Hb ne" "C.10 DD_LHb"   "C.11 DD_MHb"  
+# [1] "C.00 DD_MHb (9.91%)"   "C.01 DD_LHb (7.06%)"   "C.02 DD_MHb (6.55%)"  
+# [4] "C.03 DD_LHb (5.59%)"   "C.04"                  "C.05"                 
+# [7] "C.06 DD_MHb (4.08%)"   "C.07"                  "C.08 DD_MHb (3.82%)" 
+#SeuratOBJ@meta.data
 
+message("Clusters renaming done!")
 
 ## save RDS
 rds_file_name <- here(outputRDS_Dir, paste0(Seurat_base_name, ".rds"))
 saveRDS(SeuratOBJ, rds_file_name)
 
-
+message("New seurat with clusters renamed saved!")
 
 
 ##### (4) Some visualizations
+
+message("Building some plots ...")
 
 # Reductions(SeuratOBJ)
 ## extract a shorter name to save files 
@@ -198,16 +233,19 @@ plt1 <- DotPlot(SeuratOBJ, features = c(features, "TAC3")) + RotatedAxis()  +
 tmp_name <- paste0(seurat_name, "_POU4F1_GPR151_DotPlot.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
 
-message("Plots Completed!")
+message("Plots completed!")
 
-library("slurmjobs")
-job_loop(
-  loops = list(clustering_name = c("x1", "x2", "x3", "x4")),
-  name = "05_rename_idents",
-  cores = 2,
-  create_shell = TRUE,
-  partition = "katun"
-)
+message("Process completed!")
+
+
+# library("slurmjobs")
+# job_loop(
+#   loops = list(clustering_name = c("x1", "x2", "x3", "x4")),
+#   name = "05_rename_idents",
+#   cores = 2,
+#   create_shell = TRUE,
+#   partition = "katun"
+# )
 
 
 ## Additional plots prepared to  TLDR slides 2025
