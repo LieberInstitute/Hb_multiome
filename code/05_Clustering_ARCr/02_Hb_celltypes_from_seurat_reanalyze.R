@@ -19,6 +19,8 @@ library("Seurat")
 library("Signac")
 library("tidyverse")
 library("dplyr")
+library("purrr")
+library("stringr")
 library("data.table")
 library("magrittr")
 library("here")
@@ -30,7 +32,11 @@ Seurat_base_name <- commandArgs(trailingOnly = TRUE)
 
 # testing:
 # Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1"
-
+## Some WNN clustering results of interest
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r1
+# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.SLM_lsi_r1
 
 message(" Reading: ", Seurat_base_name)
 
@@ -47,21 +53,12 @@ if (!dir.exists(processedDir)) {dir.create(processedDir)}
 if (!dir.exists(cvsDir)) {dir.create(cvsDir)}
 
 ## Contains marker lists 
-source(here("code", "04_DiffExpr_Clustering_seurat", "remote_DGE_marker_gene_lists.R"))       # Call functions to read paths
+source(here("code", "04_DiffExpr_Clustering_seurat", "remote_DGE_marker_gene_lists.R"))   
 
 
 #############################           Initials        ################################
 
 message("Reading files to annotate cell-types in WNN clusters")
-
-## Some WNN clustering results of interest
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r1
-# seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.SLM_lsi_r1
-
-# testing
-# Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1"
 
 seurat_RDSname = paste0(Seurat_base_name, ".rds")
 
@@ -89,23 +86,49 @@ markers.custom = list()
 markers.custom[["data_driven"]] <- get_Top50r_markers_genes_Hb()
 markers.custom[["literature_base"]] <- get_erik_and_Hb_markers_genes()  
 
-# ## New function to join LB and DD gene markers lists -- moved to 02b_Hb_celltypes_from_seurat_reanalyze.R
-# markers.custom <- get_multiple_markers_genes_lst()
-# tmp <- names(markers.custom)
-# tmp <- paste(tmp, collapse=', ')
-# message("Processing ", length(markers.custom), " categories of gene-markers list \n *****(", tmp, ")*****")
-
 ## sub-population list
 # names(markers.custom$literature_base)
 # names(markers.custom$data_driven)
 # names(markers.custom)
 
-## Check unique marker genes
+## Check duplicated marker genes
 # x <- markers.custom[["literature_base"]]
-# unlist(x)
+x <- append(markers.custom$literature_base, markers.custom$data_driven)
+length(unlist(x)) # 481
 # table(unname(unlist(x)))
-# duplicated(unname(unlist(x)))
-# summary(table(unname(unlist(x))))
+v_dup <- duplicated(unname(unlist(x)))
+dup_genes <- unname(unlist(x))[v_dup]
+
+## delete duplicated genes before annotate
+
+if (length(dup_genes>0)) {
+
+  message("Eliminating ", length(dup_genes), " duplicated marker genes from DD gene markers reference")
+  remove_lst <- dup_genes
+  
+  ## get DD genes and index list 
+  tmp <- markers.custom$data_driven
+  DD_idx <- seq(length(tmp))
+  
+  ## remove duplicates from DD
+  f_remove_duplicates <- function(tmp, DD_idx, remove_lst){
+    for (gen in remove_lst) { 
+      # dd_idex = 1
+      tmp <- map(DD_idx, ~ tmp[[.x]][tmp[[.x]] != gen]) 
+    }
+    return(tmp)
+  }
+  
+  markers.custom$data_driven <- f_remove_duplicates(tmp, DD_idx, remove_lst)
+  
+  ## verify
+  x <- append(markers.custom$literature_base, markers.custom$data_driven)
+  v_dup <- duplicated(unname(unlist(x)))
+  dup_genes <- unname(unlist(x))[v_dup]
+  message("Removed from DD gene-markers list ", length(remove_lst), " duplicated genes!\nTotal kept it ", length(unlist(x)))
+  
+  }
+
 
 prefix_name <- 'all_gm'                                    # prefix to save matched markers found in the clusters
 
