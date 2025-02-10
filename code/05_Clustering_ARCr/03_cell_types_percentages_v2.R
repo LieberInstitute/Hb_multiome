@@ -1,6 +1,6 @@
 ###############################################################################
 ##
-##  Calculate and summarize percentage statistics of pre-selected cell types in different categories
+##  Calculate and summarize percentage of pre-selected cell types in Leiden r=1 knn=30
 ##
 ###############################################################################
 
@@ -15,22 +15,19 @@ here::here()
 options(digits=2)
 
 ## read input arguments
-args = commandArgs(trailingOnly=TRUE)
-cellranger_pipe <- args[2]
-marker_lst <- args[4]
-## We are only using the norm count with Harmony
-count_mtx_type <- 'norm_counts'
-Seurat_reduction <- 'Harmony'
+# args = commandArgs(trailingOnly=TRUE)
+# cellranger_pipe <- args[2]
+# marker_lst <- args[4]
+cellranger_pipe = "CR_arc_reanalyze" # processed and QCed multiome data
+
+# ## We are only using the norm count with Harmony
+# count_mtx_type <- 'norm_counts'
+# Seurat_reduction <- 'Harmony'
 
 ## Selected manually the clusters based on the cell-type identification gene-marker lists
-## args opt for testing:
+marker_lst <- "integrated"
 # marker_lst="literature_base"
 # marker_lst="data_driven"
-# cellranger_pipe = "CR_crossBarcodes"  # process GEX count crossed bc
-# cellranger_pipe = "CR_complementBarcodes" # process GEX count complement bc
-# cellranger_pipe = "CR_arc_reanalyze" # process multiome not filtered bc
-# cellranger_pipe = "CR_arc_reanalyze_outliers" # process GEX outliers bc
-# cellranger_pipe = "CR_arc_reanalyze_outliers_ATAC" # process ATAC outliers bc
 
 ## input validations
 if (length(cellranger_pipe) == 0 || length(marker_lst) == 0) {
@@ -41,136 +38,41 @@ if (length(cellranger_pipe) == 0 || length(marker_lst) == 0) {
   message("Marker list input: ", (marker_lst))
 }
 
-## Avoid to re-run data processed before
-if (cellranger_pipe=="CR_crossBarcodes" || cellranger_pipe=="CR_complementBarcodes" || 
-    cellranger_pipe=="CR_arc_reanalyze" || cellranger_pipe=="CR_arc_reanalyze_outliers" ) { stop() }
 
 message("Processing dataset ", cellranger_pipe)
 
 
-
 ## path to input Directory and suffix of cluster data
-cvsDir <- case_when(
-  cellranger_pipe == "CR_crossBarcodes" ~ here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count"),
-  cellranger_pipe == "CR_complementBarcodes" ~ here("processed-data", "04_DiffExpr_Clustering_seurat", "cellranger_count_complement"), 
-  cellranger_pipe == "CR_arc_reanalyze" ~ here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze"),
-  cellranger_pipe == "CR_arc_reanalyze_outliers" || cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" 
-  ~ here("processed-data", "04_DiffExpr_Clustering_seurat", "cellrangerARC_reanalyze_outliers")
-)
-basename(cvsDir)
-suffix <- case_when(
-  cellranger_pipe == "CR_crossBarcodes" || cellranger_pipe == "CR_arc_reanalyze" ||
-    cellranger_pipe == "CR_arc_reanalyze_outliers" || cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" ~ '_Harmony_All_cluster',
-  cellranger_pipe == "CR_complementBarcodes" ~ '_Harmony_All_subset_cluster'
-)
-basename(suffix)
+cvsDirIN <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze_v2", "cvs_files_markers")
+cvsDirOUT <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze_v2")
+message("Processing cell types generated with: `", basename(cvsDirIN), "` script")
 
-## Manually pre-selected clusters for all the available CellRanger datasets
-hb <- c()
-thal <- c()
-neu <- c()
-glia <- c()
-undeterminated <- c()
-endo <- c() 
+suffix <- '_Harmony_All_cluster'
 
-########## These are CellRanger-count datasets
-# all_cellranger_pipe=(CR_crossBarcodes CR_complementBarcodes CR_arc_reanalyze CR_arc_reanalyze_outliers CR_arc_reanalyze_outliers_ATAC)
-
-if (cellranger_pipe=="CR_crossBarcodes" || cellranger_pipe=="CR_complementBarcodes") {
-  if (marker_lst=="literature_base") {
-    neu <- c(0,1,2,5,7,8,10,13,14,17,25,26,29)
-    hb <- c(0,2,5,7,10,13,14)
-
-  } else if (marker_lst=="data_driven") {
-    neu <- c(0,1,2,5,7,8,9,10,13,14,15,16,26,27,28,29)
-    hb <- c(2,5,7,10,13,14,16,27)
-    thal <- c(1,8,15,26,28,29)
-
-  }
-}
 
 ##########These are CellRangerARC or CellRangerARC-reanalyze datasets
 
-if (cellranger_pipe=="CR_arc_reanalyze") {
-  if (marker_lst=="literature_base") {
-    neu <- c(0,3,4,5,8,9,17,22,24)
-    hb <- c(3,4,5,9)
-    thal <- c(8)
-    
-  } else if (marker_lst=="data_driven") {
-    neu <- c(0,1,2,3,4,5,8,9,10,11,14,16,21,24,26)
-    hb <- c(2,4,5,9,14,16)
-    thal <- c(0,1,3,8,21,24)
-  }
 
-} else if (cellranger_pipe=="CR_arc_reanalyze_outliers") { # GEX ONLY
-  if (marker_lst=="literature_base") {
-    hb <- c(2,3,5,9)
-    thal <- c(8)
-    neu <- c(0,4,15, hb, thal)
-    glia <- c(7,12,17,19,20,22)
-    endo <- c(23, 27) 
-    
-  } else if (marker_lst=="data_driven") {
-    hb <- c(2,4,5,9,14,16)
-    thal <- c(0,1,8,24)
-    neu <- c(10, hb, thal) 
-    glia <- c(3,7,12,17,19,20,22,28)
-    undeterminated <- c(6,21) # glia ^ neuron)
-    endo <- c(23)  
-  } 
 
-} else if (cellranger_pipe=="CR_arc_reanalyze_outliers_ATAC") { # ATAC ONLY
-  if (marker_lst=="literature_base") {
-    hb <- c(3,5,9,2)
-    thal <- c(8)
-    neu <- c(0,15, hb, thal)
-    glia <- c(7,12,17,19,22)
-    endo <- c(23,27) 
-    
-  } else if (marker_lst=="data_driven") {
-    hb <- c(5,9,10,2,4,16)
-    thal <- c(0,15,18)
-    neu <- c(11, hb, thal) 
-    glia <- c(7,12,17,19,22)
-    undeterminated <- c(1,3) # glia ^ neuron)
-    endo <- c(23)  
-  }
-    
-}
-  
 
 message(cellranger_pipe, " Groups of clusters assigned!")
 
+
 ## Read cluster info. Set count-mtx type and integration model (CCA or Harmony)
 
-if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts' }
+# if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts' }
+Seurat_base_name <- "ARCr_QCed_WNN_k30_C.leiden_lsi_r1"
 
 ## Prepare file name for retrieve cluster info from corresponding pipeline
 
-input_csv <- here(cvsDir, "cvs_files_markers", paste0(Seurat_base_name, suffix, "_info"))
-## add suffix to read the corresponding file
-input_csv <- case_when(
-  cellranger_pipe == "CR_crossBarcodes" || cellranger_pipe == "CR_complementBarcodes" || cellranger_pipe == "CR_arc_reanalyze" ~ input_csv,
-  cellranger_pipe == "CR_arc_reanalyze_outliers" ~ paste0(input_csv, "_GEX"),
-  cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" ~ paste0(input_csv, "_ATAC")
-)
-input_csv <- paste0(input_csv, ".csv")
+input_csv <- here(cvsDirIN, paste0(Seurat_base_name, "_cluster_info.csv"))
 basename(input_csv)
-# seurat.norm_counts_Harmony_All_cluster_info_GEX.csv
 
 ## Prepare file name for retrieve cell-types from corresponding pipeline
 
-ifelse (marker_lst=="literature_base", suffix_clust <- '_Harmony_All_cellTypes_literature_base_top20', suffix_clust <- '_Harmony_All_cellTypes_data_driven_top20')
-
-suffix_clust_names <- case_when(
-  cellranger_pipe == "CR_crossBarcodes" || cellranger_pipe == "CR_complementBarcodes" || cellranger_pipe == "CR_arc_reanalyze" ~ suffix_clust,
-  cellranger_pipe == "CR_arc_reanalyze_outliers" ~ paste0(suffix_clust, "_GEX"),
-  cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" ~ paste0(suffix_clust, "_ATAC")
-)
-suffix_clust_names <- paste0(suffix_clust_names, ".csv")
+suffix_clust_names <- paste0(Seurat_base_name, "_cellTypes_integrated_top50.csv")
 basename(suffix_clust_names)
-# "_Harmony_All_cellTypes_literature_base_top20_GEX.csv"
+# [1] "ARCr_QCed_WNN_k30_C.leiden_lsi_r1_cellTypes_integrated_top50.csv"
 
 message("Calculating percentage of neurons, habenula, thalamus and glia cells")
 message("Active gene marker: ", marker_lst)
