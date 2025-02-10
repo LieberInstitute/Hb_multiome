@@ -20,6 +20,7 @@ library("Signac")
 library("tidyverse")
 library("dplyr")
 library("stringr")
+library("purrr")
 library("data.table")
 library("magrittr")
 library("here")
@@ -31,7 +32,11 @@ Seurat_base_name <- commandArgs(trailingOnly = TRUE)
 
 # testing:
 # Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1"
-
+## Some WNN clustering results of interest. Testing:
+# Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1"
+# Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1"
+# Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r1"
+# Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.SLM_lsi_r1"
 
 message(" Reading: ", Seurat_base_name)
 
@@ -48,18 +53,12 @@ if (!dir.exists(processedDir)) {dir.create(processedDir)}
 if (!dir.exists(cvsDir)) {dir.create(cvsDir)}
 
 ## Contains marker lists 
-source(here("code", "04_DiffExpr_Clustering_seurat", "remote_DGE_marker_gene_lists.R"))       # Call functions to read paths
+source(here("code", "04_DiffExpr_Clustering_seurat", "remote_DGE_marker_gene_lists.R"))   
 
 
 #############################           Initials        ################################
 
 message("Reading files to annotate cell-types in WNN clusters")
-
-## Some WNN clustering results of interest. Testing:
-# Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1"
-# Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1"
-# Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r1"
-# Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.SLM_lsi_r1"
 
 seurat_RDSname = paste0(Seurat_base_name, ".rds")
 
@@ -87,16 +86,45 @@ tmp <- names(markers.custom)
 tmp <- paste(tmp, collapse=', ')
 message("Processing ", length(markers.custom), " categories of gene-markers list \n *****(", tmp, ")*****")
 
-## sub gene markers list
-# print(names(markers.custom))
-
-## Check unique and number of duplicate marker genes
-# x <- markers.custom
-# unlist(x)
+## Check duplicated marker genes
+names(markers.custom)
+x <- markers.custom
+length(unlist(x)) # 481
 # table(unname(unlist(x)))
-# x1 <- duplicated(unname(unlist(x)))
-# sum(x1, na.rm=TRUE)
-# summary(table(unname(unlist(x))))
+v_dup <- duplicated(unname(unlist(x)))
+dup_genes <- unname(unlist(x))[v_dup]
+
+## delete duplicated genes before annotate
+
+if (length(dup_genes>0)) {
+  
+  message("Eliminating ", length(dup_genes), " duplicated marker genes from DD gene markers reference")
+  remove_lst <- dup_genes
+  
+  ## get DD genes and index list 
+  DD <- c("DD_Astrocyte","DD_Endo","DD_Excit.Thal", "DD_Inhib.Thal", "DD_LHb","DD_MHb","DD_Microglia","DD_Oligo","DD_OPC")
+  DD_idx <- which(names(markers.custom) %in% DD)
+  
+  ## remove duplicates from general DD+LB gene markers list
+  f_remove_duplicates <- function(tmp, DD_idx, dup_genes){
+    for (gen in dup_genes) { 
+      # dd_idex = 1
+      tmp <- map(DD_idx, ~ tmp[[.x]][tmp[[.x]] != gen]) 
+    }
+    return(tmp)
+  }
+  
+  tmp <- f_remove_duplicates(markers.custom, DD_idx, dup_genes)
+  for (i in DD_idx) { markers.custom[[i]] <- tmp[[i]] }
+  
+  ## verify
+  x <- markers.custom
+  v_dup <- duplicated(unname(unlist(x)))
+  dup_genes <- unname(unlist(x))[v_dup]
+  message("Removed from DD gene-markers list ", length(remove_lst), " duplicated genes!\nTotal kept it ", length(unlist(x)))
+  
+}
+
 
 ## set the number of top DGE genes to pick up
 
