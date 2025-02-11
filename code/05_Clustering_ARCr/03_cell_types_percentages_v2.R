@@ -236,14 +236,9 @@ for (i in seq_along(lst_clust)) {
 message("Done!")
 
 
-# # slurm script reproducibility
-# library("slurmjobs")
-# slurmjobs::job_loop(
-#   loops = list(cellranger_pipe = c("CR_crossBarcodes", "CR_complementBarcodes", "CR_arc_reanalyze", "CR_arc_reanalyze_outliers", "CR_arc_reanalyze_outliers_ATAC"),
-#                marker_lst = c("literature_base", "data_drive")),
-#   name = "02_cell_types_percentages_v4",
-#   cores = 2,
-#   create_shell = TRUE
-# )
-
+##  slurm script reproducibility
+library("slurmjobs")
+job_single(
+  name = "03_cell_types_percentages_v2", memory = "60G", cores = 2, create_shell = TRUE
+)
 
