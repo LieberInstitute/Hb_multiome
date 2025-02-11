@@ -43,6 +43,7 @@ message("Processing dataset ", cellranger_pipe)
 
 
 ## path to input Directory and suffix of cluster data
+
 cvsDirIN <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze_v2", "cvs_files_markers")
 cvsDirOUT <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze_v2")
 message("Processing cell types generated with: `", basename(cvsDirIN), "` script")
@@ -52,15 +53,32 @@ suffix <- '_Harmony_All_cluster'
 
 ##########These are CellRangerARC or CellRangerARC-reanalyze datasets
 
+## LEIDEN resolution=r1
+
+if (cellranger_pipe=="CR_arc_reanalyze") {
+  hb <- c(2,3,5,7,9,10,12,17)
+  thal <- c(1,8,11,19,21,22,25,26,29,30,31)
+  endo <- c(13,32) 
+  glia <- c(4,15,23,24,27,28)
+  undeterminated <- c(6,14,16,18,20,33)
+} 
+
+# ## LEIDEN r2
+# if (cellranger_pipe=="CR_arc_reanalyze") {
+#   hb <- c(1,3,6,8,9,11,13,15,21,25,41)
+#   thal <- c(7,16,19,20,22,23,27,29,34,35,37,39,42)
+#   endo <- c(18,40,43) 
+#   glia <- c(4,24,26,28,31,32,33,36)
+#   undeterminated <- c(2,5,10,12,14,17,20,38)
+# } 
 
 
-
-message(cellranger_pipe, " Groups of clusters assigned!")
+message(cellranger_pipe, " groups of clusters assigned!")
 
 
 ## Read cluster info. Set count-mtx type and integration model (CCA or Harmony)
 
-# if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts' }
+count_mtx_type <- "norm_counts"
 Seurat_base_name <- "ARCr_QCed_WNN_k30_C.leiden_lsi_r1"
 
 ## Prepare file name for retrieve cluster info from corresponding pipeline
@@ -92,6 +110,8 @@ allT <- c(sort(unique(df_mdT[["seurat_clusters"]])))
 
 ## Build the list of lists with grouo of cluster to quantify (%)
 lst_clust <- list(allTypes = allT)
+# [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+# [26] 26 27 28 29 30 31 32 33
 if (!is_null(hb)) { lst_clust <- append(lst_clust, list(hb = hb)) }
 if (!is_null(thal)) { lst_clust <- append(lst_clust, list(thal= thal)) }
 if (!is_null(neu)) { lst_clust <- append(lst_clust, list(neu = neu)) }
@@ -140,18 +160,16 @@ for (i in seq_along(lst_clust)) {
   totals_grp_clusters <- totals_grp_clusters |> mutate(Perc.Cluster = totals_grp_clusters$total_clust * 100 / total_cells)
 
   ## Load cluster info and cell-types to collapse names in `cell.type` column (description)
-  top_deg_file <- here(cvsDir, "cvs_files_markers", paste0(Seurat_base_name, suffix_clust_names))
+
+  top_deg_file <- here(cvsDirOUT, "cvs_files_markers", suffix_clust_names)
+  #top_deg_file <- here(cvsDirOUT, "cvs_files_markers", paste0(Seurat_base_name, suffix_clust_names))
   df_cluster_names <- read.csv(top_deg_file)
-  ## Note. Alternative can be used the re-run of DEG calculated in the complement Seurat from CR-count after removed the cross-barcodes
-  ##                  <<Directory: top20_subset>>
-  ##      Here I am using the DEG originally calculated in the CR-count harmnony data
-  ##      df_cluster_names <- read.csv(here(cvsDir, "cvs_files_markers", "top20_subset", paste0(Seurat_base_name, suffix_clust_names)))
-  df_cluster_names <- df_cluster_names[c("cluster", "cell.type")] |>
-    group_by(cluster) |> summarise(cell.types = paste(cell.type, collapse=",")) |>
+  df_cluster_names <- df_cluster_names[c("cluster", "cell_type")] |>
+    group_by(cluster) |> summarise(cell_types = paste(cell_type, collapse=",")) |>
     rename(seurat_clusters = cluster) |> dplyr::filter(seurat_clusters %in% clust)
 
   ## Update in nice-readable format the `cell.types` column with `IDs+counts by marker` by cluster
-  list_ct <- df_cluster_names[["cell.types"]]
+  list_ct <- df_cluster_names[["cell_types"]]
   nc <- list()
   
   ## add number of markers that match each cell-type. Ex. "inhibitory_neuron (2) Thalamus/MDm (1)" 
@@ -167,7 +185,7 @@ for (i in seq_along(lst_clust)) {
     nc <- append(nc, paste0(col_new, collapse = " "))
   }
   
-  df_cluster_names$cell.types <- noquote(unlist(nc))
+  df_cluster_names$cell_types <- noquote(unlist(nc))
 
   ## Save detail counts and percentages by grp of clusters
   totals_grp_clusters <- merge(grp_clusters, totals_grp_clusters, by = "seurat_clusters", all.x = TRUE, sort = FALSE)
@@ -175,7 +193,7 @@ for (i in seq_along(lst_clust)) {
   totals_grp_clusters["total_clust.y"] <- list(NULL) ## Delete column
 
   # cvs_name <- paste0("DETAIL_", marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types ,"_v3.csv")    
-  # write.csv(totals_grp_clusters, here(cvsDir, "cvs_files_markers", cvs_name))
+  # write.csv(totals_grp_clusters, here(cvsDirOUT, "cvs_files_markers", cvs_name))
 
   ########  Calculate perceptual values by SAMPLE ########
 
@@ -197,22 +215,20 @@ for (i in seq_along(lst_clust)) {
   df_summary
 
   # cvs_name <- paste0('SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types,"_v3.csv")
-  # write.csv(df_summary, here(cvsDir, "cvs_files_markers", cvs_name), row.names=TRUE)
+  # write.csv(df_summary, here(cvsDirOUT, "cvs_files_markers", cvs_name), row.names=TRUE)
 
   ## bind detail with totals into the main table
   df_summary <- data.frame(seurat_clusters = c("Total.Cells.Sample", "Total.Cells.ALL", "Percentage.Sample"), df_summary)
-  new_columns <- list(total_clust.x = NA, Perc.Cluster = NA, cell.types = NA)
+  new_columns <- list(total_clust.x = NA, Perc.Cluster = NA, cell_types = NA)
   df_summary <- df_summary |> mutate(!!!new_columns)
+  colnames(totals_grp_clusters)
+  colnames(df_summary)
   df_summary <- rbind(totals_grp_clusters, df_summary)
 
   ## add suffix to file name to identify the corresponding report
-  cvs_name <- case_when(
-    cellranger_pipe == "CR_arc_reanalyze_outliers" ~ paste0('FULL_SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types,"_GEX_v4.csv"),
-    cellranger_pipe == "CR_arc_reanalyze_outliers_ATAC" ~ paste0('FULL_SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types,"_ATAC_v4.csv"),
-    .default = as.character(paste0('FULL_SUMMARY_', marker_lst, "_" ,count_mtx_type, suffix, "_", clust_types,"_v4.csv"))
-  )
+  cvs_name <- paste0('FULL_SUMMARY_LEIDENr1_knn30_', marker_lst, "_" , count_mtx_type, suffix, "_", clust_types,"_v1.csv")
   
-  write.csv(df_summary, here(cvsDir, cvs_name), row.names=FALSE)
+  write.csv(df_summary, here(cvsDirOUT, cvs_name), row.names=FALSE)
 
 }
 
