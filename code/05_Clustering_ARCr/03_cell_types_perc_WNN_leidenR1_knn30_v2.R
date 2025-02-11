@@ -14,15 +14,7 @@ library("here")
 here::here()
 options(digits=2)
 
-## read input arguments
-# args = commandArgs(trailingOnly=TRUE)
-# cellranger_pipe <- args[2]
-# marker_lst <- args[4]
 cellranger_pipe = "CR_arc_reanalyze" # processed and QCed multiome data
-
-# ## We are only using the norm count with Harmony
-# count_mtx_type <- 'norm_counts'
-# Seurat_reduction <- 'Harmony'
 
 ## Selected manually the clusters based on the cell-type identification gene-marker lists
 marker_lst <- "integrated"
@@ -69,16 +61,6 @@ if (cellranger_pipe=="CR_arc_reanalyze") {
   glia <- c(4,15,23,24,27,28)
   undeterminated <- c(6,14,16,18,20,33)
 } 
-
-# ## LEIDEN r2
-# if (cellranger_pipe=="CR_arc_reanalyze") {
-#   hb <- c(1,3,6,8,9,11,13,15,21,25,41)
-#   thal <- c(7,16,19,20,22,23,27,29,34,35,37,39,42)
-#   endo <- c(18,40,43) 
-#   glia <- c(4,24,26,28,31,32,33,36)
-#   undeterminated <- c(2,5,10,12,14,17,20,38)
-# } 
-
 
 message(cellranger_pipe, " groups of clusters assigned!")
 
@@ -247,6 +229,6 @@ message("Done!")
 # ##  slurm script reproducibility
 # library("slurmjobs")
 # job_single(
-#   name = "03_cell_types_percentages_v2", memory = "60G", cores = 2, create_shell = TRUE
+#   name = "03_cell_types_perc_WNN_leidenR1_knn30_v2", memory = "60G", cores = 2, create_shell = TRUE
 # )
 
