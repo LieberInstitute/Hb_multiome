@@ -53,11 +53,18 @@ suffix <- '_Harmony_All_cluster'
 
 ##########These are CellRangerARC or CellRangerARC-reanalyze datasets
 
+hb <- c()
+thal <- c()
+neu <- c()
+glia <- c()
+undeterminated <- c()
+endo <- c() 
+
 ## LEIDEN resolution=r1
 
 if (cellranger_pipe=="CR_arc_reanalyze") {
-  hb <- c(2,3,5,7,9,10,12,17)
-  thal <- c(1,8,11,19,21,22,25,26,29,30,31)
+  hb <- c(1,2,3,5,7,9,10,12,17)
+  thal <- c(8,11,19,21,22,25,26,29,30,31)
   endo <- c(13,32) 
   glia <- c(4,15,23,24,27,28)
   undeterminated <- c(6,14,16,18,20,33)
@@ -89,7 +96,6 @@ basename(input_csv)
 ## Prepare file name for retrieve cell-types from corresponding pipeline
 
 suffix_clust_names <- paste0(Seurat_base_name, "_cellTypes_integrated_top50.csv")
-basename(suffix_clust_names)
 # [1] "ARCr_QCed_WNN_k30_C.leiden_lsi_r1_cellTypes_integrated_top50.csv"
 
 message("Calculating percentage of neurons, habenula, thalamus and glia cells")
@@ -125,7 +131,7 @@ names(lst_clust)
 lst_clust$allTypes
 
 ## Parse total cells by cluster and calculate percentages
-## for testing: i <- 1
+## for testing: i <- 1 (Hb)
 for (i in seq_along(lst_clust)) {
 
   clust <- lst_clust[[i]]
@@ -162,8 +168,10 @@ for (i in seq_along(lst_clust)) {
   ## Load cluster info and cell-types to collapse names in `cell.type` column (description)
 
   top_deg_file <- here(cvsDirOUT, "cvs_files_markers", suffix_clust_names)
-  #top_deg_file <- here(cvsDirOUT, "cvs_files_markers", paste0(Seurat_base_name, suffix_clust_names))
+  basename(top_deg_file) # ARCr_QCed_WNN_k30_C.leiden_lsi_r1_cellTypes_integrated_top50.csv
+  
   df_cluster_names <- read.csv(top_deg_file)
+  df_cluster_names <- df_cluster_names |> drop_na(cell_type)
   df_cluster_names <- df_cluster_names[c("cluster", "cell_type")] |>
     group_by(cluster) |> summarise(cell_types = paste(cell_type, collapse=",")) |>
     rename(seurat_clusters = cluster) |> dplyr::filter(seurat_clusters %in% clust)
@@ -172,17 +180,17 @@ for (i in seq_along(lst_clust)) {
   list_ct <- df_cluster_names[["cell_types"]]
   nc <- list()
   
-  ## add number of markers that match each cell-type. Ex. "inhibitory_neuron (2) Thalamus/MDm (1)" 
+  ## parse clusters to sum number of markers that match each cell-type. Ex. "inhibitory_neuron (2) Thalamus/MDm (1)" 
   for (x in seq_along(list_ct)) {
+    ## test: x=2
     ct_cluster <- list_ct[x]
     x1 <- sapply(ct_cluster, function(x) strsplit(x, ","))
     for (ct in x1) {
       ids <- unique(ct)
       num_rep <- table(ct)
-      col_new <- noquote(c(rbind(ids, paste0("(", num_rep, ")"))))
+      col_new <- noquote(c(rbind(ids, paste0("(", num_rep, ") "))))
     }
-    # if (length(col_new)==2) {col_new <- paste0("***", col_new[1], col_new[2])}
-    if (length(col_new)==3) {col_new <- paste0("***", col_new[1], col_new[2])} # include NA labels
+    if (length(col_new)==2) {col_new <- paste0("*** ", col_new[1], col_new[2])}
     nc <- append(nc, paste0(col_new, collapse = " "))
   }
   
@@ -236,9 +244,9 @@ for (i in seq_along(lst_clust)) {
 message("Done!")
 
 
-##  slurm script reproducibility
-library("slurmjobs")
-job_single(
-  name = "03_cell_types_percentages_v2", memory = "60G", cores = 2, create_shell = TRUE
-)
+# ##  slurm script reproducibility
+# library("slurmjobs")
+# job_single(
+#   name = "03_cell_types_percentages_v2", memory = "60G", cores = 2, create_shell = TRUE
+# )
 
