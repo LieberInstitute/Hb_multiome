@@ -139,7 +139,7 @@ for (i in seq_along(lst_clust)) {
     pivot_wider(names_from = orig.ident, values_from = N) |>  # make wider format the table
     left_join(df_mdT |>
                 group_by(seurat_clusters) |>
-                summarise(total_clust = sum(N))) |> # sum total cells by cluster
+                summarise(total_clust = round(sum(N), digits = 0))) |> # sum total cells by cluster
     mutate(seurat_clusters = as.character(seurat_clusters))
   ## replace NAs
   grp_clusters[is.na(grp_clusters)] <- 0
@@ -157,7 +157,7 @@ for (i in seq_along(lst_clust)) {
 
   ## Add percent cells by cluster in the group
   total_cells <- sum(df_mdT$N)
-  totals_grp_clusters <- totals_grp_clusters |> mutate(Perc.Cluster = totals_grp_clusters$total_clust * 100 / total_cells)
+  totals_grp_clusters <- totals_grp_clusters |> mutate(Perc.Cluster = round((totals_grp_clusters$total_clust * 100 / total_cells), digits = 3))
 
   ## Load cluster info and cell-types to collapse names in `cell.type` column (description)
 
@@ -181,7 +181,8 @@ for (i in seq_along(lst_clust)) {
       num_rep <- table(ct)
       col_new <- noquote(c(rbind(ids, paste0("(", num_rep, ")"))))
     }
-    if (length(col_new)==2) {col_new <- paste0("***", col_new[1], col_new[2])}
+    # if (length(col_new)==2) {col_new <- paste0("***", col_new[1], col_new[2])}
+    if (length(col_new)==3) {col_new <- paste0("***", col_new[1], col_new[2])} # include NA labels
     nc <- append(nc, paste0(col_new, collapse = " "))
   }
   
