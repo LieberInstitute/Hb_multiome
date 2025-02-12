@@ -60,35 +60,17 @@ Reductions(SeuratOBJ)
 # [1] "pca"                "umap.unintegrated"  "integrated.cca"    
 # [4] "umap"               "integrated.harmony"
 
-## function to plot PCA and UMAP before Harmony 
-
-f_plot_clust <- function(sobj, f_name, reduct, ga2) {
-  
-  # integrate the samples and clusters
-  p1 <- DimPlot(sobj, 
-                reduction = reduct, group.by = c("orig.ident", ga2))
-  png_name <- here(plotsDir, paste0(f_name,'_dimplot.png'))  
-  ggsave(p1, filename = png_name, height = 5, width = 10)
-  
-  # visualize the two conditions side-by-side
-  p1 <- DimPlot(sobj, 
-                reduction = reduct, split.by = "orig.ident")
-  png_name <- here(plotsDir, paste0(f_name,'_dimplot_splitted.png'))  
-  ggsave(p1, filename = png_name, height = 5, width = 10)
-  
-}
-
-
-prefix_name <- "seurat.combined.norm_counts"
+prefix_name <- "seurat.combined.norm_counts_rna"
 
 p1 <- ElbowPlot(SeuratOBJ, ndims = 30, reduction = "pca")
 ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_elbow_before_QCed.png')), height = 5, width = 7)
 
 ## Re run PCA as outliers cells has been removed from the data-set (~12% = 7k)
 SeuratOBJ.1 <- RunPCA(SeuratOBJ)
+
+## some plots for comparison purposes 
 p1 <- ElbowPlot(SeuratOBJ.1, ndims = 30, reduction = "pca")
 ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_elbow_after_QCed.png')), height = 5, width = 7)
-
 
 ## Re run UMAP
 SeuratOBJ.1 <- RunUMAP(SeuratOBJ.1, dims = 1:30, reduction = "pca", reduction.name = "umap.unintegrated")
@@ -115,23 +97,28 @@ SeuratOBJ.1 <- SeuratOBJ.1 |>
              reduction = "pca",
              assay.use = "RNA",
              reduction.save = "integrated.harmony",
-             plot_convergence = TRUE,
+             #plot_convergence = TRUE,
              #nclust = 50,                     # Number of clusters in model. nclust=1 equivalent to simple linear regression
              max.iter = 10,                   # One round of Harmony involves one clustering and one correction step
              #max.iter.cluster = 20,          # Maximum number of rounds to run clustering at each round of Harmony
-             early_stop = T
-  )
+             early_stop = T)
 ## rewrite harmony assay
 Reductions(SeuratOBJ.1)
 
+## Re-join layers after RNA integration
+# Assays(SeuratOBJ.1)
+# [1] "RNA"  "ATAC"
+# SeuratOBJ.1[["RNA"]] <- JoinLayers(SeuratOBJ.1[["RNA"]])
+
 message("Finishing Seurat-Harmony Integration on RNA - ", Sys.time())
+
+## more plots after correction for comparison purposes 
 
 p1 <- DimPlot(SeuratOBJ, reduction = 'integrated.harmony', group.by = "orig.ident")
 ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_umap_integrated_harmony.png')), height = 5, width = 7)
 
 p1 <- DimPlot(SeuratOBJ.1, reduction = 'integrated.harmony', group.by = "orig.ident")
 ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_umap_integrated_harmony_QCed.png')), height = 5, width = 7)
-
 
 ## Run UMAP on harmonized RNA data
 SeuratOBJ.1 <- RunUMAP(SeuratOBJ.1, dims = 1:30, reduction = "integrated.harmony", reduction.name = "umap.integrated")
@@ -142,7 +129,6 @@ ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_umap_integrated_harmo
 p1 <- DimPlot(SeuratOBJ.1, reduction = 'integrated.harmony', group.by = "orig.ident")
 ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_umap_integrated_harmony_QCed.png')), height = 5, width = 7)
 
-
 ## Run TSNE
 Reductions(SeuratOBJ.1)
 SeuratOBJ.1 <- RunTSNE(SeuratOBJ.1, dims = 1:30, reduction = "integrated.harmony", reduction.name = "tsne.integrated")
@@ -151,5 +137,111 @@ p1 <- DimPlot(SeuratOBJ.1, reduction = 'tsne.integrated', group.by = "orig.ident
 ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_TSNE_integrated_harmony_QCed.png')), height = 5, width = 7)
 
 
+
+## Re-run TF-IDF on ATAC-QCed data
+
+message("Run TF-IDF on ATAC")
+
+DefaultAssay(SeuratOBJ.1) <- "ATAC"
+
+# Run term frequency inverse document frequency (TF-IDF) normalization on a matrix.
+SeuratOBJ.1 <- RunTFIDF(SeuratOBJ.1,
+                        method = 1,  # computes log(𝑇𝐹×𝐼𝐷𝐹).
+                        scale.factor = 10000)
+SeuratOBJ.1 <- FindTopFeatures(SeuratOBJ.1,
+                               min.cutoff = 'q5', # 95% most common features coverage as VariableFeatures
+                               verbose = TRUE)
+SeuratOBJ.1 <- RunSVD(SeuratOBJ.1)
+
+Reductions(SeuratOBJ.1)
+# [1] "pca"                "umap.unintegrated"  "integrated.cca"    
+# [4] "umap"               "integrated.harmony" "umap.integrated"   
+# [7] "tsne.integrated"    "lsi"
+
+## some plots for comparison purposes 
+
+prefix_name <- "seurat.combined.norm_counts_atac"
+
+p1 <- ElbowPlot(SeuratOBJ.1, ndims = 50, reduction = "lsi") + ggtitle("Elbow on ATAC before harmony correction") +
+  geom_vline(xintercept = 20, color="red", linetype="dashed")
+ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_elbow_after_QCed.png')), height = 5, width = 7)
+
+SeuratOBJ.1 <- RunUMAP(SeuratOBJ.1, dims = 2:20, reduction = "lsi", reduction.name = "umap.lsi.unintegrated")
+
+p1 <- DimPlot(SeuratOBJ.1, reduction = 'umap.lsi.unintegrated', group.by = "orig.ident")
+ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_umap_QCed.png')), height = 5, width = 7)
+
+## not longer need it
+rm("SeuratOBJ")
+
+message("Running Seurat-Harmony Integration on ATAC - ", Sys.time())
+
+## split the RNA measurements into two layers one for each sample
+tryCatch( { SeuratOBJ.1[["ATAC"]] <- split(SeuratOBJ.1[["ATAC"]], f = SeuratOBJ.1$orig.ident)
+  return(s) }, error = function(e) { print("layers are already split") } )
+
+## correct data on lsi by sampleID
+colnames(SeuratOBJ.1@meta.data)
+SeuratOBJ.1 <- SeuratOBJ.1 |> 
+  RunHarmony(group.by.vars = "orig.ident", 
+             reduction.save = "integrated.lsi.harmony",
+             assay.use = "ATAC",
+             reduction.use= 'lsi',
+             plot_convergence = TRUE,
+             #max.iter = 10,  # To avoid warning() message: Quick-TRANSfer stage steps exceeded maximum (= 2785100)  
+             #                  left empty as it could need more or less lters to complete
+             early_stop = T,
+             project.dim = F) # I think project.dim produce a bug at some point 
+# `ProjectDim` arg in the harmony source code is trying to project the batch corrected embedding back to the original feature loading, 
+#  set as `F` to allow the correction  
+
+Reductions(SeuratOBJ.1)
+# [1] "pca"                    "umap.unintegrated"      "integrated.cca"        
+# [4] "umap"                   "integrated.harmony"     "umap.integrated"       
+# [7] "tsne.integrated"        "lsi"                    "umap.lsi.unintegrated" 
+# [10] "integrated.lsi.harmony"
+
+## Re-join layers after RNA integration
+Assays(SeuratOBJ.1)
+# [1] "RNA"  "ATAC"
+SeuratOBJ.1[["ATAC"]] <- JoinLayers(SeuratOBJ.1[["ATAC"]])
+
+
+## more plots after correction on lsi for comparison purposes 
+
+message("Finishing Seurat-Harmony Integration on ATAC - ", Sys.time())
+
+
+## more plots after correction for comparison purposes 
+
+p1 <- DimPlot(SeuratOBJ.1, reduction = 'integrated.lsi.harmony', group.by = "orig.ident") + 
+  ggtitle("ATAC (LSI) harmony correction") +
+  geom_vline(xintercept = 0, color="red", linetype="dashed") +
+  geom_hline(yintercept = 0, color="red", linetype="dashed")
+ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_lsi_integrated_harmony_QCed.png')), height = 5, width = 7) 
+
+## Run UMAP on harmonized RNA data
+SeuratOBJ.1 <- RunUMAP(SeuratOBJ.1, dims = 2:30, reduction = "integrated.lsi.harmony", reduction.name = "umap.lsi.integrated")
+
+p1 <- DimPlot(SeuratOBJ.1, reduction = 'umap.lsi.integrated', group.by = "orig.ident") + 
+  ggtitle("UMAP for ATAC (LSI) harmony correction") +
+  geom_vline(xintercept = 0, color="red", linetype="dashed") +
+  geom_hline(yintercept = 0, color="red", linetype="dashed")
+ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_umap_integrated_lsi_harmony_QCed.png')), height = 5, width = 7)
+
+## Run TSNE
+SeuratOBJ.1 <- RunTSNE(SeuratOBJ.1, dims = 2:30, reduction = "integrated.lsi.harmony", reduction.name = "tsne.lsi.integrated")
+
+p1 <- DimPlot(SeuratOBJ.1, reduction = 'tsne.lsi.integrated', group.by = "orig.ident") + 
+  ggtitle("TSNE for ATAC harmony correction") +
+  geom_vline(xintercept = 0, color="red", linetype="dashed") +
+  geom_hline(yintercept = 0, color="red", linetype="dashed")
+ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_TSNE_integrated_lsi_harmony_QCed.png')), height = 5, width = 7)
+
+
+## Save Seurat with harmonized rna and atac data 
+
+Seurat_base_name <- here(rdsDir, "seurat.norm_counts_Harmony_ARCr_atac_rna_QCed.rds")
+saveRDS(rdsDir, Seurat_base_name)
 
 
