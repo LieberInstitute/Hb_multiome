@@ -1,10 +1,11 @@
 ########################################################################
-## Prepare a Seurat RDS object WITHOUT OUTLIER cells
+## Prepare a Seurat RDS object WITHOUT OUTLIER cells 
 ##  
 ## INPUT:
-##      RDS (Seurat) with ONLY GEX or ATAC multiome cells with outliers
+##      Seurat with ALL cells to remove outliers from 
+##      Seurat with GEX outliers and Seurat with ATAC outliers
 ## OUPUT:
-##      RDS (Seurat) with ONLY valid cells (good quality) detected (remove outliers)
+##      Seurat with ONLY valid cells (good quality) detected (outliers removed)
 ## NOTE:
 ##      For +60k cells request 60G free-mem
 ##
@@ -20,15 +21,17 @@ library("stringr")
 
 here::here()
 
-# Check/create directories
+## Check/create directories
+
 inputDir_fulldataset <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
 inputDir_outliers <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze_outliers") 
 outputDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze")
 cvsDir <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze_outliers", "cvs_files_markers")
+plotsDir <- here("plots", "03_pseudobulking", "cellrangerARC_reanalyze")
 
-## Check directories
 if (!dir.exists(outputDir)) {dir.create(outputDir)}
 if (!dir.exists(cvsDir)) {dir.create(cvsDir)}
+if (!dir.exists(plotsDir)) {dir.create(plotsDir)}
 
 
 #############################           Initials        ################################
@@ -43,6 +46,7 @@ minCells <- 1
 
 if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts'}
 Seurat_base_name <- paste0(Seurat_base_name, "_Harmony_All_GEX_subset_Outliers.rds")
+# seurat.norm_counts_Harmony_All_GEX_subset_Outliers.rds
 
 ## Validate seurat exists
 if (length(list.files(inputDir_outliers, pattern = Seurat_base_name)==1)) {
@@ -199,27 +203,6 @@ saveRDS(SeuratObj_subset, file = rds_name)
 
 message("Saved Seurat subset data QCed!")
 
-
-
-################## (5) Find DEG and save Seurat 
-
-## Find DEG in the integrated Seurat for ALL clusters (BEFORE pseudobulk)
-# table(SeuratOBJ[["seurat_clusters"]])
-# all.markers <- FindAllMarkers(object = SeuratObj_subset)
-# head(all.markers, n=3)
-
-# cvs_file <- paste0(Seurat_base_name, "QCed_markers_RNA_ATAC.csv") 
-# cvs_file <- here(cvsDir, cvs_file)
-# write.csv(all.markers, cvs_file)
-# 
-# message(" FindAllMarkers done!")
-
-
-# slurm script reproducibility
-# library("slurmjobs")
-# job_single(
-#   name = "07_prepare_seurat_reanalyze_without_outliers", memory = "30G", cores = 2, create_shell = TRUE
-# )
 
 library("sessioninfo")
 print('Reproducibility information:')
