@@ -15,6 +15,8 @@
 library("Seurat")
 library("Signac") 
 library("here")
+library("ggplot2")
+library("harmony")
 #library("tidyr")
 #library("stringr")
 
@@ -75,4 +77,79 @@ f_plot_clust <- function(sobj, f_name, reduct, ga2) {
   ggsave(p1, filename = png_name, height = 5, width = 10)
   
 }
+
+
+prefix_name <- "seurat.combined.norm_counts"
+
+p1 <- ElbowPlot(SeuratOBJ, ndims = 30, reduction = "pca")
+ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_elbow_before_QCed.png')), height = 5, width = 7)
+
+## Re run PCA as outliers cells has been removed from the data-set (~12% = 7k)
+SeuratOBJ.1 <- RunPCA(SeuratOBJ)
+p1 <- ElbowPlot(SeuratOBJ.1, ndims = 30, reduction = "pca")
+ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_elbow_after_QCed.png')), height = 5, width = 7)
+
+
+## Re run UMAP
+SeuratOBJ.1 <- RunUMAP(SeuratOBJ.1, dims = 1:30, reduction = "pca", reduction.name = "umap.unintegrated")
+
+p1 <- DimPlot(SeuratOBJ, reduction = 'umap.unintegrated', group.by = "orig.ident")
+ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_umap.png')), height = 5, width = 7)
+
+p1 <- DimPlot(SeuratOBJ.1, reduction = 'umap.unintegrated', group.by = "orig.ident")
+ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_umap_QCed.png')), height = 5, width = 7)
+
+
+ 
+## Re-run Harmony on QCed data
+## NOTE: if correction is handled in the same Seurat integrated, then Seurat Clusters are overwriting
+
+message("Running Seurat-Harmony Integration on RNA - ", Sys.time())
+
+# dd/mm/yyyy
+set.seed(12022025)
+
+# use k-means centroids initialization
+SeuratOBJ.1 <- SeuratOBJ.1 |>
+  RunHarmony(group.by.vars = "orig.ident",
+             reduction = "pca",
+             assay.use = "RNA",
+             reduction.save = "integrated.harmony",
+             plot_convergence = TRUE,
+             #nclust = 50,                     # Number of clusters in model. nclust=1 equivalent to simple linear regression
+             max.iter = 10,                   # One round of Harmony involves one clustering and one correction step
+             #max.iter.cluster = 20,          # Maximum number of rounds to run clustering at each round of Harmony
+             early_stop = T
+  )
+## rewrite harmony assay
+Reductions(SeuratOBJ.1)
+
+message("Finishing Seurat-Harmony Integration on RNA - ", Sys.time())
+
+p1 <- DimPlot(SeuratOBJ, reduction = 'integrated.harmony', group.by = "orig.ident")
+ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_umap_integrated_harmony.png')), height = 5, width = 7)
+
+p1 <- DimPlot(SeuratOBJ.1, reduction = 'integrated.harmony', group.by = "orig.ident")
+ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_umap_integrated_harmony_QCed.png')), height = 5, width = 7)
+
+
+## Run UMAP on harmonized RNA data
+SeuratOBJ.1 <- RunUMAP(SeuratOBJ.1, dims = 1:30, reduction = "integrated.harmony", reduction.name = "umap.integrated")
+
+p1 <- DimPlot(SeuratOBJ, reduction = 'integrated.harmony', group.by = "orig.ident")
+ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_umap_integrated_harmony.png')), height = 5, width = 7)
+
+p1 <- DimPlot(SeuratOBJ.1, reduction = 'integrated.harmony', group.by = "orig.ident")
+ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_umap_integrated_harmony_QCed.png')), height = 5, width = 7)
+
+
+## Run TSNE
+Reductions(SeuratOBJ.1)
+SeuratOBJ.1 <- RunTSNE(SeuratOBJ.1, dims = 1:30, reduction = "integrated.harmony", reduction.name = "tsne.integrated")
+
+p1 <- DimPlot(SeuratOBJ.1, reduction = 'tsne.integrated', group.by = "orig.ident")
+ggsave(p1, filename = here(plotsDir, paste0(prefix_name, '_TSNE_integrated_harmony_QCed.png')), height = 5, width = 7)
+
+
+
 
