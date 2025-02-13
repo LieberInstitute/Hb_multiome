@@ -245,3 +245,20 @@ Seurat_base_name <- here(rdsDir, "seurat.norm_counts_ARCr_harmony_atac_rna_QCed.
 saveRDS(rdsDir, Seurat_base_name)
 
 message("Saved Seurat corrected!")
+
+
+# # slurm script reproducibility
+# library("slurmjobs")
+# job_single(
+#   name = "08_harmony_CR_ARCr", memory = "60G", cores = 2, create_shell = TRUE
+# )
+
+library("sessioninfo")
+print('Reproducibility information:')
+Sys.time()
+proc.time()
+options(width = 120)
+session_info()
+
+
+
