@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=60G
+#SBATCH --mem=100G
 #SBATCH --job-name=08_harmony_CR_ARCr
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
@@ -9,7 +9,7 @@
 # SBATCH --mail-type=ALL
 
 ## Explicitly pipe script output to a log
-log_path=logs/08_harmony_CR_ARCr_${SLURM_JOB_ID}.txt
+log_path=logs/08_harmony_CR_ARCr.txt
 
 {
 set -e
