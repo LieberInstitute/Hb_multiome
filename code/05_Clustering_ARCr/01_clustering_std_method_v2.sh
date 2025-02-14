@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=100G
-#SBATCH --job-name=01_clustering_std_method
+#SBATCH --job-name=01_clustering_wnn_method
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
@@ -36,7 +36,7 @@ knn=${all_knn[$(( $SLURM_ARRAY_TASK_ID / 1 % 3 ))]}
 # 40 = 40 NN (Useful if the dataset is very noisy)
 
 ## Explicitly pipe script output to a log
-log_path=logs/01_clustering_std_method_${clust_method}_${clust_res}_${knn}_${SLURM_ARRAY_TASK_ID}.txt
+log_path=logs/01_clustering_wnn_method_${clust_method}_${clust_res}_${knn}_${SLURM_ARRAY_TASK_ID}.txt
 
 {
 set -e
