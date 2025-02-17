@@ -253,7 +253,8 @@ ggsave(pltALL, filename = here(plotDir, paste0("seurat.norm_counts_CRr_UMAP_WNN_
 ## Find DEG and save Seurat with ONLY ATAC OUTLIER cells (barcodes) to identify cell types later
 
 ## Save RDS Object
-if (clust_knn = 30) {
+clust_knn
+if (clust_knn == 30) {
   rds_name <- here(outputRDS_Dir, paste0("seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_", sufix_name, ".rds"))
   saveRDS(SeuratOBJ.1, file = rds_name)
   
@@ -320,7 +321,7 @@ ggsave(pltALL, filename = here(plotDir, paste0("seurat.norm_counts_CRr_UMAP_WNN_
 ## Find DEG and save Seurat with ONLY ATAC OUTLIER cells (barcodes) to identify cell types later
 
 ## Save RDS Object
-if (clust_knn = 30) {
+if (clust_knn == 30) {
   rds_name <- here(outputRDS_Dir, paste0("seurat.norm_counts_CRr_WNN_rnaHarm_atacLSI_", sufix_name, ".rds"))
   saveRDS(SeuratOBJ.2, file = rds_name)
   message("\nSeurat with WNN with rna-harmony and atac-lsi saved: ", basename(rds_name))
