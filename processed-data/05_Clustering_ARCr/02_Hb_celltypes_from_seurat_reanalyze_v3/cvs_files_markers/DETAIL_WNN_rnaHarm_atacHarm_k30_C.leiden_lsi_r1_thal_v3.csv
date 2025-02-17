@@ -1,0 +1,8 @@
+"","seurat_clusters","S03_Hb_r","S04_Hb_r","S05_Hb_r","S06_Hb_r","S07_Hb_r","S08_Hb_r","S09_Hb_r","S10_Hb_r","S11_Hb_r","S12_Hb_r","total_clust.x","Perc.Cluster","cell_types"
+"1","1",21,3457,183,403,551,801,66,241,293,450,6466,11.608,"DD_Excit.Thal (7)  DD_OPC (1)  DD_Inhib.Thal (2)  DD_LHb (1)  LB_LHB neuron specific (1) "
+"2","5",969,600,297,593,525,247,248,255,146,103,3983,7.151,"DD_Inhib.Thal (10)  LB_Thalamus/MDm (1)  LB_inhibitory_neuron (1)  DD_LHb (2)  LB_excitatory_neuron (1) "
+"3","8",136,83,180,925,351,27,1168,187,32,69,3158,5.669,"LB_Thalamus broad (11)  DD_Excit.Thal (1)  DD_Inhib.Thal (1)  LB_Hb neuron specific (1) "
+"4","21",2,0,4,5,3,2,466,1,0,1,484,0.869,"DD_Inhib.Thal (15)  LB_inhibitory_neuron (2)  LB_Thalamus/MDm (1)  LB_neuron (1) "
+"5","23",208,0,0,0,0,0,1,0,0,0,209,0.375,"LB_Endo/CP (6)  DD_Excit.Thal (1) "
+"6","16",0,111,8,1307,5,6,12,2,3,3,1457,2.616,"DD_Inhib.Thal (13)  LB_inhibitory_neuron (2)  LB_Thalamus/MDm (1) "
+"7","26",0,0,0,0,0,0,102,0,0,0,102,0.183,"DD_Inhib.Thal (15)  LB_inhibitory_neuron (2)  LB_Thalamus/MDm (1) "

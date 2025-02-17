@@ -1,0 +1,5 @@
+"","seurat_clusters","S03_Hb_r","S04_Hb_r","S05_Hb_r","S06_Hb_r","S07_Hb_r","S08_Hb_r","S09_Hb_r","S10_Hb_r","S11_Hb_r","S12_Hb_r","total_clust.x","Perc.Cluster","cell_types"
+"1","6",423,8,431,474,133,14,2008,179,15,4,3689,6.623,"DD_Endo (1)  DD_Astrocyte (4)  DD_Excit.Thal (1)  DD_OPC (1) "
+"2","10",23,108,17,135,287,215,117,380,954,412,2648,4.754,"DD_LHb (1)  DD_Excit.Thal (3)  DD_Astrocyte (1)  DD_OPC (7)  DD_Inhib.Thal (1) "
+"3","11",250,17,84,1837,97,0,83,5,1,11,2385,4.282,"DD_Excit.Thal (4)  DD_OPC (1)  DD_LHb (3)  DD_Inhib.Thal (1) "
+"4","14",56,245,42,65,498,189,68,90,83,279,1615,2.899,"DD_OPC (1)  DD_Excit.Thal (2)  DD_MHb (1)  DD_Endo (4) "

@@ -1,0 +1,3 @@
+"","seurat_clusters","S03_Hb_r","S04_Hb_r","S05_Hb_r","S06_Hb_r","S07_Hb_r","S08_Hb_r","S09_Hb_r","S10_Hb_r","S11_Hb_r","S12_Hb_r","total_clust.x","Perc.Cluster","cell_types"
+"1","16",2,0,1787,0,0,0,0,2,0,0,1791,3.215,"LB_Endo/CP (1)  DD_Endo (2) "
+"2","31",30,11,14,32,32,16,24,25,7,4,195,0.35,"DD_Endo (11)  LB_Endo/CP (2) "
