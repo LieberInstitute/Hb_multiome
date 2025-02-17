@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=100G
-#SBATCH --job-name=01_clustering_wnn_method
+#SBATCH --job-name=01_clustering_std_method_v2 
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
