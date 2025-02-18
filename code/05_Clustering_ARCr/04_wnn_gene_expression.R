@@ -1,5 +1,6 @@
 ########################################################################
 ## Produce Violin Plots (s) for GEX on selected WNN clustering results
+## WNN Leiden on RNA-Harmony and ATAC-LSI 
 ##
 ## Authors. CSC 
 ## Date. Jan 24, 2024
