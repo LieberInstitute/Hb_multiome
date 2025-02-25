@@ -90,39 +90,10 @@ message('Seurat object loaded!')
 
 message("Clustering ", length(Cells(SeuratOBJ)), " cells")
 
-## Plot before re-cluster data for comparison
-
-Reductions(SeuratOBJ)
-
-# plt_elbow1 <- ElbowPlot(SeuratOBJ, ndims = 50, reduction = "pca") + ggtitle("PCA reduction") +
-#   geom_vline(xintercept = 30, color="red", linetype="dashed")
-# plt_elbow2 <- ElbowPlot(SeuratOBJ, ndims = 50, reduction = "integrated.harmony") + ggtitle("Harmony reduction") +
-#   geom_vline(xintercept = 30, color="red", linetype="dashed")
-# ggsave((plt_elbow1 + plt_elbow2), filename = here(plotDir, paste0(Seurat_base_name, '_rna_elbow.png')), height = 6, width = 15)
-# 
-# plt1 <- DimHeatmap(SeuratOBJ, reduction = 'pca', nfeatures = 30, fast = FALSE) + labs(title = paste0("Heatmap PCA")) +
-#   labs(subtitle = "CellRangerARC-reanalyze Human Habenula dataset")
-# plt2 <- DimHeatmap(SeuratOBJ, reduction = "integrated.harmony", nfeatures = 30, fast = FALSE) + labs(title = paste0("Heatmap PCA.Harmony")) +
-#   labs(subtitle = "CellRangerARC-reanalyze Human Habenula dataset") #
-# ggsave((plt1/plt2), filename = here(plotDir, paste0(Seurat_base_name, '_pca_harmony_heatmap.png')), height = 8, width = 10)
-# 
-# plt1 <- DimPlot(SeuratOBJ, reduction = "pca") + labs(title = paste0("Clustering of ", length(Cells(SeuratOBJ)), " cells")) +
-#   labs(subtitle = "CellRangerARC-reanalyze Human Habenula dataset") +
-#   DimPlot(SeuratOBJ, reduction = "umap.unintegrated") +
-#   DimPlot(SeuratOBJ, reduction = "integrated.harmony")
-# ggsave(plt1, filename = here(plotDir, paste0(Seurat_base_name, '_redDim_umaps.png')), height = 6, width = 20)
-
-
 
 ####### Clustering for RNA
 
-## There are two approaches for running the RNA analysis, in this script we use 
-##    (1) Standard seurat workflow
-##    (2) SCTransform
-
-## SCTransform model normalization is followed by PCA and UMAP dimensionality reduction
-##       Function replaces NormalizeData(), ScaleData(), and FindVariableFeatures()
-
+## There are two approaches for running the RNA analysis, in this script we use  the (1) Standard seurat workflow
 
 ## (1) Standard Seurat workflow
 
@@ -184,21 +155,17 @@ message("Clustering method: ", clust_name, "\n",
         "Clustering resolution: ", as.integer(clust_res), "\n",
         "Clustering knn: ", clust_knn)
 
-# SeuratOBJ.1 <- RunUMAP(SeuratOBJ.1, dims = 1:30,
-#                        reduction = "integrated.harmony",
-#                        reduction.name = umap_rna_name) # umap.lovain
-
 message("RNA SNN ", clust_name," method = found ", length(unique(SeuratOBJ.1$seurat_clusters)), " clusters")
         
 
 ########### Next run ATAC analysis. ###########
 
-# ATAC were prepared on ~/Hb_multiome/code/03_pseudobulking/08_harmony_CR_ARCr.R
+## ATAC modality was prepared on ~/Hb_multiome/code/03_pseudobulking/08_harmony_CR_ARCr.R
 
 
 ########### Run WNN on integrated.harmony for rna and lsi (1) and lsi-harmony (2) for atac ###########
 
-########### First strategy: WNN on integrated.harmony for rna and integrated.lsi.harmony for atac 
+## strategy: WNN on integrated.harmony for rna and integrated.lsi.harmony for atac 
 
 ## Calculate a WNN graph, representing a weighted combination of RNA and ATAC-seq modalities. We use this graph for UMAP visualization and clustering
 ## We used the reduction with batch corrected data for both rna and atac
@@ -230,8 +197,6 @@ SeuratOBJ.1 <- FindClusters(SeuratOBJ.1,
 #str(SeuratOBJ.1$wnn.umap)
 table(Idents(SeuratOBJ.1))
 
-# print(as.data.frame(table(Idents(SeuratOBJ.1))), row.names = FALSE)
-
 ## reduction = "umap.integrated" | var: umap_rna_name
 plt1 <- DimPlot(SeuratOBJ.1, reduction = "umap.integrated", group.by = clust_name, 
                 label = TRUE, label.size = 2.5, repel = TRUE) + 
@@ -250,11 +215,10 @@ ggsave(pltALL, filename = here(plotDir, paste0("seurat.norm_counts_CRr_UMAP_WNN_
        height = 7, width = 20)
 
 
-## Find DEG and save Seurat with ONLY ATAC OUTLIER cells (barcodes) to identify cell types later
+## Save RDS Object and Find DEG in the WNN
 
-## Save RDS Object
 clust_knn
-if (clust_knn == 30) {
+if ((clust_knn==30 || clust_knn==40) & (clust_method==2 || clust_method==4)) {
   rds_name <- here(outputRDS_Dir, paste0("seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_", sufix_name, ".rds"))
   saveRDS(SeuratOBJ.1, file = rds_name)
   
@@ -274,70 +238,70 @@ if (clust_knn == 30) {
 
 }
 
-########### Second strategy: WNN on integrated.harmony for rna and on lsi for atac
-
-SeuratOBJ.2 <- FindMultiModalNeighbors(SeuratOBJ.1,
-                                       k.nn = as.integer(clust_knn),
-                                       reduction.list = list("integrated.harmony", "lsi"),
-                                       dims.list = list(1:30, 2:20))
-message("WNN done!")
-head(SeuratOBJ.2@neighbors)
-rm("SeuratOBJ.1")
-# head(SeuratOBJ.2@graphs$wknn)
-
-SeuratOBJ.2 <- RunUMAP(SeuratOBJ.2,
-                       n.neighbors = as.integer(clust_knn), # Default n.neighbors=30
-                       nn.name = "weighted.nn",
-                       reduction.name = "wnn.umap",
-                       reduction.key = "wnnUMAP_")
-
-SeuratOBJ.2 <- FindClusters(SeuratOBJ.2,
-                            graph.name = "wsnn",
-                            method = "igraph",
-                            random.seed = 03122024,
-                            resolution = as.integer(clust_res),
-                            algorithm = as.integer(clust_method))
-
-#str(SeuratOBJ.2$wnn.umap)
-table(Idents(SeuratOBJ.2))
-
-## reduction = "umap.integrated" | var: umap_rna_name
-plt1 <- DimPlot(SeuratOBJ.2, reduction = "umap.integrated", group.by = clust_name, 
-                label = TRUE, label.size = 2.5, repel = TRUE) + 
-  ggtitle(paste0("RNA (", clust_name, " at res=", clust_res,")")) & NoLegend()
-plt2 <- DimPlot(SeuratOBJ.2, reduction = "umap.lsi.unintegrated", group.by = clust_name,
-                label = TRUE, label.size = 2.5, repel = TRUE) + 
-  ggtitle(paste0("ATAC (LSI)")) & NoLegend()
-plt3 <- DimPlot(SeuratOBJ.2, reduction = "wnn.umap", group.by = clust_name,
-                label = TRUE, label.size = 2.5) + 
-  ggtitle(paste0("WNN (knn=", clust_knn, ", res=", as.character(clust_res), ")"))
-
-pltALL <- plt1 + plt2 + plt3 & theme(plot.title = element_text(hjust = 0.5)) 
-sufix_name <- paste0("k", clust_knn, "_", clust_name,"_lsi_r", clust_res)
-ggsave(pltALL, filename = here(plotDir, paste0("seurat.norm_counts_CRr_UMAP_WNN_rnaHarm_atacLSI_", sufix_name, ".png")), 
-       height = 7, width = 20)
-
-
-## Find DEG and save Seurat with ONLY ATAC OUTLIER cells (barcodes) to identify cell types later
-
-## Save RDS Object
-if (clust_knn == 30) {
-  rds_name <- here(outputRDS_Dir, paste0("seurat.norm_counts_CRr_WNN_rnaHarm_atacLSI_", sufix_name, ".rds"))
-  saveRDS(SeuratOBJ.2, file = rds_name)
-  message("\nSeurat with WNN with rna-harmony and atac-lsi saved: ", basename(rds_name))
-
-  ## Find DEG in the integrated Seurat for ALL clusters
-  
-  table(SeuratOBJ.2[["seurat_clusters"]])
-  all.markers <- FindAllMarkers(object = SeuratOBJ.2)
-  head(all.markers, n=3)
-  
-  cvs_file <- paste0("seurat.norm_counts_CRr_WNN_rnaHarm_atacLSI_", sufix_name,"_markers.csv")
-  cvs_file <- here(outputCVS_Dir, cvs_file)
-  write.csv(all.markers, cvs_file)
-  
-  message("\nMarkers from WNN with rna-harmony and atac-lsi saved: ", basename(cvs_file))
-}
+# ########### Second strategy: WNN on integrated.harmony for rna and on lsi for atac
+# 
+# SeuratOBJ.2 <- FindMultiModalNeighbors(SeuratOBJ.1,
+#                                        k.nn = as.integer(clust_knn),
+#                                        reduction.list = list("integrated.harmony", "lsi"),
+#                                        dims.list = list(1:30, 2:20))
+# message("WNN done!")
+# head(SeuratOBJ.2@neighbors)
+# rm("SeuratOBJ.1")
+# # head(SeuratOBJ.2@graphs$wknn)
+# 
+# SeuratOBJ.2 <- RunUMAP(SeuratOBJ.2,
+#                        n.neighbors = as.integer(clust_knn), # Default n.neighbors=30
+#                        nn.name = "weighted.nn",
+#                        reduction.name = "wnn.umap",
+#                        reduction.key = "wnnUMAP_")
+# 
+# SeuratOBJ.2 <- FindClusters(SeuratOBJ.2,
+#                             graph.name = "wsnn",
+#                             method = "igraph",
+#                             random.seed = 03122024,
+#                             resolution = as.integer(clust_res),
+#                             algorithm = as.integer(clust_method))
+# 
+# #str(SeuratOBJ.2$wnn.umap)
+# table(Idents(SeuratOBJ.2))
+# 
+# ## reduction = "umap.integrated" | var: umap_rna_name
+# plt1 <- DimPlot(SeuratOBJ.2, reduction = "umap.integrated", group.by = clust_name, 
+#                 label = TRUE, label.size = 2.5, repel = TRUE) + 
+#   ggtitle(paste0("RNA (", clust_name, " at res=", clust_res,")")) & NoLegend()
+# plt2 <- DimPlot(SeuratOBJ.2, reduction = "umap.lsi.unintegrated", group.by = clust_name,
+#                 label = TRUE, label.size = 2.5, repel = TRUE) + 
+#   ggtitle(paste0("ATAC (LSI)")) & NoLegend()
+# plt3 <- DimPlot(SeuratOBJ.2, reduction = "wnn.umap", group.by = clust_name,
+#                 label = TRUE, label.size = 2.5) + 
+#   ggtitle(paste0("WNN (knn=", clust_knn, ", res=", as.character(clust_res), ")"))
+# 
+# pltALL <- plt1 + plt2 + plt3 & theme(plot.title = element_text(hjust = 0.5)) 
+# sufix_name <- paste0("k", clust_knn, "_", clust_name,"_lsi_r", clust_res)
+# ggsave(pltALL, filename = here(plotDir, paste0("seurat.norm_counts_CRr_UMAP_WNN_rnaHarm_atacLSI_", sufix_name, ".png")), 
+#        height = 7, width = 20)
+# 
+# 
+# ## Find DEG and save Seurat with ONLY ATAC OUTLIER cells (barcodes) to identify cell types later
+# 
+# ## Calculate and save DEG found in the WNN 
+# if ((clust_knn==30 || clust_knn==40) & (clust_method==2 || clust_method==4)) {
+#   rds_name <- here(outputRDS_Dir, paste0("seurat.norm_counts_CRr_WNN_rnaHarm_atacLSI_", sufix_name, ".rds"))
+#   saveRDS(SeuratOBJ.2, file = rds_name)
+#   message("\nSeurat with WNN with rna-harmony and atac-lsi saved: ", basename(rds_name))
+# 
+#   ## Find DEG in the integrated Seurat for ALL clusters
+#   
+#   table(SeuratOBJ.2[["seurat_clusters"]])
+#   all.markers <- FindAllMarkers(object = SeuratOBJ.2)
+#   head(all.markers, n=3)
+#   
+#   cvs_file <- paste0("seurat.norm_counts_CRr_WNN_rnaHarm_atacLSI_", sufix_name,"_markers.csv")
+#   cvs_file <- here(outputCVS_Dir, cvs_file)
+#   write.csv(all.markers, cvs_file)
+#   
+#   message("\nMarkers from WNN with rna-harmony and atac-lsi saved: ", basename(cvs_file))
+# }
 
 
 message("\nAll tasks done!")
