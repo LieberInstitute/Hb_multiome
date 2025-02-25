@@ -1,0 +1,87 @@
+# Habenula multiome scRNAseq and scATACseq  
+### From frozen human brain tissue
+
+***
+
+Here, there is essential information regarding the R devel environment and a brief description of the scripts used in this directory.
+Please refer to the scripts for a wide explanation of each one.<br>
+
+<br>
+
+### Brief description of the scripts in this directory
+
+
+**01_clustering_std_method.sh** runs *01_clustering_std_method.R*
+
+It computes 48 WNN configurations with available methods and functions in Seurat.
+
+
+**01_clustering_std_method_v2.sh** runs *01_clustering_std_method.R*  (recommended)
+
+It computes 24 preselected WNN configurations with the same available methods and functions in Seurat
+
+
+**02_Hb_celltypes_from_seurat_reanalyze.sh** runs *02_Hb_celltypes_from_seurat_reanalyze.R*
+
+Identify cell-types on WNN clusters based on two gene markers lists. Output separate csv files for each corresponding reference.
+Shell script input: *input_wnn_rds_names.txt*
+
+
+**02_Hb_celltypes_from_seurat_reanalyze_v2.sh** runs *02_Hb_celltypes_from_seurat_reanalyze_v2.R*
+
+Identify cell-types on WNN clusters based on an INTEGRATE GENE MARKERS LIST. Output one csv file.
+Shell script input: *input_wnn_rds_names.txt* 
+
+
+**02_Hb_celltypes_from_seurat_reanalyze_v3.sh** (recommended)
+
+Identify cell-types on WNN clusters based on an INTEGRATE GENE MARKERS LIST. Output one csv file. 
+Plus, remove redundant (duplicated) marker genes from the DD gene markers reference
+Shell script input: *input_wnn_rds_names_v2.txt* (pre-selected WNN)
+
+
+**03_cell_types_percentages.R** (only used for EDA)
+
+Calculate and summarize the percentage of cells within SNN or WNN clusters identified during exploratory data analysis (EDA) across various datasets.
+1. cellranger_pipe = "CR_crossBarcodes"  # process GEX count crossed bc
+2. cellranger_pipe = "CR_complementBarcodes" # process GEX count complement bc
+3. cellranger_pipe = "CR_arc_reanalyze" # process multiome not filtered bc
+4. cellranger_pipe = "CR_arc_reanalyze_outliers" # process GEX outliers bc
+5. cellranger_pipe = "CR_arc_reanalyze_outliers_ATAC" # process ATAC outliers bc
+
+
+**03_cell_types_perc_WNN_leidenR1_knn30_v2.sh** runs *03_cell_types_perc_WNN_leidenR1_knn30_v2.R*
+
+Calculate and summarize the percentage of cells within WNN with Leiden res=1 and knn=30
+Note. Only RNA batch corrected
+
+
+**03_cell_types_perc_WNN_leidenR1_knn30_v3.sh** runs *03_cell_types_perc_WNN_leidenR1_knn30_v3.R* (recommended)
+
+Calculate and summarize the percentage of cells within WNN with Leiden res=1 and knn=30
+Note. RNA and ATAC batch corrected
+
+
+**05_rename_idents.sh** runs *05_rename_idents.R*
+
+Quickly annotates (renames identities) WNN clusters in Seurat objects using a gene marker reference. Convenient for evaluating cluster concordance and proximity, providing a pseudo-annotation for easy identification of target clusters (Habenula)
+
+
+
+<br>
+
+
+
+[Go to main page](../../README.md)
+<br><br>
+
+
+*Cynthia SC*
+
+February 25, 2023
+
+<br><br>
+
+***
+
+
