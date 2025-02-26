@@ -22,7 +22,7 @@ library("here")
 ## input directories
 
 inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
-inputCVS_Dir_Ann <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze_v2")
+inputCVS_Dir_Ann <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze_v3", "cvs_files_markers")
 outputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents")
 plotDir <- here("plots", "05_Clustering_ARCr", "05_rename_idents")
 
@@ -40,7 +40,8 @@ message("Processing ", Seurat_base_name)
 
 ##### (1) Load Seurat with WNN idents given by default 
 
-## For testing: Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1"
+## For testing: 
+# Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r2"
 
 seurat_RDSname <- here(inputRDS_Dir, paste0(Seurat_base_name, ".rds"))
      
@@ -56,9 +57,9 @@ message("Renaming ", nrow(unique(SeuratOBJ[["seurat_clusters"]])), " clusters fo
 
 ## extract a shorter name to save files 
 tmp_wd <- str_extract(Seurat_base_name, pattern = "WNN\\w*\\.\\w*")
-# WNN_k30_C.louvain_lsi_r1
-deg_file <- paste0("ARCr_QCed_", tmp_wd, "_DEG_Top50_WNN_DD_LB_matching_markers_integrated.csv")
-# "ARCr_QCed_WNN_k30_C.louvain_lsi_r1_DEG_Top50_WNN_DD_LB_matching_markers_integrated.csv"
+# old name: deg_file <- paste0("ARCr_QCed_", tmp_wd, "_DEG_Top50_WNN_DD_LB_matching_markers_integrated.csv")
+deg_file <- paste0(tmp_wd, "_cellTypes_integrated_top50.csv")
+# WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r1_cellTypes_integrated_top50.csv
 file_name <- here(inputCVS_Dir_Ann, deg_file)
 file_ann <- read.csv(file_name)
 head(file_ann)
@@ -162,7 +163,7 @@ new_names <- c(v_new_clusterIDS)
 names(new_names) <- levels(SeuratOBJ)
 
 ## rename idents 
-Idents(SeuratOBJ)
+# Idents(SeuratOBJ)
 SeuratOBJ <- RenameIdents(object = SeuratOBJ, new_names)
 levels(SeuratOBJ)
 # [1] "C.00 DD_MHb (9.91%)"   "C.01 DD_LHb (7.06%)"   "C.02 DD_MHb (6.55%)"  
@@ -184,8 +185,9 @@ message("New seurat with clusters renamed saved!")
 message("Building some plots ...")
 
 # Reductions(SeuratOBJ)
-## extract a shorter name to save files 
-seurat_name <- str_extract(Seurat_base_name, pattern = "C\\.\\w*")
+## extract suffix name to give unique name to plots
+seurat_name <- str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
+# seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r2
 
 plt1 <- DimPlot(SeuratOBJ, label = TRUE, reduction = "wnn.umap", label.size = 3) + NoLegend() +
   labs(title = paste0("**Clusters from WNN: ", seurat_name))
@@ -196,7 +198,6 @@ ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
 
 DefaultAssay(SeuratOBJ) <- "RNA"
 
-seurat_name <- str_extract(Seurat_base_name, regex("C\\.\\w+"))
 features <- c("POU4F1", "GPR151") # "TAC3"
   
 plt1 <- VlnPlot(object = SeuratOBJ, layer = "data",
