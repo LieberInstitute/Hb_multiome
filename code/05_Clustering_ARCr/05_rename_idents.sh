@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=60G
+#SBATCH --mem=80G
 #SBATCH --job-name=05_rename_idents
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
@@ -10,8 +10,17 @@
 #SBATCH --array=1-4%20
 
 ## Define loops and appropriately subset each variable for the array task ID
-all_clustering_name=("seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1" 
-"seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r1" "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1" "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.SLM_lsi_r1")
+
+# Old rds objects with only rna harmonized and lsi
+# all_clustering_name=("seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1" 
+# "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r1" "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1" "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.SLM_lsi_r1")
+
+# Old rds objects with only rna and lsi harmonized
+all_clustering_name=("seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r1" 
+"seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2" 
+"seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r1" 
+"seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r2")
+
 clustering_name=${all_clustering_name[$(( $SLURM_ARRAY_TASK_ID / 1 % 4 ))]}
 
 ## Explicitly pipe script output to a log
