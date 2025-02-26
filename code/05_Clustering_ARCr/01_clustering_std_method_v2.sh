@@ -7,7 +7,7 @@
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
-#SBATCH --array=1-48%20
+#SBATCH --array=1-24%20
 
 echo "*************************************************************************************"
 echo "Datasets processed with this version are run on Harmonyzed data for both RNA and ATAC"
@@ -16,14 +16,15 @@ echo "**************************************************************************
 
 ## Define loops and appropriately subset each variable for the array task ID
 all_clust_method=(1 2 3 4)
-clust_method=${all_clust_method[$(( $SLURM_ARRAY_TASK_ID / 12 % 4 ))]}
+clust_method=${all_clust_method[$(( $SLURM_ARRAY_TASK_ID / 6 % 4 ))]}
 # 1 = original Louvain algorithm
 # 2 = Louvain algorithm with multilevel refinement
 # 3 = SLM algorithm
 # 4 = Leiden algorithm
 
-all_clust_res=(0.8 1 1.5 2)
-clust_res=${all_clust_res[$(( $SLURM_ARRAY_TASK_ID / 3 % 4 ))]}
+all_clust_res=(1 2)
+#all_clust_res=(0.8 1 1.5 2)
+clust_res=${all_clust_res[$(( $SLURM_ARRAY_TASK_ID / 3 % 2 ))]}
 # 0.8 = Default
 # 1 = a bit larger clusters
 # 1.5 =  more larger clusters
