@@ -7,7 +7,8 @@
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
-#SBATCH --array=1-6%20
+#SBATCH --array=1-4%20
+
 id=$(sed -n ${SLURM_ARRAY_TASK_ID}p input_wnn_rds_names_pairs.txt)
 
 ## Explicitly pipe script output to a log
