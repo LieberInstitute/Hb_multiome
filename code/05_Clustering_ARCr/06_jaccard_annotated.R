@@ -43,7 +43,10 @@ if (!dir.exists(outputCVS_Dir)) {dir.create(outputCVS_Dir)}
 Seurat_base_name <- commandArgs(trailingOnly = TRUE)
 ## Some WNN clustering results of interest
 ## For testing:
+# Old names: 
 # Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1,seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r1"
+# New names:
+# Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r2,seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2"
 
 
 
@@ -54,8 +57,12 @@ Seurat_base_name_1 <- trimws(strsplit(Seurat_base_name, ",")[[1]][1])
 Seurat_base_name_2 <- trimws(strsplit(Seurat_base_name, ",")[[1]][2])
 seurat_RDSname_1 <- here(inputRDS_Dir, paste0(Seurat_base_name_1, ".rds"))
 seurat_RDSname_2 <- here(inputRDS_Dir, paste0(Seurat_base_name_2, ".rds"))
-Seurat_base_name_1 <- str_extract(Seurat_base_name_1, regex("C\\.\\w+")) #C.louvain_lsi_r1
-Seurat_base_name_2 <- str_extract(Seurat_base_name_2, regex("C\\.\\w+")) #C.louvainM_lsi_r1
+str_extract(Seurat_base_name_1, regex("C\\.\\w+"))
+# Names used when we were only comparing methods, now we have to extend the variable name to add the knn and the resolution
+# Seurat_base_name_1 <- str_extract(Seurat_base_name_1, regex("C\\.\\w+")) #C.louvain_lsi_r1
+# Seurat_base_name_2 <- str_extract(Seurat_base_name_2, regex("C\\.\\w+")) #C.louvainM_lsi_r1
+Seurat_base_name_1 <- str_extract(Seurat_base_name_1, regex("k[3|4]0\\_C\\.\\w+")) #k30_C.leiden_lsi_r1
+Seurat_base_name_2 <- str_extract(Seurat_base_name_2, regex("k[3|4]0\\_C\\.\\w+")) #k40_C.leiden_lsi_r1
 file_name_all  <- paste0(Seurat_base_name_1, "-", Seurat_base_name_2)
 
 ## Load the Seurats with WNN clusters
@@ -152,7 +159,7 @@ message("cell info from ", Seurat_base_name_2, " processed!")
 message("Starting approximate-silhouette for evaluating cluster separation ...")
 
 f_plot_approxSilhouette(get_cell_info$cellsEmb,
-                        trimws(gsub("\\(\\d*\\.\\d*\\%\\)", "", get_cell_info$clust)), # remove % values to clean plot
+                        trimws(gsub("\\(\\d*\\.\\d*\\%\\)", "", get_cell_info$clust)), # remove % symbol and values to clean labels on plot
                         Seurat_base_name_1)
 f_plot_approxSilhouette(get_cell_info2$cellsEmb,
                         trimws(gsub("\\(\\d*\\.\\d*\\%\\)", "", get_cell_info2$clust)),
@@ -184,28 +191,18 @@ substr(rownames(jacc.mat), 1, 12)
 
 ## Save Jacquard plot
 
-tmp_pdf <- here(plotDir, paste0(file_name_all, "_Jaccard_WNN.pdf"))
 tmp_png <- here(plotDir, paste0(file_name_all, "_Jaccard_WNN.png"))
-
 tmp_title <- unlist(strsplit(file_name_all,"-",fixed=T))
 plt1<-pheatmap(jacc.mat, color=viridis::viridis(100), 
                  cluster_cols=FALSE, 
                  cluster_rows=FALSE, # show hierarchical clust
                  angle_col = 90,
-                 main = paste0("Jaccard WNN\n (y-axis)", tmp_title[1], " (x-axis) ", tmp_title[2]),
+                 main = paste0("Jaccard WNN\n (x-axis)", tmp_title[2], " (y-axis) ", tmp_title[1]),
                  fontsize = 10,
                  legend = TRUE)
                  #display_numbers=T,
                  #number_format="%.1f",
                  #fontsize_number=7) 
-
-# pdf(tmp_pdf)
-# grid::grid.newpage()
-# ## columns 
-# grid.text(paste(">>>>", Seurat_base_name_1), x=0.95, y=0.20, rot=90, gp=gpar(fontsize=10, col="black", fontface = "bold"))
-# ## rows
-# grid.text(paste(">>>>", Seurat_base_name_2), x=0.85, y=0.03, rot=0, gp=gpar(fontsize=10, col="black", fontface = "bold"))
-# dev.off()
 
 png(tmp_png,width=12,height=10,units="in",res=1200)
 plt1
