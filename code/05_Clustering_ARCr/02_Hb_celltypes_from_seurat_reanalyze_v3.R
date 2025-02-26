@@ -1,5 +1,6 @@
 ########################################################################
-## Read Seurat clusters to search cell-types based on a custom marker gene list
+## Read Seurat clusters to search cell-types based on a custom marker gene list. 
+##      Remove redundant (duplicated) marker genes from DD gene markers reference
 ## INPUT:
 ##      A Seurat Harmony corrected dataset
 ##      A csv file with Gene-marker list. INTEGRATE ALL GENE MARKERS IN ONE LIST

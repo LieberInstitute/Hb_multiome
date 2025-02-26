@@ -1,20 +1,20 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=80G
-#SBATCH --job-name=02_v3_Hb_celltypes_ARCr
+#SBATCH --job-name=02_Hb_celltypes_ARCr_v3
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
-#SBATCH --array=1-2%20
+#SBATCH --array=1-4%20
 id=$(sed -n ${SLURM_ARRAY_TASK_ID}p input_wnn_rds_names_v2.txt)
 
 ## Here is processed normalized data in both rna and atac (leiden and louvainM r1)
 
 
 ## Explicitly pipe script output to a log
-log_path=logs/02_v3_Hb_celltypes_ARCr_${id}.txt
+log_path=logs/02_Hb_celltypes_ARCr_v3_${id}.txt
 
 {
 set -e
@@ -37,7 +37,7 @@ module load conda_R/4.3.x
 module list
 
 ## Edit with your job command
-Rscript 02_Hb_celltypes_from_seurat_reanalyze_v2.R $id
+Rscript 02_Hb_celltypes_from_seurat_reanalyze_v3.R $id
 
 echo "**** Job ends ****"
 date
