@@ -126,7 +126,7 @@ f_plot_approxSilhouette <- function(cellsID, clustID, fn){
   plt1 <- ggplot(sil.data, aes(x=cluster, y=width, colour=closest)) +
     ggbeeswarm::geom_quasirandom(method="smiley", alpha=.4) + labs(title = plt_title) + labs(x='') +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) + theme(legend.position = 'none')
-  #ggsave(plt1, filename = here(plotDir, paste0(fn,"_Silhouette_WNN.png")), height = 6, width = 10)
+  ggsave(plt1, filename = here(plotDir, paste0(fn,"_Silhouette_WNN.png")), height = 6, width = 10)
   
   message("Approximate-silhouette cvs files and plot saved!")
   
@@ -154,12 +154,12 @@ names(get_cell_info2)
 message("cell info from ", Seurat_base_name_2, " processed!")
 
 
-## Process Approximate-silhouette, save csv files and plots 
+## Process Approximate-silhouette, save csv files and plots for ALL CLUSTERS
 
 message("Starting approximate-silhouette for evaluating cluster separation ...")
 
 clust <- trimws(gsub("\\(\\d*\\.\\d*\\%\\)", "", get_cell_info$clust)) ## remove % symbol and values to clean labels on plot
-p1 <- f_plot_approxSilhouette(get_cell_info$cellsEmb, clust, Seurat_base_name_1)
+f_plot_approxSilhouette(get_cell_info$cellsEmb, clust, Seurat_base_name_1)
 
 clust <- trimws(gsub("\\(\\d*\\.\\d*\\%\\)", "", get_cell_info2$clust))
 f_plot_approxSilhouette(get_cell_info2$cellsEmb, clust, Seurat_base_name_2)
@@ -207,6 +207,53 @@ plt1<-pheatmap(jacc.mat, color=viridisLite::plasma(101), #viridis::viridis(100)
 png(tmp_png,width=12,height=10,units="in",res=1200)
 plt1
 dev.off()
+
+message("Jaccard processed")
+
+
+## Process Approximate-silhouette, save csv files and plots for HABENULA PRE-FILTERED CLUSTERS
+
+## Identified and filter clusters automatically annotated as putative `habenula`. Use length of cluster ID as criteria
+
+no_hb_clust = list()
+hb_clusters <- unlist(levels(get_cell_info$clust))
+for (idx in seq_along(hb_clusters)) { if (nchar(hb_clusters[idx]) <= 4) { no_hb_clust <- append(no_hb_clust, hb_clusters[idx]) } }
+hb_clusters <- hb_clusters[! hb_clusters %in% c(no_hb_clust)]
+hb_clusters
+# [1] "C.02 DD_LHb (7.06%)"  "C.03 DD_LHb (6.46%)"  "C.05 LB_Hb ne (5.7%)"
+# [4] "C.06 DD_LHb (5.33%)"  "C.07 DD_MHb (5.27%)"  "C.09 DD_LHb (4.68%)" 
+# [7] "C.10 DD_MHb (4.44%)"  "C.11 DD_LHb (4.2%)"   "C.13 DD_MHb (3.56%)" 
+# [10] "C.14 DD_MHb (3.35%)"  "C.16 DD_LHb (2.79%)"  "C.17 DD_MHb (2.73%)" 
+# [13] "C.21 DD_LHb (2.27%)"  "C.22 DD_LHb (1.78%)"  "C.28 DD_MHb (0.67%)"
+
+## subset main matrix and plot
+clust <- subset(get_cell_info$clust, get_cell_info$clust %in% c(hb_clusters)) #"C.25", "C.01"
+cellsEmb <- subset(get_cell_info$cellsEmb, get_cell_info$clust %in% c(hb_clusters))
+# fast validation
+# length(clust) == nrow(cellsEmb)
+f_plot_approxSilhouette(cellsEmb, as.vector(clust), paste0(Seurat_base_name_1, "_habenula"))
+
+no_hb_clust = list()
+hb_clusters <- unlist(levels(get_cell_info2$clust))
+for (idx in seq_along(hb_clusters)) { if (nchar(hb_clusters[idx]) <= 4) { no_hb_clust <- append(no_hb_clust, hb_clusters[idx]) } }
+hb_clusters <- hb_clusters[! hb_clusters %in% c(no_hb_clust)]
+hb_clusters
+# [1] "C.01 DD_LHb (7.01%)"   "C.04 DD_LHb (5.23%)"   "C.05 DD_LHb (4.97%)"  
+# [4] "C.07 DD_MHb (4.69%)"   "C.08 DD_LHb (4.55%)"   "C.10 DD_MHb (4.21%)"  
+# [7] "C.11 DD_MHb (3.97%)"   "C.12 DD_LHb (3.93%)"   "C.14 DD_MHb (3.64%)"  
+# [10] "C.16 DD_MHb (2.88%)"   "C.17 LB_Hb ne (2.85%)" "C.18 DD_LHb (2.76%)"  
+# [13] "C.23 DD_LHb (2.28%)"   "C.24 DD_LHb (1.48%)"   "C.30 DD_LHb (0.38%)"  
+# [16] "C.32 DD_LHb (0.35%)"   "C.33 DD_LHb (0.33%)"   "C.36 DD_MHb (0.26%)"  
+# [19] "C.40 DD_LHb (0.15%)" 
+
+## subset main matrix and plot
+clust <- subset(get_cell_info2$clust, get_cell_info2$clust %in% c(hb_clusters)) #"C.25", "C.01"
+cellsEmb <- subset(get_cell_info2$cellsEmb, get_cell_info2$clust %in% c(hb_clusters))
+# fast validation
+# length(clust) == nrow(cellsEmb)
+f_plot_approxSilhouette(cellsEmb, as.vector(clust), paste0(Seurat_base_name_2, "_habenula"))
+
+
 
 message("Process completed!")
 
