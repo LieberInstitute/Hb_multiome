@@ -126,7 +126,7 @@ f_plot_approxSilhouette <- function(cellsID, clustID, fn){
   plt1 <- ggplot(sil.data, aes(x=cluster, y=width, colour=closest)) +
     ggbeeswarm::geom_quasirandom(method="smiley", alpha=.4) + labs(title = plt_title) + labs(x='') +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) + theme(legend.position = 'none')
-  ggsave(plt1, filename = here(plotDir, paste0(fn,"_Silhouette_WNN.png")), height = 6, width = 10)
+  #ggsave(plt1, filename = here(plotDir, paste0(fn,"_Silhouette_WNN.png")), height = 6, width = 10)
   
   message("Approximate-silhouette cvs files and plot saved!")
   
@@ -158,12 +158,11 @@ message("cell info from ", Seurat_base_name_2, " processed!")
 
 message("Starting approximate-silhouette for evaluating cluster separation ...")
 
-f_plot_approxSilhouette(get_cell_info$cellsEmb,
-                        trimws(gsub("\\(\\d*\\.\\d*\\%\\)", "", get_cell_info$clust)), # remove % symbol and values to clean labels on plot
-                        Seurat_base_name_1)
-f_plot_approxSilhouette(get_cell_info2$cellsEmb,
-                        trimws(gsub("\\(\\d*\\.\\d*\\%\\)", "", get_cell_info2$clust)),
-                        Seurat_base_name_2)
+clust <- trimws(gsub("\\(\\d*\\.\\d*\\%\\)", "", get_cell_info$clust)) ## remove % symbol and values to clean labels on plot
+p1 <- f_plot_approxSilhouette(get_cell_info$cellsEmb, clust, Seurat_base_name_1)
+
+clust <- trimws(gsub("\\(\\d*\\.\\d*\\%\\)", "", get_cell_info2$clust))
+f_plot_approxSilhouette(get_cell_info2$cellsEmb, clust, Seurat_base_name_2)
 
 
 ## Comparing the clustering data sets 
@@ -193,10 +192,11 @@ substr(rownames(jacc.mat), 1, 12)
 
 tmp_png <- here(plotDir, paste0(file_name_all, "_Jaccard_WNN.png"))
 tmp_title <- unlist(strsplit(file_name_all,"-",fixed=T))
-plt1<-pheatmap(jacc.mat, color=viridis::viridis(100), 
+plt1<-pheatmap(jacc.mat, color=viridisLite::plasma(101), #viridis::viridis(100) 
                  cluster_cols=FALSE, 
                  cluster_rows=FALSE, # show hierarchical clust
                  angle_col = 90,
+                 na_col = "black",
                  main = paste0("Jaccard WNN\n (x-axis)", tmp_title[2], " (y-axis) ", tmp_title[1]),
                  fontsize = 10,
                  legend = TRUE)
