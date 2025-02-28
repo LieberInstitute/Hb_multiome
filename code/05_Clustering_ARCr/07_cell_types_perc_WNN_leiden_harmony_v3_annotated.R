@@ -1,6 +1,6 @@
 ###############################################################################
 ##
-##  Calculate and summarize percentage of cell-types on pre-selected WNN run with Leiden
+##  Calculate and summarize percentage of pre-selected cell types in Leiden r=1 knn=30
 ##
 ###############################################################################
 
@@ -9,16 +9,13 @@ library("tidyverse")
 library("janitor")
 library("scales")
 library("data.table")
-library("purrr")    
 library("here")
 
 here::here()
 options(digits=2)
 
 # Seurat_base_name = "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r1" 
-# Seurat_base_name = "WNN_rnaHarm_atacLSI_k30_C.leiden_lsi_r1" 
-Seurat_base_name = "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2" # (selected)
-# Seurat_base_name = "WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r2"
+Seurat_base_name = "WNN_rnaHarm_atacLSI_k30_C.leiden_lsi_r1" 
 
 ## Selected manually the clusters based on the cell-type identification gene-marker lists
 marker_lst <- "integrated"
@@ -54,30 +51,23 @@ glia <- c()
 undeterminated <- c()
 endo <- c() 
 
-## LEIDEN resolution=r1 and r2
+## LEIDEN resolution=r1
 
 if (Seurat_base_name=="WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r1") {
   ## rna harmonized and atac harmonized
   hb <- c(2,4,7,9,15,25)
   thal <- c(1,5,8,16,21,23,26)
-  endo <- c(22)
+  endo <- c(22) 
   glia <- c(3,13,17,18,19,20,24)
   undeterminated <- c(6,10,11,14)
-} else if (Seurat_base_name=="WNN_rnaHarm_atacLSI_k30_C.leiden_lsi_r1") {
+} else { (Seurat_base_name=="WNN_rnaHarm_atacLSI_k30_C.leiden_lsi_r1") 
   ## rna harmonized and lsi
   hb <- c(2,3,4,7,9,10,11,14)
   thal <- c(1,6,12,19,20,21,23,25,28,29,30)
   neu <- (13)
-  endo <- c(16,31)
+  endo <- c(16,31) 
   glia <- c(5,22,24,26,27)
   undeterminated <- c(8,15,17,18)
-} else if (Seurat_base_name=="WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2") { # SELECTED ***** 
-  hb <- c(5,7,10,11,14,16,18,23,24,30,33,36,40)
-  thal <- c(6,15,17,19,28,31,38,39)
-  neu <- c()
-  endo <- c(29) 
-  glia <- c(2,20,21,26,27,34,41)
-  undeterminated <- c(0,3,4,8,9,12,22,25,32,35,37)
 }
 
 message("Groups of clusters assigned!")
@@ -119,12 +109,13 @@ if (!is_null(glia)) { lst_clust <- append(lst_clust, list(glia = glia)) }
 if (!is_null(undeterminated)) { lst_clust <- append(lst_clust, list(undeterminated = undeterminated)) }
 if (!is_null(endo)) { lst_clust <- append(lst_clust, list(endo = endo)) }
 
+#lst_clust <- list(hb = hb, neu = neu, thal= thal, allTypes = allT)
 message("Processing ", length(lst_clust$allTypes) , " clusters")
 names(lst_clust)
 lst_clust$allTypes
 
 ## Parse total cells by cluster and calculate percentages
-## for testing: i <- 2 
+## for testing: i <- 7 
 for (i in seq_along(lst_clust)) {
 
   clust <- lst_clust[[i]]
@@ -173,27 +164,20 @@ for (i in seq_along(lst_clust)) {
   list_ct <- df_cluster_names[["cell_types"]]
   nc <- list()
   
-  ## parse clusters to sum number of markers by cell-type. Format. "inhibitory_neuron (2) Thalamus/MDm (1)" 
+  ## parse clusters to sum number of markers that match each cell-type. Ex. "inhibitory_neuron (2) Thalamus/MDm (1)" 
   for (x in seq_along(list_ct)) {
-    ## test: x=5
+    ## test: x=2
     ct_cluster <- list_ct[x]
     x1 <- sapply(ct_cluster, function(x) strsplit(x, ","))
-    ## count distint values in the list, return 2 vectors
-    dist <- rle(sort(x1[[1]]))
-    ## merge lists in one line
-    dist_lst <- map2(unlist(as.list(dist$values)), unlist(as.list(dist$lengths)), ~ paste0(.x, " (", .y, ")"))
-    sum_CellTypes = paste(unlist(dist_lst), collapse=", ")
-    #print(sum_types)
-    # for (ct in x1) {
-    #   ids <- unique(ct)
-    #   num_rep <- table(ct)
-    #   col_new <- noquote(c(rbind(ids, paste0("(", num_rep, ") "))))
-    # }
-    if (length(dist$lengths)==1) { sum_CellTypes <- paste0("*** ", sum_CellTypes) }
-    # nc <- append(nc, paste0(col_new, collapse = " "))
-    nc <- append(nc, paste0(sum_CellTypes, collapse = " "))
+    for (ct in x1) {
+      ids <- unique(ct)
+      num_rep <- table(ct)
+      col_new <- noquote(c(rbind(ids, paste0("(", num_rep, ") "))))
+    }
+    if (length(col_new)==2) {col_new <- paste0("*** ", col_new[1], col_new[2])}
+    nc <- append(nc, paste0(col_new, collapse = " "))
   }
-  nc
+  
   df_cluster_names$cell_types <- noquote(unlist(nc))
 
   ## Save detail counts and percentages by grp of clusters
