@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=20G
-#SBATCH --job-name=03_cell_types_perc_WNN_leidenR1_knn30_Harmony_v3
+#SBATCH --job-name=03_cell_types_perc_WNN_leiden_harmony_v3
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
@@ -9,7 +9,7 @@
 # SBATCH --mail-type=ALL
 
 ## Explicitly pipe script output to a log
-log_path=logs/03_cell_types_perc_WNN_leidenR1_knn30_Harmony_v3.txt
+log_path=logs/03_cell_types_perc_WNN_leiden_harmony_v3.txt
 
 {
 set -e
@@ -31,7 +31,7 @@ module load conda_R/4.3.x
 module list
 
 ## Edit with your job command
-Rscript 03_cell_types_perc_WNN_leidenR1_knn30_Harmony_v3.R
+Rscript 03_cell_types_perc_WNN_leiden_harmony_v3.R
 
 echo "**** Job ends ****"
 date
