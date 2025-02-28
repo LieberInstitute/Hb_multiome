@@ -1,0 +1,12 @@
+"seurat_clusters","S03_Hb_r","S04_Hb_r","S05_Hb_r","S06_Hb_r","S07_Hb_r","S08_Hb_r","S09_Hb_r","S10_Hb_r","S11_Hb_r","S12_Hb_r","total_clust.x","Perc.Cluster","cell_types"
+"6","3","1009","116","398","229","324","62","221","171","134",2667,4.788,"DD_Excit.Thal (6), DD_OPC (1)"
+"15","70","7","96","610","125","7","545","138","24","3",1625,2.917,"DD_Endo (2), DD_Excit.Thal (8), LB_Thalamus broad (1)"
+"17","66","78","89","319","232","20","653","52","8","70",1587,2.849,"DD_Excit.Thal (11), LB_excitatory_neuron (1), LB_Hb neuron specific (1), LB_Thalamus broad (1)"
+"19","1","39","4","1313","5","1","10","1","3","3",1380,2.477,"DD_Inhib.Thal (13), LB_inhibitory_neuron (2), LB_Thalamus/MDm (1)"
+"28","5","3","6","12","12","4","494","2","4","1",543,0.975,"DD_Inhib.Thal (15), LB_inhibitory_neuron (2), LB_neuron (1), LB_Thalamus/MDm (1)"
+"31","208","0","0","0","0","0","1","0","0","0",209,0.375,"DD_Excit.Thal (6), LB_Endo/CP (1)"
+"39","0","74","4","2","0","7","1","1","0","1",90,0.162,"DD_Inhib.Thal (11), LB_inhibitory_neuron (2), LB_Thalamus/MDm (1)"
+"38","0","0","0","1","0","0","104","0","0","0",105,0.189,"DD_Inhib.Thal (15), LB_inhibitory_neuron (2), LB_Thalamus/MDm (1)"
+"Total.Cells.Sample"," 353","1210"," 315","2655"," 603"," 363","1870"," 415"," 210"," 212",NA,NA,NA
+"Total.Cells.ALL","4375","6364","1990","7059","7207","4735","5959","5914","8054","4045",NA,NA,NA
+"Percentage.Sample"," 8.1","19.0","15.8","37.6"," 8.4"," 7.7","31.4"," 7.0"," 2.6"," 5.2",NA,NA,NA
