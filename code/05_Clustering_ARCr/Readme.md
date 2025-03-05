@@ -56,10 +56,11 @@ Calculate and summarize the percentage of cells within WNN with Leiden res=1 and
 Note. Only RNA batch corrected
 
 
-**03_cell_types_perc_WNN_leidenR1_knn30_v3.sh** runs *03_cell_types_perc_WNN_leidenR1_knn30_v3.R* (recommended)
+**03_cell_types_perc_WNN_leiden_harmony_v3.sh** runs *03_cell_types_perc_WNN_leiden_harmony_v3.R* (recommended)
 
-Calculate and summarize the percentage of cells within WNN with Leiden res=1 and knn=30
-Note. RNA and ATAC batch corrected
+Calculate and summarize the percentage of cells within WNN with Leiden res=1-2 and knn=30-40
+Note. 
+- RNA and ATAC batch corrected.
 
 
 **05_rename_idents.sh** runs *05_rename_idents.R*
