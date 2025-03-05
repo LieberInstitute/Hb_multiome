@@ -14,8 +14,10 @@ library("here")
 here::here()
 options(digits=2)
 
-# Seurat_base_name = "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r1" 
-Seurat_base_name = "WNN_rnaHarm_atacLSI_k30_C.leiden_lsi_r1" 
+## read input arguments from input_wnn_rds_names_v2 
+Seurat_base_name <- commandArgs(trailingOnly = TRUE)
+# Seurat_base_name = "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2" (selected)
+# Seurat_base_name = "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r2"
 
 ## Selected manually the clusters based on the cell-type identification gene-marker lists
 marker_lst <- "integrated"
