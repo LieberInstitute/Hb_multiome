@@ -169,7 +169,6 @@ head(SeuratOBJ.combined, n=2)
 #SeuratOBJ.combined@reductions
 
 # create and save UMAP-PCA plots grouped by sample and clusters and split side-by-side
-#plot_clust(SeuratOBJ.combined, paste0(s_sample, '_umap.unintegrated_'), 'umap.unintegrated', 'seurat_clusters')
 plot_clust(SeuratOBJ.combined, paste0(s_sample, '_umap'), 'umap.unintegrated', 'seurat_clusters')
 
 # visualize more variable features in a heatmap
@@ -177,9 +176,9 @@ p1 <- DimHeatmap(SeuratOBJ.combined, reduction = 'pca', nfeatures = 30, fast = F
 ggsave(p1, filename = here(plotsDir, paste0(s_sample, '_pca_heatmap.png')), height = 5, width = 5) 
 
 # Save RDS Object
-rds_name <- here(processedDir, paste0(s_sample, '_PCA.rds'))
-saveRDS(SeuratOBJ.combined, file = rds_name)
-message('Seurat unintegrated saved in ', rds_name)   
+# rds_name <- here(processedDir, paste0(s_sample, '_PCA.rds'))
+# saveRDS(SeuratOBJ.combined, file = rds_name)
+# message('Seurat unintegrated saved in ', rds_name)   
 
 
 
@@ -249,7 +248,6 @@ p1 <- DimHeatmap(SeuratOBJ.combined, reduction = reduction_name, nfeatures = 30,
 png_name <- 
 ggsave(p1, filename = here(plotsDir, paste0(s_sample, '_', reduction_name, '_heatmap.png')))#, height = 10, width = 10
 
-# saveRDS(SeuratOBJ.combined, file = here(processedDir, paste0(s_sample, '_PCA_CCA.rds')))
 saveRDS(SeuratOBJ.combined, file = here(processedDir, paste0(s_sample, '_CCA.rds')))
 message('Seurat combined saved in ', rds_name)   
 

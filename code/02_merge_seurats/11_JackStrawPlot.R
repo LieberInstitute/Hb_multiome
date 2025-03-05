@@ -4,6 +4,7 @@
 ## INPUT: Seurat object with PCA, CCA and Harmony slots
 ## 
 ## OUPUT: JackStrawPlot plots
+##        Returns a Seurat object where JS represents p-values for each gene in the PCA analysis
 ## 
 ## Date: April 9th, 2024 
 ########################################################################
@@ -11,6 +12,7 @@
 # load libraries
 library('Seurat')        
 library('purrr')
+#library(tidyr)
 library("here")
 library("ggplot2")
 
@@ -20,46 +22,35 @@ here::here()
 
 ############        Initials      ############
 
-count_mtx_type <-'data_counts'
+## get args
+
+args = commandArgs(trailingOnly=TRUE)
+## read count mtx type (abs_counts and normalized_counts)
+count_mtx_type <- args[2]
+
+# testing
+# count_mtx_type <-'data_counts'
 
 ## read directory with Seurat objects
 if (count_mtx_type=='data_counts') { 
   Seurat_base_name <- 'seurat.combined.data_counts'
-} else { 
+} else if (count_mtx_type_label=='norm_counts') { # normalized counts
   Seurat_base_name <- 'seurat.combined.norm_counts' 
+} else {
+  stop()
 }
 
-## Select seurat objects with PCA, CCA and Harmony data
-rds_namePCA <- here('processed-data/02_merge_seurats', paste0(Seurat_base_name, '_PCA.rds'))
-rds_nameCCA <- here('processed-data/02_merge_seurats', paste0(Seurat_base_name, '_PCA_CCA.rds'))
-rds_nameHarm <- here('processed-data/02_merge_seurats', paste0(Seurat_base_name, '_PCA_Harmony.rds'))
 
-lst_seurats = list()
-lst_sub_titles = list()
+## Select seurat objects with PCA data
+lst_seurats <- list(PCA = here('processed-data', '02_merge_seurats', paste0(Seurat_base_name, '_PCA.rds')), 
+                     CCA = here('processed-data', '02_merge_seurats', paste0(Seurat_base_name, '_PCA_CCA.rds')), 
+                                Harmony = here('processed-data', '02_merge_seurats', paste0(Seurat_base_name, '_PCA_Harmony.rds')))
 
-lst_seurats <- append(lst_seurats, rds_namePCA)
-lst_sub_titles <- append(lst_sub_titles, 'PCA')
+seurat_if_exist <- map_lgl(lst_seurats, file.exists) 
 
-if (!is_empty(rds_nameCCA)) { 
-  lst_seurats <- append(lst_seurats, rds_nameCCA)
-  lst_sub_titles <- append(lst_sub_titles, 'CCA')
+if (any(!seurat_if_exist)) {
+  message('Warnning ', names(seurat_if_exist)[!seurat_if_exist], ' does not exist!\n',  lst_seurats[!seurat_if_exist]) 
 }
-if (!is_empty(rds_nameHarm)) { 
-  lst_seurats <- append(lst_seurats, rds_nameHarm) 
-  lst_sub_titles <- append(lst_sub_titles, 'Harmony')
-}
-
-lst_seurats
-lst_sub_titles
-
-## Check if plots directory exists, if not create it
-
-if (!dir.exists(here("plots/02_merge_seurats/"))) {
-  dir.create(here("plots/02_merge_seurats/"))
-}
-rds_path_out <- here('plots/02_merge_seurats')
-
-
 
 
 ## Function to build JackStraw and Elbow plow before and after integration
@@ -68,47 +59,43 @@ plot_JackStraw <- function(g, t) {
 
   message('Loading seurat object ', g)
   
-  #g <- lst_seurats[1]
-  #t <- lst_sub_titles[1]
-  
   SeuratOBJ <-readRDS(g) 
   
-  if ( is.null(SeuratOBJ@reductions$pca) )  {
+  if ( !is_empty(SeuratOBJ@reductions) )  {
     
     print('Processing JackStraw scores ...')
     
-    SeuratOBJ <- JackStraw(SeuratOBJ, dims = 20, prop.freq = 0.01, num.replicate = 100)
+    SeuratOBJ <- suppressWarnings(JackStraw(SeuratOBJ, dims = 20, prop.freq = 0.01, num.replicate = 100))
+    head(JS(SeuratOBJ[['pca']], slot = 'empirical'))
     SeuratOBJ <- ScoreJackStraw(SeuratOBJ, dims = 1:20)
     
     print('JackStraw scores calculated ... ')
 
-    p1 <- JackStrawPlot(SeuratOBJ, dims = 1:20)  + ggtitle(label = Seurat_base_name, subtitle = t)
+    p1 <- JackStrawPlot(SeuratOBJ, dims = 1:20) + ggtitle(label = Seurat_base_name, subtitle = t)
     p2 <- ElbowPlot(SeuratOBJ, ndims = 30)
     p3 <- p1 / p2
     
-    print('JackStraw and elbow plots done!')
+    print('JackStraw and elbow plots for ', t,' done!')
+    return(p3)
+    
+  } else {
+    
+    print('Reduction not exists in the object!')
+    return(NULL)
     
   }
   
 }
 
 
-## map the lists to build Violin plots for Hb, LHb and MHb
+## map the lists to build JackStraw and elbow plots
+# NOTE: Only JS for PCA is calculated because of in Seurat v5 ONLY PCA is CURRENTLY SUPPORTED
+plot_list <- map2(lst_seurats[1], names(lst_seurats)[1], 
+                    ~ plot_JackStraw(g = .x, t = .y))
 
-plot_list = list()
+# plot_list[[1]]
 
-## test
-#plot_list <- map2(lst_seurats[1], lst_sub_titles[1], 
-#                  ~ plot_JackStraw(g = .x, t = .y))
-
-if (length(lst_seurats) == length(lst_sub_titles)) {
-  plot_list <- map2(lst_seurats, lst_sub_titles, 
-                    ~ plot_JackStraw(g = .x, t = .y)) 
-  }
-
-
-print('JackStraw plots done')
-
+print(' JackStraw plots done!\n')
 
 dir_plt <- here('plots/02_merge_seurats/')
 pdf_name <- file.path(dir_plt, paste0('JackStrawPlot_Elbow_',Seurat_base_name, '.pdf'))
@@ -117,7 +104,7 @@ print(plot_list)
 dev.off()
 
 
-print('JackStraw plots saved!')
+print('JackStraw plots saved!\n')
 
 
 ## slurm script reproducibility
@@ -128,13 +115,6 @@ print('JackStraw plots saved!')
 #   cores = 2,
 #   create_shell = TRUE
 # )
-
-
-
-
-
-
-
 
 
 
