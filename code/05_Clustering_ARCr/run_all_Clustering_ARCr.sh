@@ -143,5 +143,9 @@ date
 
 } > $log_path 2>&1
 
+## Script to renamed the columns on the DEG CVS files in a nice format
+
+10_format_DEG_csv_files.R
+
 ## This script was made using slurmjobs version 1.2.5
 ## available from http://research.libd.org/slurmjobs/
