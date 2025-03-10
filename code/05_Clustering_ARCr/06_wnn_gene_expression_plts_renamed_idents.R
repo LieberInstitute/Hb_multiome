@@ -19,11 +19,10 @@ library("here")
 inputCVS_Dir <- here("code", "05_Clustering_ARCr")
 # inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method") # clusters not labeled
 inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents") # clusters renamed to identify Hb-clusters
-plotDir <- here("plots", "05_Clustering_ARCr", "04_wnn_gene_expression.R")
+plotDir <- here("plots", "05_Clustering_ARCr", "06_wnn_gene_expression_plts_renamed_idents")
 
 ## Check directories
 if (!dir.exists(plotDir)) {dir.create(plotDir)}
-if (!dir.exists(outputCVS_Dir)) {dir.create(outputCVS_Dir)}
 
 
 ## Load input with RDS wnn to compare
@@ -40,8 +39,8 @@ Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_ls
 # wnn_file_names_lst <- here(inputRDS_Dir, paste0(wnn_file_names, ".rds"))
 wnn_file_names_lst <- here(inputRDS_Dir, Seurat_base_name)
 
-f_plt_violin <- function(seurat_name){
-  # seurat_name = wnn_file_names_lst
+# f_plt_violin <- function(seurat_name){
+  # seurat_name = wnn_file_names_lst[1]
   SeuratOBJ <- readRDS(seurat_name)
   DefaultAssay(SeuratOBJ) <- "RNA"
   Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+")) 
@@ -56,15 +55,15 @@ f_plt_violin <- function(seurat_name){
           axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
           plot.title=element_text(hjust=0.5)) 
     
-  #plt1 <- plt1 + plot_annotation(paste0("WNN: ", Seurat_base_name), 
-  #                               caption = 'Cell Ranger ARC reanalize',theme=theme(plot.title=element_text(hjust=0.5)))
+  plt1 <- plt1 + plot_annotation(paste0("WNN: ", Seurat_base_name), 
+                                 caption = 'Cell Ranger ARC reanalize',theme=theme(plot.title=element_text(hjust=0.5)))
   
   tmp_name <- paste0("Vplot_POU4F1_GPR151_", Seurat_base_name,".pdf")
   ggsave(plt1, filename = here(plotDir, tmp_name), height = 4, width = 17)
   
-  return(plt1)
+  # return(plt1)
   
-}
+# }
 
 
 ## Load the Seurat with WNN clusters
@@ -73,16 +72,16 @@ message("Reading WNN to evalute gene expression of `POU4F1` and `GPR151` on: ", 
 
 # Vplot_lst <- f_plt_violin(wnn_file_names_lst[1])
 
-# we have 4 clustering results selected 
-Vplot_lst <- map(wnn_file_names_lst, ~ f_plt_violin(.x))
-length(Vplot_lst)
-# Vplot_lst[[1]]
-
-pdf_name <-  here(plotDir, "Vplot_WNN.POU4F1_GPR151.pdf")
-pdf(file = pdf_name)
-par(mfrow=c(2,2))
-Vplot_lst[[1]] / Vplot_lst[[2]] / Vplot_lst[[3]] / Vplot_lst[[4]]
-dev.off()
+# # we have 4 clustering results selected 
+# Vplot_lst <- map(wnn_file_names_lst, ~ f_plt_violin(.x))
+# length(Vplot_lst)
+# # Vplot_lst[[1]]
+# 
+# pdf_name <-  here(plotDir, "Vplot_WNN.POU4F1_GPR151.pdf")
+# pdf(file = pdf_name)
+# par(mfrow=c(2,2))
+# Vplot_lst[[1]] / Vplot_lst[[2]] / Vplot_lst[[3]] / Vplot_lst[[4]]
+# dev.off()
 
 message('\nPlots saved `', plotDir, '`')
 
@@ -119,13 +118,7 @@ DoHeatmap(subset(sob, downsample = 100), features = features, size = 3) + labs(t
 #           angle = 90) + NoLegend()
 
 
-# # Rename cell identity classes
-# # Can provide an arbitrary amount of idents to rename
-# levels(pbmc_small)
-# #> [1] "0" "1" "2"
-# pbmc_small <- RenameIdents(pbmc_small, '0' = 'A', '2' = 'C')
-# levels(pbmc_small)
-# #> [1] "A" "C" "1"
+
 
 
 ## Reproducibility information
