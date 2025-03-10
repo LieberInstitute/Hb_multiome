@@ -58,7 +58,8 @@ wnn_file_names_lst <- here(inputRDS_Dir, Seurat_base_name)
   plt1 <- plt1 + plot_annotation(paste0("WNN: ", Seurat_base_name), 
                                  caption = 'Cell Ranger ARC reanalize',theme=theme(plot.title=element_text(hjust=0.5)))
   
-  tmp_name <- paste0("Vplot_POU4F1_GPR151_", Seurat_base_name,".pdf")
+  tmp_name <- paste0(Seurat_base_name,"_Vplot_POU4F1_GPR151.pdf")
+
   ggsave(plt1, filename = here(plotDir, tmp_name), height = 4, width = 17)
   
   # return(plt1)
@@ -86,23 +87,30 @@ message("Reading WNN to evalute gene expression of `POU4F1` and `GPR151` on: ", 
 message('\nPlots saved `', plotDir, '`')
 
 ## UMAP: Label clusters on a ggplot2-based scatter plot
-sob <- readRDS(wnn_file_names_lst[1])
-DefaultAssay(sob) <- "RNA"
-plot <- DimPlot(object = sob, 
-                reduction = "wnn.umap")
-LabelClusters(plot = plot, id = 'ident') + labs(title = Seurat_base_name)
+
+#plot <- DimPlot(object = sob, 
+plt1 <- DimPlot(SeuratOBJ,  label = TRUE, reduction = "wnn.umap", label.size = 3) + NoLegend() +
+  labs(title = paste0("Clusters from WNN: ", Seurat_base_name))
+tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_DimPlot.pdf")
+ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
 
 # Feature plot - visualize feature expression in low-dimensional space
 # Calculate feature-specific contrast levels based on quantiles of non-zero expression.
 # Particularly useful when plotting multiple markers
-Reductions(sob)
-FeaturePlot(sob, features = features,
-            reduction = "wnn.umap",
-            min.cutoff = "q10", max.cutoff = "q90") + labs(title = Seurat_base_name)
-            # min.cutoff = 1, max.cutoff = 3)
+#Reductions(sob)
+# FeaturePlot(sob, features = features,
+#             reduction = "wnn.umap",
+#             min.cutoff = "q10", max.cutoff = "q90") # + labs(title = Seurat_base_name)
 
-# Visualize co-expression of two features simultaneously
-FeaturePlot(sob, features = features, blend = TRUE) # + labs(title = Seurat_base_name)
+## Visualize co-expression of two features simultaneously
+plt1 <- FeaturePlot(SeuratOBJ, features = features, reduction = "wnn.umap", blend = TRUE) +
+  labs(title = paste0("Clusters from WNN: ", Seurat_base_name)) &
+  theme(text = element_text(size = 8), 
+        axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
+        plot.title=element_text(hjust=0.5)) 
+tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_FeaturePlot.pdf")
+ggsave(plt1, filename = here(plotDir, tmp_name), height = 3, width = 10) 
+
 
 # Dot plots - the size of the dot corresponds to the percentage of cells expressing the
 # feature in each cluster. The color represents the average expression level
