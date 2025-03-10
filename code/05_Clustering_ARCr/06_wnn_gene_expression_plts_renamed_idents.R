@@ -57,9 +57,7 @@ wnn_file_names_lst <- here(inputRDS_Dir, Seurat_base_name)
     
   plt1 <- plt1 + plot_annotation(paste0("WNN: ", Seurat_base_name), 
                                  caption = 'Cell Ranger ARC reanalize',theme=theme(plot.title=element_text(hjust=0.5)))
-  
-  tmp_name <- paste0(Seurat_base_name,"_Vplot_POU4F1_GPR151.pdf")
-
+  tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_VPlot.pdf")
   ggsave(plt1, filename = here(plotDir, tmp_name), height = 4, width = 17)
   
   # return(plt1)
@@ -112,19 +110,19 @@ tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_FeaturePlot.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 3, width = 10) 
 
 
-# Dot plots - the size of the dot corresponds to the percentage of cells expressing the
+## Dot plots - the size of the dot corresponds to the percentage of cells expressing the
 # feature in each cluster. The color represents the average expression level
-DotPlot(sob, features = features) + RotatedAxis() + labs(title = Seurat_base_name)
+plt1 <- DotPlot(SeuratOBJ, features = c(features, "TAC3")) + RotatedAxis()  +
+  labs(title = paste0("Clusters from WNN: ", Seurat_base_name)) &
+  theme(text = element_text(size = 8), 
+        axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
+        plot.title=element_text(hjust=0.5)) 
+tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_DotPlot.pdf")
+ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
 
-# Single cell heatmap of feature expression
-DoHeatmap(subset(sob, downsample = 100), features = features, size = 3) + labs(title = Seurat_base_name)
 
-
-# # DoHeatmap now shows a grouping bar, splitting the heatmap into groups or clusters. This can
-# # be changed with the `group.by` parameter
-# DoHeatmap(sob, features = VariableFeatures(sob)[1:100], cells = 1:500, size = 4,
-#           angle = 90) + NoLegend()
-
+## Single cell heatmap of feature expression
+# DoHeatmap(subset(SeuratOBJ, downsample = 100), features = features, size = 3) + labs(title = Seurat_base_name)
 
 
 
