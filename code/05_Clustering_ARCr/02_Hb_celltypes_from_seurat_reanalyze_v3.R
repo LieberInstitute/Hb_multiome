@@ -43,6 +43,7 @@ Seurat_base_name <- commandArgs(trailingOnly = TRUE)
 # Seurat_base_name <-  "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.louvainM_lsi_r1"
 # Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r1"
 # Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacLSI_k30_C.leiden_lsi_r1"
+# Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2"
 
 
 message(" Reading: ", Seurat_base_name)

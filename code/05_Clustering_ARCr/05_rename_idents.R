@@ -41,7 +41,7 @@ message("Processing ", Seurat_base_name)
 ##### (1) Load Seurat with WNN idents given by default 
 
 ## For testing: 
-# Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r2"
+# Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2"
 
 seurat_RDSname <- here(inputRDS_Dir, paste0(Seurat_base_name, ".rds"))
      
