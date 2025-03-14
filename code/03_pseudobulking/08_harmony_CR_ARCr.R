@@ -17,8 +17,7 @@ library("Signac")
 library("here")
 library("ggplot2")
 library("harmony")
-#library("tidyr")
-#library("stringr")
+
 
 here::here()
 
@@ -161,6 +160,7 @@ Reductions(SeuratOBJ.1)
 # SeuratOBJ.1[["RNA"]] <- JoinLayers(SeuratOBJ.1[["RNA"]])
 
 message("Finishing Seurat-Harmony Integration on RNA - ", Sys.time())
+class(SeuratOBJ.1[["ATAC"]])
 
 ## more plots to compare batch correction on dataset before and after remove outliers (for comparison purposes )
 
@@ -202,8 +202,8 @@ message("Running Seurat-Harmony Integration on ATAC - ", Sys.time())
 
 ## split the RNA measurements into two layers one for each sample
 
-tryCatch( { SeuratOBJ.1[["ATAC"]] <- split(SeuratOBJ.1[["ATAC"]], f = SeuratOBJ.1$orig.ident)
-  return(s) }, error = function(e) { print("layers are already split") } )
+# tryCatch( { SeuratOBJ.1[["ATAC"]] <- split(SeuratOBJ.1[["ATAC"]], f = SeuratOBJ.1$orig.ident)
+#   return(s) }, error = function(e) { print("layers are already split") } )
 
 ## correct data on lsi by sampleID
 # colnames(SeuratOBJ.1@meta.data)
@@ -229,13 +229,14 @@ SeuratOBJ.1 <- SeuratOBJ.1 |>
 ## Re-join layers after RNA integration
 # Assays(SeuratOBJ.1)
 # [1] "RNA"  "ATAC"
-SeuratOBJ.1[["ATAC"]] <- JoinLayers(SeuratOBJ.1[["ATAC"]])
+class(SeuratOBJ.1[["ATAC"]])
+SeuratOBJ.1[["RNA"]] <- JoinLayers(SeuratOBJ.1[["RNA"]])
 
 
 ## more plots after correction on lsi for comparison purposes 
 
 message("Finishing Seurat-Harmony Integration on ATAC - ", Sys.time())
-
+class(SeuratOBJ.1[["ATAC"]])
 
 ## more plots after correction for comparison purposes 
 
