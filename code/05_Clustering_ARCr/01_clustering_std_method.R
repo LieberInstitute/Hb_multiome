@@ -40,7 +40,7 @@ clust_knn <- args[6]
 
 # ## For testing use:
 # clust_method = 4
-# clust_res = 1
+# clust_res = 2
 # clust_knn = 30
 
 message("Processing ", clust_method, " at res=", clust_res, " with knn=", clust_knn)
@@ -68,18 +68,20 @@ if (!dir.exists(plotDir)) { dir.create(plotDir) }
 
 ########################    Initials. (1) load data  ########################
 
-count_mtx_type <- 'norm_counts'
-Seurat_reduction <- 'Harmony'
-minCells <- 1
-if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts'}
-Seurat_base_name <-  paste0(Seurat_base_name, "_Harmony_ARCr_QCed")
-
+# count_mtx_type <- 'norm_counts'
+# Seurat_reduction <- 'Harmony'
+# minCells <- 1
+# if (count_mtx_type=='data_counts') { Seurat_base_name <- 'seurat.data_counts' } else { Seurat_base_name <- 'seurat.norm_counts'}
+# Seurat_base_name <-  paste0(Seurat_base_name, "_Harmony_ARCr_QCed")
 # rds_name <- here(inputDir, paste0(Seurat_base_name, ".rds"))
 
 ## Read seurat QC'ed with batch correction on both rna and atac assays
 SeuratOBJ <- readRDS(here(inputDir, "seurat.norm_counts_ARCr_harmony_atac_rna_QCed.rds"))
 SeuratOBJ
-
+class(SeuratOBJ[["ATAC"]])
+# [1] "ChromatinAssay"
+# attr(,"package")
+# [1] "Signac"
 message('Seurat object loaded!')
 
 # table(SeuratOBJ$orig.ident)
@@ -201,7 +203,6 @@ table(Idents(SeuratOBJ.1))
 plt1 <- DimPlot(SeuratOBJ.1, reduction = "umap.integrated", group.by = clust_name, 
                 label = TRUE, label.size = 2.5, repel = TRUE) + 
   ggtitle(paste0("RNA (", clust_name, " at res=", clust_res,")")) & NoLegend()
-#plt2 <- DimPlot(SeuratOBJ.1, reduction = "umap.lsi.unintegrated", group.by = clust_name,
 plt2 <- DimPlot(SeuratOBJ.1, reduction = "umap.lsi.integrated", group.by = clust_name,
                 label = TRUE, label.size = 2.5, repel = TRUE) + 
   ggtitle(paste0("ATAC (LSI)")) & NoLegend()
@@ -211,7 +212,7 @@ plt3 <- DimPlot(SeuratOBJ.1, reduction = "wnn.umap", group.by = clust_name,
 
 pltALL <- plt1 + plt2 + plt3 & theme(plot.title = element_text(hjust = 0.5)) # & NoLegend()
 sufix_name <- paste0("k", clust_knn, "_", clust_name,"_lsi_r", clust_res)
-ggsave(pltALL, filename = here(plotDir, paste0("seurat.norm_counts_CRr_UMAP_WNN_rnaHarm_atacHarm_", sufix_name, ".png")), 
+ggsave(pltALL, filename = here(plotDir, paste0("seurat.norm_counts_CRr_UMAP_WNN_rnaHarm_atacHarm_", sufix_name, "_v2.png")), 
        height = 7, width = 20)
 
 
