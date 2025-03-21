@@ -38,25 +38,24 @@ clust_method <- args[2]
 clust_res <- args[4]
 clust_knn <- args[6]
 
-# ## For testing use:
-# clust_method = 4 Leiden
+# ## For testing use: Leiden
+# clust_method = 4 #
 # clust_res = 2
 # clust_knn = 30
 
-message(
-  "Processing ",
-  clust_method,
-  " at res=",
-  clust_res,
-  " with knn=",
-  clust_knn
+## get name to save the clustering results
+clust_name <- case_when(
+  clust_method == 1 ~ "C.louvain",
+  clust_method == 2 ~ "C.louvainM",
+  clust_method == 3 ~ "C.SLM",
+  clust_method == 4 ~ "C.leiden"
 )
 
 if (length(clust_method) && length(clust_res) && length(clust_knn)) {
   message(
-    "\n ====== Processing clustering with method ",
-    clust_method,
-    " at resolution=",
+    "\n ====== Processing clustering with WNN method ",
+    clust_name,
+    " at resolution = ",
     clust_res,
     " with k.nn = ",
     clust_knn,
@@ -105,6 +104,7 @@ if (!dir.exists(plotDir)) {
 
 ########################    Initials. (1) load data  ########################
 
+## The code below works when we have Seurat objects prepared, otherwise it is not necessary
 # count_mtx_type <- 'norm_counts'
 # Seurat_reduction <- 'Harmony'
 # minCells <- 1
@@ -151,15 +151,6 @@ SeuratOBJ.1 <- FindNeighbors(
   reduction = "integrated.harmony"
 )
 
-## get name to save the clustering results
-clust_name <- case_when(
-  clust_method == 1 ~ "C.louvain",
-  clust_method == 2 ~ "C.louvainM",
-  clust_method == 3 ~ "C.SLM",
-  clust_method == 4 ~ "C.leiden"
-)
-
-
 SeuratOBJ.1 <- FindClusters(
   SeuratOBJ.1,
   resolution = as.integer(clust_res),
@@ -168,13 +159,24 @@ SeuratOBJ.1 <- FindClusters(
   algorithm = as.integer(clust_method),
   cluster.name = clust_name
 )
+
+SeuratOBJ.1 <- RunUMAP(
+  SeuratOBJ.1,
+  dims = 1:30,
+  reduction = "integrated.harmony",
+  reduction.name = "umap.integrated"
+)
+# Reductions(SeuratOBJ.1)
+
 # Returns a Seurat where the idents have been updated with new cluster info
 # latest clustering results will be stored in object metadata under 'seurat_clusters'.
 # Note that 'seurat_clusters' will be overwritten every time FindClusters is run
 head(SeuratOBJ.1@meta.data[[clust_name]])
 # tail(SeuratOBJ.1[["seurat_clusters"]], n=3)
 # tail(SeuratOBJ.1[[clust_name]], n=3)
-# pmatch(SeuratOBJ.1[["seurat_clusters"]], SeuratOBJ.1[[clust_name]])
+#pmatch(SeuratOBJ.1[["seurat_clusters"]], SeuratOBJ.1[[clust_name]])
+
+## Some verifications. Comparing differences between previous and current SNN clustering
 
 message("\nSeurat Default Clustering:")
 df1 <- as.data.frame(table(Idents(SeuratOBJ)))
@@ -202,21 +204,10 @@ umap_rna_name <- paste0("umap.", gsub("\\C.", "", clust_name))
 #   clust_method == "4" ~ "umap.leiden")
 
 message(
-  "Clustering method: ",
-  clust_name,
-  "\n",
-  "Clustering resolution: ",
-  as.integer(clust_res),
-  "\n",
-  "Clustering knn: ",
-  clust_knn
-)
-
-message(
   "RNA SNN ",
   clust_name,
   " method = found ",
-  length(unique(SeuratOBJ.1$seurat_clusters)),
+  length(unique(table(SeuratOBJ.1[[clust_name]]))),
   " clusters"
 )
 
@@ -228,15 +219,21 @@ message(
 ########### Run WNN on integrated.harmony for rna and lsi (1) and lsi-harmony (2) for atac ###########
 
 ## ATAC data are normalized and batch corrected
-DefaultAssay(SeuratOBJ) <- "ATAC"
+
+DefaultAssay(SeuratOBJ.1) <- "ATAC"
+
 clust_name_atac <- paste0(clust_name, "_atac")
+
 # Reductions(SeuratOBJ.1) # "umap.lsi.integrated"
+
 SeuratOBJ.1 <- FindNeighbors(
   SeuratOBJ.1,
   dims = 2:20,
   reduction = "integrated.lsi.harmony"
 )
+
 ## Build nearest neighbor graph using ATAC (LSI-Harmony)
+
 SeuratOBJ.1 <- FindClusters(
   SeuratOBJ.1,
   resolution = as.integer(clust_res),
@@ -246,23 +243,32 @@ SeuratOBJ.1 <- FindClusters(
   cluster.name = clust_name_atac
 )
 
+SeuratOBJ.1 <- RunUMAP(
+  SeuratOBJ.1,
+  dims = 2:20,
+  reduction = "integrated.lsi.harmony",
+  reduction.name = "umap.lsi.integrated"
+)
+
 message(
   "ATAC SNN ",
   clust_name,
   " method = found ",
-  length(unique(SeuratOBJ.1$seurat_clusters)),
+  length(unique(table(SeuratOBJ.1[[clust_name_atac]]))),
   " clusters"
 )
 
 ## verify output
 colnames(SeuratOBJ.1@meta.data)
 
-## strategy: WNN on integrated.harmony for rna and integrated.lsi.harmony for atac
 
 ## Calculate a WNN graph, representing a weighted combination of RNA and ATAC-seq modalities. We use this graph for UMAP visualization and clustering
 ## We used the reduction with batch corrected data for both rna and atac
 
 DefaultAssay(SeuratOBJ) <- "RNA"
+
+clust_name_wnn <- paste0(clust_name, "_wnn")
+# "C.leiden_wnn"
 
 SeuratOBJ.1 <- FindMultiModalNeighbors(
   SeuratOBJ.1,
@@ -294,6 +300,14 @@ SeuratOBJ.1 <- FindClusters(
   algorithm = as.integer(clust_method)
 )
 
+message(
+  "Multiome WNN ",
+  clust_name,
+  " method = found ",
+  length(unique(table(SeuratOBJ.1[["seurat_clusters"]]))),
+  " clusters"
+)
+
 # str(SeuratOBJ.1$wnn.umap)
 # table(Idents(SeuratOBJ.1))
 colnames(SeuratOBJ.1@meta.data)
@@ -321,6 +335,7 @@ plt1 <- DimPlot(
     )
   ) &
   NoLegend()
+
 plt2 <- DimPlot(
   SeuratOBJ.1,
   reduction = "umap.lsi.integrated",
@@ -342,6 +357,7 @@ plt2 <- DimPlot(
     )
   ) &
   NoLegend()
+
 plt3 <- DimPlot(
   SeuratOBJ.1,
   reduction = "wnn.umap",
