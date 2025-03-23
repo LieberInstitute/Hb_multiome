@@ -10,7 +10,7 @@
 #SBATCH --array=1-4%20
 id=$(sed -n ${SLURM_ARRAY_TASK_ID}p input_wnn_rds_names_v2.txt)
 
-## Here is processed normalized data in both rna and atac (leiden and louvainM r1)
+## Cell-type identification ONLY for selected WNN clustering results with 'leiden'
 
 
 ## Explicitly pipe script output to a log
