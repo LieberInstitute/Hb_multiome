@@ -28,7 +28,7 @@ echo "Job id: ${SLURM_JOBID}"
 echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 
 ## load modules
-module conda_R/4.3.x
+module load conda_R/4.3.x
 ## List current modules for reproducibility
 module list
 
@@ -41,24 +41,21 @@ PLOTDIR="${MAINDIR}/plots"
 # cd ${CODEDIR}
 # Rscript update_style.R
 
-
-######## Run clustering with different methods
-######## All section runs on SUBDIR="05_Clustering_ARCr"
-
+## change dir
 SUBDIR="05_Clustering_ARCr"
+cd ${CODEDIR}/${SUBDIR}
 
-echo "Running clustering ..................."
-
-# ## rm previous log files and output files
-# rm ${CODEDIR}/${SUBDIR}/logs/01_clustering_std_method_*.txt
-# rm ${PROCESSEDIR}/${SUBDIR}/01_clustering_std_method/*.rds
-# rm ${PROCESSEDIR}/${SUBDIR}/01_clustering_std_method/cvs_files/*.csv
-# rm ${PLOTDIR}/${SUBDIR}/01_clustering_std_method/*.png
-
-# echo "Previous logs and output files deleted!"
-
-## Run independent job
-
+echo "######## Run clustering with different methods ########"
+echo "Current dir:"
+pwd
+## rm previous log files and output files
+rm -f ${CODEDIR}/${SUBDIR}/logs/01_clustering_std_method_*.txt
+rm -f ${PROCESSEDIR}/${SUBDIR}/01_clustering_std_method/*.rds
+rm -f ${PROCESSEDIR}/${SUBDIR}/01_clustering_std_method/cvs_files/*.csv
+rm -f ${PLOTDIR}/${SUBDIR}/01_clustering_std_method/*.png
+echo "Previous logs, cvs and png files deleted!"
+## Run independent job / scritpt 'v2' compute only 24 (a subset) WNN configurations
+sbatch 01_clustering_std_method_v2.sh   
 # id1=$(sbatch --parsable 01_clustering_std_method.sh)      # perform 48 WNN configurations
 # id1=$(sbatch --parsable 01_clustering_std_method_v2.sh)   # this 'v2' compute only 24 (a subset) WNN configurations
 # echo $id1
@@ -70,6 +67,9 @@ echo "Clustering done!!"
 
 echo "Running cell-types identification ..................."
 
+# ===== Extended version to identy cell-types from different WNN methods (Louvain, LouvainM, SML and Leiden) 
+# ===== Requiered for EDA (Louvain, LouvainM, SML and Leiden) 
+#
 # ## rm previous log files and output files
 # rm ${CODEDIR}/${SUBDIR}/logs/02_v2_Hb_celltypes_ARCr*.txt
 # rm ${PROCESSEDIR}/${SUBDIR}/02_Hb_celltypes_from_seurat_reanalyze_v2/*.csv
@@ -79,13 +79,23 @@ echo "Running cell-types identification ..................."
 # 
 # # Run dependency job
 # 
-# id2=$(sbatch --parsable 02_Hb_celltypes_from_seurat_reanalyze_v2.sh)
-# # Alternative command if you need to re-run the clustering
-# # id2=$(sbatch --parsable --dependency=afterok:$id1 02_Hb_celltypes_from_seurat_reanalyze_v2.sh)
+# sbatch 02_Hb_celltypes_from_seurat_reanalyze_v2.sh
 # 
-# echo $id2
+# echo "Cell type identification v2 done!!"
 
-echo "Cell type identification v2 done!!"
+
+# ===== Version to identy cell-types only for WNN methods with Leiden
+#
+## rm previous log files and output files
+rm -f ${CODEDIR}/${SUBDIR}/logs/02_Hb_celltypes_ARCr_v3*.txt
+rm -f ${PROCESSEDIR}/${SUBDIR}/02_Hb_celltypes_from_seurat_reanalyze_v3/*.csv
+rm -f ${PROCESSEDIR}/${SUBDIR}/02_Hb_celltypes_from_seurat_reanalyze_v3/cvs_files_markers/*.csv
+
+echo "Previous logs and output files deleted!"
+
+# Run dependency job
+
+sbatch 02_Hb_celltypes_from_seurat_reanalyze_v3.sh
 
 
 ######## Run rename idents
