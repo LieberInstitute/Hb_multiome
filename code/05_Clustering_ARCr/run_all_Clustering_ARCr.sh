@@ -88,7 +88,6 @@ echo "Running cell-types identification ..................."
 #
 ## rm previous log files and output files
 rm -f ${CODEDIR}/${SUBDIR}/logs/02_Hb_celltypes_ARCr_v3*.txt
-rm -f ${PROCESSEDIR}/${SUBDIR}/02_Hb_celltypes_from_seurat_reanalyze_v3/*.csv
 rm -f ${PROCESSEDIR}/${SUBDIR}/02_Hb_celltypes_from_seurat_reanalyze_v3/cvs_files_markers/*.csv
 
 echo "Previous logs and output files deleted!"
@@ -96,6 +95,35 @@ echo "Previous logs and output files deleted!"
 # Run dependency job
 
 sbatch 02_Hb_celltypes_from_seurat_reanalyze_v3.sh
+
+echo "Cell type identification v3 done!!"
+
+
+######## Run cell type percentage
+
+echo "Running cell-types percentages ..................."
+
+## rm previous log files and output files
+## rm previous log files and output files
+rm -f ${CODEDIR}/${SUBDIR}/logs/02_Hb_celltypes_ARCr_v3*.txt
+rm -f ${PROCESSEDIR}/${SUBDIR}/02_Hb_celltypes_from_seurat_reanalyze_v3/cvs_files_markers/DETAIL*v3.csv
+rm -f ${PROCESSEDIR}/${SUBDIR}/02_Hb_celltypes_from_seurat_reanalyze_v3/FULL_SUMMARY*v3.csv
+
+echo "Previous logs and output files deleted!"
+
+# Run dependency job
+
+sbatch 03_cell_types_perc_WNN_leiden_harmony_v3.sh
+
+echo "Cell type percentages for v3 done!!"
+
+# ===== Extended version to identy cell-types from different Cell Ranger Pipelines. It includes:
+# ===== Requiered for EDA
+# cellranger_pipe=="CR_crossBarcodes"
+# cellranger_pipe=="CR_complementBarcodes"
+# cellranger_pipe=="CR_arc_reanalyze"
+# cellranger_pipe=="CR_arc_reanalyze_outliers"
+# 03_cell_types_percentages.R
 
 
 ######## Run rename idents
