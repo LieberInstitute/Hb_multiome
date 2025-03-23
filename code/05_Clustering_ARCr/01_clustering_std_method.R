@@ -39,7 +39,7 @@ clust_res <- args[4]
 clust_knn <- args[6]
 
 # ## For testing use: Leiden
-# clust_method = 4 #
+# clust_method = 4 
 # clust_res = 2
 # clust_knn = 30
 
@@ -187,8 +187,6 @@ df_compare <- df_clusters_compare |> arrange((Var1)) # |> mutate(diff_size = (`F
 
 rm("SeuratOBJ")
 
-message("Number of communities: ", length(table(Idents(SeuratOBJ.1))))
-
 print(df_compare, row.names = FALSE)
 #      Var1 Freq.x Freq.y diff_size
 # 1     0   5539   5300       239
@@ -197,14 +195,11 @@ print(df_compare, row.names = FALSE)
 
 ## customize umap assay name accordingly with clustering method
 umap_rna_name <- paste0("umap.", gsub("\\C.", "", clust_name))
-# umap_rna_name <- case_when(
-#   clust_method == "1" ~ "umap.lovain",
-#   clust_method == "2" ~ "umap.lovainM",
-#   clust_method == "3" ~ "umap.SLM",
-#   clust_method == "4" ~ "umap.leiden")
+# umap_rna_name
+#[1] "umap.leiden"
 
 message(
-  "RNA SNN ",
+  "===== RNA SNN ",
   clust_name,
   " method = found ",
   length(unique(table(SeuratOBJ.1[[clust_name]]))),
@@ -221,10 +216,8 @@ message(
 ## ATAC data are normalized and batch corrected
 
 DefaultAssay(SeuratOBJ.1) <- "ATAC"
-
-clust_name_atac <- paste0(clust_name, "_atac")
-
-# Reductions(SeuratOBJ.1) # "umap.lsi.integrated"
+# Reductions(SeuratOBJ.1) 
+# "umap.lsi.integrated"
 
 SeuratOBJ.1 <- FindNeighbors(
   SeuratOBJ.1,
@@ -234,6 +227,8 @@ SeuratOBJ.1 <- FindNeighbors(
 
 ## Build nearest neighbor graph using ATAC (LSI-Harmony)
 
+clust_name_atac <- paste0(clust_name, "_atac")
+#[1] "C.leiden_atac"
 SeuratOBJ.1 <- FindClusters(
   SeuratOBJ.1,
   resolution = as.integer(clust_res),
@@ -251,7 +246,7 @@ SeuratOBJ.1 <- RunUMAP(
 )
 
 message(
-  "ATAC SNN ",
+  "===== ATAC SNN ",
   clust_name,
   " method = found ",
   length(unique(table(SeuratOBJ.1[[clust_name_atac]]))),
@@ -259,13 +254,13 @@ message(
 )
 
 ## verify output
-colnames(SeuratOBJ.1@meta.data)
+head(SeuratOBJ.1@meta.data[[clust_name_atac]])
 
 
 ## Calculate a WNN graph, representing a weighted combination of RNA and ATAC-seq modalities. We use this graph for UMAP visualization and clustering
 ## We used the reduction with batch corrected data for both rna and atac
 
-DefaultAssay(SeuratOBJ) <- "RNA"
+DefaultAssay(SeuratOBJ.1) <- "RNA"
 
 clust_name_wnn <- paste0(clust_name, "_wnn")
 # "C.leiden_wnn"
@@ -283,6 +278,16 @@ message("WNN done!")
 # head(SeuratOBJ.1@neighbors)
 # head(SeuratOBJ.1@graphs$wknn)
 
+SeuratOBJ.1 <- FindClusters(
+  SeuratOBJ.1,
+  graph.name = "wsnn",
+  method = "igraph",
+  random.seed = 03122024,
+  resolution = as.integer(clust_res),
+  algorithm = as.integer(clust_method),
+  cluster.name = clust_name_wnn
+)
+
 SeuratOBJ.1 <- RunUMAP(
   SeuratOBJ.1,
   n.neighbors = as.integer(clust_knn), # Default n.neighbors=30
@@ -291,27 +296,19 @@ SeuratOBJ.1 <- RunUMAP(
   reduction.key = "wnnUMAP_"
 )
 
-SeuratOBJ.1 <- FindClusters(
-  SeuratOBJ.1,
-  graph.name = "wsnn",
-  method = "igraph",
-  random.seed = 03122024,
-  resolution = as.integer(clust_res),
-  algorithm = as.integer(clust_method)
-)
-
 message(
-  "Multiome WNN ",
+  "===== Multiome WNN ",
   clust_name,
   " method = found ",
-  length(unique(table(SeuratOBJ.1[["seurat_clusters"]]))),
+  length(unique(table(SeuratOBJ.1[[clust_name_wnn]]))),
   " clusters"
 )
 
 # str(SeuratOBJ.1$wnn.umap)
-# table(Idents(SeuratOBJ.1))
-colnames(SeuratOBJ.1@meta.data)
-unique(SeuratOBJ.1$seurat_clusters)
+message("===== WNN Multiome clusters:")
+table(Idents(SeuratOBJ.1))
+#colnames(SeuratOBJ.1@meta.data)
+#unique(SeuratOBJ.1$seurat_clusters)
 
 ## reduction = "umap.integrated" | var: umap_rna_name
 plt1 <- DimPlot(
@@ -361,7 +358,8 @@ plt2 <- DimPlot(
 plt3 <- DimPlot(
   SeuratOBJ.1,
   reduction = "wnn.umap",
-  group.by = "seurat_clusters",
+  #group.by = clust_name_wnn, 
+  group.by = "seurat_clusters", #sorted clusters (ok)
   label = TRUE,
   label.size = 2.5
 ) +
@@ -374,11 +372,11 @@ plt3 <- DimPlot(
       " (knn=",
       clust_knn,
       "); Clusters=",
-      subtitle = length(table(SeuratOBJ.1[["seurat_clusters"]]))
+      subtitle = length(table(SeuratOBJ.1[[clust_name_wnn]]))
     )
   )
 
-pltALL <- plt1 + plt2 + plt3 & theme(plot.title = element_text(hjust = 0.5)) # & NoLegend()
+pltALL <- plt1 + plt2 + plt3 & theme(plot.title = element_text(hjust = 0.5))
 sufix_name <- paste0("k", clust_knn, "_", clust_name, "_lsi_r", clust_res)
 ggsave(
   pltALL,
@@ -395,9 +393,8 @@ ggsave(
 )
 
 
-## Save RDS Object and Find DEG in the WNN
+## Save predefined results of interest: RDS Object and DEG in the WNN
 
-clust_knn
 if (
   (clust_knn == 30 || clust_knn == 40) &
     (clust_method == 2 || clust_method == 4)
@@ -415,7 +412,7 @@ if (
 
   ## Find DEG in the integrated Seurat for ALL clusters
 
-  table(SeuratOBJ.1[["seurat_clusters"]])
+  #table(SeuratOBJ.1[["seurat_clusters"]])
   all.markers <- FindAllMarkers(object = SeuratOBJ.1)
   head(all.markers, n = 3)
 
@@ -428,7 +425,7 @@ if (
   write.csv(all.markers, cvs_file)
 
   message(
-    "\nMarkers from WNN with rna-harmony and atac-harmony saved: ",
+    "===== Markers from WNN with rna-harmony and atac-harmony saved: ",
     basename(cvs_file)
   )
 }
