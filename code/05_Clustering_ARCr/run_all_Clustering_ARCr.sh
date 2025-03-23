@@ -125,6 +125,11 @@ echo "Cell type percentages for v3 done!!"
 # cellranger_pipe=="CR_arc_reanalyze_outliers"
 # 03_cell_types_percentages.R
 
+# ===== Requiered for EDA: without annotated cell-types
+# 03_jaccard.sh
+# ===== Requiered for EDA: without annotated cell-types /  called different outputs: Louvain, LouvainM, SML and Leiden
+# 04_wnn_gene_expression.R
+
 
 ######## Run rename idents
 
