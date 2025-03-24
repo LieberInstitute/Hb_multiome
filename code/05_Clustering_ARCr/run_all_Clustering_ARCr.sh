@@ -138,9 +138,9 @@ echo "Renaming idents ..................."
 SUBsubDIR="05_rename_idents"
 
 ## rm previous log files and output files
-rm ${CODEDIR}/${SUBDIR}/logs/05_rename_idents_*.txt
-rm ${PROCESSEDIR}/${SUBDIR}/${SUBsubDIR}/*.rds
-rm ${PLOTDIR}/${SUBDIR}/${SUBsubDIR}/*.pdf
+rm -f ${CODEDIR}/${SUBDIR}/logs/05_rename_idents_*.txt
+rm -f ${PROCESSEDIR}/${SUBDIR}/${SUBsubDIR}/*.rds
+rm -f ${PLOTDIR}/${SUBDIR}/${SUBsubDIR}/*.pdf
 
 echo "Previous logs and output files deleted!"
 
