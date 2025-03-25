@@ -10,8 +10,11 @@
 library("Seurat")
 library("Signac")
 library("ggplot2")
+library("pheatmap")
+library("bluster")
+library("viridisLite")
 library("patchwork")
-library("purrr")
+# library("purrr")
 library("tidyverse")
 library("stringr")
 library("here")
@@ -61,6 +64,7 @@ levels(SeuratOBJ)
 
 DefaultAssay(SeuratOBJ) <- "RNA"
 Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+")) 
+# C.leiden_lsi_r2_renamed_visium
 
 ## Prepare Violin Plot on canonical Hb gene-markers
 
@@ -92,6 +96,87 @@ tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_VPlot.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 4, width = 17)
 
 message('\nViolin plots saved `', plotDir, '`')
+
+
+## Heatmap of overlaps between WNN vs RNA and WNN vs ATAC
+
+colnames(SeuratOBJ@meta.data)
+# # SeuratOBJ$seurat_clusters
+# cmat <- table(SeuratOBJ[[c("C.leiden", "C.leiden_atac")]])
+# dim(cmat)
+# pheatmap(cmat, cluster_rows = TRUE, cluster_cols = TRUE, display_numbers = FALSE)
+# 
+# # SeuratOBJ[[c("C.leiden", "C.leiden_wnn")]]
+# cmat <- table(SeuratOBJ[[c("seurat_clusters", "C.leiden")]])
+# dim(cmat)
+# plt_rna <- pheatmap(cmat, cluster_rows = TRUE, cluster_cols = TRUE, display_numbers = FALSE,
+#          main = "RNA vs WNN", xlab = "RNA clusters", ylab = "WNN clusters")
+# 
+# cmat <- table(SeuratOBJ[[c("seurat_clusters", "C.leiden_atac")]])
+# dim(cmat)
+# plt_atac <- pheatmap(cmat, cluster_rows = TRUE, cluster_cols = TRUE, display_numbers = FALSE,
+#          main = "ATAC vs WNN")
+
+##  compute Jaccard for RNA
+
+clust.wnn1 <- as.vector(SeuratOBJ$seurat_clusters)
+clust.wnn2 <- as.vector(SeuratOBJ$C.leiden)
+jacc.mat <- linkClustersMatrix(clust.wnn1, clust.wnn2)
+# rownames(jacc.mat)
+colnames(jacc.mat) <- paste0("RNA.C.", colnames(jacc.mat))
+
+## Plot Jacquard
+
+plt_wnn_rna <- pheatmap(jacc.mat, color=viridisLite::plasma(101), #viridis::viridis(100) 
+               cluster_cols=FALSE, 
+               cluster_rows=TRUE, # show hierarchical clust
+               angle_col = 90,
+               na_col = "black",
+               main = "Jaccard WNN\n (x-axis)",
+               fontsize = 10,
+               display_numbers=T,
+               number_format="%.1f",
+               fontsize_number=7,
+               legend = TRUE)
+
+##  compute Jaccard for ATAC
+
+clust.wnn2 <- as.vector(SeuratOBJ$C.leiden_atac)
+jacc.mat <- linkClustersMatrix(clust.wnn1, clust.wnn2)
+colnames(jacc.mat) <- paste0("ATAC.C.", colnames(jacc.mat))
+
+## Plot Jacquard
+
+plt_wnn_atac <- pheatmap(jacc.mat, color=viridisLite::plasma(101), #viridis::viridis(100) 
+                 cluster_cols=FALSE, 
+                 cluster_rows=TRUE, # show hierarchical clust
+                 angle_col = 90,
+                 na_col = "black",
+                 main = "Jaccard WNN\n (x-axis)",
+                 fontsize = 10,
+                 display_numbers=T,
+                 number_format="%.1f",
+                 fontsize_number=7,
+                 legend = TRUE)
+
+class(plt_wnn_atac)
+
+plot_list <- list()
+plot_list[['rna']]<- as.ggp  plt_wnn_rna
+plot_list[['atac']]<- plt_wnn_atac
+names(plot_list)
+library(gridExtra)
+g <- grid.arrange(grobs = plot_list, ncol=2)
+
+plt1 <- plt_wnn_rna + plt_wnn_atac
+tmp_png <- here(plotDir, paste0(file_name_all, "_Jaccard_WNN.png"))
+tmp_title <- unlist(strsplit(file_name_all,"-",fixed=T))
+
+
+png(tmp_png,width=12,height=10,units="in",res=1200)
+plt1
+
+
 
 ## UMAP: Label clusters on a ggplot2-based scatter plot
 
