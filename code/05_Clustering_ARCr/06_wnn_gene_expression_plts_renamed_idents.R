@@ -4,6 +4,7 @@
 ## Authors. CSC 
 ## Date. Jan 24, 2024
 ## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
+## Note. Seurat objects were created with module load conda_R/4.3.x
 ########################################################################
 
 library("Seurat")
@@ -11,6 +12,7 @@ library("Signac")
 library("ggplot2")
 library("patchwork")
 library("purrr")
+library("tidyverse")
 library("stringr")
 library("here")
 
@@ -20,9 +22,8 @@ here()
 
 # Check/create directories
 inputCVS_Dir <- here("code", "05_Clustering_ARCr")
-# inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method") # clusters not labeled
-# inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents") # clusters renamed to identify Hb-clusters
-inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "08_wnn_gene_expression_plts_renamed_idents") # clusters renamed for Spatial-Registration on Visium project
+## clusters renamed for Spatial-Registration on Visium project
+inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "08_wnn_gene_expression_plts_renamed_idents") 
 plotDir <- here("plots", "05_Clustering_ARCr", "08_wnn_gene_expression_plts_renamed_idents")
 
 ## Check directories
@@ -31,65 +32,68 @@ if (!dir.exists(plotDir)) {dir.create(plotDir)}
 
 ## Load input with RDS wnn to compare
 
-# WNN clustering results of interest
+# WNN clustering results of interest. To plot annotated or not annotatted clusters
+# For inputRDS_Dir_not_annotated
+# inputRDS_Dir_not_annotated <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
 # Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1"
+# For inputRDS_Dir_annotated
+# inputRDS_Dir_annotated <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents")
 # Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2.rds"
+
+# For inputRDS_Dir, clusters renamed for Spatial-Registration on Visium project
 Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds"
 
-wnn_file_names_lst <- here(inputRDS_Dir, Seurat_base_name)
+seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 
-# f_plt_violin <- function(seurat_name){
-  seurat_name <- wnn_file_names_lst
-  SeuratOBJ <- readRDS(seurat_name)
-  DefaultAssay(SeuratOBJ) <- "RNA"
-  Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+")) 
-  # features <- c("POU4F1", "GPR151", "TAC3")
-  features <- c("POU4F1", "GPR151")
-  
-  plt1 <- VlnPlot(object = SeuratOBJ, layer = "data",
-                  features = features,
-                  pt.size = 0) +
-    labs(x = paste0("WNN: ", Seurat_base_name)) &
-    theme(text = element_text(size = 8), 
-          axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
-          plot.title=element_text(hjust=0.5)) 
-    
-  plt1 <- plt1 + plot_annotation(paste0("WNN: ", Seurat_base_name), 
-                                 caption = 'Cell Ranger ARC reanalize',theme=theme(plot.title=element_text(hjust=0.5)))
-  tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_VPlot.pdf")
-  ggsave(plt1, filename = here(plotDir, tmp_name), height = 4, width = 17)
-  
-  # return(plt1)
-  
-# }
+SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
+levels(SeuratOBJ)
+## Levels should be
+# [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
+# [6] "C.16 DD_MHb" "C.18 DD_LHb" "C.23 DD_LHb" "C.24 DD_LHb" "C.30 DD_LHb"
+# [11] "C.33 DD_LHb" "C.36 DD_MHb" "C.40 DD_LHb" "C.01"        "C.02"       
+# [16] "C.03"        "C.04"        "C.06"        "C.08"        "C.09"       
+# [21] "C.12"        "C.13"        "C.15"        "C.17"        "C.19"       
+# [26] "C.20"        "C.21"        "C.22"        "C.25"        "C.26"       
+# [31] "C.27"        "C.28"        "C.29"        "C.31"        "C.32"       
+# [36] "C.34"        "C.35"        "C.37"        "C.38"        "C.39"       
+# [41] "C.41"        "C.42" 
 
 
-## Load the Seurat with WNN clusters
+DefaultAssay(SeuratOBJ) <- "RNA"
+Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+")) 
+
+## Prepare Violin Plot on canonical Hb gene-markers
 
 message("Reading WNN to evalute gene expression of `POU4F1` and `GPR151` on: ", str_extract(Seurat_base_name, regex("C\\.\\w+")))
+# features <- c("POU4F1", "GPR151", "TAC3")
+features <- c("POU4F1", "GPR151")
+  
+plt1 <- VlnPlot(
+  object = SeuratOBJ,
+  layer = "data",
+  features = features,
+  pt.size = 0
+) +
+  labs(x = paste0("WNN: ", Seurat_base_name)) &
+  theme(
+    text = element_text(size = 8),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    plot.title = element_text(hjust = 0.5)
+  )
 
-# Vplot_lst <- f_plt_violin(wnn_file_names_lst[1])
+plt1 <- plt1 +
+  plot_annotation(
+    paste0("WNN: ", Seurat_base_name),
+    caption = 'Cell Ranger ARC reanalize',
+    theme = theme(plot.title = element_text(hjust = 0.5))
+  )
+tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_VPlot.pdf")
+ggsave(plt1, filename = here(plotDir, tmp_name), height = 4, width = 17)
 
-# # we have 4 clustering results selected 
-# Vplot_lst <- map(wnn_file_names_lst, ~ f_plt_violin(.x))
-# length(Vplot_lst)
-# # Vplot_lst[[1]]
-# 
-# pdf_name <-  here(plotDir, "Vplot_WNN.POU4F1_GPR151.pdf")
-# pdf(file = pdf_name)
-# par(mfrow=c(2,2))
-# Vplot_lst[[1]] / Vplot_lst[[2]] / Vplot_lst[[3]] / Vplot_lst[[4]]
-# dev.off()
-
-message('\nPlots saved `', plotDir, '`')
+message('\nViolin plots saved `', plotDir, '`')
 
 ## UMAP: Label clusters on a ggplot2-based scatter plot
-
-#plot <- DimPlot(object = sob, 
-plt1 <- DimPlot(SeuratOBJ,  label = TRUE, reduction = "wnn.umap", label.size = 3) + NoLegend() +
-  labs(title = paste0("Clusters from WNN: ", Seurat_base_name))
-tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_DimPlot.pdf")
-ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
 
 # Feature plot - visualize feature expression in low-dimensional space
 # Calculate feature-specific contrast levels based on quantiles of non-zero expression.
@@ -117,37 +121,6 @@ plt1 <- DotPlot(SeuratOBJ, features = c(features, "TAC3")) + RotatedAxis()  +
         axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
         plot.title=element_text(hjust=0.5)) 
 tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_DotPlot.pdf")
-ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
-
-
-## Single cell heatmap of feature expression
-# DoHeatmap(subset(SeuratOBJ, downsample = 100), features = features, size = 3) + labs(title = Seurat_base_name)
-
-
-## Plot coverage plot for specific genes 
-features <- "GPR151"
-features <- "POU4F1"
-features <- "CDH4"
-newname_clusters <- levels(SeuratOBJ)
-for (idx in newname_clusters) { if (nchar(idx) <= 4) { no_hb_clust <- append(no_hb_clust, idx) } }
-no_hb_clust <- sort(c(unlist(no_hb_clust)))
-hb_clusters <- sort(newname_clusters[! newname_clusters %in% c(no_hb_clust)])
-
-
-plt1 <- CoveragePlot(
-  object = SeuratOBJ,
-  region = features,
-  features = features,
-  expression.assay = "RNA",
-  extend.upstream = 500,
-  extend.downstream = 500,
-  idents = hb_clusters
-)  +
-  labs(title = paste0("Clusters from WNN: ", seurat_name)) +
-  theme(text = element_text(size = 8),
-        axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
-        plot.title=element_text(hjust=0.5))
-tmp_name <- paste0(seurat_name, "_", features, "_CoveragePlt.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
 
 
