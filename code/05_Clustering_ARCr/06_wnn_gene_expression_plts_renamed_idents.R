@@ -1,7 +1,7 @@
 ########################################################################
 ## Plot GEX on selected WNN clustering results
 ##
-## Authors. CSC 
+## Authors. CSC
 ## Date. Jan 24, 2024
 ## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
 ## Note. Seurat objects were created with module load conda_R/4.3.x
@@ -14,6 +14,8 @@ library("pheatmap")
 library("bluster")
 library("viridisLite")
 library("patchwork")
+library("ggplotify")
+library("gridExtra")
 # library("purrr")
 library("tidyverse")
 library("stringr")
@@ -26,11 +28,21 @@ here()
 # Check/create directories
 inputCVS_Dir <- here("code", "05_Clustering_ARCr")
 ## clusters renamed for Spatial-Registration on Visium project
-inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "08_wnn_gene_expression_plts_renamed_idents") 
-plotDir <- here("plots", "05_Clustering_ARCr", "08_wnn_gene_expression_plts_renamed_idents")
+inputRDS_Dir <- here(
+  "processed-data",
+  "05_Clustering_ARCr",
+  "08_wnn_gene_expression_plts_renamed_idents"
+)
+plotDir <- here(
+  "plots",
+  "05_Clustering_ARCr",
+  "08_wnn_gene_expression_plts_renamed_idents"
+)
 
 ## Check directories
-if (!dir.exists(plotDir)) {dir.create(plotDir)}
+if (!dir.exists(plotDir)) {
+  dir.create(plotDir)
+}
 
 
 ## Load input with RDS wnn to compare
@@ -53,25 +65,27 @@ levels(SeuratOBJ)
 ## Levels should be
 # [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
 # [6] "C.16 DD_MHb" "C.18 DD_LHb" "C.23 DD_LHb" "C.24 DD_LHb" "C.30 DD_LHb"
-# [11] "C.33 DD_LHb" "C.36 DD_MHb" "C.40 DD_LHb" "C.01"        "C.02"       
-# [16] "C.03"        "C.04"        "C.06"        "C.08"        "C.09"       
-# [21] "C.12"        "C.13"        "C.15"        "C.17"        "C.19"       
-# [26] "C.20"        "C.21"        "C.22"        "C.25"        "C.26"       
-# [31] "C.27"        "C.28"        "C.29"        "C.31"        "C.32"       
-# [36] "C.34"        "C.35"        "C.37"        "C.38"        "C.39"       
-# [41] "C.41"        "C.42" 
-
+# [11] "C.33 DD_LHb" "C.36 DD_MHb" "C.40 DD_LHb" "C.01"        "C.02"
+# [16] "C.03"        "C.04"        "C.06"        "C.08"        "C.09"
+# [21] "C.12"        "C.13"        "C.15"        "C.17"        "C.19"
+# [26] "C.20"        "C.21"        "C.22"        "C.25"        "C.26"
+# [31] "C.27"        "C.28"        "C.29"        "C.31"        "C.32"
+# [36] "C.34"        "C.35"        "C.37"        "C.38"        "C.39"
+# [41] "C.41"        "C.42"
 
 DefaultAssay(SeuratOBJ) <- "RNA"
-Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+")) 
+Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
 # C.leiden_lsi_r2_renamed_visium
 
 ## Prepare Violin Plot on canonical Hb gene-markers
 
-message("Reading WNN to evalute gene expression of `POU4F1` and `GPR151` on: ", str_extract(Seurat_base_name, regex("C\\.\\w+")))
+message(
+  "Reading WNN to evalute gene expression of `POU4F1` and `GPR151` on: ",
+  str_extract(Seurat_base_name, regex("C\\.\\w+"))
+)
 # features <- c("POU4F1", "GPR151", "TAC3")
 features <- c("POU4F1", "GPR151")
-  
+
 plt1 <- VlnPlot(
   object = SeuratOBJ,
   layer = "data",
@@ -105,13 +119,13 @@ colnames(SeuratOBJ@meta.data)
 # cmat <- table(SeuratOBJ[[c("C.leiden", "C.leiden_atac")]])
 # dim(cmat)
 # pheatmap(cmat, cluster_rows = TRUE, cluster_cols = TRUE, display_numbers = FALSE)
-# 
+#
 # # SeuratOBJ[[c("C.leiden", "C.leiden_wnn")]]
 # cmat <- table(SeuratOBJ[[c("seurat_clusters", "C.leiden")]])
 # dim(cmat)
 # plt_rna <- pheatmap(cmat, cluster_rows = TRUE, cluster_cols = TRUE, display_numbers = FALSE,
 #          main = "RNA vs WNN", xlab = "RNA clusters", ylab = "WNN clusters")
-# 
+#
 # cmat <- table(SeuratOBJ[[c("seurat_clusters", "C.leiden_atac")]])
 # dim(cmat)
 # plt_atac <- pheatmap(cmat, cluster_rows = TRUE, cluster_cols = TRUE, display_numbers = FALSE,
@@ -127,17 +141,20 @@ colnames(jacc.mat) <- paste0("RNA.C.", colnames(jacc.mat))
 
 ## Plot Jacquard
 
-plt_wnn_rna <- pheatmap(jacc.mat, color=viridisLite::plasma(101), #viridis::viridis(100) 
-               cluster_cols=FALSE, 
-               cluster_rows=TRUE, # show hierarchical clust
-               angle_col = 90,
-               na_col = "black",
-               main = "Jaccard WNN\n (x-axis)",
-               fontsize = 10,
-               display_numbers=T,
-               number_format="%.1f",
-               fontsize_number=7,
-               legend = TRUE)
+plt_wnn_rna <- pheatmap(
+  jacc.mat,
+  color = viridisLite::plasma(101),
+  cluster_cols = FALSE,
+  cluster_rows = TRUE, # show hierarchical clust
+  angle_col = 90,
+  na_col = "black",
+  main = "Overlap between RNA and WNN cluster identities",
+  fontsize = 10,
+  display_numbers = T,
+  number_format = "%.1f",
+  fontsize_number = 7,
+  legend = TRUE
+)
 
 ##  compute Jaccard for ATAC
 
@@ -147,35 +164,30 @@ colnames(jacc.mat) <- paste0("ATAC.C.", colnames(jacc.mat))
 
 ## Plot Jacquard
 
-plt_wnn_atac <- pheatmap(jacc.mat, color=viridisLite::plasma(101), #viridis::viridis(100) 
-                 cluster_cols=FALSE, 
-                 cluster_rows=TRUE, # show hierarchical clust
-                 angle_col = 90,
-                 na_col = "black",
-                 main = "Jaccard WNN\n (x-axis)",
-                 fontsize = 10,
-                 display_numbers=T,
-                 number_format="%.1f",
-                 fontsize_number=7,
-                 legend = TRUE)
+plt_wnn_atac <- pheatmap(
+  jacc.mat,
+  color = viridisLite::plasma(101),
+  cluster_cols = FALSE,
+  cluster_rows = TRUE,
+  angle_col = 90,
+  na_col = "black",
+  main = "Overlap between ATAC and WNN cluster identities",
+  fontsize = 10,
+  display_numbers = T,
+  number_format = "%.1f",
+  fontsize_number = 7,
+  legend = TRUE
+)
 
-class(plt_wnn_atac)
+# arrange and save plots
 
 plot_list <- list()
-plot_list[['rna']]<- as.ggp  plt_wnn_rna
-plot_list[['atac']]<- plt_wnn_atac
-names(plot_list)
-library(gridExtra)
-g <- grid.arrange(grobs = plot_list, ncol=2)
+plot_list[['rna']] <- as.ggplot(plt_wnn_rna)
+plot_list[['atac']] <- as.ggplot(plt_wnn_atac)
+g <- grid.arrange(grobs = plot_list, ncol = 2)
 
-plt1 <- plt_wnn_rna + plt_wnn_atac
-tmp_png <- here(plotDir, paste0(file_name_all, "_Jaccard_WNN.png"))
-tmp_title <- unlist(strsplit(file_name_all,"-",fixed=T))
-
-
-png(tmp_png,width=12,height=10,units="in",res=1200)
-plt1
-
+tmp_png <- paste0(Seurat_base_name, "_Jaccard_WNN_RNA_ATAC.png")
+ggsave(g, filename = here(plotDir, tmp_png), height = 6, width = 17)
 
 
 ## UMAP: Label clusters on a ggplot2-based scatter plot
@@ -189,25 +201,37 @@ plt1
 #             min.cutoff = "q10", max.cutoff = "q90") # + labs(title = Seurat_base_name)
 
 ## Visualize co-expression of two features simultaneously
-plt1 <- FeaturePlot(SeuratOBJ, features = features, reduction = "wnn.umap", blend = TRUE) +
+plt1 <- FeaturePlot(
+  SeuratOBJ,
+  features = features,
+  reduction = "wnn.umap",
+  blend = TRUE
+) +
   labs(title = paste0("Clusters from WNN: ", Seurat_base_name)) &
-  theme(text = element_text(size = 8), 
-        axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
-        plot.title=element_text(hjust=0.5)) 
+  theme(
+    text = element_text(size = 8),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    plot.title = element_text(hjust = 0.5)
+  )
 tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_FeaturePlot.pdf")
-ggsave(plt1, filename = here(plotDir, tmp_name), height = 3, width = 10) 
+ggsave(plt1, filename = here(plotDir, tmp_name), height = 3, width = 10)
 
 
 ## Dot plots - the size of the dot corresponds to the percentage of cells expressing the
 # feature in each cluster. The color represents the average expression level
-plt1 <- DotPlot(SeuratOBJ, features = c(features, "TAC3")) + RotatedAxis()  +
+plt1 <- DotPlot(SeuratOBJ, features = c(features, "TAC3")) +
+  RotatedAxis() +
   labs(title = paste0("Clusters from WNN: ", Seurat_base_name)) &
-  theme(text = element_text(size = 8), 
-        axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
-        plot.title=element_text(hjust=0.5)) 
+  theme(
+    text = element_text(size = 8),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    plot.title = element_text(hjust = 0.5)
+  )
+
 tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_DotPlot.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
-
 
 
 ## Reproducibility information
@@ -217,5 +241,3 @@ Sys.time()
 proc.time()
 options(width = 120)
 session_info()
-
-
