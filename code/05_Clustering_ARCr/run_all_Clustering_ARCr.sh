@@ -178,15 +178,30 @@ echo $id4
 echo "Silhouette and Jaccard done!!"
 
 
-######## Run WNN GEX on renamed Idents for easy identification: 04_wnn_gene_expression.R
+######## Generate WNN VPlots, FeaturePlots, Other Jaccard, etc on renamed Idents curated (Visium-Project)
 
+echo "Processing visualization plots on renamed idents curated  ..................."
+
+SUBsubDIR="08_wnn_gene_expression_plts_renamed_idents"
+
+## rm previous log files and output files
+# rm ${CODEDIR}/${SUBDIR}/logs/06_jaccard_annotated_*.txt
+rm ${PROCESSEDIR}/${SUBDIR}/${SUBsubDIR}/Silhouette_*.cvs
+rm ${PLOTDIR}/${SUBDIR}/${SUBsubDIR}/*.pdf
+rm ${PLOTDIR}/${SUBDIR}/${SUBsubDIR}/*.png
+
+echo "Previous logs and output files deleted!"
+
+# Run dependency job
+
+Rscript 08_wnn_gene_expression_plts_renamed_idents.R
+# id4=$(sbatch --parsable --dependency=afterok:$id3 08_wnn_gene_expression_plts_renamed_idents.sh
 
 echo "**** Job ends ****"
 date
 
-} > $log_path 2>&1
 
-## Script to renamed the columns on the DEG CVS files in a nice format
+} > $log_path 2>&1
 
 Rscript 10_format_DEG_csv_files.R
 
