@@ -269,14 +269,18 @@ ggsave(
 #             reduction = "wnn.umap",
 #             min.cutoff = "q10", max.cutoff = "q90") # + labs(title = Seurat_base_name)
 
-## Visualize co-expression of two features simultaneously
+## Visualize co-expression of two features simultaneously for Medial and Lateral Hb
+
+features <- c("POU4F1", "GPR151")
+title <- str_extract(seurat_name, regex("C\\.\\w*\\_r2"))
+
 plt1 <- FeaturePlot(
   SeuratOBJ,
   features = features,
   reduction = "wnn.umap",
   blend = TRUE
 ) +
-  labs(title = paste0("Clusters from WNN: ", Seurat_base_name)) &
+  labs(title = paste0("Clusters from WNN: ", title)) &
   theme(
     text = element_text(size = 8),
     axis.text.x = element_text(size = 7),
@@ -291,7 +295,7 @@ ggsave(plt1, filename = here(plotDir, tmp_name), height = 3, width = 10)
 # feature in each cluster. The color represents the average expression level
 plt1 <- DotPlot(SeuratOBJ, features = c(features, "TAC3")) +
   RotatedAxis() +
-  labs(title = paste0("Clusters from WNN: ", Seurat_base_name)) &
+  labs(title = paste0("Clusters from WNN: ", title)) &
   theme(
     text = element_text(size = 8),
     axis.text.x = element_text(size = 7),
