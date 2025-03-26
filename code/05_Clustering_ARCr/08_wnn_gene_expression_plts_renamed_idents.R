@@ -196,7 +196,7 @@ seu_c <- as.vector(head(SeuratOBJ$seurat_clusters))
 wnn_c <- as.vector(head(SeuratOBJ$`C.leiden_wnn`))
 rna_c <- as.vector(head(SeuratOBJ$`C.leiden`))
 atac_c <- as.vector(head(SeuratOBJ$`C.leiden_atac`))
-tbl <- data.frame(rna_c, atac_c, wnn_c, seu_c)  
+tbl <- data.frame(rna_c, atac_c, wnn_c, seu_c)
 #     rna_c atac_c wnn_c seu_c
 # 1    24     11    25  C.25
 # 2     4     11     4  C.04
@@ -204,7 +204,6 @@ tbl <- data.frame(rna_c, atac_c, wnn_c, seu_c)
 # 4     1      9     4  C.04
 # 5     2     11     1  C.01
 # 6     2      8     1  C.01
-
 
 clust_name = "seurat_clusters"
 plt1 <- DimPlot(
@@ -218,8 +217,12 @@ plt1 <- DimPlot(
   ggtitle(
     "RNA",
     subtitle = paste(
-      " Leiden at res=2 knn=30; SNN Clusters=", length(table(SeuratOBJ[["C.leiden"]])), "\nAnnotated by WNN clusters")
-  ) & NoLegend()
+      " Leiden at res=2 knn=30; SNN Clusters=",
+      length(table(SeuratOBJ[["C.leiden"]])),
+      "\nAnnotated by WNN clusters"
+    )
+  ) &
+  NoLegend()
 
 plt2 <- DimPlot(
   SeuratOBJ,
@@ -233,8 +236,12 @@ plt2 <- DimPlot(
   ggtitle(
     "ATAC",
     subtitle = paste(
-      " Leiden at res=2 knn=30; SNN Clusters=", length(table(SeuratOBJ[["C.leiden_atac"]])), "\nAnnotated by WNN clusters")
-  ) & NoLegend()
+      " Leiden at res=2 knn=30; SNN Clusters=",
+      length(table(SeuratOBJ[["C.leiden_atac"]])),
+      "\nAnnotated by WNN clusters"
+    )
+  ) &
+  NoLegend()
 
 plt3 <- DimPlot(
   SeuratOBJ,
@@ -246,15 +253,19 @@ plt3 <- DimPlot(
   ggtitle(
     "WNN",
     subtitle = paste(
-      "Leiden at res=2 knn=30; WNN Clusters=", length(table(SeuratOBJ[[clust_name]])))
+      "Leiden at res=2 knn=30; WNN Clusters=",
+      length(table(SeuratOBJ[[clust_name]]))
+    )
   )
 
 pltALL <- plt1 + plt2 + plt3 & theme(plot.title = element_text(hjust = 0.5))
-tmp_png <- paste0(Seurat_base_name, "_RNA_ATAC_WNN_DimPlots.png") 
+tmp_png <- paste0(Seurat_base_name, "_RNA_ATAC_WNN_DimPlots.png")
 ggsave(
   pltALL,
   filename = here(
-    plotDir, tmp_png),
+    plotDir,
+    tmp_png
+  ),
   height = 7,
   width = 20
 )
