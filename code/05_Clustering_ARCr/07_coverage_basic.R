@@ -13,7 +13,6 @@ library("ggplot2")
 # library("patchwork")
 # library("purrr")
 library("tidyverse")
-# library("stringr")
 library("here")
 
 ## input directories
@@ -132,6 +131,62 @@ plt1 <- plt1 +
 ggsave(plt1, filename = here(plotDir, f_name), height = 12, width = 6)
 
 
+
+## ========================================================================== ##
+
+## Read DEG to prepare coverage plots of the top 5 genes highly expressed
+
+# All DEG
+
+DEG_file_name <- "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_cellTypes_integrated_top50.csv"
+DEG_file_name <- here(inputCVS_Dir, DEG_file_name)
+df_cluster_names <- read.csv(DEG_file_name)
+df_cluster_names <- df_cluster_names |> drop_na(cell_type)
+head(df_cluster_names)
+# p_val avg_log2FC pct.1 pct.2 p_val_adj cluster     gene            cell_type
+# 1     0   4.336764 0.938 0.100         0       1 OTX2-AS1        DD_Inhib.Thal
+# 2     0   3.849508 0.900 0.083         0       1      KIT        DD_Inhib.Thal
+# 3     0   3.682782 0.927 0.122         0       1    MEIS2      LB_Thalamus/MDm
+
+## Identified and subset clusters annotated for `habenula`.
+
+message("Cluster-IDs from `WNN`")
+
+SeuOBJ_clusters <- Idents(SeuratOBJ)
+hb_clusters <- unlist(levels(SeuOBJ_clusters))
+## Get top 5. Filter habenula clusters only
+no_hb_clust = list()
+for (idx in seq_along(hb_clusters)) {
+  if (nchar(hb_clusters[idx]) <= 4) {
+    no_hb_clust <- append(no_hb_clust, hb_clusters[idx])
+  }
+}
+no_hb_clust <- c(unlist(no_hb_clust))
+hb_clusters <- hb_clusters[!hb_clusters %in% c(no_hb_clust)]
+as.vector(hb_clusters)
+# [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
+# [6] "C.16 DD_MHb" "C.18 DD_LHb" "C.23 DD_LHb" "C.24 DD_LHb" "C.30 DD_LHb"
+# [11] "C.33 DD_LHb" "C.36 DD_MHb" "C.40 DD_LHb"
+# length(hb_clusters)
+
+##  Use length of clustersto extract clusters IDs
+hb_clusters <- as.integer(substr(hb_clusters, 3, 4))
+# [1]  5  7 10 11 14 16 18 23 24 30 33 36 40
+
+## filter the top 5
+unique(df_cluster_names$cluster)
+top5 <- df_cluster_names |>
+  filter(cluster %in% hb_clusters) |>
+  group_by(cluster) |>
+  top_n(n = 5, wt = avg_log2FC)
+head(top5)
+#     p_val avg_log2FC pct.1 pct.2 p_val_adj cluster gene    cell_type
+# <dbl>      <dbl> <dbl> <dbl>     <dbl>   <int> <chr>   <chr>    
+# 1     0       3.04 0.768 0.145         0       5 RFTN1   DD_LHb   
+# 2     0       3.03 0.798 0.194         0       5 CBLN2   DD_LHb   
+# 3     0       3.37 0.73  0.129         0       5 GALR1   DD_LHb   
+# 4     0       3.15 0.669 0.124         0       5 HTR4    DD_LHb   
+# 5     0       3.38 0.956 0.457         0       5 COL25A1 DD_LHb  
 
 
 
