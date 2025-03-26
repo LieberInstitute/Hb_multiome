@@ -119,7 +119,7 @@ message('\nViolin plots saved `', plotDir, '`')
 
 ## Read DEG to plot the top 5 genes highly expressed
 
-# All DEG 
+# All DEG
 
 DEG_file_name <- "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_cellTypes_integrated_top50.csv"
 DEG_file_name <- here(inputCVS_Dir, DEG_file_name)
@@ -131,19 +131,22 @@ head(df_cluster_names)
 # 2     0   3.849508 0.900 0.083         0       1      KIT        DD_Inhib.Thal
 # 3     0   3.682782 0.927 0.122         0       1    MEIS2      LB_Thalamus/MDm
 
-
 ## Identified and subset clusters annotated as putative `habenula`. Use length of cluster ID as criteria
 ## extract clusters IDs
- 
+
 message("Cluster-IDs from `WNN`")
- 
+
 SeuOBJ_clusters <- Idents(SeuratOBJ)
 hb_clusters <- unlist(levels(SeuOBJ_clusters))
 ## Get top 5. Filter habenula clusters only
 no_hb_clust = list()
-for (idx in seq_along(hb_clusters)) { if (nchar(hb_clusters[idx]) <= 4) { no_hb_clust <- append(no_hb_clust, hb_clusters[idx]) } }
+for (idx in seq_along(hb_clusters)) {
+  if (nchar(hb_clusters[idx]) <= 4) {
+    no_hb_clust <- append(no_hb_clust, hb_clusters[idx])
+  }
+}
 no_hb_clust <- c(unlist(no_hb_clust))
-hb_clusters <- hb_clusters[! hb_clusters %in% c(no_hb_clust)]
+hb_clusters <- hb_clusters[!hb_clusters %in% c(no_hb_clust)]
 as.vector(hb_clusters)
 # [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
 # [6] "C.16 DD_MHb" "C.18 DD_LHb" "C.23 DD_LHb" "C.24 DD_LHb" "C.30 DD_LHb"
@@ -164,36 +167,44 @@ top5 <- df_cluster_names |>
 
 for (clus in unique(top5$cluster)) {
   # testing: clus = 5
-  tmp_name <- paste0(Seurat_base_name, "_VPlot_hb_top5_fdr5_cluster_", clus,".pdf")
-  
+  tmp_name <- paste0(
+    Seurat_base_name,
+    "_VPlot_hb_top5_fdr5_cluster_",
+    clus,
+    ".pdf"
+  )
+
   message("Processing habenula cluster: ", clus, "; Saved as: ", tmp_name)
-  
+
   top5_cluster <- top5 |>
-    filter(cluster==clus)
-  
-    pdf(file=here(plotDir, tmp_name))
-    par(mfrow = c(2,1))
-    
-    for (gen in top5_cluster$gene) {
-      
-      message(paste0("Processing gene ", gen))
-      
-      plt1 <- VlnPlot(object = SeuratOBJ, layer = "data",
-                      # features = top5_cluster$gene[.x],
-                      features = gen,
-                      pt.size = 0) +
-        labs(x = paste0("**Habenula cluster: ", clus)) &
-        theme(text = element_text(size = 8),
-              axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
-              plot.title=element_text(hjust=0.5)) &
-        NoLegend()
-      print(plt1)
-    }
-    
-    dev.off()
+    filter(cluster == clus)
+
+  pdf(file = here(plotDir, tmp_name))
+  par(mfrow = c(2, 1))
+
+  for (gen in top5_cluster$gene) {
+    message(paste0("Processing gene ", gen))
+
+    plt1 <- VlnPlot(
+      object = SeuratOBJ,
+      layer = "data",
+      # features = top5_cluster$gene[.x],
+      features = gen,
+      pt.size = 0
+    ) +
+      labs(x = paste0("**Habenula cluster: ", clus)) &
+      theme(
+        text = element_text(size = 8),
+        axis.text.x = element_text(size = 7),
+        axis.text.y = element_text(size = 7),
+        plot.title = element_text(hjust = 0.5)
+      ) &
+      NoLegend()
+    print(plt1)
+  }
+
+  dev.off()
 }
-
-
 
 
 ## Heatmap of overlaps between WNN vs RNA and WNN vs ATAC
