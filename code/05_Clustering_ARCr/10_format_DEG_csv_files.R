@@ -56,7 +56,7 @@ if (!length(lst_idx_to_remove) == 0) {
 
 
 
-## rename columns and re-arrange for supplemental file
+## rename and re-arrange columns for supplemental file (paper)
 
 for (f in lst_files) {
   # f= lst_files[1]  
