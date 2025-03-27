@@ -9,7 +9,7 @@
 ## Date: Feb 2025
 ########################################################################
 
-
+library("sessioninfo")
 library("tidyverse")
 library("here")
 
@@ -79,3 +79,18 @@ for (f in lst_files) {
   write.csv(df, here(outputCVS_Dir, basename(f)), row.names = F)
   
 }
+
+
+##  slurm script reproducibility
+# library("slurmjobs")
+# job_single(
+#   name = "10_format_DEG_csv_files", memory = "20G", cores = 1, create_shell = TRUE, partition = "katun", logdir = "logs", create_logdir = FALSE
+# )
+
+## Reproducibility information
+
+print("Reproducibility information:")
+Sys.time()
+proc.time()
+options(width = 120)
+session_info()
