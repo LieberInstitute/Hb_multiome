@@ -189,6 +189,59 @@ head(top5)
 # 5     0       3.38 0.956 0.457         0       5 COL25A1 DD_LHb  
 
 
+## Prepare and save coverage plot
+
+for (clus in unique(top5$cluster)) {
+  # testing: clus = 5
+  tmp_name <- paste0(
+    Seurat_base_name,
+    "_PEAKS_hb-cluster-",
+    clus,
+    ".pdf"
+  )
+  
+  message("Processing habenula cluster: ", clus, "; Saved as: ", tmp_name)
+  
+  top5_cluster <- top5 |>
+    filter(cluster == clus)
+  
+  pdf(file = here(plotDir, tmp_name))
+  
+  walk(seq_along(top5_cluster$gene), ~ {
+
+    tryCatch({
+      
+      message(paste0("Processing gene ", top5_cluster$gene[.x]))
+      
+      features <- top5_cluster$gene[.x]
+      plt1 <- CoveragePlot(
+        object = SeuratOBJ,
+        region = features,
+        features = features,
+        extend.upstream = 500,
+        extend.downstream = 500,
+        peaks = TRUE,
+        links = TRUE
+      )
+      plt1 <- plt1 +
+        labs(title = paste0("Clusters from WNN: ", seurat_name)) +
+        theme(text = element_text(size = 8),
+              axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
+              plot.title=element_text(hjust=0.5))
+      print(plt1)
+      
+    }, error = function(e) {
+      
+      message(paste0("Error occurred while processing gene ", top5_cluster$gene[.x], ": ", e$message))
+      
+    })
+    
+  })
+  
+  dev.off()
+  
+}
+
 
 
 ## Reproducibility information
