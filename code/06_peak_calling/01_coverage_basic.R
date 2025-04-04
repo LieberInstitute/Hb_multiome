@@ -50,15 +50,15 @@ levels(SeuratOBJ)
 
 DefaultAssay(SeuratOBJ) <- "ATAC"
 class(SeuratOBJ[["ATAC"]])
-Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+")) 
+Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
 # C.leiden_lsi_r2_renamed_visium
 
 message("Processing coverage plots for `POU4F1` and `GPR151` genes")
 features <- c("POU4F1", "GPR151")
 
-## Coverage plot with canonical Habenula genes 
+## Coverage plot with canonical Habenula genes
 
-f_name <- paste0(Seurat_base_name,"_peaks_GPR151.png")
+f_name <- paste0(Seurat_base_name, "_peaks_GPR151.png")
 features <- "GPR151"
 plt1 <- CoveragePlot(
   object = SeuratOBJ,
@@ -68,16 +68,19 @@ plt1 <- CoveragePlot(
   extend.downstream = 500,
   peaks = TRUE,
   links = TRUE
-)  
+)
 plt1 <- plt1 +
   labs(title = paste0("Clusters from WNN: ", seurat_name)) +
-  theme(text = element_text(size = 8),
-        axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
-        plot.title=element_text(hjust=0.5))
+  theme(
+    text = element_text(size = 8),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    plot.title = element_text(hjust = 0.5)
+  )
 ggsave(plt1, filename = here(plotDir, f_name), height = 12, width = 6)
 
 
-f_name <- paste0(Seurat_base_name,"_peaks_POU4F1.png")
+f_name <- paste0(Seurat_base_name, "_peaks_POU4F1.png")
 features <- "POU4F1"
 plt1 <- CoveragePlot(
   object = SeuratOBJ,
@@ -87,16 +90,19 @@ plt1 <- CoveragePlot(
   extend.downstream = 500,
   peaks = TRUE,
   links = TRUE
-)  
+)
 plt1 <- plt1 +
   labs(title = paste0("Clusters from WNN: ", seurat_name)) +
-  theme(text = element_text(size = 8),
-        axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
-        plot.title=element_text(hjust=0.5))
+  theme(
+    text = element_text(size = 8),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    plot.title = element_text(hjust = 0.5)
+  )
 ggsave(plt1, filename = here(plotDir, f_name), height = 12, width = 6)
 
 
-f_name <- paste0(Seurat_base_name,"_peaks_TAC3.png")
+f_name <- paste0(Seurat_base_name, "_peaks_TAC3.png")
 features <- "TAC3"
 plt1 <- CoveragePlot(
   object = SeuratOBJ,
@@ -106,14 +112,16 @@ plt1 <- CoveragePlot(
   extend.downstream = 500,
   peaks = TRUE,
   links = TRUE
-)  
+)
 plt1 <- plt1 +
   labs(title = paste0("Clusters from WNN: ", seurat_name)) +
-  theme(text = element_text(size = 8),
-        axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
-        plot.title=element_text(hjust=0.5))
+  theme(
+    text = element_text(size = 8),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    plot.title = element_text(hjust = 0.5)
+  )
 ggsave(plt1, filename = here(plotDir, f_name), height = 12, width = 6)
-
 
 
 ## ========================================================================== ##
@@ -165,13 +173,12 @@ top5 <- df_cluster_names |>
   top_n(n = 5, wt = avg_log2FC)
 head(top5)
 #     p_val avg_log2FC pct.1 pct.2 p_val_adj cluster gene    cell_type
-# <dbl>      <dbl> <dbl> <dbl>     <dbl>   <int> <chr>   <chr>    
-# 1     0       3.04 0.768 0.145         0       5 RFTN1   DD_LHb   
-# 2     0       3.03 0.798 0.194         0       5 CBLN2   DD_LHb   
-# 3     0       3.37 0.73  0.129         0       5 GALR1   DD_LHb   
-# 4     0       3.15 0.669 0.124         0       5 HTR4    DD_LHb   
-# 5     0       3.38 0.956 0.457         0       5 COL25A1 DD_LHb  
-
+# <dbl>      <dbl> <dbl> <dbl>     <dbl>   <int> <chr>   <chr>
+# 1     0       3.04 0.768 0.145         0       5 RFTN1   DD_LHb
+# 2     0       3.03 0.798 0.194         0       5 CBLN2   DD_LHb
+# 3     0       3.37 0.73  0.129         0       5 GALR1   DD_LHb
+# 4     0       3.15 0.669 0.124         0       5 HTR4    DD_LHb
+# 5     0       3.38 0.956 0.457         0       5 COL25A1 DD_LHb
 
 ## Prepare and save coverage plot
 
@@ -183,54 +190,71 @@ for (clus in unique(top5$cluster)) {
     clus,
     ".pdf"
   )
-  
+
   message("Processing habenula cluster: ", clus, "; Saved as: ", tmp_name)
-  
+
   top5_cluster <- top5 |>
     filter(cluster == clus)
-  
-  pdf(file = here(plotDir, tmp_name))
-  
-  walk(seq_along(top5_cluster$gene), ~ {
 
-    tryCatch({
-      
-      message(paste0("Processing gene ", top5_cluster$gene[.x]))
-      
-      features <- top5_cluster$gene[.x]
-      plt1 <- CoveragePlot(
-        object = SeuratOBJ,
-        region = features,
-        features = features,
-        extend.upstream = 500,
-        extend.downstream = 500,
-        peaks = TRUE,
-        links = TRUE
+  pdf(file = here(plotDir, tmp_name))
+
+  walk(
+    seq_along(top5_cluster$gene),
+    ~ {
+      tryCatch(
+        {
+          message(paste0("Processing gene ", top5_cluster$gene[.x]))
+
+          features <- top5_cluster$gene[.x]
+          plt1 <- CoveragePlot(
+            object = SeuratOBJ,
+            region = features,
+            features = features,
+            extend.upstream = 500,
+            extend.downstream = 500,
+            peaks = TRUE,
+            links = TRUE
+          )
+          plt1 <- plt1 +
+            labs(title = paste0("Clusters from WNN: ", seurat_name)) +
+            theme(
+              text = element_text(size = 8),
+              axis.text.x = element_text(size = 7),
+              axis.text.y = element_text(size = 7),
+              plot.title = element_text(hjust = 0.5)
+            )
+          print(plt1)
+        },
+        error = function(e) {
+          message(paste0(
+            "Error occurred while processing gene ",
+            top5_cluster$gene[.x],
+            ": ",
+            e$message
+          ))
+        }
       )
-      plt1 <- plt1 +
-        labs(title = paste0("Clusters from WNN: ", seurat_name)) +
-        theme(text = element_text(size = 8),
-              axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
-              plot.title=element_text(hjust=0.5))
-      print(plt1)
-      
-    }, error = function(e) {
-      
-      message(paste0("Error occurred while processing gene ", top5_cluster$gene[.x], ": ", e$message))
-      
-    })
-    
-  })
-  
+    }
+  )
+
   dev.off()
-  
 }
 # Error occurred while processing gene AC109466.1: Gene not found
 # Error occurred while processing gene LINC02143: Gene not found
 
 message("Coverage plots completed")
 
-
+# library("slurmjobs")
+# job_single(
+#   "01_coverage_basic",
+#   create_shell = TRUE,
+#   partition = "katun",
+#   memory = "30G",
+#   cores = 2,
+#   logdir = "logs",
+#   command = "Rscript -e \"options(width = 120); sessioninfo::session_info()\"",
+#   create_logdir = TRUE
+# )
 
 ## Reproducibility information
 library("sessioninfo")
@@ -239,5 +263,3 @@ Sys.time()
 proc.time()
 options(width = 120)
 session_info()
-
-
