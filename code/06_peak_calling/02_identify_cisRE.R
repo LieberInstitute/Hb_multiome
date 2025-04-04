@@ -119,6 +119,15 @@ message("Link Peaks to Genes (cis-regulatory analysis)")
 
 SeuratOBJ
 
+# Signac requires GC content or other DNA sequence information for each peak in order to compute the correlation between accessibility and expression properly. This is handled using the RegionStats() function before calling LinkPeaks().
+library(BSgenome.Hsapiens.UCSC.hg38)
+genome <- BSgenome.Hsapiens.UCSC.hg38
+SeuratOBJ <- RegionStats(
+  object = SeuratOBJ,
+  genome = genome,
+  assay = "ATAC"  # or whatever your ATAC/peaks assay is named
+)
+
 atac <- LinkPeaks(
   object = SeuratOBJ,
   peak.assay = "ATAC",
@@ -128,7 +137,7 @@ atac <- LinkPeaks(
   distance = 1e5             # Cis distance (e.g., 100kb window)
 )
 
-# Error in LinkPeaks(object = SeuratOBJ, peak.assay = "ATAC", expression.assay = "RNA",  : 
-#                      DNA sequence information for each peak has not been computed.
-#                    Run RegionsStats before calling this function.
+# Testing 39 genes and 262891 peaks
+# Found gene coordinates for 31 genes
+# |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=43s  
                    
