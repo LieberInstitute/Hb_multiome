@@ -10,8 +10,6 @@
 library("Seurat")
 library("Signac")
 library("ggplot2")
-# library("patchwork")
-# library("purrr")
 library("tidyverse")
 library("here")
 
@@ -35,8 +33,7 @@ inputCVS_Dir <- here(
 )
 plotDir <- here(
   "plots",
-  "05_Clustering_ARCr",
-  "07_coverage_basic"
+  "06_peak_calling"
 )
 
 ## Check directories
@@ -59,20 +56,7 @@ Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
 message("Processing coverage plots for `POU4F1` and `GPR151` genes")
 features <- c("POU4F1", "GPR151")
 
-## Coverage plot with cannonical habenula genes 
-
-# f_name <- paste0(
-#   Seurat_base_name,
-#   "_peaks_POU4F1_GPR151.png"
-# )
-# plt1 <- CoveragePlot(
-#   object = SeuratOBJ,
-#   region = features,
-#   extend.upstream = 500,
-#   extend.downstream = 00,
-#   peaks = TRUE,
-#   links = TRUE
-# )  
+## Coverage plot with canonical Habenula genes 
 
 f_name <- paste0(Seurat_base_name,"_peaks_GPR151.png")
 features <- "GPR151"
@@ -241,6 +225,10 @@ for (clus in unique(top5$cluster)) {
   dev.off()
   
 }
+# Error occurred while processing gene AC109466.1: Gene not found
+# Error occurred while processing gene LINC02143: Gene not found
+
+message("Coverage plots completed")
 
 
 
