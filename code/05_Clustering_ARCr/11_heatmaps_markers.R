@@ -68,6 +68,7 @@ seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 
 # Load Seurat
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
+DefaultAssay(SeuratOBJ) <- "RNA"
 levels(SeuratOBJ)
 ## Levels should be
 # [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
@@ -79,8 +80,6 @@ levels(SeuratOBJ)
 # [31] "C.27"        "C.28"        "C.29"        "C.31"        "C.32"
 # [36] "C.34"        "C.35"        "C.37"        "C.38"        "C.39"
 # [41] "C.41"        "C.42"
-
-DefaultAssay(SeuratOBJ) <- "RNA"
 
 Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
 Seurat_base_name
@@ -160,7 +159,9 @@ genes_to_scale <- as.vector(unlist(append(combined_named_list[1], combined_named
 # SeuratOBJ <- NormalizeData(SeuratOBJ)
 SeuratOBJ <- ScaleData(SeuratOBJ, features = genes_to_scale)
 
-## plot all the list in separate heatmaps
+
+
+######## Plot 1: plot the 2 gene-markers list (DD, LB) across all clusters in separate heatmaps
 
 heatmap_list <- list()
 
@@ -288,6 +289,105 @@ combined_plot <- wrap_plots(heatmap_list, ncol = length(heatmap_list))
 pdf(file = here(plotDir, f_name), width = 10 * length(heatmap_list), height = 6)
 print(combined_plot)
 dev.off()
+
+
+
+######## Plot 2: plot the top-x genes (markers) used to annotate each cluster
+
+# df_cluster_names$cluster
+# df_cluster_names$gene
+# df_cluster_names$cell_type
+
+# Downsample to equal cell numbers per group
+# Number of cells per group you want (e.g., 50)
+n_cells <- 50
+
+# Randomly sample equal number of cells from each group to control column size
+# Add cell IDs as a column first (from rownames)
+meta_df <- SeuratOBJ@meta.data
+meta_df$cell_id <- rownames(meta_df)
+# Sample cells evenly across clusters
+cells_to_plot <- meta_df |>
+    group_by(seurat_clusters) |>
+    sample_n(size = min(n_cells, n()), replace = FALSE) |>
+    arrange(seurat_clusters) |>   # This sets a fixed order to remove dendogram manually
+    pull(cell_id)
+
+# extract top 10 genes per cluster
+top_markers <- df_cluster_names %>%
+    group_by(cluster) %>%
+    top_n(n = 10, wt = avg_log2FC)
+
+# Unique gene list
+marker_genes <- unique(top_markers$gene)
+marker_genes <- marker_genes[marker_genes %in% rownames(SeuratOBJ)]
+#SeuratOBJ <- ScaleData(SeuratOBJ, features = marker_genes, verbose = FALSE)
+
+Idents(SeuratOBJ) <- "seurat_clusters"
+
+plt <- DoHeatmap(SeuratOBJ,
+          features = marker_genes,
+          group.by = "seurat_clusters",
+          cells = cells_to_plot,
+          group.bar = TRUE,
+          size = 3) +
+    scale_fill_gradientn(colors = c("blue", "white", "red")) +
+    #ggtitle("Top Marker Genes per Cluster") +
+    theme(#plot.title = element_text(hjust = 0.5, size = 8),
+          plot.margin = margin(t = 20, r = 5, b = 30, l = 5),  # extra bottom space
+          axis.text.y = element_text(size = 5),
+          axis.text.x = element_blank(),        # hide x-axis labels (just in case)
+          axis.ticks.x = element_blank(),       # remove x-axis ticks
+          legend.position = "none")
+
+f_name <- paste0(
+    Seurat_base_name,
+    "_heatmap_top20genes.pdf"
+)
+pdf(file = here(plotDir, f_name), width = 5 * length(heatmap_list), height = 6)
+print(plt)
+dev.off()
+
+
+
+######## Plot 3: plot top marker genes across all the clusters in transposed format: big issue here with Seurat
+
+## doHeatmap does not support transpose matrix
+## also, found a bug with AggregateExpression() in SeuratV5 to transpose manually. 
+## SeuratV5 needs to be updated: https://github.com/satijalab/seurat/issues/8309 
+
+# library("pheatmap")
+# Assays(SeuratOBJ)
+# Layers(SeuratOBJ[["RNA"]])  # replace "RNA" with the actual assay name
+# 
+# # Calculate average expression
+# # Use AggregateExpression (new in Seurat v5)
+# agg_expr_list <- AggregateExpression(
+#     object = SeuratOBJ,
+#     features = marker_genes,
+#     group.by = "seurat_clusters",
+#     assays = list(RNA = "scale.data")
+# )
+# # Extract matrix directly (assumes only one assay was returned)
+# avg_expr <- agg_expr_list[["RNA"]]  # This is a genes x clusters matrix
+# 
+# # Filter only those clusters and genes you want
+# avg_expr <- avg_expr[marker_genes, ]  # Rows = genes, columns = clusters
+# 
+# # Step 3: Transpose for clusters on Y-axis
+# avg_expr_t <- t(avg_expr)
+# 
+# # Step 4: Plot with pheatmap
+# pheatmap(avg_expr_t,
+#          cluster_rows = TRUE,       # cluster clusters (optional)
+#          cluster_cols = FALSE,      # don't cluster genes
+#          angle_col = 45,            # rotate gene names
+#          fontsize_row = 10,         # cluster label font
+#          fontsize_col = 8,          # gene label font
+#          main = "Clusters on Y-axis")
+
+
+######## Plot 4: plot Subset of Hb clusters
 
 ## Subset Hb clusters. Use length of cluster ID as criteria
 ## extract clusters IDs and cluster label
