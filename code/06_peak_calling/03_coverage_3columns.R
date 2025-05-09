@@ -10,6 +10,7 @@
 library("Seurat")
 library("Signac")
 library("ggplot2")
+library("purrr")
 library("patchwork")
 library("tidyverse")
 library("stringr")
@@ -102,6 +103,7 @@ rm("SeuratOBJ")
 
 make_coverage_plot <- function(seurat_subset, 
                                 gene_list, 
+                                region_size,
                                 group_by = "seurat_clusters") {
     # Check inputs
     if (length(gene_list)==0) {
@@ -113,153 +115,101 @@ make_coverage_plot <- function(seurat_subset,
         object = seurat_subset,
         region = gene_list,
         features = gene_list,
-        extend.upstream = 500,
-        extend.downstream = 500,
+        extend.upstream = region_size,
+        extend.downstream = region_size,
         peaks = TRUE,
         links = TRUE
     )
     plt1 <- plt1 +
         labs(title = paste0("Muti-coverage plot for gene: ", gene_list)) +
         theme(
-            text = element_text(size = 8),
-            axis.text.x = element_text(size = 7),
-            axis.text.y = element_text(size = 7),
+            text = element_text(size = 6),
+            axis.text.x = element_text(size = 6),
+            axis.text.y = element_text(size = 5),
             plot.title = element_text(hjust = 0.5)
         )
-    #print(plt1)
     return(plt1)
 }
+
 
 # Make and combine plots in a single row
 
 ## canonical genes to plot
 
-features <- c("POU4F1")
+hg = 6
+wd = 14
 
-f_name <- paste0("CoveragePlot_all_clusters_canonical_", features,".png")
-
-coverage_plots <- list(
-    make_coverage_plot(SeuratOBJ_MHb, features),
-    make_coverage_plot(SeuratOBJ_LHb, features),
-    make_coverage_plot(SeuratOBJ_None, features)
+# size window to track in the plots
+open_window_sizes = c(500,1000,2000)
+# List of Seurat objects
+seurat_objs <- list(
+    MHb = SeuratOBJ_MHb,
+    LHb = SeuratOBJ_LHb,
+    None = SeuratOBJ_None
 )
-combined_plot <- wrap_plots(plotlist = coverage_plots, ncol = length(coverage_plots))
-ggsave(combined_plot, filename = here(plotDir, f_name), height = 8, width = 12)
+# Create all combinations
+param_grid <- cross2(seurat_objs, open_window_sizes)
 
-features <- "GPR151"
+# Generate plot for POU4F1
 
-f_name <- paste0("CoveragePlot_all_clusters_canonical_", features,".png")
+features <- c("POU4F1", "GPR151", "TAC3")
 
-coverage_plots <- list(
-    make_coverage_plot(SeuratOBJ_MHb, features),
-    make_coverage_plot(SeuratOBJ_LHb, features),
-    make_coverage_plot(SeuratOBJ_None, features)
-)
-combined_plot <- wrap_plots(plotlist = coverage_plots, ncol = length(coverage_plots))
-ggsave(combined_plot, filename = here(plotDir, f_name), height = 12, width = 6)
+for (gene in features) {
+    
+    feature <- gene
+    coverage_plots <- map(param_grid, function(params) {
+        seurat_obj <- params[[1]]
+        window_size <- params[[2]]
+        make_coverage_plot(seurat_obj, feature, window_size)
+    })
+    
+    # Save plots to PDF
+    if (length(coverage_plots)>1) {
+        
+        f_name <- paste0("CoveragePlot_all_clusters_canonical_", feature,".pdf")
+        pdf(file = here(plotDir, f_name), width = 14, height = 6)
+        # Loop through in chunks of 3
+        for (i in seq(1, length(coverage_plots), by = 3)) {
+            plots_chunk <- coverage_plots[i:min(i+2, length(coverage_plots))]
+            combined_plot <- wrap_plots(plotlist = plots_chunk, ncol = 3)
+            print(combined_plot)
+        }
 
-features <- "TAC3"
-
-f_name <- paste0("CoveragePlot_all_clusters_canonical_", features,".png")
-
-coverage_plots <- list(
-    make_coverage_plot(SeuratOBJ_MHb, features),
-    make_coverage_plot(SeuratOBJ_LHb, features),
-    make_coverage_plot(SeuratOBJ_None, features)
-)
-combined_plot <- wrap_plots(plotlist = coverage_plots, ncol = length(coverage_plots))
-ggsave(combined_plot, filename = here(plotDir, f_name), height = 6, width = 12)
-
-
-
-
-
-##### Build plt for column 1
-
-## make first coverage plt for LHb clusters
-
-## filter the top 5
-# unique(dge_cluster_names$cluster)
-# top5 <- dge_cluster_names |>
-#     filter(cluster %in% hb_clusters_idx) |>
-#     group_by(cluster) |>
-#     top_n(n = 5, wt = avg_log2FC)
-# head(top5)
-# #     p_val avg_log2FC pct.1 pct.2 p_val_adj cluster gene    cell_type
-# # <dbl>      <dbl> <dbl> <dbl>     <dbl>   <int> <chr>   <chr>
-# # 1     0       3.04 0.768 0.145         0       5 RFTN1   DD_LHb
-# # 2     0       3.03 0.798 0.194         0       5 CBLN2   DD_LHb
-# # 3     0       3.37 0.73  0.129         0       5 GALR1   DD_LHb
-# # 4     0       3.15 0.669 0.124         0       5 HTR4    DD_LHb
-# # 5     0       3.38 0.956 0.457         0       5 COL25A1 DD_LHb
+        dev.off()
+    }
+    
+}
 
 
-# top5_by_clust <- top5 |>
-#     filter(cluster == 5) |>
-#     group_by(cluster) |>
-#     top_n(n = 5, wt = avg_log2FC)
+# =======
 
+# Generate plot for all canonical in 1 plot
 
-# ## Prepare and save coverage plot
-# 
-# 
-# for (clus in unique(top5$cluster)) {
-#     # testing: clus = 5
-#     tmp_name <- paste0(
-#         Seurat_base_name,
-#         "_PEAKS_hb-cluster-",
-#         clus,
-#         ".pdf"
-#     )
-#     
-#     message("Processing habenula cluster: ", clus, "; Saved as: ", tmp_name)
-#     
-#     top5_cluster <- top5 |>
-#         filter(cluster == clus)
-#     
-# #    pdf(file = here(plotDir, tmp_name))
-#     
-#     walk(
-#         seq_along(top5_cluster$gene),
-#         ~ {
-#             tryCatch(
-#                 {
-#                     message(paste0("Processing gene ", top5_cluster$gene[.x]))
-#                     
-#                     features <- top5_cluster$gene[.x]
-#                     plt1 <- CoveragePlot(
-#                         object = SeuratOBJ,
-#                         region = features,
-#                         features = features,
-#                         extend.upstream = 500,
-#                         extend.downstream = 500,
-#                         peaks = TRUE,
-#                         links = TRUE
-#                     )
-#                     plt1 <- plt1 +
-#                         labs(title = paste0("Clusters from WNN: ", seurat_name)) +
-#                         theme(
-#                             text = element_text(size = 8),
-#                             axis.text.x = element_text(size = 7),
-#                             axis.text.y = element_text(size = 7),
-#                             plot.title = element_text(hjust = 0.5)
-#                         )
-#                     print(plt1)
-#                 },
-#                 error = function(e) {
-#                     message(paste0(
-#                         "Error occurred while processing gene ",
-#                         top5_cluster$gene[.x],
-#                         ": ",
-#                         e$message
-#                     ))
-#                 }
-#             )
-#         }
-#     )
-#     
-#     dev.off()
-# }
+# size window to track in the plots
+open_window_sizes = c(500,1000)
+# Create all combinations
+param_grid <- cross2(seurat_objs, open_window_sizes)
+
+coverage_plots <- map(param_grid, function(params) {
+    seurat_obj <- params[[1]]
+    window_size <- params[[2]]
+    make_coverage_plot(seurat_obj, feature, window_size)
+})
+
+# Save plots to PDF
+if (length(coverage_plots)>1) {
+    
+    f_name <- paste0("CoveragePlot_all_clusters_canonical_", paste(features, collapse = "_"), ".pdf")
+    pdf(file = here(plotDir, f_name), width = 14, height = 6)
+    # Loop through in chunks of 3
+    for (i in seq(1, length(coverage_plots), by = 3)) {
+        plots_chunk <- coverage_plots[i:min(i+2, length(coverage_plots))]
+        combined_plot <- wrap_plots(plotlist = plots_chunk, ncol = 3)
+        print(combined_plot)
+    }
+    
+    dev.off()
+}
 
 
 message("Coverage plots completed")
