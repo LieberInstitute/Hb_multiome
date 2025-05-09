@@ -10,6 +10,7 @@
 library("Seurat")
 library("Signac")
 library("ggplot2")
+library("patchwork")
 library("tidyverse")
 library("stringr")
 library("here")
@@ -70,69 +71,106 @@ unique(dge_cluster_names$cluster)
 # [1]  1  2  3  4  5  6  7  8  9 10 11 12 14 15 16 17 18 19 20 21 22 23 24 25 26
 # [26] 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41
 
-## Identified and subset clusters annotated for `habenula`.
+## Identified and subset clusters annotated in e groups
 
 message("Cluster-IDs from `WNN`")
 
-SeuOBJ_clusters <- Idents(SeuratOBJ)
-all_clusters <- unlist(levels(SeuOBJ_clusters))
-unique(SeuratOBJ$seurat_clusters)
+all_clusters <- unlist(levels(SeuratOBJ))
+#unique(SeuratOBJ$seurat_clusters)
 
 # Create 3 list with clusters to plot: LHb, MHb, None
 
-lhb_clusters <- hb_clusters[grepl("LHb", all_clusters)]
+lhb_clusters <- all_clusters[grepl("LHb", all_clusters)]
 lhb_cluster_ids <- str_extract(lhb_clusters, "(?<=C\\.)\\d+")
 
-mhb_clusters <- hb_clusters[grepl("MHb", all_clusters)]
+mhb_clusters <- all_clusters[grepl("MHb", all_clusters)]
 mhb_cluster_ids <- str_extract(mhb_clusters, "(?<=C\\.)\\d+")
 
-noneHb_clusters <- hb_clusters[!grepl("MHb|LHb", all_clusters)]
+noneHb_clusters <- all_clusters[!grepl("MHb|LHb", all_clusters)]
 noneHb_clusters_ids <- str_extract(noneHb_clusters, "(?<=C\\.)\\d+")
 
 
 # Create 3 subsets of Seurat objects to plot: LHb, MHb, None
 
-levels(Idents(SeuratOBJ))
-# [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
-# [6] "C.16 DD_MHb" "C.18 DD_LHb" "C.23 DD_LHb" "C.24 DD_LHb" "C.30 DD_LHb"
-# [11] "C.33 DD_LHb" "C.36 DD_MHb" "C.40 DD_LHb" "C.01"        "C.02"       
-# [16] "C.03"        "C.04"        "C.06"        "C.08"        "C.09"       
-# [21] "C.12"        "C.13"        "C.15"        "C.17"        "C.19"       
-# [26] "C.20"        "C.21"        "C.22"        "C.25"        "C.26"       
-# [31] "C.27"        "C.28"        "C.29"        "C.31"        "C.32"       
-# [36] "C.34"        "C.35"        "C.37"        "C.38"        "C.39"       
-# [41] "C.41"        "C.42"   
-
 SeuratOBJ_LHb <- subset(SeuratOBJ, idents = lhb_clusters)
 SeuratOBJ_MHb <- subset(SeuratOBJ, idents = mhb_clusters)
 SeuratOBJ_None <- subset(SeuratOBJ, idents = noneHb_clusters)
+rm("SeuratOBJ")
 
+
+##### function to build coverage plots
+
+make_coverage_plot <- function(seurat_subset, 
+                                gene_list, 
+                                group_by = "seurat_clusters") {
+    # Check inputs
+    if (length(gene_list)==0) {
+        stop(" gene_list empty")
+    }
+    
+    # Generate coverage plots
+    plt1 <- CoveragePlot(
+        object = seurat_subset,
+        region = gene_list,
+        features = gene_list,
+        extend.upstream = 500,
+        extend.downstream = 500,
+        peaks = TRUE,
+        links = TRUE
+    )
+    plt1 <- plt1 +
+        labs(title = paste0("Muti-coverage plot for gene: ", gene_list)) +
+        theme(
+            text = element_text(size = 8),
+            axis.text.x = element_text(size = 7),
+            axis.text.y = element_text(size = 7),
+            plot.title = element_text(hjust = 0.5)
+        )
+    #print(plt1)
+    return(plt1)
+}
+
+# Make and combine plots in a single row
 
 ## canonical genes to plot
 
 features <- c("POU4F1")
-# features <- c("POU4F1", "GPR151", "TAC3")
 
-##### Build plt for column 1
+f_name <- paste0("CoveragePlot_all_clusters_canonical_", features,".png")
 
-plt1 <- CoveragePlot(
-    object = SeuratOBJ_MHb,
-    region = features,
-    features = features,
-    extend.upstream = 500,
-    extend.downstream = 500,
-    peaks = TRUE,
-    links = TRUE
+coverage_plots <- list(
+    make_coverage_plot(SeuratOBJ_MHb, features),
+    make_coverage_plot(SeuratOBJ_LHb, features),
+    make_coverage_plot(SeuratOBJ_None, features)
 )
-plt1 <- plt1 +
-    labs(title = paste0("Clusters from WNN: ", seurat_name)) +
-    theme(
-        text = element_text(size = 8),
-        axis.text.x = element_text(size = 7),
-        axis.text.y = element_text(size = 7),
-        plot.title = element_text(hjust = 0.5)
-    )
-print(plt1)
+combined_plot <- wrap_plots(plotlist = coverage_plots, ncol = length(coverage_plots))
+ggsave(combined_plot, filename = here(plotDir, f_name), height = 8, width = 12)
+
+features <- "GPR151"
+
+f_name <- paste0("CoveragePlot_all_clusters_canonical_", features,".png")
+
+coverage_plots <- list(
+    make_coverage_plot(SeuratOBJ_MHb, features),
+    make_coverage_plot(SeuratOBJ_LHb, features),
+    make_coverage_plot(SeuratOBJ_None, features)
+)
+combined_plot <- wrap_plots(plotlist = coverage_plots, ncol = length(coverage_plots))
+ggsave(combined_plot, filename = here(plotDir, f_name), height = 12, width = 6)
+
+features <- "TAC3"
+
+f_name <- paste0("CoveragePlot_all_clusters_canonical_", features,".png")
+
+coverage_plots <- list(
+    make_coverage_plot(SeuratOBJ_MHb, features),
+    make_coverage_plot(SeuratOBJ_LHb, features),
+    make_coverage_plot(SeuratOBJ_None, features)
+)
+combined_plot <- wrap_plots(plotlist = coverage_plots, ncol = length(coverage_plots))
+ggsave(combined_plot, filename = here(plotDir, f_name), height = 6, width = 12)
+
+
 
 
 
