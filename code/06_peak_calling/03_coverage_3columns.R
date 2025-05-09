@@ -1,10 +1,11 @@
 ########################################################################
-## Plot Coverage Plots on WNN clusters
+## Plot Coverage Plots on 3 groups of clusters: MHb, LHb and None Hb
 ##
 ## Authors. CSC
-## Date. March 24, 2025
+## Date. May09, 2025
 ## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
 ## Note. Seurat objects were created with module load conda_R/4.3.x
+##
 ########################################################################
 
 library("Seurat")
@@ -132,7 +133,39 @@ make_coverage_plot <- function(seurat_subset,
 }
 
 
-# Make and combine plots in a single row
+
+
+
+make_coverage_plot_pseudobulk_by_cluster <- function(seurat_subset, 
+                               gene_list, 
+                               region_size,
+                               group_by = "seurat_clusters") {
+    # Check inputs
+    if (length(gene_list)==0) {
+        stop(" gene_list empty")
+    }
+    
+    # Generate coverage plots
+    plt1 <- CoveragePlot(
+        object = seurat_subset,
+        region = gene_list,
+        features = gene_list,
+        group.by = "seurat_clusters",  # pseudobulk by cluster
+        extend.upstream = region_size,
+        extend.downstream = region_size,
+        peaks = TRUE,
+        links = TRUE
+    )
+    plt1 <- plt1 +
+        labs(title = paste0("Muti-coverage plot for gene: ", gene_list)) +
+        theme(
+            text = element_text(size = 6),
+            axis.text.x = element_text(size = 6),
+            axis.text.y = element_text(size = 5),
+            plot.title = element_text(hjust = 0.5)
+        )
+    return(plt1)
+}
 
 ## canonical genes to plot
 
@@ -157,6 +190,11 @@ features <- c("POU4F1", "GPR151", "TAC3")
 for (gene in features) {
     
     feature <- gene
+    message("Gene to track: ", feature)
+    
+    ## Plotting raw (individual-cell) accessibility signals
+    ## The plot is still pseudobulked, but globally, not by cluster, condition, or any group.
+    
     coverage_plots <- map(param_grid, function(params) {
         seurat_obj <- params[[1]]
         window_size <- params[[2]]
@@ -166,7 +204,7 @@ for (gene in features) {
     # Save plots to PDF
     if (length(coverage_plots)>1) {
         
-        f_name <- paste0("CoveragePlot_all_clusters_canonical_", feature,".pdf")
+        f_name <- paste0("CoveragePlot_Hb_canonical_", feature,".pdf")
         pdf(file = here(plotDir, f_name), width = 14, height = 6)
         
         # Loop through in chunks of 3
@@ -179,6 +217,32 @@ for (gene in features) {
         dev.off()
     }
     
+    ## Plotting accessibility signals 
+    ## The plot is pseudobulked by cluster
+    
+    coverage_plots <- map(param_grid, function(params) {
+        seurat_obj <- params[[1]]
+        window_size <- params[[2]]
+        make_coverage_plot_pseudobulk_by_cluster(seurat_obj, feature, window_size)
+    })
+    
+    # Save plots to PDF
+    if (length(coverage_plots)>1) {
+        
+        f_name <- paste0("CoveragePlot_Hb_canonical_pseudobulk_cluster_", feature,".pdf")
+        pdf(file = here(plotDir, f_name), width = 14, height = 6)
+        
+        # Loop through in chunks of 3
+        for (i in seq(1, length(coverage_plots), by = 3)) {
+            plots_chunk <- coverage_plots[i:min(i+2, length(coverage_plots))]
+            combined_plot <- wrap_plots(plotlist = plots_chunk, ncol = 3)
+            print(combined_plot)
+        }
+        
+        dev.off()
+    }
+    
+    
 }
 
 
@@ -187,16 +251,23 @@ for (gene in features) {
 # Generate plot for all canonical in 1 plot
 
 features <- c("POU4F1", "GPR151")
-# # List of Seurat objects
-# seurat_objs <- list(
-#     MHb = SeuratOBJ_MHb,
-#     LHb = SeuratOBJ_LHb
-# )
+# List of Seurat objects
+seurat_objs <- list(
+    MHb = SeuratOBJ_MHb,
+    LHb = SeuratOBJ_LHb
+)
 
 # size window to track in the plots
 open_window_sizes = c(500)
 # Create all combinations
 param_grid <- cross2(seurat_objs, open_window_sizes)
+
+# # Generate names for each plot
+# plot_names <- map_chr(param_grid, function(params) {
+#     obj_name <- names(seurat_objs)[sapply(seurat_objs, identical, params[[1]])]
+#     paste0(obj_name, "_win", params[[2]])
+# })
+# plot_names
 
 message("Genes to track: ", paste(features, collapse = ","))
 
@@ -205,6 +276,10 @@ coverage_plots <- map(param_grid, function(params) {
     window_size <- params[[2]]
     make_coverage_plot(seurat_obj, features, window_size)
 })
+length(coverage_plots)
+# # Add names
+# names(coverage_plots) <- paste0(param_grid$obj, "_win", param_grid$window)
+# names(coverage_plots) 
 
 # Save plots
 if (length(coverage_plots)>1) {
@@ -214,7 +289,7 @@ if (length(coverage_plots)>1) {
     
     # Loop through each plot individually
     for (i in seq_along(coverage_plots)) {
-        # Add title from name if available, else use index
+        # Add title
         plot_title <- if (!is.null(names(coverage_plots))) {
             names(coverage_plots)[i]
         } else {
