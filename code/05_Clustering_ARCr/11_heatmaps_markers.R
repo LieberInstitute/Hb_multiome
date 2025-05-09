@@ -38,7 +38,7 @@ inputRDS_Dir <- here(
 plotDir <- here(
     "plots",
     "05_Clustering_ARCr",
-    "08_wnn_gene_expression_plts_renamed_idents"
+    "11_heatmaps_markers"
 )
 inputCVS_Dir <- here(
     "processed-data",
@@ -52,9 +52,9 @@ if (!dir.exists(plotDir)) {
     dir.create(plotDir)
 }
 
-## Load input with RDS wnn to compare
+## Load Seurat with WNN
 
-# WNN clustering results of interest. To plot annotated or not annotatted clusters
+# WNN clustering results of interest. To plot annotated or not annotated clusters
 # For inputRDS_Dir_not_annotated
 # inputRDS_Dir_not_annotated <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
 # Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1"
@@ -69,7 +69,7 @@ seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 # Load Seurat
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
 DefaultAssay(SeuratOBJ) <- "RNA"
-levels(SeuratOBJ)
+#levels(SeuratOBJ)
 ## Levels should be
 # [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
 # [6] "C.16 DD_MHb" "C.18 DD_LHb" "C.23 DD_LHb" "C.24 DD_LHb" "C.30 DD_LHb"
@@ -342,7 +342,7 @@ plt <- DoHeatmap(SeuratOBJ,
 
 f_name <- paste0(
     Seurat_base_name,
-    "_heatmap_top20genes.pdf"
+    "_heatmap_top10genes.pdf"
 )
 pdf(file = here(plotDir, f_name), width = 5 * length(heatmap_list), height = 6)
 print(plt)
