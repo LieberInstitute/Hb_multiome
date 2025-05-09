@@ -150,7 +150,7 @@ seurat_objs <- list(
 # Create all combinations
 param_grid <- cross2(seurat_objs, open_window_sizes)
 
-# Generate plot for POU4F1
+# Generate individual plot for each gene in the list 'features'
 
 features <- c("POU4F1", "GPR151", "TAC3")
 
@@ -168,6 +168,7 @@ for (gene in features) {
         
         f_name <- paste0("CoveragePlot_all_clusters_canonical_", feature,".pdf")
         pdf(file = here(plotDir, f_name), width = 14, height = 6)
+        
         # Loop through in chunks of 3
         for (i in seq(1, length(coverage_plots), by = 3)) {
             plots_chunk <- coverage_plots[i:min(i+2, length(coverage_plots))]
@@ -185,30 +186,45 @@ for (gene in features) {
 
 # Generate plot for all canonical in 1 plot
 
+features <- c("POU4F1", "GPR151")
+# # List of Seurat objects
+# seurat_objs <- list(
+#     MHb = SeuratOBJ_MHb,
+#     LHb = SeuratOBJ_LHb
+# )
+
 # size window to track in the plots
-open_window_sizes = c(500,1000)
+open_window_sizes = c(500)
 # Create all combinations
 param_grid <- cross2(seurat_objs, open_window_sizes)
+
+message("Genes to track: ", paste(features, collapse = ","))
 
 coverage_plots <- map(param_grid, function(params) {
     seurat_obj <- params[[1]]
     window_size <- params[[2]]
-    make_coverage_plot(seurat_obj, feature, window_size)
+    make_coverage_plot(seurat_obj, features, window_size)
 })
 
-# Save plots to PDF
+# Save plots
 if (length(coverage_plots)>1) {
     
     f_name <- paste0("CoveragePlot_all_clusters_canonical_", paste(features, collapse = "_"), ".pdf")
     pdf(file = here(plotDir, f_name), width = 14, height = 6)
-    # Loop through in chunks of 3
-    for (i in seq(1, length(coverage_plots), by = 3)) {
-        plots_chunk <- coverage_plots[i:min(i+2, length(coverage_plots))]
-        combined_plot <- wrap_plots(plotlist = plots_chunk, ncol = 3)
+    
+    # Loop through each plot individually
+    for (i in seq_along(coverage_plots)) {
+        # Add title from name if available, else use index
+        plot_title <- if (!is.null(names(coverage_plots))) {
+            names(coverage_plots)[i]
+        } else {
+            paste("Plot", i)
+        }
+        combined_plot <- coverage_plots[[i]] + plot_annotation(title = plot_title)
         print(combined_plot)
     }
-    
     dev.off()
+    
 }
 
 
