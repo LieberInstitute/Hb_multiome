@@ -420,7 +420,7 @@ ggsave(
 ## Visualize co-expression of two features simultaneously for Medial and Lateral Hb
 
 features <- c("POU4F1", "GPR151")
-title <- str_extract(seurat_name, regex("C\\.\\w*\\_r2"))
+title_name <- str_extract(seurat_name, regex("C\\.\\w*\\_r2"))
 
 plt1 <- FeaturePlot(
   SeuratOBJ,
@@ -428,7 +428,7 @@ plt1 <- FeaturePlot(
   reduction = "wnn.umap",
   blend = TRUE
 ) +
-  labs(title = paste0("Clusters from WNN: ", title)) &
+  labs(title = paste0("Clusters from WNN: ", title_name)) &
   theme(
     text = element_text(size = 8),
     axis.text.x = element_text(size = 7),
@@ -447,7 +447,7 @@ features <- c("POU4F1", "GPR151", "TAC3")
 
 plt1 <- DotPlot(SeuratOBJ, features = features) +
   RotatedAxis() +
-  labs(title = paste0("Clusters from WNN: ", title)) &
+  labs(title = paste0("Clusters from WNN: ", title_name)) &
   theme(
     text = element_text(size = 8),
     axis.text.x = element_text(size = 7),
@@ -495,7 +495,7 @@ table(SeuratOBJ$merged_cluster)
 ## Plot DimPlot merged clusters
 
 plt1 <- DimPlot(SeuratOBJ, group.by = "merged_cluster", label = TRUE) +
-    labs(title = paste0("WNN clusters merged: ", title)) &
+    labs(title = paste0("WNN clusters merged: ", title_name)) +
     theme(
         text = element_text(size = 8),
         axis.text.x = element_text(size = 7),
@@ -509,19 +509,21 @@ ggsave(plt1, filename = here(plotDir, f_name), height = 6, width = 6)
 ## Plot DotPlot merged clusters
 
 features <- c("POU4F1", "GPR151", "TAC3")
+title_name <- str_extract(seurat_name, regex("C\\.\\w*\\_r2"))
 
-plt1 <- DotPlot(SeuratOBJ, features = features) +
-    labs(title = paste0("WNN clusters merged: ", title)) +
+plt1 <- DotPlot(SeuratOBJ, features = features) + #, dot.scale = 3
+    labs(title = paste0("WNN clusters merged: ", title_name)) +
+    theme_minimal() +
     theme(
-        text = element_text(size = 14),
-        axis.text.x = element_text(size = 12, angle = 0, hjust = 0.5),
-        axis.text.y = element_text(size = 12),
+        text = element_text(size = 12),
+        axis.text.x = element_text(size = 10, angle = 0, hjust = 0.5),
+        axis.text.y = element_text(size = 10),
         plot.title = element_text(hjust = 0.5)
     )
 
+f_name <- paste0(Seurat_base_name, "_MERGED_clusters_DotPlot.pdf")
+ggsave(plt1, filename = here(plotDir, f_name), height = 4, width = 6)
 
-f_name <- paste0(Seurat_base_name, "_MERGED_clusters_DotPlot.png")
-ggsave(plt1, filename = here(plotDir, f_name), height = 6, width = 6)
 
 message("Plots done!")
 
