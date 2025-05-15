@@ -516,7 +516,10 @@ saveRDS(SeuratOBJ, file = rds_name)
 
 ## Plot DimPlot merged clusters
 
-plt1 <- DimPlot(SeuratOBJ, group.by = "merged_cluster", label = TRUE) +
+plt1 <- DimPlot(SeuratOBJ, 
+                reduction = "wnn.umap",
+                group.by = "merged_cluster",
+                label = FALSE) +
     labs(title = paste0("WNN clusters merged: ", title_name)) +
     theme(
         text = element_text(size = 8),
@@ -524,7 +527,7 @@ plt1 <- DimPlot(SeuratOBJ, group.by = "merged_cluster", label = TRUE) +
         axis.text.y = element_text(size = 7),
         plot.title = element_text(hjust = 0.5)
     )
-f_name <- paste0(Seurat_base_name, "_MERGED_clusters_DimPlot.png")
+f_name <- paste0(Seurat_base_name, "_MERGED_clusters_DimPlotV2.png")
 ggsave(plt1, filename = here(plotDir, f_name), height = 6, width = 6)
 
 
