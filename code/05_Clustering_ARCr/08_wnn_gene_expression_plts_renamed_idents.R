@@ -16,7 +16,6 @@ library("viridisLite")
 library("patchwork")
 library("ggplotify")
 library("gridExtra")
-# library("purrr")
 library("tidyverse")
 library("stringr")
 library("here")
@@ -82,13 +81,50 @@ DefaultAssay(SeuratOBJ) <- "RNA"
 Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
 # C.leiden_lsi_r2_renamed_visium
 
+## Read DEG file
+
+DEG_file_name <- "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_cellTypes_integrated_top50.csv"
+DEG_file_name <- here(inputCVS_Dir, DEG_file_name)
+df_cluster_names <- read.csv(DEG_file_name)
+df_cluster_names <- df_cluster_names |> drop_na(cell_type)
+head(df_cluster_names)
+# p_val avg_log2FC pct.1 pct.2 p_val_adj cluster     gene            cell_type
+# 1     0   4.336764 0.938 0.100         0       1 OTX2-AS1        DD_Inhib.Thal
+# 2     0   3.849508 0.900 0.083         0       1      KIT        DD_Inhib.Thal
+# 3     0   3.682782 0.927 0.122         0       1    MEIS2      LB_Thalamus/MDm
+
+## Subset Hb clusters. Use length of cluster ID as criteria
+## extract clusters IDs and cluster label
+
+message("Cluster-IDs from `WNN`")
+
+SeuOBJ_clusters <- Idents(SeuratOBJ)
+all_clusters <- levels(SeuOBJ_clusters)
+no_hb_clust <- all_clusters[nchar(all_clusters) <= 4]
+hb_clusters <- all_clusters[!all_clusters %in% c(no_hb_clust)]
+hb_clusters_ann <- hb_clusters
+hb_clusters_ann
+# [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
+# [6] "C.16 DD_MHb" "C.18 DD_LHb" "C.23 DD_LHb" "C.24 DD_LHb" "C.30 DD_LHb"
+# [11] "C.33 DD_LHb" "C.36 DD_MHb" "C.40 DD_LHb"
+# length(hb_clusters)
+hb_clusters <- as.integer(substr(hb_clusters, 3, 4))
+hb_clusters
+
+hb_df <- data.frame(
+    cluster = hb_clusters,
+    cluster_ann = hb_clusters_ann,
+    stringsAsFactors = FALSE 
+)
+
+
+
 ## Prepare Violin Plot on canonical Hb gene-markers
 
 message(
   "Reading WNN to evalute gene expression of `POU4F1` and `GPR151` on: ",
   str_extract(Seurat_base_name, regex("C\\.\\w+"))
 )
-# features <- c("POU4F1", "GPR151", "TAC3")
 features <- c("POU4F1", "GPR151")
 
 plt1 <- VlnPlot(
@@ -117,44 +153,8 @@ ggsave(plt1, filename = here(plotDir, tmp_name), height = 4, width = 17)
 message('\nViolin plots saved `', plotDir, '`')
 
 
-## Read DEG to plot the top 5 genes highly expressed
+## Plot Violin for top genes in habenula clusters
 
-# All DEG
-
-DEG_file_name <- "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_cellTypes_integrated_top50.csv"
-DEG_file_name <- here(inputCVS_Dir, DEG_file_name)
-df_cluster_names <- read.csv(DEG_file_name)
-df_cluster_names <- df_cluster_names |> drop_na(cell_type)
-head(df_cluster_names)
-# p_val avg_log2FC pct.1 pct.2 p_val_adj cluster     gene            cell_type
-# 1     0   4.336764 0.938 0.100         0       1 OTX2-AS1        DD_Inhib.Thal
-# 2     0   3.849508 0.900 0.083         0       1      KIT        DD_Inhib.Thal
-# 3     0   3.682782 0.927 0.122         0       1    MEIS2      LB_Thalamus/MDm
-
-## Identified and subset clusters annotated as putative `habenula`. Use length of cluster ID as criteria
-## extract clusters IDs
-
-message("Cluster-IDs from `WNN`")
-
-SeuOBJ_clusters <- Idents(SeuratOBJ)
-hb_clusters <- unlist(levels(SeuOBJ_clusters))
-## Get top 5. Filter habenula clusters only
-no_hb_clust = list()
-for (idx in seq_along(hb_clusters)) {
-  if (nchar(hb_clusters[idx]) <= 4) {
-    no_hb_clust <- append(no_hb_clust, hb_clusters[idx])
-  }
-}
-no_hb_clust <- c(unlist(no_hb_clust))
-hb_clusters <- hb_clusters[!hb_clusters %in% c(no_hb_clust)]
-as.vector(hb_clusters)
-# [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
-# [6] "C.16 DD_MHb" "C.18 DD_LHb" "C.23 DD_LHb" "C.24 DD_LHb" "C.30 DD_LHb"
-# [11] "C.33 DD_LHb" "C.36 DD_MHb" "C.40 DD_LHb"
-# length(hb_clusters)
-hb_clusters <- as.integer(substr(hb_clusters, 3, 4))
-# [1]  5  7 10 11 14 16 18 23 24 30 33 36 40
-# get top 5
 unique(df_cluster_names$cluster)
 top5 <- df_cluster_names |>
   filter(cluster %in% hb_clusters) |>
@@ -167,7 +167,7 @@ top5 <- df_cluster_names |>
 
 for (clus in unique(top5$cluster)) {
   # testing: clus = 5
-  tmp_name <- paste0(
+  f_name <- paste0(
     Seurat_base_name,
     "_VPlot_hb_top5_fdr5_cluster_",
     clus,
@@ -179,7 +179,7 @@ for (clus in unique(top5$cluster)) {
   top5_cluster <- top5 |>
     filter(cluster == clus)
 
-  pdf(file = here(plotDir, tmp_name))
+  pdf(file = here(plotDir, f_name))
   par(mfrow = c(2, 1))
 
   for (gen in top5_cluster$gene) {
@@ -207,24 +207,66 @@ for (clus in unique(top5$cluster)) {
 }
 
 
-## Heatmap of overlaps between WNN vs RNA and WNN vs ATAC
+## Heatmap 1: plot the top genes by cluster
 
-colnames(SeuratOBJ@meta.data)
-# # SeuratOBJ$seurat_clusters
-# cmat <- table(SeuratOBJ[[c("C.leiden", "C.leiden_atac")]])
-# dim(cmat)
-# pheatmap(cmat, cluster_rows = TRUE, cluster_cols = TRUE, display_numbers = FALSE)
-#
-# # SeuratOBJ[[c("C.leiden", "C.leiden_wnn")]]
-# cmat <- table(SeuratOBJ[[c("seurat_clusters", "C.leiden")]])
-# dim(cmat)
-# plt_rna <- pheatmap(cmat, cluster_rows = TRUE, cluster_cols = TRUE, display_numbers = FALSE,
-#          main = "RNA vs WNN", xlab = "RNA clusters", ylab = "WNN clusters")
-#
-# cmat <- table(SeuratOBJ[[c("seurat_clusters", "C.leiden_atac")]])
-# dim(cmat)
-# plt_atac <- pheatmap(cmat, cluster_rows = TRUE, cluster_cols = TRUE, display_numbers = FALSE,
-#          main = "ATAC vs WNN")
+f_name <- paste0(
+    Seurat_base_name,
+    "_heatmap_hb_top20_fdr5.pdf"
+)
+pdf(file = here(plotDir, f_name))
+
+# Loop through all clusters in your list
+for (i in seq_along(hb_df$cluster_ann)) {
+    #i=2
+    # Get cluster ID and annotation
+    cluster_id <- hb_df$cluster[i]
+    cluster_label <- hb_df$cluster_ann[i]
+    
+    # Subset Seurat object to current cluster
+    seurat_subset <- subset(SeuratOBJ, idents = cluster_label)
+    
+    # Filter top 50 genes for this cluster
+    TopGenes <- df_cluster_names %>%
+        filter(cluster == cluster_id) %>%
+        top_n(n = 50, wt = avg_log2FC)
+    
+    # Filter genes that exist in Seurat object
+    TopGenes <- TopGenes %>% filter(gene %in% rownames(seurat_subset))
+    
+    # Plot heatmap
+    heatmap_plot <- DoHeatmap(seurat_subset, features = TopGenes$gene, size = 3) +
+        scale_fill_gradientn(colors = c("blue", "white", "red")) +
+        ggtitle(paste("Cluster", cluster_label))
+    print(heatmap_plot)
+
+}
+dev.off()
+
+
+## Heatmap 2: plot all the cluster by gene-markers
+
+
+f_name <- paste0(
+    Seurat_base_name,
+    "_heatmap_all_reference_markers_fdr5.pdf"
+)
+pdf(file = here(plotDir, f_name))
+
+markers <- c("POU4F1", "GPR151", "TAC3")
+# Check if the genes exist in your Seurat object
+markers <- markers[markers %in% rownames(SeuratOBJ)]
+# filter clusters 
+# Idents(SeuratOBJ) <- hb_df$cluster_ann
+Idents(SeuratOBJ) <- all_clusters
+
+heatmap_plot <- DoHeatmap(SeuratOBJ, features = markers, size = 4) +
+    scale_fill_gradientn(colors = c("blue", "white", "red")) +
+    ggtitle("Expression of GeneX and GeneY Across Clusters") +
+    theme(plot.title = element_text(hjust = 0.5))
+
+print(heatmap_plot)
+dev.off()
+
 
 ##  compute Jaccard for RNA
 
@@ -397,9 +439,13 @@ tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_FeaturePlot.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 3, width = 10)
 
 
+
 ## Dot plots - the size of the dot corresponds to the percentage of cells expressing the
 # feature in each cluster. The color represents the average expression level
-plt1 <- DotPlot(SeuratOBJ, features = c(features, "TAC3")) +
+
+features <- c("POU4F1", "GPR151", "TAC3")
+
+plt1 <- DotPlot(SeuratOBJ, features = features) +
   RotatedAxis() +
   labs(title = paste0("Clusters from WNN: ", title)) &
   theme(
@@ -411,6 +457,74 @@ plt1 <- DotPlot(SeuratOBJ, features = c(features, "TAC3")) +
 
 tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_DotPlot.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
+
+
+
+################################################################################
+## Make DimPlot and DotPlot with merged clusters
+## 3 meta-clusters: MHb, LHb and No-Habenula
+################################################################################
+
+## Extract and merge clusters
+unique(Idents(SeuratOBJ))
+LHb_clusters_to_merge <- grep("LHb", hb_clusters_ann, value = TRUE)
+MHb_clusters_to_merge <- grep("MHb", hb_clusters_ann, value = TRUE)
+no_hb_clust
+
+# Replace LHb, MHb and No-Hb clusters with the merged cluster list
+current_idents <- as.character(Idents(SeuratOBJ))
+# Assign merged labels
+merged_cluster <- ifelse(current_idents %in% LHb_clusters_to_merge, "LHb_merged",
+                         ifelse(current_idents %in% MHb_clusters_to_merge, "MHb_merged",
+                                ifelse(current_idents %in% no_hb_clust, "No-Hb_merged", current_idents)))
+unique(merged_cluster)
+#[1] "No-Hb_merged" "MHb_merged"   "LHb_merged" 
+
+# add to new metadata
+SeuratOBJ$merged_cluster <- merged_cluster
+unique(SeuratOBJ$merged_cluster)
+# assign new identities to the Seurat object
+Idents(SeuratOBJ) <- merged_cluster
+unique(Idents(SeuratOBJ))
+#Levels: No-Hb_merged MHb_merged LHb_merged
+table(SeuratOBJ$merged_cluster)
+# LHb_merged   MHb_merged No-Hb_merged 
+# 6883        10944        37875 
+
+
+## Plot DimPlot merged clusters
+
+plt1 <- DimPlot(SeuratOBJ, group.by = "merged_cluster", label = TRUE) +
+    labs(title = paste0("WNN clusters merged: ", title)) &
+    theme(
+        text = element_text(size = 8),
+        axis.text.x = element_text(size = 7),
+        axis.text.y = element_text(size = 7),
+        plot.title = element_text(hjust = 0.5)
+    )
+f_name <- paste0(Seurat_base_name, "_MERGED_clusters_DimPlot.png")
+ggsave(plt1, filename = here(plotDir, f_name), height = 6, width = 6)
+
+
+## Plot DotPlot merged clusters
+
+features <- c("POU4F1", "GPR151", "TAC3")
+
+plt1 <- DotPlot(SeuratOBJ, features = features) +
+    labs(title = paste0("WNN clusters merged: ", title)) +
+    theme(
+        text = element_text(size = 14),
+        axis.text.x = element_text(size = 12, angle = 0, hjust = 0.5),
+        axis.text.y = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5)
+    )
+
+
+f_name <- paste0(Seurat_base_name, "_MERGED_clusters_DotPlot.png")
+ggsave(plt1, filename = here(plotDir, f_name), height = 6, width = 6)
+
+message("Plots done!")
+
 
 
 ## Reproducibility information
