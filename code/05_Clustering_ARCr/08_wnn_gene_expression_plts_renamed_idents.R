@@ -1,5 +1,7 @@
 ########################################################################
-## Plot GEX on selected WNN clustering results
+## Plot GEX on WNN clusters
+## Plot GEX on MERGED WNN clusters
+## Save a new Seurat with MERGED clusters for visualization purposes
 ##
 ## Authors. CSC
 ## Date. Jan 24, 2024
@@ -24,16 +26,11 @@ library("here")
 
 here()
 
-# Check/create directories
-
 ## clusters renamed for Spatial-Registration on Visium project
+
+## input dirs
 inputRDS_Dir <- here(
   "processed-data",
-  "05_Clustering_ARCr",
-  "08_wnn_gene_expression_plts_renamed_idents"
-)
-plotDir <- here(
-  "plots",
   "05_Clustering_ARCr",
   "08_wnn_gene_expression_plts_renamed_idents"
 )
@@ -43,10 +40,25 @@ inputCVS_Dir <- here(
   "02_Hb_celltypes_from_seurat_reanalyze_v3",
   "cvs_files_markers"
 )
+## output dirs
+plotDir <- here(
+    "plots",
+    "05_Clustering_ARCr",
+    "08_wnn_gene_expression_plts_renamed_idents"
+)
+processedDir <- here(
+    "processed-data",
+    "05_Clustering_ARCr",
+    "08_wnn_gene_expression_plts_renamed_idents"
+)
+
 
 ## Check directories
 if (!dir.exists(plotDir)) {
   dir.create(plotDir)
+}
+if (!dir.exists(processedDir)) {
+    dir.create(processedDir)
 }
 
 ## Load input with RDS wnn to compare
@@ -62,6 +74,7 @@ if (!dir.exists(plotDir)) {
 # For inputRDS_Dir, clusters renamed for Spatial-Registration on Visium project
 Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds"
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
+title_name <- str_extract(seurat_name, regex("C\\.\\w*\\_r2"))
 
 # Load Seurat
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
@@ -420,7 +433,7 @@ ggsave(
 ## Visualize co-expression of two features simultaneously for Medial and Lateral Hb
 
 features <- c("POU4F1", "GPR151")
-title_name <- str_extract(seurat_name, regex("C\\.\\w*\\_r2"))
+#title_name <- str_extract(seurat_name, regex("C\\.\\w*\\_r2"))
 
 plt1 <- FeaturePlot(
   SeuratOBJ,
@@ -491,6 +504,15 @@ table(SeuratOBJ$merged_cluster)
 # LHb_merged   MHb_merged No-Hb_merged 
 # 6883        10944        37875 
 
+## save seurat with MERGED clusters for visualization purposes 
+Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_MERGED.rds"
+rds_name <- here(
+    processedDir,
+    Seurat_base_name
+)
+saveRDS(SeuratOBJ, file = rds_name)
+
+
 
 ## Plot DimPlot merged clusters
 
@@ -509,7 +531,7 @@ ggsave(plt1, filename = here(plotDir, f_name), height = 6, width = 6)
 ## Plot DotPlot merged clusters
 
 features <- c("POU4F1", "GPR151", "TAC3")
-title_name <- str_extract(seurat_name, regex("C\\.\\w*\\_r2"))
+#title_name <- str_extract(seurat_name, regex("C\\.\\w*\\_r2"))
 
 plt1 <- DotPlot(SeuratOBJ, features = features) + #, dot.scale = 3
     labs(title = paste0("WNN clusters merged: ", title_name)) +
