@@ -535,7 +535,7 @@ features <- c("POU4F1", "GPR151", "TAC3")
 
 plt1 <- DotPlot(SeuratOBJ, features = features) + #, dot.scale = 3
     labs(title = paste0("WNN clusters merged: ", title_name)) +
-    theme_minimal() +
+    #theme_minimal() +
     theme(
         text = element_text(size = 12),
         axis.text.x = element_text(size = 10, angle = 0, hjust = 0.5),
