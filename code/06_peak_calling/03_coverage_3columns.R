@@ -5,7 +5,7 @@
 ## Date. May09, 2025
 ## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
 ## Note. Seurat objects were created with module load conda_R/4.3.x
-##
+## - Processing the Seurat objects with newer versions could have unexpected results on the chromatin object
 ########################################################################
 
 library("Seurat")
@@ -50,15 +50,15 @@ if (!dir.exists(plotDir)) {
 Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds"
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
-levels(SeuratOBJ)
+#levels(SeuratOBJ)
 
 DefaultAssay(SeuratOBJ) <- "ATAC"
 class(SeuratOBJ[["ATAC"]])
-Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
-# C.leiden_lsi_r2_renamed_visium
+# ensure the identities are set
+Idents(SeuratOBJ) <- "seurat_clusters"
 
 
-## Read DEG to prepare coverage plots of the top 5 genes highly expressed
+## Read DEG to select genes for the coverage. Top 5 genes highly expressed
 
 DEG_file_name <- "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_cellTypes_integrated_top50.csv"
 DEG_file_name <- here(inputCVS_Dir, DEG_file_name)
@@ -72,6 +72,7 @@ head(dge_cluster_names)
 unique(dge_cluster_names$cluster)
 # [1]  1  2  3  4  5  6  7  8  9 10 11 12 14 15 16 17 18 19 20 21 22 23 24 25 26
 # [26] 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41
+
 
 ## Identified and subset clusters annotated in e groups
 
@@ -92,15 +93,24 @@ noneHb_clusters <- all_clusters[!grepl("MHb|LHb", all_clusters)]
 noneHb_clusters_ids <- str_extract(noneHb_clusters, "(?<=C\\.)\\d+")
 
 
-# Create 3 subsets of Seurat objects to plot: LHb, MHb, None
+
+################################################################################
+# Create ATAC Coverage Plot with 3 columns side to side
+# - compares canonical Hb gene markers
+################################################################################
+
+## Create 3 subsets of Seurat objects to plot: LHb, MHb, None
 
 SeuratOBJ_LHb <- subset(SeuratOBJ, idents = lhb_clusters)
+# some verification: fragments assigned after subset  and check gene annotations loaded 
+#Fragments(SeuratOBJ_LHb)
+#SeuratOBJ_LHb[["ATAC"]]@annotation
 SeuratOBJ_MHb <- subset(SeuratOBJ, idents = mhb_clusters)
 SeuratOBJ_None <- subset(SeuratOBJ, idents = noneHb_clusters)
 rm("SeuratOBJ")
 
 
-##### function to build coverage plots
+## function to build coverage plots from Seurat counts
 
 make_coverage_plot <- function(seurat_subset, 
                                 gene_list, 
@@ -116,6 +126,7 @@ make_coverage_plot <- function(seurat_subset,
         object = seurat_subset,
         region = gene_list,
         features = gene_list,
+        group_by = group_by,
         extend.upstream = region_size,
         extend.downstream = region_size,
         peaks = TRUE,
@@ -134,7 +145,7 @@ make_coverage_plot <- function(seurat_subset,
 
 
 
-
+## function to build coverage plots from Seurat pseudobulk data
 
 make_coverage_plot_pseudobulk_by_cluster <- function(seurat_subset, 
                                gene_list, 
@@ -167,13 +178,15 @@ make_coverage_plot_pseudobulk_by_cluster <- function(seurat_subset,
     return(plt1)
 }
 
-## canonical genes to plot
+## prepara data to plot canonical genes to plot
 
+# set width and heigh to plot
 hg = 6
 wd = 14
 
-# size window to track in the plots
+# window size in the coverage graph track to loop
 open_window_sizes = c(500,1000,2000)
+
 # List of Seurat objects
 seurat_objs <- list(
     MHb = SeuratOBJ_MHb,
@@ -183,30 +196,50 @@ seurat_objs <- list(
 # Create all combinations
 param_grid <- cross2(seurat_objs, open_window_sizes)
 
-# Generate individual plot for each gene in the list 'features'
-
+# Generate individual coverage plot for each gene in the list of 'features'
 features <- c("POU4F1", "GPR151", "TAC3")
+
+# ## testing raw vs pseudobulk
+# 
+# plt <- make_coverage_plot(SeuratOBJ, "POU4F1", 2000)
+# plt1r <- make_coverage_plot(subset(SeuratOBJ, idents = lhb_clusters[1]), "POU4F1", 4000)
+# 
+# # Balancing number of cells per cluster. Downsampling for visualization purposes
+# balanced_obj <- subset(SeuratOBJ, downsample = 200)  # max 200 cells/cluster
+# plt1 <- make_coverage_plot_pseudobulk_by_cluster(balanced_obj, "POU4F1", 2000)
+# 
+# # manual comparison - subset lost cell identities
+# plt1 <- make_coverage_plot_pseudobulk_by_cluster(subset(balanced_obj, idents = lhb_clusters[1]), "POU4F1", 2000)
+# plt2 <- make_coverage_plot_pseudobulk_by_cluster(subset(balanced_obj, idents = mhb_clusters[1]), "POU4F1", 2000)
+
+
+################################################################################
+# Create 3 ATAC Coverage Plots for Hb genes ("POU4F1", "GPR151", "TAC3")
+# - Plot both, raw accessibility signals, and pseudobulk signals for comparison purposes 
+# - Plots are arranged by columns
+################################################################################
 
 for (gene in features) {
     
+    # gene="POU4F1"
     feature <- gene
     message("Gene to track: ", feature)
     
-    ## Plotting raw (individual-cell) accessibility signals
-    ## The plot is still pseudobulked, but globally, not by cluster, condition, or any group.
+    ## Plot raw (individual-cell) accessibility signals
+    ## The plot has still pseudobulk data, but globally, not by cluster, condition, or any group.
     
     coverage_plots <- map(param_grid, function(params) {
         seurat_obj <- params[[1]]
         window_size <- params[[2]]
         make_coverage_plot(seurat_obj, feature, window_size)
     })
-    
+
     # Save plots to PDF
     if (length(coverage_plots)>1) {
-        
-        f_name <- paste0("CoveragePlot_Hb_canonical_", feature,".pdf")
-        pdf(file = here(plotDir, f_name), width = 14, height = 6)
-        
+
+        f_name <- paste0("Multiome_peaks_gene_", feature,".pdf")
+        pdf(file = here(plotDir, f_name), width = wd, height = hg)
+
         # Loop through in chunks of 3
         for (i in seq(1, length(coverage_plots), by = 3)) {
             plots_chunk <- coverage_plots[i:min(i+2, length(coverage_plots))]
@@ -217,8 +250,11 @@ for (gene in features) {
         dev.off()
     }
     
-    ## Plotting accessibility signals 
-    ## The plot is pseudobulked by cluster
+
+    ## Plot pseudobulk (individual-cell) accessibility signals by cluster
+    
+    ## Note. I can see peaks in the raw (all-cells) CoveragePlot(), but not after pseudobulking by cluster
+    # The issue is likely related to cell mismatches. e.g., cells not linked properly to fragment (need to reattach the  fragment file)
     
     coverage_plots <- map(param_grid, function(params) {
         seurat_obj <- params[[1]]
@@ -226,10 +262,11 @@ for (gene in features) {
         make_coverage_plot_pseudobulk_by_cluster(seurat_obj, feature, window_size)
     })
     
+    
     # Save plots to PDF
     if (length(coverage_plots)>1) {
         
-        f_name <- paste0("CoveragePlot_Hb_canonical_pseudobulk_cluster_", feature,".pdf")
+        f_name <- paste0("Multiome_peaks_gene_", feature,"_pseudobulk_by_cluster.pdf")
         pdf(file = here(plotDir, f_name), width = 14, height = 6)
         
         # Loop through in chunks of 3
@@ -246,11 +283,15 @@ for (gene in features) {
 }
 
 
-# =======
+################################################################################
+# Create One ATAC Coverage Plot for all clusters
+################################################################################
 
 # Generate plot for all canonical in 1 plot
 
 features <- c("POU4F1", "GPR151")
+# window size in the coverage graph track to loop
+window_size = 500
 # List of Seurat objects
 seurat_objs <- list(
     MHb = SeuratOBJ_MHb,
@@ -261,6 +302,7 @@ seurat_objs <- list(
 open_window_sizes = c(500)
 # Create all combinations
 param_grid <- cross2(seurat_objs, open_window_sizes)
+#param_grid[[1]]
 
 # # Generate names for each plot
 # plot_names <- map_chr(param_grid, function(params) {
@@ -274,7 +316,7 @@ message("Genes to track: ", paste(features, collapse = ","))
 coverage_plots <- map(param_grid, function(params) {
     seurat_obj <- params[[1]]
     window_size <- params[[2]]
-    make_coverage_plot(seurat_obj, features, window_size)
+    make_coverage_plot(seurat_objs, features, window_size)
 })
 length(coverage_plots)
 # # Add names
@@ -285,7 +327,7 @@ length(coverage_plots)
 if (length(coverage_plots)>1) {
     
     f_name <- paste0("CoveragePlot_all_clusters_canonical_", paste(features, collapse = "_"), ".pdf")
-    pdf(file = here(plotDir, f_name), width = 14, height = 6)
+    pdf(file = here(plotDir, f_name), width = wd, height = hg)
     
     # Loop through each plot individually
     for (i in seq_along(coverage_plots)) {
@@ -303,14 +345,64 @@ if (length(coverage_plots)>1) {
 }
 
 
+
+################################################################################
+# Create 3 ATAC Coverage Plots for Hb genes ("POU4F1", "GPR151", "TAC3")
+# - Plot raw accessibility signals
+# - Plots are arranged in one column
+################################################################################
+
+## load seurat with merged clusters for visualization purposes 
+rm("SeuratOBJ")
+Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_MERGED.rds"
+seurat_name <- here(inputRDS_Dir, Seurat_base_name)
+SeuratOBJ_merged <- readRDS(here(inputRDS_Dir, Seurat_base_name))
+
+DefaultAssay(SeuratOBJ_merged) <- "ATAC"
+class(SeuratOBJ_merged[["ATAC"]])
+
+# ensure the identities are set
+Idents(SeuratOBJ_merged) <- "merged_cluster"
+colnames(SeuratOBJ_merged@meta.data)
+table(SeuratOBJ_merged$merged_cluster)
+# LHb_merged   MHb_merged No-Hb_merged 
+# 6883        10944        37875 
+
+# set width and heigh to plot
+hg = 6
+wd = 6
+
+# Define the genes
+genes_to_plot <- c("TAC3", "GPR151", "POU4F1")
+
+"TAC3" %in% rownames(SeuratOBJ_merged[["RNA"]])  # Should be TRUE
+
+# Create one plot per gene category (LHb, MHb and No-Hb)
+
+# plt <- make_coverage_plot(SeuratOBJ_merged, "GPR151", 500)
+# plt <- make_coverage_plot(SeuratOBJ_merged, "GPR151", 500, "merged_cluster")
+
+coverage_plots <- lapply(genes_to_plot, function(gene) {
+    make_coverage_plot(SeuratOBJ_merged, gene, 500, "merged_cluster") + patchwork::plot_annotation(title = gene)
+})
+
+# Combine plots vertically
+combined_plot <- wrap_plots(coverage_plots, ncol = 1)
+
+# Save to PDF
+pdf(here(plotDir, "multi_peaks_by_MEGED_Hb_category_vertical.pdf"), width = 10, height = 12)
+print(combined_plot)
+dev.off()
+
+
 message("Coverage plots completed")
 
 # library("slurmjobs")
 # job_single(
-#   "01_coverage_basic",
+#   "03_coverage_3columns.R",
 #   create_shell = TRUE,
 #   partition = "katun",
-#   memory = "30G",
+#   memory = "60G",
 #   cores = 2,
 #   logdir = "logs",
 #   command = "Rscript -e \"options(width = 120); sessioninfo::session_info()\"",
