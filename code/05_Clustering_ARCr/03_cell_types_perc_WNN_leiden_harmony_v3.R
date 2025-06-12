@@ -1,7 +1,11 @@
 ###############################################################################
-##
-##  Calculate and summarize percentage of cell-types on pre-selected WNN run with Leiden
-##
+#
+# Calculate and summarize percentage of cell-types on WNN
+# Leiden r2 knn=30 -- BEST CLUSTERING FOR HABENULA
+# EDA: compute percentages on separate files (csv) for: all clusters, endo, glia, habenula and thalamus
+# Dataset: RNA log-normalized with harmony
+# Reference: Integrated (Data-Driven and Literature-Based) gene markers reference (469 genes with no repetetitions)
+# 
 ###############################################################################
 
 library("stringr")
