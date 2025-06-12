@@ -7,21 +7,21 @@
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 #SBATCH --mail-type=ALL
-#SBATCH --array=1-4%20
+# SBATCH --array=1-4%4
+#SBATCH --array=1-1%1
+
+# # Previous EDA with both assays harmonized
+# all_clustering_name=("seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r1" 
+# "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2" 
+# "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r1" 
+# "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r2")
+
+# Our WNN of interest
+all_clustering_name=("seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2")
 
 ## Define loops and appropriately subset each variable for the array task ID
-
-# Old rds objects with only rna harmonized and lsi
-# all_clustering_name=("seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1" 
-# "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvainM_lsi_r1" "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1" "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.SLM_lsi_r1")
-
-# Old rds objects with only rna and lsi harmonized
-all_clustering_name=("seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r1" 
-"seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2" 
-"seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r1" 
-"seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r2")
-
-clustering_name=${all_clustering_name[$(( $SLURM_ARRAY_TASK_ID / 1 % 4 ))]}
+#clustering_name=${all_clustering_name[$(( $SLURM_ARRAY_TASK_ID / 1 % 4 ))]}
+clustering_name=${all_clustering_name[$(( $SLURM_ARRAY_TASK_ID / 1 % 1 ))]}
 
 ## Explicitly pipe script output to a log
 log_path=logs/05_rename_idents_${clustering_name}_${SLURM_ARRAY_TASK_ID}.txt
