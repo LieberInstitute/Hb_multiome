@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=80G
-#SBATCH --job-name=03_jaccard
+#SBATCH --mem=40G
+#SBATCH --job-name=07_jaccard
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
@@ -11,7 +11,7 @@
 id=$(sed -n ${SLURM_ARRAY_TASK_ID}p input_wnn_rds_names_pairs.txt)
 
 ## Explicitly pipe script output to a log
-log_path=logs/03_jaccard_ARCr_${id}.txt
+log_path=logs/07_jaccard_ARCr_${id}.txt
 
 {
 set -e
@@ -34,7 +34,7 @@ module load conda_R/4.3.x
 module list
 
 # Edit with your job command
-Rscript 03_jaccard.R $id
+Rscript 07_jaccard.R $id
 
 echo "**** Job ends ****"
 date
