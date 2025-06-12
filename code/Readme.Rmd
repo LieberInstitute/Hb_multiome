@@ -1,0 +1,122 @@
+---
+title: "Readme"
+author: "Cynthia SC"
+date: "2025-06-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(eval = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+# Habenula multiome
+
+<br>
+
+### Notes:
+
+**R environment**: Make sure to run your script with *R v4.3.x* (not a newer version), as upgrading has been observed to corrupt the chromatin assay in multiome Seurat objects. To avoid unexpected results, ensure you load the appropriate module in your bash scripts:
+
+```bash
+# Load the specific R module to safely save/load Seurat v5 chromatin integrity
+module load conda_R/4.3.x
+```
+<br><br>
+
+**clustering directory**: most notable clustering results
+```{r}
+# Load knitr for kable
+library(knitr)
+library(here)
+
+# Define the directory path
+cluster_dir <- here("processed-data/05_Clustering_ARCr/01_clustering_std_method")
+print(cluster_dir)
+# List only .rds files
+clustering_files <- list.files(path = cluster_dir, pattern = "\\.rds$", full.names = TRUE)
+
+# Create a data frame for display
+clustering_df <- data.frame(`RDS File` = clustering_files)
+
+# Display as a table
+kable(clustering_df, caption = "Clustering Output Files (.rds)")
+```
+<br><br>
+
+**Best WNN clustering result**: **Best WNN clustering result**: <mark>seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2.rds</mark>
+
+```{r}
+library(here)
+
+# Define the directory path
+cluster_dir <- here("processed-data/05_Clustering_ARCr/01_clustering_std_method/seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2.rds")
+print(cluster_dir)
+```
+
+After evaluating the clustering results, we found that this configuration provides the most representative clusters for habenula. It captures the medial and lateral sub cell-types than other clustering settings, making it the most suitable choice for downstream analyses.
+This is an object of class Seurat containing:
+299552 features across <mark>55702</mark> samples (cells) within 2 assays 
+Active assay: RNA (36601 features, 2000 variable features)
+<br>
+We have <mark>42 clusters</mark>, having <mark>13 of these with Habenula markers</mark>
+<br><br>
+
+**Habenula gene markers references directory**: (not styled)
+## code/04_DiffExpr_Clustering_seurat/remote_DGE_marker_gene_lists.R
+
+We used a mixed gene markers reference composed by <mark>Literature-Based + Data-Driven</mark> genes
+
+ [1] "DD_Astrocyte"                 "DD_Endo"                     
+ [3] "DD_Excit.Thal"                "DD_Inhib.Thal"               
+ [5] "DD_LHb"                       "DD_MHb"                      
+ [7] "DD_Microglia"                 "DD_Oligo"                    
+ [9] "DD_OPC"                       "LB_neuron"                   
+[11] "LB_excitatory_neuron"         "LB_inhibitory_neuron"        
+[13] "LB_Hb neuron specific"        "LB_MHB neuron specific"      
+[15] "LB_LHB neuron specific"       "LB_oligodendrocyte"          
+[17] "LB_oligodendrocyte_precursor" "LB_microglia"                
+[19] "LB_astrocyte"                 "LB_Endo/CP"                  
+[21] "LB_Thalamus broad"            "LB_Thalamus/MDm/Endo"        
+[23] "LB_Thalamus/MDm/Endo-"        "LB_Thalamus/MDm"  
+
+Total genes used: 469
+
+<br><br>
+
+
+**Habenula cell-types directory**: 
+All DGE for all clusters directory:
+processed-data/05_Clustering_ARCr/01_clustering_std_method/cvs_files/seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_markers.csv
+Cell-type identification thresholds: we used <mark>the top 50 genes</mark> with <mark>FDR<0.05)</mark>
+Top 50 DGE for all clusters directory: 
+processed-data/05_Clustering_ARCr/02_Hb_celltypes_from_seurat_reanalyze_v3/cvs_files_markers/WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_cellTypes_integrated_top50.csv"
+
+Output dir for csv file not styled:  
+processedDir <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze_v3")
+
+```{r}
+# Load knitr for kable
+library(knitr)
+library(here)
+
+# Define the directory path
+cluster_cell_types_dir <- here("processed-data/05_Clustering_ARCr/02_Hb_celltypes_from_seurat_reanalyze_v3")
+print(cluster_dir)
+# List only .rds files
+cell_types_files <- list.files(path = cluster_cell_types_dir, pattern = "\\.csv$", full.names = TRUE)
+
+# Create a data frame for display
+clustering_df <- data.frame(`RDS File` = cell_types_files)
+
+# Display as a table
+kable(clustering_df, caption = "Cell Types Files (.csv)")
+```
+<br><br>
+
+
+**Habenula cell-types directory**: (styled in a readable format)
+
+
+
