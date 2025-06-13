@@ -30,9 +30,9 @@ here::here()
 
 ## read input arguments ( name of RDS Seurat file with wnn clustering to parse )
 Seurat_base_name <- commandArgs(trailingOnly = TRUE)
+# Debug with our best cluster representation is: 
+# Seurat_base_name = "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2"
 
-# testing:
-# Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1"
 ## Some WNN clustering results of interest. Testing:
 # Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1"
 # Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1"
@@ -71,8 +71,6 @@ message("Reading files to annotate cell-types in WNN clusters")
 # seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2
 # seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r1
 # seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r2
-# Debug with our best cluster representation is: 
-# Seurat_base_name = "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2"
 
 seurat_RDSname = paste0(Seurat_base_name, ".rds")
 
@@ -108,14 +106,14 @@ tmp <- names(markers.custom)
 tmp <- paste(tmp, collapse=', ')
 message("Processing ", length(markers.custom), " categories of gene-markers list \n *****(", tmp, ")*****")
 
-## Check duplicated marker genes
+## Check and remove duplicated genes markers
+
 names(markers.custom)
 x <- markers.custom
 length(unlist(x)) # 481
 # table(unname(unlist(x)))
 v_dup <- duplicated(unname(unlist(x)))
 dup_genes <- unname(unlist(x))[v_dup]
-message("Duplicated genes in both lists: ", length(dup_genes))
 
 ## delete duplicated genes before annotate
 
@@ -189,8 +187,8 @@ clusters <- as.integer(levels(clusters)[as.integer(clusters)])
 ## Read All markers CVS file for all clusters
 DGE_cvs_name <- here(inputDir_cvs, paste0(Seurat_base_name, "_markers.csv"))
 
-message('/nSaved cluster info. \nIdentifying cell types for ', length(clusters),' clusters using `', basename(DGE_cvs_name), "`")
-# Identifying cell types for 33 clusters using `seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.leiden_lsi_r1_markers.csv`
+message('Saved cluster info. \nAnnotating cell types for ', length(clusters),' clusters using `', basename(DGE_cvs_name), "`")
+# Annotating cell types for 42 clusters using `seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_markers.csv`
 
 seurat_clust_DEG <- read.csv(DGE_cvs_name, header = TRUE)
 seurat_clust_DEG <- seurat_clust_DEG[,-1]
@@ -209,13 +207,13 @@ top_DGE_clust <- seurat_clust_DEG |>
   arrange(cluster, p_val_adj)
 tail(top_DGE_clust)
 
-# all_markers_cvs_name <- here(cvsDir, paste0(tmp_file_name, "_DEG_Top50_WNN.csv"))
-# write.csv(top_DGE_clust, all_markers_cvs_name)
-# 
-# message("Saved CVS file with Top50 DEG from: ", basename(all_markers_cvs_name))
+all_markers_cvs_name <- here(cvsDir, paste0(tmp_file_name, "_DEG_Top50_WNN.csv"))
+write.csv(top_DGE_clust, all_markers_cvs_name)
+
+message("Saved CVS file with Top50 DEG from: ", basename(all_markers_cvs_name))
 
 
-####### Parse the 10/20 DGE genes from GEX cluster against the marker genes list provided ####### 
+####### Parse the 10/20 DGE genes from GEX cluster against the gene markers list provided ####### 
 
 ## Build df to save cell-types that match with the gene-marker-list
 # names(markers.custom) #[1] "literature_base" and "data_driven" in the same list
@@ -238,7 +236,7 @@ markers.lst <- markers.custom
 all_gene_match <- setNames(data.frame(matrix(ncol = 5, nrow = 0)),
                            c("Feature.ID", "Feature.Name", "p_val_adj", "cell_type", "cluster")) #Cluster.Adjusted.p.value
 
-message("\nSearching cell-types for all gene markers lists")
+message("Searching cell-types for all gene markers in **literature_base** and **data_driven**")
 
 
 ## Annotate cell types based on the reference of gene markers DD+LB
