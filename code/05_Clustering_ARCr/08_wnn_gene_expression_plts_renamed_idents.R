@@ -24,15 +24,14 @@ library("here")
 
 ## input directories
 
-here()
-
 ## clusters renamed for Spatial-Registration on Visium project
 
 ## input dirs
 inputRDS_Dir <- here(
   "processed-data",
   "05_Clustering_ARCr",
-  "08_wnn_gene_expression_plts_renamed_idents"
+  #"08_wnn_gene_expression_plts_renamed_idents"
+  "05_rename_idents"
 )
 inputCVS_Dir <- here(
   "processed-data",
@@ -72,23 +71,31 @@ if (!dir.exists(processedDir)) {
 # Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2.rds"
 
 # For inputRDS_Dir, clusters renamed for Spatial-Registration on Visium project
-Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds"
+# Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds"
+Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2.rds"
+
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 title_name <- str_extract(seurat_name, regex("C\\.\\w*\\_r2"))
 
 # Load Seurat
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
-levels(SeuratOBJ)
-## Levels should be
-# [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
-# [6] "C.16 DD_MHb" "C.18 DD_LHb" "C.23 DD_LHb" "C.24 DD_LHb" "C.30 DD_LHb"
-# [11] "C.33 DD_LHb" "C.36 DD_MHb" "C.40 DD_LHb" "C.01"        "C.02"
-# [16] "C.03"        "C.04"        "C.06"        "C.08"        "C.09"
-# [21] "C.12"        "C.13"        "C.15"        "C.17"        "C.19"
-# [26] "C.20"        "C.21"        "C.22"        "C.25"        "C.26"
-# [31] "C.27"        "C.28"        "C.29"        "C.31"        "C.32"
-# [36] "C.34"        "C.35"        "C.37"        "C.38"        "C.39"
-# [41] "C.41"        "C.42"
+all_clusters <- levels(SeuratOBJ)
+all_clusters
+# ========================= new
+# [1] "C.01.undeterminated" "C.02.DD_Oligo"       "C.03.undeterminated"
+# [4] "C.04.undeterminated" "C.05.DD_LHb"         "C.06.DD_Exit.Thal"  
+# [7] "C.07.DD_MHb"         "C.08.undeterminated" "C.09.undeterminated"
+# [10] "C.10.DD_MHb"         "C.11.DD_MHb"         "C.12.undeterminated"
+# [13] "C.13.no-match"       "C.14.DD_MHb"         "C.15.DD_Exit.Thal"  
+# [16] "C.16.DD_MHb"         "C.17.DD_Exit.Thal"   "C.18.DD_LHb"        
+# [19] "C.19.DD_Inhib.Thal"  "C.20.DD_Astrocyte"   "C.21.DD_Astrocyte"  
+# [22] "C.22.undeterminated" "C.23.DD_LHb"         "C.24.DD_LHb"        
+# [25] "C.25.undeterminated" "C.26.DD_OPC"         "C.27.DD_Microglia"  
+# [28] "C.28.DD_Inhib.Thal"  "C.29.DD_Endo"        "C.30.DD_LHb"        
+# [31] "C.31.DD_Exit.Thal"   "C.32.undeterminated" "C.33.DD_LHb"        
+# [34] "C.34.DD_Oligo"       "C.35.undeterminated" "C.36.DD_MHb"        
+# [37] "C.37.undeterminated" "C.38.DD_Inhib.Thal"  "C.39.DD_Inhib.Thal" 
+# [40] "C.40.DD_LHb"         "C.41.DD_Microglia"   "C.42.no-match"               
 
 DefaultAssay(SeuratOBJ) <- "RNA"
 Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
@@ -106,32 +113,71 @@ head(df_cluster_names)
 # 2     0   3.849508 0.900 0.083         0       1      KIT        DD_Inhib.Thal
 # 3     0   3.682782 0.927 0.122         0       1    MEIS2      LB_Thalamus/MDm
 
+
+# Subset Seurat object where identity (cluster name) contains "MHb" or "LHb"
+grep("MHb|LHb", Idents(SeuratOBJ))
+Seurat_subset <- subset(SeuratOBJ, idents = grep("MHb|LHb", Idents(SeuratOBJ), value = TRUE))
+hb_clusters <- levels(Seurat_subset)
+# [1] "C.05.DD_LHb" "C.07.DD_MHb" "C.10.DD_MHb" "C.11.DD_MHb" "C.14.DD_MHb"
+# [6] "C.16.DD_MHb" "C.18.DD_LHb" "C.23.DD_LHb" "C.24.DD_LHb" "C.30.DD_LHb"
+# [11] "C.33.DD_LHb" "C.36.DD_MHb" "C.40.DD_LHb"
+table(Idents(Seurat_subset))
+
 ## Subset Hb clusters. Use length of cluster ID as criteria
 ## extract clusters IDs and cluster label
 
-message("Cluster-IDs from `WNN`")
+# message("Cluster-IDs from `WNN`")
 
-SeuOBJ_clusters <- Idents(SeuratOBJ)
-all_clusters <- levels(SeuOBJ_clusters)
-no_hb_clust <- all_clusters[nchar(all_clusters) <= 4]
-hb_clusters <- all_clusters[!all_clusters %in% c(no_hb_clust)]
-hb_clusters_ann <- hb_clusters
-hb_clusters_ann
-# [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
-# [6] "C.16 DD_MHb" "C.18 DD_LHb" "C.23 DD_LHb" "C.24 DD_LHb" "C.30 DD_LHb"
-# [11] "C.33 DD_LHb" "C.36 DD_MHb" "C.40 DD_LHb"
-# length(hb_clusters)
-hb_clusters <- as.integer(substr(hb_clusters, 3, 4))
-hb_clusters
+# SeuOBJ_clusters <- Idents(SeuratOBJ)
+# all_clusters <- levels(SeuOBJ_clusters)
+# no_hb_clust <- all_clusters[nchar(all_clusters) <= 4]
+# hb_clusters <- all_clusters[!all_clusters %in% c(no_hb_clust)]
+# hb_clusters_ann <- hb_clusters
+# hb_clusters_ann
+# # [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
+# # [6] "C.16 DD_MHb" "C.18 DD_LHb" "C.23 DD_LHb" "C.24 DD_LHb" "C.30 DD_LHb"
+# # [11] "C.33 DD_LHb" "C.36 DD_MHb" "C.40 DD_LHb"
+# # length(hb_clusters)
+# hb_clusters <- as.integer(substr(hb_clusters, 3, 4))
+# hb_clusters
+hb_numeric_cluster <- as.integer(sub("^C\\.(\\d+)\\..*$", "\\1", hb_clusters))
+print(hb_numeric_cluster)
 
 hb_df <- data.frame(
     cluster = hb_clusters,
-    cluster_ann = hb_clusters_ann,
-    stringsAsFactors = FALSE 
+    cluster_ann = hb_numeric_cluster,
+    stringsAsFactors = FALSE
 )
+# cluster cluster_ann
+# 1  C.05.DD_LHb          05
+# 2  C.07.DD_MHb          07
+# 3  C.10.DD_MHb          10
+# 4  C.11.DD_MHb          11
 
+# Set new factor levels for identities to first plot Hb clusters
+# ensure all clusters are included
+new_levels <- c(hb_clusters, setdiff(all_clusters, hb_clusters))
+new_levels
+# [1] "C.05.DD_LHb"         "C.07.DD_MHb"         "C.10.DD_MHb"        
+# [4] "C.11.DD_MHb"         "C.14.DD_MHb"         "C.16.DD_MHb"        
+# [7] "C.18.DD_LHb"         "C.23.DD_LHb"         "C.24.DD_LHb"        
+# [10] "C.30.DD_LHb"         "C.33.DD_LHb"         "C.36.DD_MHb"        
+# [13] "C.40.DD_LHb"         "C.01.undeterminated" "C.02.DD_Oligo"      
+# [16] "C.03.undeterminated" "C.04.undeterminated" "C.06.DD_Exit.Thal"  
+# [19] "C.08.undeterminated" "C.09.undeterminated" "C.12.undeterminated"
+# [22] "C.13.no-match"       "C.15.DD_Exit.Thal"   "C.17.DD_Exit.Thal"  
+# [25] "C.19.DD_Inhib.Thal"  "C.20.DD_Astrocyte"   "C.21.DD_Astrocyte"  
+# [28] "C.22.undeterminated" "C.25.undeterminated" "C.26.DD_OPC"        
+# [31] "C.27.DD_Microglia"   "C.28.DD_Inhib.Thal"  "C.29.DD_Endo"       
+# [34] "C.31.DD_Exit.Thal"   "C.32.undeterminated" "C.34.DD_Oligo"      
+# [37] "C.35.undeterminated" "C.37.undeterminated" "C.38.DD_Inhib.Thal" 
+# [40] "C.39.DD_Inhib.Thal"  "C.41.DD_Microglia"   "C.42.no-match" 
 
+# Apply the new order to Seurat object identities
+SeuratOBJ <- SetIdent(SeuratOBJ, value = factor(Idents(SeuratOBJ), levels = new_levels))
+levels(SeuratOBJ)
 
+## =============================================================================
 ## Prepare Violin Plot on canonical Hb gene-markers
 
 message(
@@ -141,83 +187,105 @@ message(
 features <- c("POU4F1", "GPR151")
 
 plt1 <- VlnPlot(
-  object = SeuratOBJ,
+  object = Seurat_subset,
   layer = "data",
   features = features,
   pt.size = 0
 ) +
-  labs(x = paste0("WNN: ", Seurat_base_name)) &
-  theme(
-    text = element_text(size = 8),
-    axis.text.x = element_text(size = 7),
-    axis.text.y = element_text(size = 7),
-    plot.title = element_text(hjust = 0.5)
-  )
-
-plt1 <- plt1 +
-  plot_annotation(
-    paste0("WNN: ", Seurat_base_name),
-    caption = 'Cell Ranger ARC reanalize',
-    theme = theme(plot.title = element_text(hjust = 0.5))
-  )
+    labs(x = paste0("WNN: ", Seurat_base_name)) +
+    theme(
+        #text = element_text(size = 8),
+        #axis.text.x = element_text(size = 7),
+        #axis.text.y = element_text(size = 7),
+        plot.title = element_text(hjust = 0.5)
+    ) +
+    plot_annotation(
+        title = paste0("WNN: ", Seurat_base_name),
+        caption = "Cell Ranger ARC reanalize"
+    )
 tmp_name <- paste0(Seurat_base_name, "_POU4F1_GPR151_VPlot.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 4, width = 17)
 
-message('\nViolin plots saved `', plotDir, '`')
+message('Violin plots saved `', plotDir, '`')
 
 
-## Plot Violin for top genes in habenula clusters
+## =============================================================================
+## Prepare Violin Plot on top 10 gene markers
 
-unique(df_cluster_names$cluster)
-top5 <- df_cluster_names |>
-  filter(cluster %in% hb_clusters) |>
-  group_by(cluster) |>
-  top_n(n = 5, wt = avg_log2FC)
+# Get top 10 genes per habenula cluster
+# df_cluster_names$cluster
+top10 <- df_cluster_names |>
+    filter(cluster %in% hb_numeric_cluster) |>
+    group_by(cluster) |>
+    top_n(n = 10, wt = avg_log2FC)
+top10
 
-# dim(top5)
-# head(top5)
-# unique(top5$cluster)
+# Start PDF output
+f_name <- paste0(Seurat_base_name, "_VPlot_hb_top10_fdr5_by_cluster.pdf")
+pdf(file = here(plotDir, f_name), width = 8.5, height = 11)  # standard letter size
 
-for (clus in unique(top5$cluster)) {
-  # testing: clus = 5
-  f_name <- paste0(
-    Seurat_base_name,
-    "_VPlot_hb_top5_fdr5_cluster_",
-    clus,
-    ".pdf"
-  )
-
-  message("Processing habenula cluster: ", clus, "; Saved as: ", tmp_name)
-
-  top5_cluster <- top5 |>
-    filter(cluster == clus)
-
-  pdf(file = here(plotDir, f_name))
-  par(mfrow = c(2, 1))
-
-  for (gen in top5_cluster$gene) {
-    message(paste0("Processing gene ", gen))
-
-    plt1 <- VlnPlot(
-      object = SeuratOBJ,
-      layer = "data",
-      # features = top5_cluster$gene[.x],
-      features = gen,
-      pt.size = 0
-    ) +
-      labs(x = paste0("**Habenula cluster: ", clus)) &
-      theme(
-        text = element_text(size = 8),
-        axis.text.x = element_text(size = 7),
-        axis.text.y = element_text(size = 7),
-        plot.title = element_text(hjust = 0.5)
-      ) &
-      NoLegend()
-    print(plt1)
-  }
-
-  dev.off()
+# Loop through each habenula cluster
+for (clus in unique(top10$cluster)) {
+    
+    message("Processing habenula cluster: ", clus)
+    
+    top10_cluster <- top10 |>
+        filter(cluster == clus)
+    
+    # Create list of plots
+    vln_plots <- lapply(top10_cluster$gene, function(gen) {
+        VlnPlot(
+            object = SeuratOBJ,
+            layer = "data",
+            features = gen,
+            pt.size = 0
+        ) +
+            labs(title = gen) +
+            theme(
+                text = element_text(size = 7),
+                axis.text.x = element_text(size = 5),
+                axis.text.y = element_text(size = 5),
+                plot.title = element_text(hjust = 0.5, size = 8)
+            ) +
+            NoLegend()
+    })
+    
+    # Combine plots using patchwork
+    combined_plot <- wrap_plots(vln_plots, ncol = 2) +
+        plot_annotation(
+            title = paste0("Top 10 genes in cluster: ", clus),
+            theme = theme(plot.title = element_text(hjust = 0.5, size = 12))
+        )
+    
+    print(combined_plot)
 }
+
+dev.off()
+
+
+## =============================================================================
+## Prepare Violin Plot on top 10 gene markers
+
+BiocManager::install("DeconvoBuddies")
+BiocManager::install("LieberInstitute/DeconvoBuddies")
+# ERROR: this R is version 4.3.2, package 'DeconvoBuddies' requires R >=  4.4.0
+library("SingleCellExperiment")
+
+sce_your_data <- as.SingleCellExperiment(SeuratOBJ)
+# top 10 genes per habenula cluster
+top10
+
+library(DeconvoBuddies)
+
+plot_marker_express(
+    sce = sce_your_data,
+    stat = top10,
+    cellType_col = "cell_type",    # adjust to match your column name
+    cell_type = "DD_LHb",       # the cell type you want to visualize
+    gene_col = "gene"              # column with gene symbols
+)
+
+## =============================================================================
 
 
 ## Heatmap 1: plot the top genes by cluster
