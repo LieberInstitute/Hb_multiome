@@ -2,11 +2,9 @@ library("SingleCellExperiment")
 library("Seurat")
 library("here")
 library("lobstr")
-library("sessioninfo")
-# library("HDF5Array")
 library("Matrix")
 library("tidyverse")
-
+library("sessioninfo")
 
 ## Load RDS multiome
 message(Sys.time(), "- load Harmony corrected Seurat")
@@ -36,6 +34,11 @@ levels(SeuratOBJ)
 # [37] "C.37.undeterminated" "C.38.DD_Inhib.Thal"  "C.39.DD_Inhib.Thal" 
 # [40] "C.40.DD_LHb"         "C.41.DD_Microglia"   "C.42.no-match"    
 
+## verify that RNA assay has gene symbols
+head(rownames(SeuratOBJ[["RNA"]]))
+# [1] "MIR1302-2HG" "FAM138A"     "OR4F5"       "AL627309.1"  "AL627309.3" 
+# [6] "AL627309.2" 
+
 ## make slim Seurat with ony RNA modality
 SeuratOBJ <- DietSeurat(SeuratOBJ, 
                         assays = "RNA")
@@ -44,6 +47,16 @@ SeuratOBJ
 # 36601 features across 55702 samples within 1 assay 
 # Active assay: RNA (36601 features, 2000 variable features)
 # 3 layers present: data, counts, scale.data
+head(rownames(SeuratOBJ[["RNA"]]))
+# [1] "MIR1302-2HG" "FAM138A"     "OR4F5"       "AL627309.1"  "AL627309.3" 
+# [6] "AL627309.2" 
+
+# Remove all reductions from SeuratOBJ to avoid mismatch issues with sce convertion
+for (red in Reductions(SeuratOBJ)) {
+    SeuratOBJ[[red]] <- NULL
+}
+Reductions(SeuratOBJ)
+# NULL
 
 ## convert Seurat object into sce
 sce <- as.SingleCellExperiment(SeuratOBJ)
@@ -60,8 +73,11 @@ sce
 # colData names(29): orig.ident nCount_RNA ... C.leiden_wnn ident
 # reducedDimNames(0):
 #     mainExpName: RNA
-# altExpNames(0):
-# colnames(colData(sce))
+# rownames(sce) 
+
+head(rownames(sce))
+# [1] "MIR1302-2HG" "FAM138A"     "OR4F5"       "AL627309.1"  "AL627309.3" 
+# [6] "AL627309.2" 
 
 ## Drop data we don't need for iSEE. We keep only logcount
 assayNames(sce)
@@ -86,15 +102,16 @@ metadata(sce) <- list()
 # sce$path <- NULL
 # sce$total <- NULL
 
-# # sourcing official color palette
-load(here("processed-data", "04_snRNA-seq", "cell_type_colors.Rdata"))
-sn_colors<- cell_type_colors
+## sourcing official color palette
+# load(here("processed-data", "04_snRNA-seq", "cell_type_colors.Rdata"))
+# sn_colors<- cell_type_colors
 
 ## Check final size
 lobstr::obj_size(sce)
-# 5.87 GB
+# 2.36 GB
 
 rownames(sce) <- rowData(sce)$Symbol
+head(rownames(sce))
 
 #### Add MeanRatio Marker Gene Details ####
 load(here("processed-data", "04_snRNA-seq", "16_sn_MeanRatio", "MarkerStats_cell_type_fine.Rdata"))
@@ -126,7 +143,7 @@ sce
 
 sce 
 saveRDS(sce, file = here("code", "06_iSEE_app", "sce_ERC_iSEE.rds"))
-saveRDS(sn_colors, file = here("code", "06_iSEE_app", "sn_colors.rds"))
+#saveRDS(sn_colors, file = here("code", "06_iSEE_app", "sn_colors.rds"))
 
 # slurmjobs::job_single('01_prep_iSEE', create_shell = TRUE, memory = '25G', command = "Rscript 01_prep_iSEE.R")
 
