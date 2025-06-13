@@ -86,6 +86,13 @@ Total genes used: 469
 
 <br><br>
 
+**Multiome cell-type annotations**: 
+
+Manually curated annotations to annotate Seurat clusters
+Details on: 
+https://github.com/LieberInstitute/Hb_multiome/blob/38887eec8239a4b7f9589382303ae56463c18c23/data/full_annotation_meta_data.csv
+
+<br><br>
 
 
 **Habenula cell-types directory**: 
