@@ -3,8 +3,8 @@ library("iSEE")
 library("shiny")
 
 ## Load data
-sce <- readRDS("sce_ERC_iSEE.rds")
-sn_colors <- readRDS("sn_colors.rds")
+sce <- readRDS("sce_Habenula_iSEE.rds")
+#sn_colors <- readRDS("sn_colors.rds")
 
 ## iSEE configuration
 initial <- list()
@@ -107,17 +107,17 @@ initial[["FeatureAssayPlot1"]] <- new("FeatureAssayPlot", Assay = "logcounts", X
 
 ## Build the iSEE app
 iSEE(sce,
-        appTitle = "LFF_ERC_snRNA-seq", 
+        appTitle = "Habenula_multiome", 
         initial = initial,
-        colormap = ExperimentColorMap(
-            colData = list(
-                 cell_type_fine= function(n) {
-                    return(sn_colors$fine)
-                }
-                ,
-                cell_type_broad = function(n) {
-                    return(bulk_colors$broad)
-                }
-            )
-        )
+        # colormap = ExperimentColorMap(
+        #     colData = list(
+        #          cell_type_fine= function(n) {
+        #             return(sn_colors$fine)
+        #         }
+        #         ,
+        #         cell_type_broad = function(n) {
+        #             return(bulk_colors$broad)
+        #         }
+        #     )
+        # )
     )
