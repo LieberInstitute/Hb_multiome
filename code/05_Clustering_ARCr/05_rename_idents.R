@@ -24,6 +24,7 @@ library("here")
 inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
 inputCVS_Dir_Ann <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze_v3", "cvs_files_markers")
 outputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents")
+outputCSV_Dir <- here("data")
 plotDir <- here("plots", "05_Clustering_ARCr", "05_rename_idents")
 
 ## Check directories
@@ -89,120 +90,138 @@ f_get_percent_label <- function(cl) {
   ## longer label
   # clust_label <- paste0("[", clustSize = clust_size, " / ", paste0(round(((clust_size*100) / total_cells), 2), "%"), "]")
   ## shorter label
-  clust_label <- paste0("(", paste0(round(((clust_size*100) / total_cells), 2), "%"), ")")
+  clust_label <- paste0(round(((clust_size*100) / total_cells), 2), "%")
   return(clust_label)               
 }
 
-# print a short label with percentages
+##  add labels to df: cluster id, short label, long_label, percentages, etc
+
 v_unique_hb_clust <- unlist(unique(cell_types_df["cluster"]))
 cells_percents <- map(v_unique_hb_clust, ~ f_get_percent_label(.x))
 head(cells_percents)
-# $cluster1
-# [1] "(7.01%)"
-# $cluster2
-# [1] "(6.05%)"
 
 cell_types_with_percents_df <- data.frame(
   cluster = c(v_unique_hb_clust),
   percent = c(unlist(cells_percents)))
 cell_types_with_percents_df
-# cluster percent
-# cluster1        0 (9.91%)
-# cluster2        1 (7.06%)
-# cluster3        2 (6.55%)
+#     cluster percent
+# cluster1        1   7.01%
+# cluster2        2   6.05%
+# cluster3        3   5.87%
 
-
-## collapse the redundancy clusters
-
+# collapse the redundancy clusters
 collapsed_cell_types <- aggregate(cell_type_longer ~ cluster, data = cell_types_df, FUN = function(x) paste(x, collapse = ", "))
-## set pad of 2 digits to clusters
+
+# set pad of 2 digits to clusters
 collapsed_cell_types$cluster <- paste0("C.", sprintf('%02d', collapsed_cell_types$cluster))
-# ## shorter the cell_type label to 8 characters
-# v_hb_short_cell_types <- substr(collapsed_cell_types$cell_type, 1, 8)
-# collapsed_cell_types$cell_type <- c(v_hb_short_cell_types)
-# collapsed_cell_types$cell_type <- trimws(gsub(",", "", collapsed_cell_types$cell_type))
-collapsed_cell_types$cell_type <- sub(",.*", "+", collapsed_cell_types$cell_type)
-head(collapsed_cell_types$cell_type)
-# [1] "DD_Inhib.Thal+"  "DD_Oligo+"       "undeterminated+" "DD_Excit.Thal+" 
-# [5] "DD_LHb+"         "undeterminated+"
 
-collapsed_cell_types$cell_type <- paste(collapsed_cell_types$cell_type, cell_types_with_percents_df$percent)
+# shorter the cell_type label
+# pseudo annotation using the first match == ONLY for EDA
+collapsed_cell_types$cell_type_pseudo <- sub(",.*", "_pseudo", collapsed_cell_types$cell_type)
+collapsed_cell_types$cluster_percentage <- cell_types_with_percents_df$percent
 
-head(collapsed_cell_types[c("cluster", "cell_type")])
-# cluster  cell_type
-# 1    C.00     DD_MHb
-# 2    C.01     DD_LHb
-# 3    C.02     DD_MHb
-# 4    C.03     DD_LHb
-# 5    C.06 LB_Hb neur
-# 6    C.08 LB_Hb neur
-# ===========================
-#     cluster               cell_type
-# 1    C.01  DD_Inhib.Thal+ (7.01%)
-# 2    C.02       DD_Oligo+ (6.05%)
-# 3    C.03 undeterminated+ (5.87%)
-# 4    C.04  DD_Excit.Thal+ (5.23%)
-# 5    C.05         DD_LHb+ (4.97%)
-# 6    C.06 undeterminated+ (4.79%)
+## Polished annotation
+# Manually curated annotations to annotate Seurat clusters
+# Details on: https://github.com/LieberInstitute/Hb_multiome/tree/8b614669db8f7b833e5a793fa01326f839c57cd8/data 
+cell_types_curated <- data.frame(
+    cell_type = c(
+        cell_type_pseudo <- c(
+            "undeterminated", "DD_Oligo", "undeterminated", "undeterminated", "DD_LHb",
+            "DD_Exit.Thal", "DD_MHb", "undeterminated", "undeterminated", "DD_MHb",
+            "DD_MHb", "undeterminated", "no-match", "DD_MHb", "DD_Exit.Thal",
+            "DD_MHb", "DD_Exit.Thal", "DD_LHb", "DD_Inhib.Thal", "DD_Astrocyte",
+            "DD_Astrocyte", "undeterminated", "DD_LHb", "DD_LHb", "undeterminated",
+            "DD_OPC", "DD_Microglia", "DD_Inhib.Thal", "DD_Endo", "DD_LHb",
+            "DD_Exit.Thal", "undeterminated", "DD_LHb", "DD_Oligo", "undeterminated",
+            "DD_MHb", "undeterminated", "DD_Inhib.Thal", "DD_Inhib.Thal", "DD_LHb",
+            "DD_Microglia", "no-match"
+        )
+    ),
+    cluster = c(
+        "C.01", "C.02", "C.03", "C.04", "C.05", "C.06", "C.07", "C.08", "C.09", "C.10",
+        "C.11", "C.12", "C.13", "C.14", "C.15", "C.16", "C.17", "C.18", "C.19", "C.20",
+        "C.21", "C.22", "C.23", "C.24", "C.25", "C.26", "C.27", "C.28", "C.29", "C.30",
+        "C.31", "C.32", "C.33", "C.34", "C.35", "C.36", "C.37", "C.38", "C.39", "C.40",
+        "C.41", "C.42"
+    ),
+    stringsAsFactors = FALSE  # Optional, prevents conversion to factors
+)
+tail(cell_types_curated)
+
+## inner join pseudo annotation (EDA) with curated annotation for supplemental material
+full_annotation_df <- left_join(cell_types_curated, collapsed_cell_types, by = "cluster")
+colnames(full_annotation_df)
+# order columns
+colnames(full_annotation_df)[colnames(full_annotation_df) == "cell_type_longer"] <- "all_cell_types_match"
+full_annotation_df <- full_annotation_df[, c("cluster", "cell_type", "cluster_percentage", "all_cell_types_match", "cell_type_pseudo")]
+
+
+# ==============================================================================
+# save full summary with cluster annotations curated
+
+full_annotation_df
+#       cluster      cell_type cluster_percentage
+# 1    C.01 undeterminated              7.01%
+# 2    C.02       DD_Oligo              6.05%
+# 3    C.03 undeterminated              5.87%
+# 4    C.04 undeterminated              5.23%
+# 5    C.05         DD_LHb              4.97%
+# 6    C.06   DD_Exit.Thal              4.79%
+# all_cell_types_match
+# 1 DD_Inhib.Thal, LB_Thalamus/MDm, LB_inhibitory_neuron, undeterminated, DD_LHb, LB_excitatory_neuron
+# 2                                            DD_Oligo, undeterminated, LB_oligodendrocyte, LB_neuron
+# 3                                               undeterminated, DD_Endo, DD_Astrocyte, DD_Excit.Thal
+# 4               DD_Excit.Thal, undeterminated, DD_Inhib.Thal, DD_LHb, DD_OPC, LB_LHB neuron specific
+# 5               DD_LHb, LB_LHB neuron specific, undeterminated, LB_Hb neuron specific, DD_Excit.Thal
+# 6                                                              undeterminated, DD_Excit.Thal, DD_OPC
+
+
+write.csv(full_annotation_df, here(outputCSV_Dir, "full_annotation_meta_data.csv"), row.names = FALSE)
+# ==============================================================================
 
 
 ##### (3) extract original idents (clusters) and prepare the new ident names to rename Seurat clusters
 
+# sanity check if any Seurat clusters was excluded
 Seurat_clusterIDS <- as.integer(levels(SeuratOBJ$seurat_clusters))
 Seurat_clusterIDS <- paste0("C.", sprintf('%02d',Seurat_clusterIDS))
-Seurat_clusterIDS <- as.data.frame(Seurat_clusterIDS)
-colnames(Seurat_clusterIDS) = "cluster"
+if (!identical(Seurat_clusterIDS, full_annotation_df$cluster)) {
+    stop("Cluster IDs in Seurat object do not match those in the annotation data frame.")
+}
 
-## reassign cluster name according with cell-annotation
-Seurat_clusterIDS_new <- merge(Seurat_clusterIDS, collapsed_cell_types, all.x = TRUE)
-head(Seurat_clusterIDS_new[c("cluster", "cell_type")])
-# cluster  cell_type
-# 1     C.00     DD_MHb
-# 2     C.01     DD_LHb
-# 3     C.02     DD_MHb
-# 4     C.03     DD_LHb
-# 5     C.04       <NA>
-# 6     C.05       <NA>
-# 7     C.06 LB_Hb neur
-# 8     C.07       <NA>
-# ===========================
-#     cluster               cell_type
-# 1    C.01  DD_Inhib.Thal+ (7.01%)
-# 2    C.02       DD_Oligo+ (6.05%)
-# 3    C.03 undeterminated+ (5.87%)
-# 4    C.04  DD_Excit.Thal+ (5.23%)
-# 5    C.05         DD_LHb+ (4.97%)
-# 6    C.06 undeterminated+ (4.79%)
+# Extract numeric part from "C.XX" and convert to character
+full_annotation_df$cluster_id <- as.character(as.numeric(sub("C\\.", "", full_annotation_df$cluster)))
 
-## replace NAs   
-Seurat_clusterIDS_new[is.na(Seurat_clusterIDS_new)] <- "undeterminated"
-head(Seurat_clusterIDS_new)
-# cluster      cell_type
-# 1    C.00 DD_MHb (9.91%)
-# 2    C.01 DD_LHb (7.06%)
-# 3    C.02 DD_MHb (6.55%)
-# 4    C.03 DD_LHb (5.59%)
-# 5    C.04               
-# 6    C.05       
-
-v_new_clusterIDS <- trimws(paste(Seurat_clusterIDS_new$cluster, Seurat_clusterIDS_new$cell_type))
-
-levels(SeuratOBJ)
-# [1] "0"  "1"  "2"  "3"  "4"  "5"  "6"  "7"  "8"  "9"  "10" "11" "12" "13" "14"
-# [16] "15" "16" "17" "18" "19" "20" "21" "22" "23" "24" "25" "26" "27" "28" "29"
-# [31] "30" "31" "32" "33" "34" "35" "36" "37"
-
-new_names <- c(v_new_clusterIDS)
-names(new_names) <- levels(SeuratOBJ)
+# new_names = current cluster IDs in SeuratOBJ + full_annotation_df$cell_type (CURATED ANNOTATION)
+new_names <- setNames(paste0(full_annotation_df$cluster, ".", full_annotation_df$cell_type), full_annotation_df$cluster_id)
+new_names
 
 ## rename idents 
 # Idents(SeuratOBJ)
 SeuratOBJ <- RenameIdents(object = SeuratOBJ, new_names)
-head(levels(SeuratOBJ))
-# [1] "C.01 DD_Inhib.Thal+ (7.01%)"  "C.02 DD_Oligo+ (6.05%)"      
-# [3] "C.03 undeterminated+ (5.87%)" "C.04 DD_Excit.Thal+ (5.23%)" 
-# [5] "C.05 DD_LHb+ (4.97%)"         "C.06 undeterminated+ (4.79%)"
-#SeuratOBJ@meta.data
+
+# verification
+levels(SeuratOBJ)
+# [1] "C.01.undeterminated" "C.02.DD_Oligo"       "C.03.undeterminated"
+# [4] "C.04.undeterminated" "C.05.DD_LHb"         "C.06.DD_Exit.Thal"  
+# [7] "C.07.DD_MHb"         "C.08.undeterminated" "C.09.undeterminated"
+# [10] "C.10.DD_MHb"         "C.11.DD_MHb"         "C.12.undeterminated"
+# [13] "C.13.no-match"       "C.14.DD_MHb"         "C.15.DD_Exit.Thal"  
+# [16] "C.16.DD_MHb"         "C.17.DD_Exit.Thal"   "C.18.DD_LHb"        
+# [19] "C.19.DD_Inhib.Thal"  "C.20.DD_Astrocyte"   "C.21.DD_Astrocyte"  
+# [22] "C.22.undeterminated" "C.23.DD_LHb"         "C.24.DD_LHb"        
+# [25] "C.25.undeterminated" "C.26.DD_OPC"         "C.27.DD_Microglia"  
+# [28] "C.28.DD_Inhib.Thal"  "C.29.DD_Endo"        "C.30.DD_LHb"        
+# [31] "C.31.DD_Exit.Thal"   "C.32.undeterminated" "C.33.DD_LHb"        
+# [34] "C.34.DD_Oligo"       "C.35.undeterminated" "C.36.DD_MHb"        
+# [37] "C.37.undeterminated" "C.38.DD_Inhib.Thal"  "C.39.DD_Inhib.Thal" 
+# [40] "C.40.DD_LHb"         "C.41.DD_Microglia"   "C.42.no-match"
+head(Idents(SeuratOBJ))
+# S04_AAACAGCCAGAATGAC-1 S04_AAACAGCCAGCAAGGC-1 S04_AAACATGCACCTGGTG-1 
+# C.25.undeterminated    C.04.undeterminated    C.09.undeterminated 
+# S04_AAACATGCAGGATGGC-1 S04_AAACATGCAGTAATAG-1 S04_AAACATGCATAAGTCT-1 
+# C.04.undeterminated    C.01.undeterminated    C.01.undeterminated 
+# 42 Levels: C.01.undeterminated C.02.DD_Oligo ... C.42.no-match
 
 message("Clusters renaming done!")
 
