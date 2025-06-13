@@ -26,34 +26,35 @@ outputCVS_Dir <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_f
 
 if (!dir.exists(outputCVS_Dir)) { dir.create(outputCVS_Dir) }
 
-## Remove empty files or files with "" garbage 
-
-#lst_files <- list.files(inputCVS_Dir, pattern = "\\.csv$", full.names = TRUE, include.dirs = FALSE) 
-# filenames: WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_cellTypes_integrated_top50.csv
+## Previous WNN inspected
 lst_files <- list.files(inputCVS_Dir, pattern = "*_top50.csv$", full.names = TRUE, include.dirs = FALSE) 
 basename(lst_files)
 # [1] "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r1_cellTypes_integrated_top50.csv"
 # [2] "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_cellTypes_integrated_top50.csv"
 # [3] "WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r1_cellTypes_integrated_top50.csv"
 # [4] "WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r2_cellTypes_integrated_top50.csv"
-lst_idx_to_remove = list()
-length(lst_files)
 
-for (f in seq_along(lst_files)) {
-  # f = 2
-  if (file.size(lst_files[f]) <= 3) { 
-    print(basename(lst_files[f])) 
-    lst_idx_to_remove <- append(lst_idx_to_remove, f)
-  }
-}
+# Now, I only redo the annotations nice for our target WNN result
+lst_files <- lst_files[basename(lst_files) == "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_cellTypes_integrated_top50.csv"]
+basename(lst_files)
 
-## remove empty files
-if (!length(lst_idx_to_remove) == 0) {
-  unlist(lst_idx_to_remove)
-  lst_files <- lst_files[-unlist(lst_idx_to_remove)]
-  length(lst_files)
-}
 
+# We do not need this any more
+# lst_idx_to_remove = list()
+# length(lst_files)
+# for (f in seq_along(lst_files)) {
+#   # f = 2
+#   if (file.size(lst_files[f]) <= 3) { 
+#     print(basename(lst_files[f])) 
+#     lst_idx_to_remove <- append(lst_idx_to_remove, f)
+#   }
+# }
+# ## remove empty files
+# if (!length(lst_idx_to_remove) == 0) {
+#   unlist(lst_idx_to_remove)
+#   lst_files <- lst_files[-unlist(lst_idx_to_remove)]
+#   length(lst_files)
+# }
 
 
 ## rename and re-arrange columns for supplemental file (paper)
