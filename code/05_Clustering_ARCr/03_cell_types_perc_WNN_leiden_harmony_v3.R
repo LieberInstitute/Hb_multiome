@@ -30,7 +30,7 @@ marker_lst <- "integrated"
 # marker_lst="data_driven"
 
 ## input validations
-if (length(Seurat_base_name) == 0 || length(Seurat_base_name) == 0) {
+if (length(Seurat_base_name) == 0) {
   message("Cellranger pipeline or input marker list missed or not valid!")
   stop()
 } else {
@@ -39,14 +39,13 @@ if (length(Seurat_base_name) == 0 || length(Seurat_base_name) == 0) {
 }
 
 
-message("Processing dataset ", Seurat_base_name)
+message("Processing dataset from ", Seurat_base_name)
 
 
 ## path to input Directory and suffix of cluster data
 
 cvsDirIN <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze_v3", "cvs_files_markers")
 cvsDirOUT <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze_v3")
-message("Processing cell types generated with: `", basename(cvsDirIN), "` script")
 
 
 ##########These are CellRangerARC or CellRangerARC-reanalyze datasets
@@ -80,8 +79,8 @@ if (Seurat_base_name=="WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r1") {
   thal <- c(6,15,17,19,28,31,38,39)
   neu <- c()
   endo <- c(29) 
-  glia <- c(2,20,21,26,27,34,41)
-  undeterminated <- c(0,3,4,8,9,12,22,25,32,35,37)
+  glia <- c(2,20,21,26,27,34,41) # oligo / oligos
+  undeterminated <- c(1,3,4,8,9,12,13,22,25,32,35,37,42)
 }
 
 message("Groups of clusters assigned!")
