@@ -110,26 +110,52 @@ metadata(sce) <- list()
 lobstr::obj_size(sce)
 # 2.36 GB
 
-rownames(sce) <- rowData(sce)$Symbol
+#rownames(sce) <- rowData(sce)$Symbol
 head(rownames(sce))
+# [1] "MIR1302-2HG" "FAM138A"     "OR4F5"       "AL627309.1"  "AL627309.3" 
+# [6] "AL627309.2" 
 
-#### Add MeanRatio Marker Gene Details ####
-load(here("processed-data", "04_snRNA-seq", "16_sn_MeanRatio", "MarkerStats_cell_type_fine.Rdata"))
-marker_stats |> dplyr::count(cellType.target)
+# # ===== I do not have mean-ratio genes, trying to adpapt to work with the DGE from Seurat
+# #### Add MeanRatio Marker Gene Details ####
+# load(here("processed-data", "04_snRNA-seq", "16_sn_MeanRatio", "MarkerStats_cell_type_fine.Rdata"))
+# marker_stats |> dplyr::count(cellType.target)
+# 
+# marker_anno <- marker_stats |>
+#     filter(MeanRatio.rank <= 50 & MeanRatio > 1) |>
+#     select(gene,
+#            cellType.target,
+#            MeanRatio.rank,
+#            MeanRatio,
+#            MeanRatio.anno) |>
+#     column_to_rownames("gene")
+# 
+# rowData(sce) <- cbind(rowData(sce), marker_anno[rownames(sce),])
+# 
+# rowData(sce)[which(rowData(sce)$MeanRatio.rank ==1),]
+# # ============================================================================
 
-marker_anno <- marker_stats |>
-    filter(MeanRatio.rank <= 50 & MeanRatio > 1) |>
-    select(gene,
-           cellType.target,
-           MeanRatio.rank,
-           MeanRatio,
-           MeanRatio.anno) |>
-    column_to_rownames("gene")
 
-rowData(sce) <- cbind(rowData(sce), marker_anno[rownames(sce),])
-
-rowData(sce)[which(rowData(sce)$MeanRatio.rank ==1),]
-
+## Testing alternatives ========================================================
+# Read DEG file
+inputCVS_Dir <- here(
+    "processed-data",
+    "05_Clustering_ARCr",
+    "02_Hb_celltypes_from_seurat_reanalyze_v3",
+    "cvs_files_markers"
+)
+DEG_file_name <- "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_cellTypes_integrated_top50.csv"
+DEG_file_name <- here(inputCVS_Dir, DEG_file_name)
+df_cluster_names <- read.csv(DEG_file_name)
+df_cluster_names <- df_cluster_names
+head(df_cluster_names)
+# p_val avg_log2FC pct.1 pct.2 p_val_adj cluster     gene            cell_type
+# 1     0   4.336764 0.938 0.100         0       1 OTX2-AS1        DD_Inhib.Thal
+# 2     0   3.849508 0.900 0.083         0       1      KIT        DD_Inhib.Thal
+# 3     0   3.682782 0.927 0.122         0       1    MEIS2      LB_Thalamus/MDm
+# 4     0   3.477362 0.881 0.108         0       1     GAD1 LB_inhibitory_neuron
+# 5     0   3.524186 0.860 0.101         0       1     GAD2 LB_inhibitory_neuron
+# 6     0   3.381990 0.958 0.229         0       1    SYNPR        DD_Inhib.Thal
+# Read DEG file ================================================================
 
 sce
 # class: SingleCellExperiment 
@@ -141,9 +167,8 @@ sce
 # colnames(140119): cell1 cell2 ... cell160742 cell160743
 # colData names(34): Barcode sample_id ... low_detected_batch sizeFactor
 
-sce 
-saveRDS(sce, file = here("code", "06_iSEE_app", "sce_ERC_iSEE.rds"))
-#saveRDS(sn_colors, file = here("code", "06_iSEE_app", "sn_colors.rds"))
+# saveRDS(sce, file = here("code", "06_iSEE_app", "sce_ERC_iSEE.rds"))
+saveRDS(sce, here("code", "07_iSEE_app", "sce_Habenula_iSEE.rds"))
 
 # slurmjobs::job_single('01_prep_iSEE', create_shell = TRUE, memory = '25G', command = "Rscript 01_prep_iSEE.R")
 
