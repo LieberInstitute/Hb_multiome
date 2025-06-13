@@ -83,3 +83,33 @@ for (clus in clusters) {
     cluster_peaks[[clus]] <- peaks_present
 }
 
+
+##==============================================================================
+## Preparing to compute pair peaks comparison in the Habenula clusters
+
+all_cluster_IDs <- levels(SeuratOBJ)
+## extract Hb clusters
+Hb_cluster_IDs <- cluster_IDs[grepl("MHb|LHb", all_cluster_IDs)]
+Hb_cluster_IDs
+# [1] "C.05.DD_LHb" "C.07.DD_MHb" "C.10.DD_MHb" "C.11.DD_MHb" "C.14.DD_MHb"
+# [6] "C.16.DD_MHb" "C.18.DD_LHb" "C.23.DD_LHb" "C.24.DD_LHb" "C.30.DD_LHb"
+# [11] "C.33.DD_LHb" "C.36.DD_MHb" "C.40.DD_LHb"
+pairwise_combinations <- combn(Hb_cluster_IDs, 2, simplify = FALSE)
+pairwise_combinations
+pairwise_df <- do.call(rbind, pairwise_combinations)
+colnames(pairwise_df) <- c("cluster_1", "cluster_2")
+pairwise_df <- as.data.frame(pairwise_df)
+pairwise_df
+
+
+for (clust_p in pairwise_df)
+    da_peaks <- FindMarkers(
+        object = seurat_atac,
+        ident.1 = clust_p["cluster1"],
+        ident.2 = clust_p["cluster2"],
+        test.use = 'LR',
+        min.pct = 0.05
+    )
+}
+
+
