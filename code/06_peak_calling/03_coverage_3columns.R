@@ -27,7 +27,8 @@ here()
 inputRDS_Dir <- here(
     "processed-data",
     "05_Clustering_ARCr",
-    "08_wnn_gene_expression_plts_renamed_idents"
+    #"08_wnn_gene_expression_plts_renamed_idents"
+    "05_rename_idents"
 )
 inputCVS_Dir <- here(
     "processed-data",
@@ -50,7 +51,7 @@ if (!dir.exists(plotDir)) {
 Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds"
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
-#levels(SeuratOBJ)
+levels(SeuratOBJ)
 
 DefaultAssay(SeuratOBJ) <- "ATAC"
 class(SeuratOBJ[["ATAC"]])
@@ -63,7 +64,7 @@ Idents(SeuratOBJ) <- "seurat_clusters"
 DEG_file_name <- "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_cellTypes_integrated_top50.csv"
 DEG_file_name <- here(inputCVS_Dir, DEG_file_name)
 dge_cluster_names <- read.csv(DEG_file_name)
-dge_cluster_names <- dge_cluster_names |> drop_na(cell_type)
+dge_cluster_names <- dge_cluster_names #|> drop_na(cell_type)
 head(dge_cluster_names)
 # p_val avg_log2FC pct.1 pct.2 p_val_adj cluster     gene            cell_type
 # 1     0   4.336764 0.938 0.100         0       1 OTX2-AS1        DD_Inhib.Thal
@@ -78,10 +79,9 @@ unique(dge_cluster_names$cluster)
 
 message("Cluster-IDs from `WNN`")
 
-all_clusters <- unlist(levels(SeuratOBJ))
-#unique(SeuratOBJ$seurat_clusters)
-
 # Create 3 list with clusters to plot: LHb, MHb, None
+
+all_clusters <- levels(SeuratOBJ)
 
 lhb_clusters <- all_clusters[grepl("LHb", all_clusters)]
 lhb_cluster_ids <- str_extract(lhb_clusters, "(?<=C\\.)\\d+")
@@ -94,18 +94,26 @@ noneHb_clusters_ids <- str_extract(noneHb_clusters, "(?<=C\\.)\\d+")
 
 
 
-################################################################################
-# Create ATAC Coverage Plot with 3 columns side to side
-# - compares canonical Hb gene markers
-################################################################################
+## =============================================================================
+# Create ATAC Coverage Plot arranged in 3 columns side to side for cannonical genes
+# - compares canonical Hb gene markers vs cluster with no Hb
+# - ge. Gene GPR151: MHb | LHb | Non-Hb
 
 ## Create 3 subsets of Seurat objects to plot: LHb, MHb, None
 
 SeuratOBJ_LHb <- subset(SeuratOBJ, idents = lhb_clusters)
+levels(SeuratOBJ_LHb)
+# [1] "C.05.DD_LHb" "C.18.DD_LHb" "C.23.DD_LHb" "C.24.DD_LHb" "C.30.DD_LHb"
+# [6] "C.33.DD_LHb" "C.40.DD_LHb"
+
 # some verification: fragments assigned after subset  and check gene annotations loaded 
 #Fragments(SeuratOBJ_LHb)
 #SeuratOBJ_LHb[["ATAC"]]@annotation
 SeuratOBJ_MHb <- subset(SeuratOBJ, idents = mhb_clusters)
+levels(SeuratOBJ_MHb)
+# [1] "C.07.DD_MHb" "C.10.DD_MHb" "C.11.DD_MHb" "C.14.DD_MHb" "C.16.DD_MHb"
+# [6] "C.36.DD_MHb"
+
 SeuratOBJ_None <- subset(SeuratOBJ, idents = noneHb_clusters)
 rm("SeuratOBJ")
 
@@ -144,7 +152,6 @@ make_coverage_plot <- function(seurat_subset,
 }
 
 
-
 ## function to build coverage plots from Seurat pseudobulk data
 
 make_coverage_plot_pseudobulk_by_cluster <- function(seurat_subset, 
@@ -178,9 +185,10 @@ make_coverage_plot_pseudobulk_by_cluster <- function(seurat_subset,
     return(plt1)
 }
 
-## prepara data to plot canonical genes to plot
 
-# set width and heigh to plot
+## prepare data to plot canonical genes to plot
+
+# set width and high to plot
 hg = 6
 wd = 14
 
@@ -213,11 +221,9 @@ features <- c("POU4F1", "GPR151", "TAC3")
 # plt2 <- make_coverage_plot_pseudobulk_by_cluster(subset(balanced_obj, idents = mhb_clusters[1]), "POU4F1", 2000)
 
 
-################################################################################
-# Create 3 ATAC Coverage Plots for Hb genes ("POU4F1", "GPR151", "TAC3")
+# Call the functions, create 3 Coverage Plots by categories (columns) for Hb genes "POU4F1", "GPR151", "TAC3"
 # - Plot both, raw accessibility signals, and pseudobulk signals for comparison purposes 
 # - Plots are arranged by columns
-################################################################################
 
 for (gene in features) {
     
@@ -237,7 +243,7 @@ for (gene in features) {
     # Save plots to PDF
     if (length(coverage_plots)>1) {
 
-        f_name <- paste0("Multiome_peaks_gene_", feature,".pdf")
+        f_name <- paste0("coverage_3cols_gene_", feature,".pdf")
         pdf(file = here(plotDir, f_name), width = wd, height = hg)
 
         # Loop through in chunks of 3
@@ -266,7 +272,7 @@ for (gene in features) {
     # Save plots to PDF
     if (length(coverage_plots)>1) {
         
-        f_name <- paste0("Multiome_peaks_gene_", feature,"_pseudobulk_by_cluster.pdf")
+        f_name <- paste0("coverage_3cols_gene_", feature,"_pseudobulk.pdf")
         pdf(file = here(plotDir, f_name), width = 14, height = 6)
         
         # Loop through in chunks of 3
@@ -283,9 +289,8 @@ for (gene in features) {
 }
 
 
-################################################################################
+## =============================================================================
 # Create One ATAC Coverage Plot for all clusters
-################################################################################
 
 # Generate plot for all canonical in 1 plot
 
@@ -303,13 +308,6 @@ open_window_sizes = c(500)
 # Create all combinations
 param_grid <- cross2(seurat_objs, open_window_sizes)
 #param_grid[[1]]
-
-# # Generate names for each plot
-# plot_names <- map_chr(param_grid, function(params) {
-#     obj_name <- names(seurat_objs)[sapply(seurat_objs, identical, params[[1]])]
-#     paste0(obj_name, "_win", params[[2]])
-# })
-# plot_names
 
 message("Genes to track: ", paste(features, collapse = ","))
 
@@ -346,11 +344,10 @@ if (length(coverage_plots)>1) {
 
 
 
-################################################################################
-# Create 3 ATAC Coverage Plots for Hb genes ("POU4F1", "GPR151", "TAC3")
+## =============================================================================
+# Create 3 Coverage Plots for Hb genes ("POU4F1", "GPR151", "TAC3")
 # - Plot raw accessibility signals
 # - Plots are arranged in one column
-################################################################################
 
 ## load seurat with merged clusters for visualization purposes 
 rm("SeuratOBJ")
