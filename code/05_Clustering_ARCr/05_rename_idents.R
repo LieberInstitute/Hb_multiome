@@ -1,11 +1,12 @@
 ########################################################################
-## Rename WNN Clusters Hb clusters (Idents) with cell-types identified with the annotation
+## Annotate WNN Clusters: all cluster with cell-types identified with the human pilot annotation
 ## INPUT:
 ##      (1) GEX DEG annotation
-##      (2) Seurat with wnn 
+##      (2) Seurat with WNN 
 ## OUPUT:
-##      (1) Seurat with re-named idents
-##      (2) Plots for exploration     
+##      (1) Seurats with annotated idents and MERGED meta-data added
+##      (2) Full summary with cluster annotations curated (supplementary material)
+##      (3) Some visualizations: VPlots, DimPlot, Feature, DotPlot ...
 ## Authors. CSC 
 ## Date. Jan, 2024
 ## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
@@ -180,7 +181,7 @@ write.csv(full_annotation_df, here(outputCSV_Dir, "full_annotation_meta_data.csv
 # ==============================================================================
 
 
-##### (3) extract original idents (clusters) and prepare the new ident names to rename Seurat clusters
+## extract original idents (clusters) and prepare the new ident names to rename Seurat clusters
 
 # sanity check if any Seurat clusters was excluded
 Seurat_clusterIDS <- as.integer(levels(SeuratOBJ$seurat_clusters))
@@ -223,16 +224,76 @@ head(Idents(SeuratOBJ))
 # C.04.undeterminated    C.01.undeterminated    C.01.undeterminated 
 # 42 Levels: C.01.undeterminated C.02.DD_Oligo ... C.42.no-match
 
-message("Clusters renaming done!")
+# Set new factor levels for identities to first plot Hb clusters
+all_clusters <- levels(SeuratOBJ)
+hb_clusters <- grep("MHb|LHb", all_clusters, value = TRUE)
+hb_clusters
+# [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
+# [6] "C.16 DD_MHb" "C.18 DD_LHb" "C.23 DD_LHb" "C.24 DD_LHb" "C.30 DD_LHb"
+# [11] "C.33 DD_LHb" "C.36 DD_MHb" "C.40 DD_LHb"
+no_hb_clust <- grep("MHb|LHb", all_clusters, value = TRUE, invert = TRUE)
+no_hb_clust
+
+# ensure all clusters are included
+new_levels <- c(hb_clusters, setdiff(all_clusters, hb_clusters))
+new_levels
+# Apply the new order to Seurat object identities
+SeuratOBJ <- SetIdent(SeuratOBJ, value = factor(Idents(SeuratOBJ), levels = new_levels))
+levels(SeuratOBJ)
+# [1] "C.05.DD_LHb"         "C.07.DD_MHb"         "C.10.DD_MHb"        
+# [4] "C.11.DD_MHb"         "C.14.DD_MHb"         "C.16.DD_MHb"        
+# [7] "C.18.DD_LHb"         "C.23.DD_LHb"         "C.24.DD_LHb"        
+# [10] "C.30.DD_LHb"         "C.33.DD_LHb"         "C.36.DD_MHb"        
+# [13] "C.40.DD_LHb"         "C.01.undeterminated" "C.02.DD_Oligo"      
+# [16] "C.03.undeterminated" "C.04.undeterminated" "C.06.DD_Exit.Thal"  
+# [19] "C.08.undeterminated" "C.09.undeterminated" "C.12.undeterminated"
+# [22] "C.13.no-match"       "C.15.DD_Exit.Thal"   "C.17.DD_Exit.Thal"  
+# [25] "C.19.DD_Inhib.Thal"  "C.20.DD_Astrocyte"   "C.21.DD_Astrocyte"  
+# [28] "C.22.undeterminated" "C.25.undeterminated" "C.26.DD_OPC"        
+# [31] "C.27.DD_Microglia"   "C.28.DD_Inhib.Thal"  "C.29.DD_Endo"       
+# [34] "C.31.DD_Exit.Thal"   "C.32.undeterminated" "C.34.DD_Oligo"      
+# [37] "C.35.undeterminated" "C.37.undeterminated" "C.38.DD_Inhib.Thal" 
+# [40] "C.39.DD_Inhib.Thal"  "C.41.DD_Microglia"   "C.42.no-match"   
+
+message("Clusters sorted done!")
+
+
+## =============================================================================
+## Add 3 meta-cluster as column: MHb, LHb and No-Habenula
+
+# extract the ident ID for the 3 meta-groups
+LHb_clusters_to_merge <- grep("LHb", hb_clusters, value = TRUE)
+MHb_clusters_to_merge <- grep("MHb", hb_clusters, value = TRUE)
+LHb_clusters_to_merge
+# [1] "C.05.DD_LHb" "C.18.DD_LHb" "C.23.DD_LHb" "C.24.DD_LHb" "C.30.DD_LHb"
+# [6] "C.33.DD_LHb" "C.40.DD_LHb"
+MHb_clusters_to_merge
+# [1] "C.07.DD_MHb" "C.10.DD_MHb" "C.11.DD_MHb" "C.14.DD_MHb" "C.16.DD_MHb"
+# [6] "C.36.DD_MHb"
+no_hb_clust
+
+# Add meta-data "merged_cluster" with 3 merged clusters classes: LHb, MHb and No-Hb clusters
+current_idents <- as.character(Idents(SeuratOBJ))
+# Assign merged labels
+merged_cluster <- ifelse(current_idents %in% LHb_clusters_to_merge, "LHb_merged",
+                         ifelse(current_idents %in% MHb_clusters_to_merge, "MHb_merged",
+                                ifelse(current_idents %in% no_hb_clust, "No-Hb_merged", current_idents)))
+unique(merged_cluster)
+
+# add to new metadata MERGED ident labels for further analysis
+SeuratOBJ$merged_cluster <- merged_cluster
+unique(SeuratOBJ$merged_cluster)
+#[1] "No-Hb_merged" "MHb_merged"   "LHb_merged" 
 
 ## save RDS
-rds_file_name <- here(outputRDS_Dir, paste0(Seurat_base_name, ".rds"))
+rds_file_name <- here(outputRDS_Dir, paste0(Seurat_base_name, "_renamed_visium.rds"))
 saveRDS(SeuratOBJ, rds_file_name)
 
-message("New seurat with clusters renamed saved!")
+message("New seurat with clusters annotated and `merged_cluster` meta-data saved!")
 
 
-##### (4) Some visualizations
+## =============================================================================
+## Some visualizations: VPlots, DimPlot, Feature, DotPlot ...
 
 message("Building some plots ...")
 
@@ -264,14 +325,14 @@ ggsave(plt1, filename = here(plotDir, tmp_name), height = 4, width = 17)
   
 
 ## Feature plot - visualize feature expression in low-dimensional space
-Reductions(SeuratOBJ)
-# FeaturePlot(SeuratOBJ, features = features, reduction = "wnn.umap")
+#Reductions(SeuratOBJ)
 # Visualize co-expression of two features simultaneously
 plt1 <- FeaturePlot(SeuratOBJ, features = features, reduction = "wnn.umap", blend = TRUE) +
   labs(title = paste0("**Clusters from WNN: ", seurat_name)) &
   theme(text = element_text(size = 8), 
         axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
         plot.title=element_text(hjust=0.5)) 
+
 tmp_name <- paste0(seurat_name, "_POU4F1_GPR151_FeaturePlot.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 3, width = 10)
 
@@ -283,6 +344,7 @@ plt1 <- DotPlot(SeuratOBJ, features = c(features, "TAC3")) + RotatedAxis()  +
   theme(text = element_text(size = 8), 
         axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
         plot.title=element_text(hjust=0.5)) 
+
 tmp_name <- paste0(seurat_name, "_POU4F1_GPR151_DotPlot.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
 
