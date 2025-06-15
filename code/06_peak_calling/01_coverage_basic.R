@@ -1,7 +1,7 @@
 ########################################################################
-## Find the set of peaks that may regulate the top 10 gene by computing the correlation between gene expression and accessibility at nearby peaks
+## Basic peaks coverrage Plot for Hb cannonical genes and top5 Hb DGE genes by cluster
 ##
-## Output: plot coverage plots from WNN ATAC modality - rna.clusters
+## Output: coverage plots from WNN ATAC modality - rna.clusters
 ##
 ## Authors. CSC
 ## Date. March 24, 2025
