@@ -140,10 +140,10 @@ write.csv(df_peaks, here(outputCSV_Dir, "Hb_celltype_peaks.csv"), row.names = FA
 
 # library("slurmjobs")
 # job_single(
-#   "03_coverage_3columns.R",
+#   "04_search_peaks",
 #   create_shell = TRUE,
 #   partition = "katun",
-#   memory = "60G",
+#   memory = "80G",
 #   cores = 2,
 #   logdir = "logs",
 #   command = "Rscript -e \"options(width = 120); sessioninfo::session_info()\"",
