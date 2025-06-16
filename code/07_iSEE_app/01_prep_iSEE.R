@@ -11,8 +11,9 @@ message(Sys.time(), "- load Harmony corrected Seurat")
 #sce <- HDF5Array::loadHDF5SummarizedExperiment(here("processed-data", "sce_objects", "sce_ERC"))
 
 ## point to soft link from ~/processed-data/05_Clustering_ARCr/05_rename_idents/
-Seurat_base_name <- here("code", "07_iSEE",
-                         "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2.rds")
+Seurat_base_name <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents",
+                         "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds")
+
 Seurat_base_name
 SeuratOBJ <- readRDS(Seurat_base_name)
 
