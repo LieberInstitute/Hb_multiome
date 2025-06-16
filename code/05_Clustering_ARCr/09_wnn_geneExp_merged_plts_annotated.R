@@ -9,14 +9,7 @@
 
 library("Seurat")
 library("ggplot2")
-# library("pheatmap")
-# library("bluster")
-# library("viridisLite")
-# library("patchwork")
-# library("ggplotify")
-# library("gridExtra")
 library("tidyverse")
-# library("stringr")
 library("here")
 
 ## input directories
@@ -32,7 +25,7 @@ inputRDS_Dir <- here(
 plotDir <- here(
     "plots",
     "05_Clustering_ARCr",
-    "09_wnn_geneExp_merged_plts_annotated.R"
+    "09_wnn_geneExp_merged_plts_annotated"
 )
 
 ## Check directories
