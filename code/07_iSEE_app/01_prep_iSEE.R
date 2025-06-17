@@ -8,9 +8,7 @@ library("sessioninfo")
 
 ## Load RDS multiome
 message(Sys.time(), "- load Harmony corrected Seurat")
-#sce <- HDF5Array::loadHDF5SummarizedExperiment(here("processed-data", "sce_objects", "sce_ERC"))
 
-## point to soft link from ~/processed-data/05_Clustering_ARCr/05_rename_idents/
 Seurat_base_name <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents",
                          "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds")
 
@@ -35,10 +33,16 @@ levels(SeuratOBJ)
 # [37] "C.37.undeterminated" "C.38.DD_Inhib.Thal"  "C.39.DD_Inhib.Thal" 
 # [40] "C.40.DD_LHb"         "C.41.DD_Microglia"   "C.42.no-match"    
 
+## Add active cluster identity (levels(SeuratOBJ)) as a metadata to easy cell-type identification
+SeuratOBJ$cluster_annotation <- Idents(SeuratOBJ)
+head(SeuratOBJ@meta.data[, "cluster_annotation"])
+
 ## verify that RNA assay has gene symbols
 head(rownames(SeuratOBJ[["RNA"]]))
 # [1] "MIR1302-2HG" "FAM138A"     "OR4F5"       "AL627309.1"  "AL627309.3" 
 # [6] "AL627309.2" 
+
+head(SeuratOBJ@meta.data)
 
 ## make slim Seurat with ony RNA modality
 SeuratOBJ <- DietSeurat(SeuratOBJ, 
@@ -134,39 +138,6 @@ head(rownames(sce))
 # 
 # rowData(sce)[which(rowData(sce)$MeanRatio.rank ==1),]
 # # ============================================================================
-
-
-## Testing alternatives ========================================================
-# Read DEG file
-inputCVS_Dir <- here(
-    "processed-data",
-    "05_Clustering_ARCr",
-    "02_Hb_celltypes_from_seurat_reanalyze_v3",
-    "cvs_files_markers"
-)
-DEG_file_name <- "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_cellTypes_integrated_top50.csv"
-DEG_file_name <- here(inputCVS_Dir, DEG_file_name)
-df_cluster_names <- read.csv(DEG_file_name)
-df_cluster_names <- df_cluster_names
-head(df_cluster_names)
-# p_val avg_log2FC pct.1 pct.2 p_val_adj cluster     gene            cell_type
-# 1     0   4.336764 0.938 0.100         0       1 OTX2-AS1        DD_Inhib.Thal
-# 2     0   3.849508 0.900 0.083         0       1      KIT        DD_Inhib.Thal
-# 3     0   3.682782 0.927 0.122         0       1    MEIS2      LB_Thalamus/MDm
-# 4     0   3.477362 0.881 0.108         0       1     GAD1 LB_inhibitory_neuron
-# 5     0   3.524186 0.860 0.101         0       1     GAD2 LB_inhibitory_neuron
-# 6     0   3.381990 0.958 0.229         0       1    SYNPR        DD_Inhib.Thal
-# Read DEG file ================================================================
-
-sce
-# class: SingleCellExperiment 
-# dim: 38606 140119 
-# metadata(0):
-#     assays(1): logcounts
-# rownames(38606): ENSG00000290825 ENSG00000243485 ... ENSG00000278817 ENSG00000277196
-# rowData names(4): ID Symbol Type binomial_deviance
-# colnames(140119): cell1 cell2 ... cell160742 cell160743
-# colData names(34): Barcode sample_id ... low_detected_batch sizeFactor
 
 # saveRDS(sce, file = here("code", "06_iSEE_app", "sce_ERC_iSEE.rds"))
 saveRDS(sce, here("code", "07_iSEE_app", "sce_Habenula_iSEE.rds"))
