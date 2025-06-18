@@ -10,43 +10,14 @@ sce <- readRDS("sce_Habenula_iSEE.rds")
 initial <- list()
 
 ################################################################################
-# Settings for Reduced dimension plot 1
-################################################################################
-
-initial[["ReducedDimensionPlot1"]] <- new("ReducedDimensionPlot", Type = "TSNE", XAxis = 1L, YAxis = 2L, 
-                                          FacetRowByColData = "sample_id", FacetColumnByColData = "sample_id", 
-                                          ColorByColumnData = "cell_type_fine", ColorByFeatureNameAssay = "logcounts", 
-                                          ColorBySampleNameColor = "#FF0000", ShapeByColumnData = "sample_id", 
-                                          SizeByColumnData = "sum", TooltipColumnData = character(0), 
-                                          FacetRowBy = "None", FacetColumnBy = "None", ColorBy = "Column data", 
-                                          ColorByDefaultColor = "#000000", ColorByFeatureName = "ENSG00000290825", 
-                                          ColorByFeatureSource = "---", ColorByFeatureDynamicSource = FALSE, 
-                                          ColorBySampleName = "1", ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE, 
-                                          ShapeBy = "None", SizeBy = "None", SelectionAlpha = 0.1, 
-                                          ZoomData = numeric(0), BrushData = list(), VisualBoxOpen = TRUE, 
-                                          VisualChoices = "Color", ContourAdd = FALSE, ContourColor = "#0000FF", 
-                                          FixAspectRatio = FALSE, ViolinAdd = TRUE, PointSize = 1, 
-                                          PointAlpha = 1, Downsample = FALSE, DownsampleResolution = 200, 
-                                          CustomLabels = FALSE, CustomLabelsText = "1", FontSize = 1, 
-                                          LegendPointSize = 1, LegendPosition = "Bottom", HoverInfo = TRUE, 
-                                          LabelCenters = FALSE, LabelCentersBy = "sample_id", LabelCentersColor = "#000000", 
-                                          VersionInfo = list(iSEE = structure(list(c(2L, 18L, 0L)), class = c("package_version", 
-                                                                                                              "numeric_version"))), PanelId = c(ReducedDimensionPlot = 1L), 
-                                          PanelHeight = 500L, PanelWidth = 6L, SelectionBoxOpen = FALSE, 
-                                          RowSelectionSource = "---", ColumnSelectionSource = "---", 
-                                          DataBoxOpen = FALSE, RowSelectionDynamicSource = FALSE, ColumnSelectionDynamicSource = FALSE, 
-                                          RowSelectionRestrict = FALSE, ColumnSelectionRestrict = FALSE, 
-                                          SelectionHistory = list())
-
-################################################################################
 # Settings for Row data table 1
 ################################################################################
 
-initial[["RowDataTable1"]] <- new("RowDataTable", Selected = "ENSG00000157005", Search = "", 
-                                  SearchColumns = c("", "", "", "", "", "1", "", ""), HiddenColumns = "Type", 
-                                  VersionInfo = list(iSEE = structure(list(c(2L, 18L, 0L)), class = c("package_version", 
-                                                                                                      "numeric_version"))), PanelId = c(RowDataTable = 1L), PanelHeight = 500L, 
-                                  PanelWidth = 6L, SelectionBoxOpen = FALSE, RowSelectionSource = "---", 
+initial[["RowDataTable1"]] <- new("RowDataTable", Selected = "POU4F1", Search = "POU4", SearchColumns = "", 
+                                  HiddenColumns = character(0), VersionInfo = list(iSEE = structure(list(
+                                      c(2L, 18L, 0L)), class = c("package_version", "numeric_version"
+                                      ))), PanelId = c(RowDataTable = 1L), PanelHeight = 600L, 
+                                  PanelWidth = 4L, SelectionBoxOpen = FALSE, RowSelectionSource = "---", 
                                   ColumnSelectionSource = "---", DataBoxOpen = FALSE, RowSelectionDynamicSource = FALSE, 
                                   ColumnSelectionDynamicSource = FALSE, RowSelectionRestrict = FALSE, 
                                   ColumnSelectionRestrict = FALSE, SelectionHistory = list())
@@ -56,59 +27,316 @@ initial[["RowDataTable1"]] <- new("RowDataTable", Selected = "ENSG00000157005", 
 ################################################################################
 
 initial[["FeatureAssayPlot1"]] <- new("FeatureAssayPlot", Assay = "logcounts", XAxis = "Column data", 
-                                      XAxisColumnData = "cell_type_fine", XAxisFeatureName = "ENSG00000290825", 
+                                      XAxisColumnData = "cluster_annotation", XAxisFeatureName = "MIR1302-2HG", 
                                       XAxisFeatureSource = "---", XAxisFeatureDynamicSource = FALSE, 
-                                      YAxisFeatureName = "ENSG00000157005", YAxisFeatureSource = "RowDataTable1", 
-                                      YAxisFeatureDynamicSource = FALSE, FacetRowByColData = "sample_id", 
-                                      FacetColumnByColData = "sample_id", ColorByColumnData = "cell_type_fine", 
+                                      YAxisFeatureName = "POU4F1", YAxisFeatureSource = "RowDataTable1", 
+                                      YAxisFeatureDynamicSource = TRUE, FacetRowByColData = "orig.ident", 
+                                      FacetColumnByColData = "orig.ident", ColorByColumnData = "seurat_clusters", 
                                       ColorByFeatureNameAssay = "logcounts", ColorBySampleNameColor = "#FF0000", 
-                                      ShapeByColumnData = "sample_id", SizeByColumnData = "sum", 
+                                      ShapeByColumnData = "orig.ident", SizeByColumnData = "nCount_RNA", 
                                       TooltipColumnData = character(0), FacetRowBy = "None", FacetColumnBy = "None", 
                                       ColorBy = "Column data", ColorByDefaultColor = "#000000", 
-                                      ColorByFeatureName = "ENSG00000290825", ColorByFeatureSource = "---", 
-                                      ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "1", 
+                                      ColorByFeatureName = "MIR1302-2HG", ColorByFeatureSource = "---", 
+                                      ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "S04_AAACAGCCAGAATGAC-1", 
                                       ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE, 
                                       ShapeBy = "None", SizeBy = "None", SelectionAlpha = 0.1, 
-                                      ZoomData = numeric(0), BrushData = list(), VisualBoxOpen = TRUE, 
+                                      ZoomData = numeric(0), BrushData = list(), VisualBoxOpen = FALSE, 
                                       VisualChoices = "Color", ContourAdd = FALSE, ContourColor = "#0000FF", 
                                       FixAspectRatio = FALSE, ViolinAdd = TRUE, PointSize = 1, 
                                       PointAlpha = 1, Downsample = FALSE, DownsampleResolution = 200, 
-                                      CustomLabels = FALSE, CustomLabelsText = "1", FontSize = 1, 
-                                      LegendPointSize = 1, LegendPosition = "Bottom", HoverInfo = TRUE, 
-                                      LabelCenters = FALSE, LabelCentersBy = "sample_id", LabelCentersColor = "#000000", 
-                                      VersionInfo = list(iSEE = structure(list(c(2L, 18L, 0L)), class = c("package_version", 
-                                                                                                          "numeric_version"))), PanelId = c(FeatureAssayPlot = 1L), 
-                                      PanelHeight = 500L, PanelWidth = 6L, SelectionBoxOpen = FALSE, 
+                                      CustomLabels = FALSE, CustomLabelsText = "S04_AAACAGCCAGAATGAC-1", 
+                                      FontSize = 1, LegendPointSize = 1, LegendPosition = "Bottom", 
+                                      HoverInfo = TRUE, LabelCenters = FALSE, LabelCentersBy = "orig.ident", 
+                                      LabelCentersColor = "#000000", VersionInfo = list(iSEE = structure(list(
+                                          c(2L, 18L, 0L)), class = c("package_version", "numeric_version"
+                                          ))), PanelId = c(FeatureAssayPlot = 1L), PanelHeight = 400L, 
+                                      PanelWidth = 8L, SelectionBoxOpen = FALSE, RowSelectionSource = "---", 
+                                      ColumnSelectionSource = "FeatureAssayPlot3", DataBoxOpen = FALSE, 
+                                      RowSelectionDynamicSource = FALSE, ColumnSelectionDynamicSource = TRUE, 
+                                      RowSelectionRestrict = FALSE, ColumnSelectionRestrict = FALSE, 
+                                      SelectionHistory = list())
+
+
+################################################################################
+# Settings for Feature assay plot 3
+################################################################################
+
+initial[["FeatureAssayPlot3"]] <- new("FeatureAssayPlot", Assay = "logcounts", XAxis = "Column data", 
+                                      XAxisColumnData = "merged_cluster", XAxisFeatureName = "MIR1302-2HG", 
+                                      XAxisFeatureSource = "---", XAxisFeatureDynamicSource = FALSE, 
+                                      YAxisFeatureName = "POU4F1", YAxisFeatureSource = "RowDataTable1", 
+                                      YAxisFeatureDynamicSource = TRUE, FacetRowByColData = "orig.ident", 
+                                      FacetColumnByColData = "orig.ident", ColorByColumnData = "orig.ident", 
+                                      ColorByFeatureNameAssay = "logcounts", ColorBySampleNameColor = "#FF0000", 
+                                      ShapeByColumnData = "orig.ident", SizeByColumnData = "nCount_RNA", 
+                                      TooltipColumnData = character(0), FacetRowBy = "None", FacetColumnBy = "None", 
+                                      ColorBy = "Column data", ColorByDefaultColor = "#000000", 
+                                      ColorByFeatureName = "MIR1302-2HG", ColorByFeatureSource = "---", 
+                                      ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "S04_AAACAGCCAGAATGAC-1", 
+                                      ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE, 
+                                      ShapeBy = "None", SizeBy = "None", SelectionAlpha = 0.1, 
+                                      ZoomData = numeric(0), BrushData = list(), VisualBoxOpen = FALSE, 
+                                      VisualChoices = "Color", ContourAdd = FALSE, ContourColor = "#0000FF", 
+                                      FixAspectRatio = FALSE, ViolinAdd = TRUE, PointSize = 1, 
+                                      PointAlpha = 1, Downsample = FALSE, DownsampleResolution = 200, 
+                                      CustomLabels = FALSE, CustomLabelsText = "S04_AAACAGCCAGAATGAC-1", 
+                                      FontSize = 1, LegendPointSize = 1, LegendPosition = "Bottom", 
+                                      HoverInfo = TRUE, LabelCenters = FALSE, LabelCentersBy = "orig.ident", 
+                                      LabelCentersColor = "#000000", VersionInfo = list(iSEE = structure(list(
+                                          c(2L, 18L, 0L)), class = c("package_version", "numeric_version"
+                                          ))), PanelId = 3L, PanelHeight = 400L, PanelWidth = 6L, SelectionBoxOpen = FALSE, 
                                       RowSelectionSource = "---", ColumnSelectionSource = "---", 
-                                      DataBoxOpen = FALSE, RowSelectionDynamicSource = FALSE, ColumnSelectionDynamicSource = FALSE, 
+                                      DataBoxOpen = FALSE, RowSelectionDynamicSource = FALSE, ColumnSelectionDynamicSource = TRUE, 
                                       RowSelectionRestrict = FALSE, ColumnSelectionRestrict = FALSE, 
                                       SelectionHistory = list())
 
 ################################################################################
-# Settings for Complex heatmap 1
+# Settings for Feature assay plot 4
 ################################################################################
 
-# initial[["ComplexHeatmapPlot1"]] <- new("ComplexHeatmapPlot", Assay = "logcounts", CustomRows = TRUE, 
-#                                         CustomRowsText = "POU4F1\nGPR151\nCHRNB4\nHTR2C\nLYPD6B\nADARB2\nRORB\nSYT1\nSLC17A6\nGAD1\nMOBP\nPDGFRA\nAQP4\nITIH5\nCSF1R\n\n# ONECUT2\n# CRH\n# MCOLN3\n# TLE2\n# SEMA3D\n# ESRP1\n# CCK\n# CHAT\n# EBF3", 
-#                                         ClusterRows = FALSE, ClusterRowsDistance = "spearman", ClusterRowsMethod = "ward.D2", 
-#                                         DataBoxOpen = FALSE, VisualChoices = "Annotations", ColumnData = "snn_k15", 
-#                                         RowData = character(0), CustomBounds = FALSE, LowerBound = NA_real_, 
-#                                         UpperBound = NA_real_, AssayCenterRows = TRUE, AssayScaleRows = FALSE, 
-#                                         DivergentColormap = "purple < black < yellow", ShowDimNames = "Rows", 
-#                                         LegendPosition = "Right", LegendDirection = "Vertical", VisualBoxOpen = FALSE, 
-#                                         NamesRowFontSize = 10, NamesColumnFontSize = 10, ShowColumnSelection = TRUE, 
-#                                         OrderColumnSelection = TRUE, VersionInfo = list(iSEE = structure(list(
-#                                             c(2L, 16L, 0L)), class = c("package_version", "numeric_version"
-#                                             ))), PanelId = c(ComplexHeatmapPlot = 1L), PanelHeight = 500L, 
-#                                         PanelWidth = 6L, SelectionBoxOpen = FALSE, RowSelectionSource = "RowDataTable1", 
-#                                         ColumnSelectionSource = "FeatureAssayPlot1", RowSelectionDynamicSource = FALSE, 
-#                                         ColumnSelectionDynamicSource = FALSE, RowSelectionRestrict = FALSE, 
-#                                         ColumnSelectionRestrict = FALSE, SelectionHistory = list())
+initial[["FeatureAssayPlot4"]] <- new("FeatureAssayPlot", Assay = "logcounts", XAxis = "Column data", 
+                                      XAxisColumnData = "orig.ident", XAxisFeatureName = "MIR1302-2HG", 
+                                      XAxisFeatureSource = "---", XAxisFeatureDynamicSource = FALSE, 
+                                      YAxisFeatureName = "POU4F1", YAxisFeatureSource = "RowDataTable1", 
+                                      YAxisFeatureDynamicSource = TRUE, FacetRowByColData = "orig.ident", 
+                                      FacetColumnByColData = "orig.ident", ColorByColumnData = "orig.ident", 
+                                      ColorByFeatureNameAssay = "logcounts", ColorBySampleNameColor = "#FF0000", 
+                                      ShapeByColumnData = "orig.ident", SizeByColumnData = "nCount_RNA", 
+                                      TooltipColumnData = character(0), FacetRowBy = "None", FacetColumnBy = "None", 
+                                      ColorBy = "Column data", ColorByDefaultColor = "#000000", 
+                                      ColorByFeatureName = "MIR1302-2HG", ColorByFeatureSource = "---", 
+                                      ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "S04_AAACAGCCAGAATGAC-1", 
+                                      ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE, 
+                                      ShapeBy = "None", SizeBy = "None", SelectionAlpha = 0.1, 
+                                      ZoomData = numeric(0), BrushData = list(), VisualBoxOpen = FALSE, 
+                                      VisualChoices = "Color", ContourAdd = FALSE, ContourColor = "#0000FF", 
+                                      FixAspectRatio = FALSE, ViolinAdd = TRUE, PointSize = 1, 
+                                      PointAlpha = 1, Downsample = FALSE, DownsampleResolution = 200, 
+                                      CustomLabels = FALSE, CustomLabelsText = "S04_AAACAGCCAGAATGAC-1", 
+                                      FontSize = 1, LegendPointSize = 1, LegendPosition = "Bottom", 
+                                      HoverInfo = TRUE, LabelCenters = FALSE, LabelCentersBy = "orig.ident", 
+                                      LabelCentersColor = "#000000", VersionInfo = list(iSEE = structure(list(
+                                          c(2L, 18L, 0L)), class = c("package_version", "numeric_version"
+                                          ))), PanelId = 4L, PanelHeight = 400L, PanelWidth = 6L, SelectionBoxOpen = FALSE, 
+                                      RowSelectionSource = "---", ColumnSelectionSource = "FeatureAssayPlot1", 
+                                      DataBoxOpen = FALSE, RowSelectionDynamicSource = FALSE, ColumnSelectionDynamicSource = TRUE, 
+                                      RowSelectionRestrict = FALSE, ColumnSelectionRestrict = FALSE, 
+                                      SelectionHistory = list())
+
+################################################################################
+# Settings for Column data plot 1
+################################################################################
+
+initial[["ColumnDataPlot1"]] <- new("ColumnDataPlot", XAxis = "Column data", YAxis = "nCount_RNA", 
+                                    XAxisColumnData = "orig.ident", FacetRowByColData = "orig.ident", 
+                                    FacetColumnByColData = "orig.ident", ColorByColumnData = "orig.ident", 
+                                    ColorByFeatureNameAssay = "logcounts", ColorBySampleNameColor = "#FF0000", 
+                                    ShapeByColumnData = "orig.ident", SizeByColumnData = "nCount_RNA", 
+                                    TooltipColumnData = character(0), FacetRowBy = "None", FacetColumnBy = "None", 
+                                    ColorBy = "Column data", ColorByDefaultColor = "#000000", 
+                                    ColorByFeatureName = "MIR1302-2HG", ColorByFeatureSource = "---", 
+                                    ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "S04_AAACAGCCAGAATGAC-1", 
+                                    ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE, 
+                                    ShapeBy = "None", SizeBy = "None", SelectionAlpha = 0.1, 
+                                    ZoomData = numeric(0), BrushData = list(), VisualBoxOpen = FALSE, 
+                                    VisualChoices = "Color", ContourAdd = FALSE, ContourColor = "#0000FF", 
+                                    FixAspectRatio = FALSE, ViolinAdd = TRUE, PointSize = 1, 
+                                    PointAlpha = 1, Downsample = FALSE, DownsampleResolution = 200, 
+                                    CustomLabels = FALSE, CustomLabelsText = "S04_AAACAGCCAGAATGAC-1", 
+                                    FontSize = 1, LegendPointSize = 1, LegendPosition = "Bottom", 
+                                    HoverInfo = TRUE, LabelCenters = FALSE, LabelCentersBy = "orig.ident", 
+                                    LabelCentersColor = "#000000", VersionInfo = list(iSEE = structure(list(
+                                        c(2L, 18L, 0L)), class = c("package_version", "numeric_version"
+                                        ))), PanelId = 1L, PanelHeight = 400L, PanelWidth = 4L, SelectionBoxOpen = FALSE, 
+                                    RowSelectionSource = "---", ColumnSelectionSource = "---", 
+                                    DataBoxOpen = FALSE, RowSelectionDynamicSource = FALSE, ColumnSelectionDynamicSource = FALSE, 
+                                    RowSelectionRestrict = FALSE, ColumnSelectionRestrict = FALSE, 
+                                    SelectionHistory = list())
+
+################################################################################
+# Settings for Column data plot 6
+################################################################################
+
+initial[["ColumnDataPlot6"]] <- new("ColumnDataPlot", XAxis = "Column data", YAxis = "nFeature_RNA", 
+                                    XAxisColumnData = "orig.ident", FacetRowByColData = "orig.ident", 
+                                    FacetColumnByColData = "orig.ident", ColorByColumnData = "orig.ident", 
+                                    ColorByFeatureNameAssay = "logcounts", ColorBySampleNameColor = "#FF0000", 
+                                    ShapeByColumnData = "orig.ident", SizeByColumnData = "nCount_RNA", 
+                                    TooltipColumnData = character(0), FacetRowBy = "None", FacetColumnBy = "None", 
+                                    ColorBy = "Column data", ColorByDefaultColor = "#000000", 
+                                    ColorByFeatureName = "MIR1302-2HG", ColorByFeatureSource = "---", 
+                                    ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "S04_AAACAGCCAGAATGAC-1", 
+                                    ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE, 
+                                    ShapeBy = "None", SizeBy = "None", SelectionAlpha = 0.1, 
+                                    ZoomData = numeric(0), BrushData = list(), VisualBoxOpen = FALSE, 
+                                    VisualChoices = "Color", ContourAdd = FALSE, ContourColor = "#0000FF", 
+                                    FixAspectRatio = FALSE, ViolinAdd = TRUE, PointSize = 1, 
+                                    PointAlpha = 1, Downsample = FALSE, DownsampleResolution = 200, 
+                                    CustomLabels = FALSE, CustomLabelsText = "S04_AAACAGCCAGAATGAC-1", 
+                                    FontSize = 1, LegendPointSize = 1, LegendPosition = "Bottom", 
+                                    HoverInfo = TRUE, LabelCenters = FALSE, LabelCentersBy = "orig.ident", 
+                                    LabelCentersColor = "#000000", VersionInfo = list(iSEE = structure(list(
+                                        c(2L, 18L, 0L)), class = c("package_version", "numeric_version"
+                                        ))), PanelId = 6L, PanelHeight = 400L, PanelWidth = 4L, SelectionBoxOpen = FALSE, 
+                                    RowSelectionSource = "---", ColumnSelectionSource = "---", 
+                                    DataBoxOpen = FALSE, RowSelectionDynamicSource = FALSE, ColumnSelectionDynamicSource = FALSE, 
+                                    RowSelectionRestrict = FALSE, ColumnSelectionRestrict = FALSE, 
+                                    SelectionHistory = list())
+
+################################################################################
+# Settings for Column data plot 7
+################################################################################
+
+initial[["ColumnDataPlot7"]] <- new("ColumnDataPlot", XAxis = "Column data", YAxis = "MTRatio", 
+                                    XAxisColumnData = "orig.ident", FacetRowByColData = "orig.ident", 
+                                    FacetColumnByColData = "orig.ident", ColorByColumnData = "orig.ident", 
+                                    ColorByFeatureNameAssay = "logcounts", ColorBySampleNameColor = "#FF0000", 
+                                    ShapeByColumnData = "orig.ident", SizeByColumnData = "nCount_RNA", 
+                                    TooltipColumnData = character(0), FacetRowBy = "None", FacetColumnBy = "None", 
+                                    ColorBy = "Column data", ColorByDefaultColor = "#000000", 
+                                    ColorByFeatureName = "MIR1302-2HG", ColorByFeatureSource = "---", 
+                                    ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "S04_AAACAGCCAGAATGAC-1", 
+                                    ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE, 
+                                    ShapeBy = "None", SizeBy = "None", SelectionAlpha = 0.1, 
+                                    ZoomData = numeric(0), BrushData = list(), VisualBoxOpen = FALSE, 
+                                    VisualChoices = "Color", ContourAdd = FALSE, ContourColor = "#0000FF", 
+                                    FixAspectRatio = FALSE, ViolinAdd = TRUE, PointSize = 1, 
+                                    PointAlpha = 1, Downsample = FALSE, DownsampleResolution = 200, 
+                                    CustomLabels = FALSE, CustomLabelsText = "S04_AAACAGCCAGAATGAC-1", 
+                                    FontSize = 1, LegendPointSize = 1, LegendPosition = "Bottom", 
+                                    HoverInfo = TRUE, LabelCenters = FALSE, LabelCentersBy = "orig.ident", 
+                                    LabelCentersColor = "#000000", VersionInfo = list(iSEE = structure(list(
+                                        c(2L, 18L, 0L)), class = c("package_version", "numeric_version"
+                                        ))), PanelId = 7L, PanelHeight = 400L, PanelWidth = 4L, SelectionBoxOpen = FALSE, 
+                                    RowSelectionSource = "---", ColumnSelectionSource = "---", 
+                                    DataBoxOpen = FALSE, RowSelectionDynamicSource = FALSE, ColumnSelectionDynamicSource = FALSE, 
+                                    RowSelectionRestrict = FALSE, ColumnSelectionRestrict = FALSE, 
+                                    SelectionHistory = list())
+
+################################################################################
+# Settings for Column data plot 5
+################################################################################
+
+initial[["ColumnDataPlot5"]] <- new("ColumnDataPlot", XAxis = "Column data", YAxis = "nCount_ATAC", 
+                                    XAxisColumnData = "orig.ident", FacetRowByColData = "orig.ident", 
+                                    FacetColumnByColData = "orig.ident", ColorByColumnData = "orig.ident", 
+                                    ColorByFeatureNameAssay = "logcounts", ColorBySampleNameColor = "#FF0000", 
+                                    ShapeByColumnData = "orig.ident", SizeByColumnData = "nCount_RNA", 
+                                    TooltipColumnData = character(0), FacetRowBy = "None", FacetColumnBy = "None", 
+                                    ColorBy = "Column data", ColorByDefaultColor = "#000000", 
+                                    ColorByFeatureName = "MIR1302-2HG", ColorByFeatureSource = "---", 
+                                    ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "S04_AAACAGCCAGAATGAC-1", 
+                                    ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE, 
+                                    ShapeBy = "None", SizeBy = "None", SelectionAlpha = 0.1, 
+                                    ZoomData = numeric(0), BrushData = list(), VisualBoxOpen = FALSE, 
+                                    VisualChoices = "Color", ContourAdd = FALSE, ContourColor = "#0000FF", 
+                                    FixAspectRatio = FALSE, ViolinAdd = TRUE, PointSize = 1, 
+                                    PointAlpha = 1, Downsample = FALSE, DownsampleResolution = 200, 
+                                    CustomLabels = FALSE, CustomLabelsText = "S04_AAACAGCCAGAATGAC-1", 
+                                    FontSize = 1, LegendPointSize = 1, LegendPosition = "Bottom", 
+                                    HoverInfo = TRUE, LabelCenters = FALSE, LabelCentersBy = "orig.ident", 
+                                    LabelCentersColor = "#000000", VersionInfo = list(iSEE = structure(list(
+                                        c(2L, 18L, 0L)), class = c("package_version", "numeric_version"
+                                        ))), PanelId = 5L, PanelHeight = 400L, PanelWidth = 3L, SelectionBoxOpen = FALSE, 
+                                    RowSelectionSource = "---", ColumnSelectionSource = "---", 
+                                    DataBoxOpen = FALSE, RowSelectionDynamicSource = FALSE, ColumnSelectionDynamicSource = FALSE, 
+                                    RowSelectionRestrict = FALSE, ColumnSelectionRestrict = FALSE, 
+                                    SelectionHistory = list())
+
+################################################################################
+# Settings for Column data plot 2
+################################################################################
+
+initial[["ColumnDataPlot2"]] <- new("ColumnDataPlot", XAxis = "Column data", YAxis = "nFeature_ATAC", 
+                                    XAxisColumnData = "orig.ident", FacetRowByColData = "orig.ident", 
+                                    FacetColumnByColData = "orig.ident", ColorByColumnData = "orig.ident", 
+                                    ColorByFeatureNameAssay = "logcounts", ColorBySampleNameColor = "#FF0000", 
+                                    ShapeByColumnData = "orig.ident", SizeByColumnData = "nCount_RNA", 
+                                    TooltipColumnData = character(0), FacetRowBy = "None", FacetColumnBy = "None", 
+                                    ColorBy = "Column data", ColorByDefaultColor = "#000000", 
+                                    ColorByFeatureName = "MIR1302-2HG", ColorByFeatureSource = "---", 
+                                    ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "S04_AAACAGCCAGAATGAC-1", 
+                                    ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE, 
+                                    ShapeBy = "None", SizeBy = "None", SelectionAlpha = 0.1, 
+                                    ZoomData = numeric(0), BrushData = list(), VisualBoxOpen = FALSE, 
+                                    VisualChoices = "Color", ContourAdd = FALSE, ContourColor = "#0000FF", 
+                                    FixAspectRatio = FALSE, ViolinAdd = TRUE, PointSize = 1, 
+                                    PointAlpha = 1, Downsample = FALSE, DownsampleResolution = 200, 
+                                    CustomLabels = FALSE, CustomLabelsText = "S04_AAACAGCCAGAATGAC-1", 
+                                    FontSize = 1, LegendPointSize = 1, LegendPosition = "Bottom", 
+                                    HoverInfo = TRUE, LabelCenters = FALSE, LabelCentersBy = "orig.ident", 
+                                    LabelCentersColor = "#000000", VersionInfo = list(iSEE = structure(list(
+                                        c(2L, 18L, 0L)), class = c("package_version", "numeric_version"
+                                        ))), PanelId = 2L, PanelHeight = 400L, PanelWidth = 3L, SelectionBoxOpen = FALSE, 
+                                    RowSelectionSource = "---", ColumnSelectionSource = "---", 
+                                    DataBoxOpen = FALSE, RowSelectionDynamicSource = FALSE, ColumnSelectionDynamicSource = FALSE, 
+                                    RowSelectionRestrict = FALSE, ColumnSelectionRestrict = FALSE, 
+                                    SelectionHistory = list())
+
+################################################################################
+# Settings for Column data plot 3
+################################################################################
+
+initial[["ColumnDataPlot3"]] <- new("ColumnDataPlot", XAxis = "Column data", YAxis = "nucleosome_group", 
+                                    XAxisColumnData = "orig.ident", FacetRowByColData = "orig.ident", 
+                                    FacetColumnByColData = "orig.ident", ColorByColumnData = "orig.ident", 
+                                    ColorByFeatureNameAssay = "logcounts", ColorBySampleNameColor = "#FF0000", 
+                                    ShapeByColumnData = "orig.ident", SizeByColumnData = "nCount_RNA", 
+                                    TooltipColumnData = character(0), FacetRowBy = "None", FacetColumnBy = "None", 
+                                    ColorBy = "Column data", ColorByDefaultColor = "#000000", 
+                                    ColorByFeatureName = "MIR1302-2HG", ColorByFeatureSource = "---", 
+                                    ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "S04_AAACAGCCAGAATGAC-1", 
+                                    ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE, 
+                                    ShapeBy = "None", SizeBy = "None", SelectionAlpha = 0.1, 
+                                    ZoomData = numeric(0), BrushData = list(), VisualBoxOpen = FALSE, 
+                                    VisualChoices = "Color", ContourAdd = FALSE, ContourColor = "#0000FF", 
+                                    FixAspectRatio = FALSE, ViolinAdd = TRUE, PointSize = 1, 
+                                    PointAlpha = 1, Downsample = FALSE, DownsampleResolution = 200, 
+                                    CustomLabels = FALSE, CustomLabelsText = "S04_AAACAGCCAGAATGAC-1", 
+                                    FontSize = 1, LegendPointSize = 1, LegendPosition = "Bottom", 
+                                    HoverInfo = TRUE, LabelCenters = FALSE, LabelCentersBy = "orig.ident", 
+                                    LabelCentersColor = "#000000", VersionInfo = list(iSEE = structure(list(
+                                        c(2L, 18L, 0L)), class = c("package_version", "numeric_version"
+                                        ))), PanelId = 3L, PanelHeight = 400L, PanelWidth = 3L, SelectionBoxOpen = FALSE, 
+                                    RowSelectionSource = "---", ColumnSelectionSource = "---", 
+                                    DataBoxOpen = FALSE, RowSelectionDynamicSource = FALSE, ColumnSelectionDynamicSource = FALSE, 
+                                    RowSelectionRestrict = FALSE, ColumnSelectionRestrict = FALSE, 
+                                    SelectionHistory = list())
+
+################################################################################
+# Settings for Column data plot 4
+################################################################################
+
+initial[["ColumnDataPlot4"]] <- new("ColumnDataPlot", XAxis = "Column data", YAxis = "high.tss", 
+                                    XAxisColumnData = "orig.ident", FacetRowByColData = "orig.ident", 
+                                    FacetColumnByColData = "orig.ident", ColorByColumnData = "orig.ident", 
+                                    ColorByFeatureNameAssay = "logcounts", ColorBySampleNameColor = "#FF0000", 
+                                    ShapeByColumnData = "orig.ident", SizeByColumnData = "nCount_RNA", 
+                                    TooltipColumnData = character(0), FacetRowBy = "None", FacetColumnBy = "None", 
+                                    ColorBy = "Column data", ColorByDefaultColor = "#000000", 
+                                    ColorByFeatureName = "MIR1302-2HG", ColorByFeatureSource = "---", 
+                                    ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "S04_AAACAGCCAGAATGAC-1", 
+                                    ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE, 
+                                    ShapeBy = "None", SizeBy = "None", SelectionAlpha = 0.1, 
+                                    ZoomData = numeric(0), BrushData = list(), VisualBoxOpen = FALSE, 
+                                    VisualChoices = "Color", ContourAdd = FALSE, ContourColor = "#0000FF", 
+                                    FixAspectRatio = FALSE, ViolinAdd = TRUE, PointSize = 1, 
+                                    PointAlpha = 1, Downsample = FALSE, DownsampleResolution = 200, 
+                                    CustomLabels = FALSE, CustomLabelsText = "S04_AAACAGCCAGAATGAC-1", 
+                                    FontSize = 1, LegendPointSize = 1, LegendPosition = "Bottom", 
+                                    HoverInfo = TRUE, LabelCenters = FALSE, LabelCentersBy = "orig.ident", 
+                                    LabelCentersColor = "#000000", VersionInfo = list(iSEE = structure(list(
+                                        c(2L, 18L, 0L)), class = c("package_version", "numeric_version"
+                                        ))), PanelId = 4L, PanelHeight = 400L, PanelWidth = 3L, SelectionBoxOpen = FALSE, 
+                                    RowSelectionSource = "---", ColumnSelectionSource = "---", 
+                                    DataBoxOpen = FALSE, RowSelectionDynamicSource = FALSE, ColumnSelectionDynamicSource = FALSE, 
+                                    RowSelectionRestrict = FALSE, ColumnSelectionRestrict = FALSE, 
+                                    SelectionHistory = list())
 
 ## Build the iSEE app
 iSEE(sce,
         appTitle = "Habenula_multiome", 
-        initial = initial,
+        initial = initial
         # colormap = ExperimentColorMap(
         #     colData = list(
         #          cell_type_fine= function(n) {
