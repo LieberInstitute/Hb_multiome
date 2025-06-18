@@ -33,3 +33,4 @@ processed-data/cellrangerATAC/
 processed-data/05_Clustering_ARCr/01_clustering_std_method/
 processed-data/**/*.rds
 processed-data/**/*.RDS
+.Rproj.user
