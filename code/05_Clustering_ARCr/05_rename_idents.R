@@ -217,6 +217,15 @@ message("Clusters sorted done!")
 
 
 ## =============================================================================
+## Assign new "cluster_ann" column to Seurat meta-data for visualizations
+colnames(SeuratOBJ@meta.data)
+cluster_ann <- as.vector(Idents(SeuratOBJ))
+# assign new identities to the Seurat object
+SeuratOBJ$cluster_ann <- cluster_ann
+table(SeuratOBJ[["seurat_clusters"]])
+table(SeuratOBJ[["cluster_ann"]])
+
+## =============================================================================
 ## Add 3 meta-cluster as column: MHb, LHb and No-Habenula
 
 # extract the ident ID for the 3 meta-groups
