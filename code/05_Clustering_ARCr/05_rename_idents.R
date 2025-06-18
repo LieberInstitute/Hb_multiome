@@ -23,7 +23,6 @@ library("here")
 ## input directories
 
 inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
-inputCVS_Dir_Ann <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze_v3", "cvs_files_markers")
 inputCVS_cell_types_summary <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze_v3", 
                          "FULL_SUMMARY_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_allTypes_v3.csv")
 
@@ -95,7 +94,8 @@ head(summary_ct_df)
 # rename and format some columns
 summary_ct_df <- summary_ct_df |>
     rename(cluster_percentage = Perc.Cluster, 
-           all_cell_types_match = cell_types)  |>
+           all_cell_types_match = cell_types,
+           number_cells = total_clust.x)  |>
     mutate(cluster_percentage = paste0(cluster_percentage, "%"))
 head(summary_ct_df)
 
@@ -132,7 +132,7 @@ full_annotation_df <- left_join(cell_types_curated, summary_ct_df, by = "cluster
 colnames(full_annotation_df)
 
 # filtr and sort columns
-full_annotation_df <- full_annotation_df[, c("cluster", "cell_type", "cluster_percentage", "all_cell_types_match")]
+full_annotation_df <- full_annotation_df[, c("cluster", "cell_type", "number_cells", "cluster_percentage", "all_cell_types_match")]
 
 # ==============================================================================
 # save full summary with cluster annotations curated
@@ -314,8 +314,6 @@ plt1 <- DotPlot(SeuratOBJ, features = c(features, "TAC3")) + RotatedAxis()  +
 
 tmp_name <- paste0(seurat_name, "_POU4F1_GPR151_DotPlot.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
-
-message("Plots completed!")
 
 message("Process completed!")
 
