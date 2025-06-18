@@ -6,6 +6,7 @@ library("shiny")
 sce <- readRDS("sce_Habenula_iSEE.rds")
 #sn_colors <- readRDS("sn_colors.rds")
 
+## iSEE configuration
 initial <- list()
 
 ################################################################################
@@ -54,6 +55,7 @@ initial[["FeatureAssayPlot1"]] <- new("FeatureAssayPlot", Assay = "logcounts", X
                                       RowSelectionDynamicSource = FALSE, ColumnSelectionDynamicSource = TRUE, 
                                       RowSelectionRestrict = FALSE, ColumnSelectionRestrict = FALSE, 
                                       SelectionHistory = list())
+
 
 ################################################################################
 # Settings for Feature assay plot 3
