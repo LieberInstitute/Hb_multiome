@@ -112,11 +112,12 @@ if (length(low_ct)==TRUE) {
 }
 
 ## Get the mean ratio for each gene for each cell type defined in `cluster_ann`
+# specify rowData col names for gene_name and gene_ensembl
 marker_stats <- get_mean_ratio(
     sce,
-    cellType_col = "cluster_ann"
-    # gene_name = "GPR151",
-    # gene_ensembl = "gene_id"
+    cellType_col = "cluster_ann", 
+    gene_name = "gene_symbol",
+    gene_ensembl = "gene_id"
 )
 
 head(marker_stats)
@@ -129,7 +130,6 @@ head(marker_stats)
 # 4 SNHG14  C.25.undeterminated        4.06 C.31.DD_Exit.Thal       4.42     0.919
 # 5 SIPA1L1 C.25.undeterminated        1.06 C.31.DD_Exit.Thal       1.15     0.917
 # 6 FTX     C.25.undeterminated        2.68 C.33.DD_LHb             3.14     0.856
-
 
 
 ## Reproducibility information
