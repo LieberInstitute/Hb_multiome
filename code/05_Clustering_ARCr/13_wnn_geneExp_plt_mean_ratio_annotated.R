@@ -5,7 +5,13 @@
 ## Authors. CSC
 ## Date. Jun 19, 2025
 ## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
-## Note. Seurat objects were created with module load conda_R/4.3.x
+##
+# All Seurat objects were created using module load conda_R/4.3.x to preserve chromatin integrity.
+# If you're not working with the ATAC modality and encounter installation issues with other packages
+## -—such as DeconvoBuddies, which is not available for Bioconductor version '3.18', you may consider using conda_R/4.4.x instead
+# Relevant Note: 
+# - Avoid updating your Seurat objects under this version, as it may compromise chromatin integrity.
+# - Warning message: package ‘DeconvoBuddies’ is not available for Bioconductor version '3.18'
 ########################################################################
 
 library("Seurat")
