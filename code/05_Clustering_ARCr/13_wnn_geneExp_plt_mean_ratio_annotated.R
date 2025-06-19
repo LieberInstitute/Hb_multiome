@@ -19,6 +19,7 @@
 
 library("SingleCellExperiment")
 library("DeconvoBuddies") # [1] ‘0.99.39’
+library(dplyr)
 library("stringr")
 library("here")
 
@@ -121,16 +122,30 @@ marker_stats <- get_mean_ratio(
 )
 
 head(marker_stats)
-# # A tibble: 6 × 8
+# # A tibble: 6 × 10
 # gene    cellType.target     mean.target cellType.2nd        mean.2nd MeanRatio
 # <chr>   <chr>                     <dbl> <chr>                  <dbl>     <dbl>
-# 1 DLGAP2  C.25.undeterminated        1.36 C.04.undeterminated     1.13     1.19 
+# 1 DLGAP2  C.25.undeterminated    1.36 C.04.undeterminated     1.13     1.19 
 # 2 MALAT1  C.25.undeterminated        5.37 C.33.DD_LHb             5.67     0.946
 # 3 MEG3    C.25.undeterminated        3.12 C.32.undeterminated     3.38     0.923
 # 4 SNHG14  C.25.undeterminated        4.06 C.31.DD_Exit.Thal       4.42     0.919
 # 5 SIPA1L1 C.25.undeterminated        1.06 C.31.DD_Exit.Thal       1.15     0.917
 # 6 FTX     C.25.undeterminated        2.68 C.33.DD_LHb             3.14     0.856
 
+
+plot_marker_express(
+    sce,
+    stats = marker_stats,
+    cellType_col = "cluster_ann",
+    cell_type = "C.05.DD_LHb",
+    gene_col = "gene",
+    n_genes = 10,
+    # rank_col = "MeanRatio.rank",
+    # anno_col = "MeanRatio.anno",
+    color_pal = NULL,
+    plot_points = FALSE,
+    ncol = 2
+)
 
 ## Reproducibility information
 library("sessioninfo")
