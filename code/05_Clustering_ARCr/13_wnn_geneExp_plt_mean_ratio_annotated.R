@@ -105,6 +105,7 @@ celltypes <- colData(sce)$cluster_ann
 celltype_counts <- table(celltypes)
 low_ct <- names(celltype_counts[celltype_counts <= 10])
 
+## Louise might be interested into add the filter into the package
 if (length(low_ct)==TRUE) {
     message("Removing cell types with less<10 cells: ", low_ct)
     # Remove cell types with <= 10 cells
@@ -132,20 +133,62 @@ head(marker_stats)
 # 5 SIPA1L1 C.25.undeterminated        1.06 C.31.DD_Exit.Thal       1.15     0.917
 # 6 FTX     C.25.undeterminated        2.68 C.33.DD_LHb             3.14     0.856
 
+## inspect data
+filtered_marker_stats <- marker_stats |>
+    filter(cellType.target == "C.05.DD_LHb")
+filtered_marker_stats
+# gene    cellType.target mean.target cellType.2nd      mean.2nd MeanRatio
+# <chr>   <chr>                 <dbl> <chr>                <dbl>     <dbl>
+#     1 MSC-AS1 C.05.DD_LHb           0.971 C.24.DD_LHb          0.396      2.45
+# 2 GALR1   C.05.DD_LHb           1.00  C.36.DD_MHb          0.667      1.50
+# 3 CALN1   C.05.DD_LHb           1.83  C.31.DD_Exit.Thal    1.33       1.38
+# 4 TMTC4   C.05.DD_LHb           0.758 C.07.DD_MHb          0.577      1.31
+# 5 CBLN2   C.05.DD_LHb           1.23  C.33.DD_LHb          0.972      1.27
+# 6 SRGAP1  C.05.DD_LHb           2.05  C.10.DD_MHb          1.65       1.24
+# 7 PRR16   C.05.DD_LHb           2.01  C.07.DD_MHb          1.66       1.21
+# 8 L3MBTL4 C.05.DD_LHb           1.04  C.07.DD_MHb          0.866      1.20
+# 9 COL25A1 C.05.DD_LHb           3.31  C.16.DD_MHb          2.77       1.20
+# 10 ZNF235  C.05.DD_LHb           0.529 C.33.DD_LHb          0.458      1.16
 
-plot_marker_express(
-    sce,
-    stats = marker_stats,
-    cellType_col = "cluster_ann",
-    cell_type = "C.05.DD_LHb",
-    gene_col = "gene",
-    n_genes = 10,
-    # rank_col = "MeanRatio.rank",
-    # anno_col = "MeanRatio.anno",
-    color_pal = NULL,
-    plot_points = FALSE,
-    ncol = 2
-)
+## save marker stats
+marker_stats
+
+## plots the top n marker genes for a specified cell type based off of the stats table from get_mean_ratio()
+
+# Prepare data
+# sort unique_ct so that clusters containing "MH" or "LH" appear first
+# valid_types = after remove ct<10 cells
+sorted_ct <- valid_types|>
+    sort() |>
+    tibble(cluster = _) |>
+    mutate(priority = str_detect(cluster, "MHb|LHb")) |>
+    arrange(desc(priority), cluster) |>
+    pull(cluster)
+sorted_ct
+
+f_name <- here(plotDir ,"VPlot_mean_ratio_all_wnn_cluster.pdf")
+pdf(file = f_name, width = 8.5, height = 11)  # standard letter size
+
+# Loop through each habenula cluster
+for (ct in sorted_ct) {
+    message("Plotting wnn cluster: ", ct)
+    p1 <- plot_marker_express(
+        sce,
+        stats = marker_stats,
+        cellType_col = "cluster_ann",
+        cell_type = ct,
+        gene_col = "gene",
+        n_genes = 10,
+        # rank_col = "MeanRatio.rank",
+        # anno_col = "MeanRatio.anno",
+        color_pal = NULL,
+        plot_points = FALSE,
+        ncol = 2
+    )
+    print(p1)
+}
+
+dev.off()
 
 ## Reproducibility information
 library("sessioninfo")
