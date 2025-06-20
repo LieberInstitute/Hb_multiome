@@ -19,7 +19,7 @@
 
 library("SingleCellExperiment")
 library("DeconvoBuddies") # [1] ‘0.99.39’
-library(dplyr)
+library("dplyr")
 library("stringr")
 library("here")
 
@@ -28,12 +28,11 @@ library("here")
 ## clusters renamed for Spatial-Registration on Visium project
 
 inputSCE_Dir <- "~/Habenula_Visium/processed-data/05_snRNA-seq_model_stats/"
-# inputCVS_Dir <- here(
-#     "processed-data",
-#     "05_Clustering_ARCr",
-#     "02_Hb_celltypes_from_seurat_reanalyze_v3",
-#     "cvs_files_markers"
-# )
+outputCSV_Dir <- here(
+    "processed-data",
+    "05_Clustering_ARCr",
+    "13_wnn_geneExp_plt_mean_ratio_annotated"
+)
 plotDir <- here(
     "plots",
     "05_Clustering_ARCr",
@@ -43,6 +42,9 @@ plotDir <- here(
 ## Check directories
 if (!dir.exists(plotDir)) {
     dir.create(plotDir)
+}
+if (!dir.exists(outputCSV_Dir)) {
+    dir.create(outputCSV_Dir)
 }
 
 ## set hard path to `sce` object derived from Seurat multimodal dataset
@@ -70,31 +72,16 @@ sce
 # altExpNames(0):
 head(rownames(sce))
 colnames(colData(sce))
-
-## nuclei are classified in to cell types
-table(sce$cluster_ann)
-# C.01.undeterminated       C.02.DD_Oligo C.03.undeterminated C.04.undeterminated 
-# 3906                3371                3271                2911 
-# C.05.DD_LHb   C.06.DD_Exit.Thal         C.07.DD_MHb C.08.undeterminated 
-# 2771                2667                2610                2537 
-# C.09.undeterminated         C.10.DD_MHb         C.11.DD_MHb C.12.undeterminated 
-# 2430                2344                2212                2187 
-# C.13.no-match         C.14.DD_MHb   C.15.DD_Exit.Thal         C.16.DD_MHb 
-# 2036                2026                1625                1607 
-# C.17.DD_Exit.Thal         C.18.DD_LHb  C.19.DD_Inhib.Thal   C.20.DD_Astrocyte 
-# 1587                1535                1380                1343 
-# C.21.DD_Astrocyte C.22.undeterminated         C.23.DD_LHb         C.24.DD_LHb 
-# 1341                1327                1269                 825 
-# C.25.undeterminated         C.26.DD_OPC   C.27.DD_Microglia  C.28.DD_Inhib.Thal 
-# 707                 638                 587                 543 
-# C.29.DD_Endo         C.30.DD_LHb   C.31.DD_Exit.Thal C.32.undeterminated 
-# 343                 213                 209                 196 
-# C.33.DD_LHb       C.34.DD_Oligo C.35.undeterminated         C.36.DD_MHb 
-# 186                 184                 165                 145 
-# C.37.undeterminated  C.38.DD_Inhib.Thal  C.39.DD_Inhib.Thal         C.40.DD_LHb 
-# 111                 105                  90                  84 
-# C.41.DD_Microglia       C.42.no-match 
-# 76                   2 
+## briefly check cell types and counts
+cluster_counts_df <- as.data.frame(table(sce$cluster_ann))
+head(cluster_counts_df)
+#                   Var1 Freq
+# 1 C.01.undeterminated 3906
+# 2       C.02.DD_Oligo 3371
+# 3 C.03.undeterminated 3271
+# 4 C.04.undeterminated 2911
+# 5         C.05.DD_LHb 2771
+# 6   C.06.DD_Exit.Thal 2667
 
 # check rowData ensembl names and gene id(s)
 head(rowData(sce)$gene_symbol)
@@ -105,7 +92,7 @@ celltypes <- colData(sce)$cluster_ann
 celltype_counts <- table(celltypes)
 low_ct <- names(celltype_counts[celltype_counts <= 10])
 
-## Louise might be interested into add the filter into the package
+## Louise might be interested into add this filter into the package
 if (length(low_ct)==TRUE) {
     message("Removing cell types with less<10 cells: ", low_ct)
     # Remove cell types with <= 10 cells
@@ -113,15 +100,37 @@ if (length(low_ct)==TRUE) {
     sce <- sce[, colData(sce)$cluster_ann %in% valid_types]
 }
 
+##==============================================================================
 ## Get the mean ratio for each gene for each cell type defined in `cluster_ann`
-# specify rowData col names for gene_name and gene_ensembl
+
+# Debugging warning triggered by `get_mean_ratio()` 
+# Warning message:
+#     In asMethod(object) :
+#     sparse->dense coercion: allocating vector of size 12.3 GiB
+
+# verify "logcounts" is already a sparse matrix. OK
+class(assay(sce, "logcounts"))
+# [1] "dgCMatrix"
+# attr(,"package")
+# [1] "Matrix"
+
+# To avoid coercing a massive matrix, restrict the calculation to a subset of 
+# 3000 genes most highly expressed genes
+keep_genes <- head(order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE), 10000)
+sce_subset <- sce[keep_genes, ]
+
 marker_stats <- get_mean_ratio(
-    sce,
+    sce_subset,
+    assay_name = "logcounts",
     cellType_col = "cluster_ann", 
     gene_name = "gene_symbol",
     gene_ensembl = "gene_id"
 )
 
+##==============================================================================
+
+
+## inspect data
 head(marker_stats)
 # # A tibble: 6 × 10
 # gene    cellType.target     mean.target cellType.2nd        mean.2nd MeanRatio
@@ -133,7 +142,6 @@ head(marker_stats)
 # 5 SIPA1L1 C.25.undeterminated        1.06 C.31.DD_Exit.Thal       1.15     0.917
 # 6 FTX     C.25.undeterminated        2.68 C.33.DD_LHb             3.14     0.856
 
-## inspect data
 filtered_marker_stats <- marker_stats |>
     filter(cellType.target == "C.05.DD_LHb")
 filtered_marker_stats
@@ -152,6 +160,7 @@ filtered_marker_stats
 
 ## save marker stats
 marker_stats
+save(marker_stats, file = here(outputCSV_Dir, sprintf("marker_stats_MeanRatio_%s.Rdata", cluster)))
 
 ## plots the top n marker genes for a specified cell type based off of the stats table from get_mean_ratio()
 
