@@ -22,6 +22,7 @@ library("DeconvoBuddies") # [1] ‘0.99.39’
 library("purrr")
 library("dplyr")
 library("stringr")
+library("ggplot2")
 library("here")
 
 ## directories
@@ -189,9 +190,59 @@ head(marker_stats_ratio)
 # 6 TMTC1   C.05.DD_LHb            2.33 C.07.DD_MHb            2.09      1.12
 ##==============================================================================
 
-## Track MeanRatio Rank Across Gene Subsets for genes of interest 
+## Track MeanRatio Rank Across Gene Subsets for genes of interest. The goals are: 
+# - Get an stable high MeanRatio and low rank across subset sizes. Indicates robust marker performance
+# - If rank drops significantly when increasing feature space, that marker may be less specific
 
+genes_of_interest <- c("GPR151", "TAC3", "POU4F1")
 
+# Wrapper function to compute and extract ranks
+get_marker_ranks <- function(sce, gene_subset, n, celltype_regex = "LHb|MHb") {
+    sce_sub <- sce[gene_subset, ]
+    
+    ratio_df <- get_mean_ratio(
+        sce_sub,
+        assay_name = "logcounts",
+        cellType_col = "cluster_ann",
+        gene_name = "gene_symbol",
+        gene_ensembl = "gene_id"
+    ) |>
+        filter(str_detect(cellType.target, celltype_regex)) |>
+        group_by(cellType.target) |>
+        mutate(Rank = rank(-MeanRatio, ties.method = "first")) |>
+        ungroup() |>
+        filter(gene %in% genes_of_interest) |>
+        mutate(SubsetSize = n)
+    
+    return(ratio_df)
+}
+
+# Run across different gene subset sizes
+sizes <- c(2000, 4000, 6000, 8000, 10000)
+rank_results <- lapply(sizes, function(n) {
+    gene_subset <- head(order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE), n)
+    get_marker_ranks(sce, gene_subset, n)
+})
+length(rank_results)
+rank_summary <- bind_rows(rank_results)
+
+## Check how many rows were returned 
+rank_summary$SubsetSize <- as.numeric(rank_summary$SubsetSize)
+table(rank_summary$SubsetSize)
+# 4000 6000 
+# 6   11 
+
+rank_summary |>
+    filter(SubsetSize == 2000 & gene == "GPR151")
+
+ggplot(rank_summary, aes(x = SubsetSize, y = MeanRatio, color = gene)) +
+    geom_line(aes(group = interaction(gene, cellType.target))) +
+    geom_point() +
+    scale_x_continuous(breaks = sizes) +
+    theme_minimal() +
+    facet_wrap(~ cellType.target) +
+    labs(title = "MeanRatio of marker genes across gene subset sizes",
+         y = "MeanRatio", x = "Number of genes used")
 
 
 
