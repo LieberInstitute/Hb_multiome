@@ -19,6 +19,7 @@
 
 library("SingleCellExperiment")
 library("DeconvoBuddies") # [1] ‘0.99.39’
+library("purrr")
 library("dplyr")
 library("stringr")
 library("here")
@@ -46,6 +47,8 @@ if (!dir.exists(plotDir)) {
 if (!dir.exists(outputCSV_Dir)) {
     dir.create(outputCSV_Dir)
 }
+
+#===============================================================================
 
 ## set hard path to `sce` object derived from Seurat multimodal dataset
 sce_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v3.rds"
@@ -87,7 +90,9 @@ head(cluster_counts_df)
 head(rowData(sce)$gene_symbol)
 head(rowData(sce)$gene_id)
 
+#===============================================================================
 ##  remove cell types with fewer than 10 cells
+## Louise might be interested into add this filter into her get_mean_ratio() 
 celltypes <- colData(sce)$cluster_ann
 celltype_counts <- table(celltypes)
 low_ct <- names(celltype_counts[celltype_counts <= 10])
@@ -99,6 +104,7 @@ if (length(low_ct)==TRUE) {
     valid_types <- names(celltype_counts[celltype_counts > 10])
     sce <- sce[, colData(sce)$cluster_ann %in% valid_types]
 }
+#Removing cell types with less<10 cells: C.42.no-match
 
 ##==============================================================================
 ## Get the mean ratio for each gene for each cell type defined in `cluster_ann`
@@ -113,54 +119,87 @@ class(assay(sce, "logcounts"))
 # [1] "dgCMatrix"
 # attr(,"package")
 # [1] "Matrix"
+#DeconvoBuddies:::get_mean_ratio  # See internal logic
 
-# To avoid coercing a massive matrix, restrict the calculation to a subset of 
-# 3000 genes most highly expressed genes
-keep_genes <- head(order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE), 10000)
+# To avoid coercing a massive matrix, restrict the calculation to a subset of
+# 10k genes most highly expressed genes
+keep_genes <- head(order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE), 2000) 
 sce_subset <- sce[keep_genes, ]
+sce_subset
 
-marker_stats <- get_mean_ratio(
+## support allocate a vector less than size 1.2 GiB
+marker_stats_ratio <- get_mean_ratio(
     sce_subset,
     assay_name = "logcounts",
     cellType_col = "cluster_ann", 
     gene_name = "gene_symbol",
     gene_ensembl = "gene_id"
 )
+head(marker_stats_ratio, n=5)
+# verification
+top50_per_celltype <- marker_stats_ratio |>
+    filter(str_detect(cellType.target, "LHb|MHb")) |>
+    group_by(cellType.target) |>
+    slice_max(order_by = MeanRatio, n = 50, with_ties = FALSE) |>
+    ungroup()
+head(top50_per_celltype, n=10)
+
+c("GPR151", "POUF4", "TAC3") %in% top50_lhb_mhb$gene
+top50_lhb_mhb %>%
+    filter(gene == "GPR151")
 
 ##==============================================================================
-
-
 ## inspect data
-head(marker_stats)
+head(marker_stats_ratio)
 # # A tibble: 6 × 10
 # gene    cellType.target     mean.target cellType.2nd        mean.2nd MeanRatio
 # <chr>   <chr>                     <dbl> <chr>                  <dbl>     <dbl>
-# 1 DLGAP2  C.25.undeterminated    1.36 C.04.undeterminated     1.13     1.19 
+# 1 DLGAP2  C.25.undeterminated        1.36 C.04.undeterminated     1.13     1.19 
 # 2 MALAT1  C.25.undeterminated        5.37 C.33.DD_LHb             5.67     0.946
 # 3 MEG3    C.25.undeterminated        3.12 C.32.undeterminated     3.38     0.923
 # 4 SNHG14  C.25.undeterminated        4.06 C.31.DD_Exit.Thal       4.42     0.919
 # 5 SIPA1L1 C.25.undeterminated        1.06 C.31.DD_Exit.Thal       1.15     0.917
 # 6 FTX     C.25.undeterminated        2.68 C.33.DD_LHb             3.14     0.856
 
-filtered_marker_stats <- marker_stats |>
-    filter(cellType.target == "C.05.DD_LHb")
-filtered_marker_stats
+##==============================================================================
+## MeanRatio ranking is context-dependent on the gene universe you're testing
+## - change the denominator in a relative ranking
+## - MeanRatio = mean_in_target_celltype / max_mean_in_non_target_celltypes
+
+##### Using 6000 genes 
+# A tibble: 6 × 10
 # gene    cellType.target mean.target cellType.2nd      mean.2nd MeanRatio
 # <chr>   <chr>                 <dbl> <chr>                <dbl>     <dbl>
-#     1 MSC-AS1 C.05.DD_LHb           0.971 C.24.DD_LHb          0.396      2.45
-# 2 GALR1   C.05.DD_LHb           1.00  C.36.DD_MHb          0.667      1.50
-# 3 CALN1   C.05.DD_LHb           1.83  C.31.DD_Exit.Thal    1.33       1.38
-# 4 TMTC4   C.05.DD_LHb           0.758 C.07.DD_MHb          0.577      1.31
-# 5 CBLN2   C.05.DD_LHb           1.23  C.33.DD_LHb          0.972      1.27
-# 6 SRGAP1  C.05.DD_LHb           2.05  C.10.DD_MHb          1.65       1.24
-# 7 PRR16   C.05.DD_LHb           2.01  C.07.DD_MHb          1.66       1.21
-# 8 L3MBTL4 C.05.DD_LHb           1.04  C.07.DD_MHb          0.866      1.20
-# 9 COL25A1 C.05.DD_LHb           3.31  C.16.DD_MHb          2.77       1.20
-# 10 ZNF235  C.05.DD_LHb           0.529 C.33.DD_LHb          0.458      1.16
+# 1 CALN1   C.05.DD_LHb           1.83  C.31.DD_Exit.Thal    1.33       1.38
+# 2 TMTC4   C.05.DD_LHb           0.758 C.07.DD_MHb          0.577      1.31
+# 3 CBLN2   C.05.DD_LHb           1.23  C.33.DD_LHb          0.972      1.27
+# 4 SRGAP1  C.05.DD_LHb           2.05  C.10.DD_MHb          1.65       1.24
+# 5 PRR16   C.05.DD_LHb           2.01  C.07.DD_MHb          1.66       1.21
+# 6 L3MBTL4 C.05.DD_LHb           1.04  C.07.DD_MHb          0.866      1.20
+
+##### Using 2000 genes 
+# A tibble: 10 × 10
+# gene    cellType.target mean.target cellType.2nd       mean.2nd MeanRatio
+# <chr>   <chr>                 <dbl> <chr>                 <dbl>     <dbl>
+# 1 CALN1   C.05.DD_LHb            1.83 C.31.DD_Exit.Thal      1.33      1.38
+# 2 SRGAP1  C.05.DD_LHb            2.05 C.10.DD_MHb            1.65      1.24
+# 3 PRR16   C.05.DD_LHb            2.01 C.07.DD_MHb            1.66      1.21
+# 4 COL25A1 C.05.DD_LHb            3.31 C.16.DD_MHb            2.77      1.20
+# 5 PBX3    C.05.DD_LHb            1.46 C.38.DD_Inhib.Thal     1.29      1.14
+# 6 TMTC1   C.05.DD_LHb            2.33 C.07.DD_MHb            2.09      1.12
+##==============================================================================
+
+## Track MeanRatio Rank Across Gene Subsets for genes of interest 
+
+
+
+
+
+##==============================================================================
 
 ## save marker stats
 marker_stats
-save(marker_stats, file = here(outputCSV_Dir, sprintf("marker_stats_MeanRatio_%s.Rdata", cluster)))
+save(marker_stats, file = here(outputCSV_Dir, "marker_stats_MeanRatio.Rdata"))
 
 ## plots the top n marker genes for a specified cell type based off of the stats table from get_mean_ratio()
 
