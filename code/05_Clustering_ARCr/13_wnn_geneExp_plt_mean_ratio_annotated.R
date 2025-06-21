@@ -346,7 +346,7 @@ save(marker_ranks_6000, marker_ranks_8000, marker_ranks_10000, marker_ranks_1200
 
 message("Mean ratio results saved !!!")
 
-
+##==============================================================================
 ## plots the top n marker genes for a specified cell type based off of the stats table from get_mean_ratio()
 
 # Prepare data
@@ -359,9 +359,39 @@ sorted_ct <- valid_types|>
     arrange(desc(priority), cluster) |>
     pull(cluster)
 sorted_ct
+# [1] "C.05.DD_LHb"         "C.07.DD_MHb"         "C.10.DD_MHb"        
+# [4] "C.11.DD_MHb"         "C.14.DD_MHb"         "C.16.DD_MHb"        
+# [7] "C.18.DD_LHb"         "C.23.DD_LHb"         "C.24.DD_LHb"        
+# [10] "C.30.DD_LHb"         "C.33.DD_LHb"         "C.36.DD_MHb"        
+# [13] "C.40.DD_LHb"         "C.01.undeterminated" "C.02.DD_Oligo"      
+# [16] "C.03.undeterminated" "C.04.undeterminated" "C.06.DD_Exit.Thal"  
+# [19] "C.08.undeterminated" "C.09.undeterminated" "C.12.undeterminated"
+# [22] "C.13.no-match"       "C.15.DD_Exit.Thal"   "C.17.DD_Exit.Thal"  
+# [25] "C.19.DD_Inhib.Thal"  "C.20.DD_Astrocyte"   "C.21.DD_Astrocyte"  
+# [28] "C.22.undeterminated" "C.25.undeterminated" "C.26.DD_OPC"        
+# [31] "C.27.DD_Microglia"   "C.28.DD_Inhib.Thal"  "C.29.DD_Endo"       
+# [34] "C.31.DD_Exit.Thal"   "C.32.undeterminated" "C.34.DD_Oligo"      
+# [37] "C.35.undeterminated" "C.37.undeterminated" "C.38.DD_Inhib.Thal" 
+# [40] "C.39.DD_Inhib.Thal"  "C.41.DD_Microglia"  
 
-f_name <- here(plotDir ,"VPlot_mean_ratio_all_wnn_cluster.pdf")
+# set as factor of sce[[cellType_col]] to match sorted_ct on the plots
+sce$cluster_ann <- factor(sce$cluster_ann, levels = sorted_ct)
+
+f_name <- here(plotDir ,"VPlot_mean_ratio_all_wnn_cluster_genes10k.pdf")
 pdf(file = f_name, width = 8.5, height = 11)  # standard letter size
+
+marker_stats <- rank_results[["size_10000"]]
+head(marker_stats)
+# A tibble: 6 × 12
+# gene   cellType.target mean.target cellType.2nd        mean.2nd MeanRatio
+# <chr>  <chr>                 <dbl> <chr>                  <dbl>     <dbl>
+# 1 COX17  C.11.DD_MHb           0.688 C.30.DD_LHb            0.591      1.16
+# 2 CHRNA3 C.11.DD_MHb           1.12  C.07.DD_MHb            0.965      1.16
+# 3 NCS1   C.11.DD_MHb           0.858 C.03.undeterminated    0.802      1.07
+# 4 GNB1   C.11.DD_MHb           1.30  C.14.DD_MHb            1.23       1.06
+# 5 ITM2C  C.11.DD_MHb           1.74  C.10.DD_MHb            1.65       1.06
+# 6 NRN1   C.11.DD_MHb           1.20  C.10.DD_MHb            1.13       1.06
+
 
 # Loop through each habenula cluster
 for (ct in sorted_ct) {
@@ -373,8 +403,8 @@ for (ct in sorted_ct) {
         cell_type = ct,
         gene_col = "gene",
         n_genes = 10,
-        # rank_col = "MeanRatio.rank",
-        # anno_col = "MeanRatio.anno",
+        rank_col = "MeanRatio.rank",
+        anno_col = "MeanRatio.anno",
         color_pal = NULL,
         plot_points = FALSE,
         ncol = 2
@@ -383,6 +413,10 @@ for (ct in sorted_ct) {
 }
 
 dev.off()
+
+message("Mean ratio Plots for genes subset 10k saved !!!")
+
+
 
 ## Reproducibility information
 library("sessioninfo")
