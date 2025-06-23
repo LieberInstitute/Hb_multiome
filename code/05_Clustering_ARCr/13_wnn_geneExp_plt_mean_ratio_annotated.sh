@@ -10,7 +10,7 @@
 
 ## Explicitly pipe script output to a log
 # mkdir -p logs
-log_path=logs/13_wnn_geneExp_plt_mean_ratio_annotated_${SLURM_JOB_ID}.txt
+log_path=logs/13_wnn_geneExp_plt_mean_ratio_annotated.txt
 
 {
 set -e
