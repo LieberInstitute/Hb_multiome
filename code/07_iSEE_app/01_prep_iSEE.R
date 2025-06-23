@@ -102,11 +102,6 @@ class(logcounts(sce))
 message(Sys.time(), "- Convert logcounts to sparse Matrix")
 logcounts(sce) <- as(logcounts(sce), "sparseMatrix")  
 
-## Drop metadata we don't need
-metadata(sce) <- list()
-# sce$path <- NULL
-# sce$total <- NULL
-
 ## sourcing official color palette
 # load(here("processed-data", "04_snRNA-seq", "cell_type_colors.Rdata"))
 # sn_colors<- cell_type_colors
@@ -120,11 +115,30 @@ head(rownames(sce))
 # [1] "MIR1302-2HG" "FAM138A"     "OR4F5"       "AL627309.1"  "AL627309.3" 
 # [6] "AL627309.2" 
 
-# # ===== I do not have mean-ratio genes, trying to adpapt to work with the DGE from Seurat
-# #### Add MeanRatio Marker Gene Details ####
+
+#### Add MeanRatio Marker Gene Details ####
 # load(here("processed-data", "04_snRNA-seq", "16_sn_MeanRatio", "MarkerStats_cell_type_fine.Rdata"))
-# marker_stats |> dplyr::count(cellType.target)
-# 
+temp_env <- new.env()
+load(here("processed-data", 
+          "05_Clustering_ARCr", 
+          "13_wnn_geneExp_plt_mean_ratio_annotated", 
+          "marker_ranks_6k_12k.RData"), envir = temp_env)
+# extract only what you need
+marker_stats <- temp_env$marker_ranks_12000
+head(marker_ranks)
+# A tibble: 6 × 12
+# gene   cellType.target mean.target cellType.2nd        mean.2nd MeanRatio
+# <chr>  <chr>                 <dbl> <chr>                  <dbl>     <dbl>
+# 1 COX17  C.11.DD_MHb           0.688 C.30.DD_LHb            0.591      1.16
+# 2 CHRNA3 C.11.DD_MHb           1.12  C.07.DD_MHb            0.965      1.16
+# 3 NCS1   C.11.DD_MHb           0.858 C.03.undeterminated    0.802      1.07
+# 4 GNB1   C.11.DD_MHb           1.30  C.14.DD_MHb            1.23       1.06
+# 5 ITM2C  C.11.DD_MHb           1.74  C.10.DD_MHb            1.65       1.06
+# 6 NRN1   C.11.DD_MHb           1.20  C.10.DD_MHb            1.13       1.06
+
+marker_stats |> dplyr::count(cellType.target)
+summary(marker_stats)
+
 # marker_anno <- marker_stats |>
 #     filter(MeanRatio.rank <= 50 & MeanRatio > 1) |>
 #     select(gene,
@@ -133,14 +147,52 @@ head(rownames(sce))
 #            MeanRatio,
 #            MeanRatio.anno) |>
 #     column_to_rownames("gene")
-# 
-# rowData(sce) <- cbind(rowData(sce), marker_anno[rownames(sce),])
-# 
-# rowData(sce)[which(rowData(sce)$MeanRatio.rank ==1),]
-# # ============================================================================
+
+
+marker_anno <- marker_stats |>
+    filter(MeanRatio.rank <= 50 & MeanRatio > 0.5) |>
+    group_by(gene) |>
+    slice_max(order_by = MeanRatio, n = 1) |>  # keep only top match /  one row per gene
+    ungroup() |>
+    select(gene, cellType.target, MeanRatio.rank, MeanRatio, MeanRatio.anno) |>
+    column_to_rownames("gene")
+
+head(rownames(sce)) # note not all genes in sce are in markers_ann0
+marker_anno["ABL1", ]
+
+head(marker_anno)
+#           cellType.target MeanRatio.rank MeanRatio
+# COX17      C.11.DD_MHb              1  1.164583
+# CHRNA3     C.11.DD_MHb              2  1.156088
+# NCS1       C.11.DD_MHb              3  1.069116
+# GNB1       C.11.DD_MHb              4  1.059450
+# ITM2C      C.11.DD_MHb              5  1.059274
+# NRN1       C.11.DD_MHb              6  1.057485
+# MeanRatio.anno
+# COX17          C.11.DD_MHb/C.30.DD_LHb: 1.165
+# CHRNA3         C.11.DD_MHb/C.07.DD_MHb: 1.156
+# NCS1   C.11.DD_MHb/C.03.undeterminated: 1.069
+# GNB1           C.11.DD_MHb/C.14.DD_MHb: 1.059
+# ITM2C          C.11.DD_MHb/C.10.DD_MHb: 1.059
+# NRN1           C.11.DD_MHb/C.10.DD_MHb: 1.057
+
+rowData(sce) <- cbind(rowData(sce), marker_anno[rownames(sce),])
+# verify, head of rows where gene_id is not NA
+non_na_rows <- rowSums(is.na(as.data.frame(rowData(sce)))) < ncol(rowData(sce))
+head(rowData(sce)[non_na_rows, ])
+rowData(sce)[which(rowData(sce)$MeanRatio.rank ==1),]
+# DataFrame with 17 rows and 4 columns
+#               cellType.target     MeanRatio.rank MeanRatio         MeanRatio.anno
+#               <character>         <integer> <numeric>            <character>
+# LYPD1           C.10.DD_MHb              1   2.14351 C.10.DD_MHb/C.14.DD_..
+# LINC01811       C.36.DD_MHb              1   3.57846 C.36.DD_MHb/C.08.und..
+# ADAMTS9         C.18.DD_LHb              1   1.82854 C.18.DD_LHb/C.29.DD_..
+# ADAMTS9-AS2     C.18.DD_LHb              1   1.82854 C.18.DD_LHb/C.29.DD_..
+# COX17           C.11.DD_MHb              1   1.16458 C.11.DD_MHb/C.30.DD_..
+
 
 # saveRDS(sce, file = here("code", "06_iSEE_app", "sce_ERC_iSEE.rds"))
-saveRDS(sce, here("code", "07_iSEE_app", "sce_Habenula_iSEE.rds"))
+saveRDS(sce, here("code", "07_iSEE_app", "sce_Habenula_iSEE_v2.rds"))
 
 # slurmjobs::job_single('01_prep_iSEE', create_shell = TRUE, memory = '25G', command = "Rscript 01_prep_iSEE.R")
 
