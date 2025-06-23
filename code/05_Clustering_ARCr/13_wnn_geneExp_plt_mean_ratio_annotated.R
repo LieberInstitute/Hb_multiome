@@ -101,7 +101,7 @@ celltypes <- colData(sce)$cluster_ann
 celltype_counts <- table(celltypes)
 low_ct <- names(celltype_counts[celltype_counts <= 10])
 
-## Louise might be interested into add this filter into the package
+## Louise might be interested into add this filter into the get_mean_ratio() function
 if (length(low_ct)==TRUE) {
     message("Removing cell types with less<10 cells: ", low_ct)
     # Remove cell types with <= 10 cells
@@ -126,7 +126,7 @@ if (length(low_ct)==TRUE) {
 #DeconvoBuddies:::get_mean_ratio  # See internal logic
 
 # To avoid coercing a massive matrix, restrict the calculation to a subset of
-# 10k genes most highly expressed genes
+# 2k genes most highly expressed genes
 # keep_genes <- head(order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE), 2000) 
 # sce_subset <- sce[keep_genes, ]
 # sce_subset
@@ -166,7 +166,7 @@ if (length(low_ct)==TRUE) {
 # 6 FTX     C.25.undeterminated        2.68 C.33.DD_LHb             3.14     0.856
 
 ##==============================================================================
-## MeanRatio ranking is context-dependent on the gene universe you're testing
+## MeanRatio ranking is context-dependent on the gene universe tested
 ## - change the denominator in a relative ranking
 ## - MeanRatio = mean_in_target_celltype / max_mean_in_non_target_celltypes
 
@@ -194,9 +194,12 @@ if (length(low_ct)==TRUE) {
 
 
 ##==============================================================================
-## Track MeanRatio Rank across gene subsets for Habenula genes. The goals are: 
+## To safetly pick up a threshold, I track `MeanRatio Rank` across gene subsets for Habenula genes. Goals are: 
 # - Get an stable high MeanRatio and low rank across subset sizes. Indicates robust marker performance
 # - If rank drops significantly when increasing feature space, that marker may be less specific
+
+## Note, I am using `get_mean_ratio_sparse()`, this is my custom adaptation with minimal changes
+#  - of get_mean_ratio(), that fix error of coercing a massive matrix
 
 genes_of_interest <- c("GPR151", "TAC3", "POU4F1")
 
@@ -392,9 +395,11 @@ head(marker_stats)
 # 5 ITM2C  C.11.DD_MHb           1.74  C.10.DD_MHb            1.65       1.06
 # 6 NRN1   C.11.DD_MHb           1.20  C.10.DD_MHb            1.13       1.06
 
+valid_clusters <- unique(marker_stats$cellType.target)
+sorted_ct_valid <- sorted_ct[sorted_ct %in% valid_clusters]
 
 # Loop through each habenula cluster
-for (ct in sorted_ct) {
+for (ct in sorted_ct_valid) {
     message("Plotting wnn cluster: ", ct)
     p1 <- plot_marker_express(
         sce,
@@ -416,6 +421,9 @@ dev.off()
 
 message("Mean ratio Plots for genes subset 10k saved !!!")
 
+
+# library("slurmjobs")
+# job_single("13_wnn_geneExp_plt_mean_ratio_annotated", cores = 2, partition = "katun", create_shell = TRUE)
 
 
 ## Reproducibility information
