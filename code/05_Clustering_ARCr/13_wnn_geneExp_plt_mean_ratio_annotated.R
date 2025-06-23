@@ -204,11 +204,14 @@ if (length(low_ct)==TRUE) {
 genes_of_interest <- c("GPR151", "TAC3", "POU4F1")
 
 # Wrapper function to compute and extract ranks
-get_marker_ranks <- function(sce, gene_subset, n, celltype_regex = "LHb|MHb",
+get_marker_ranks <- function(sce, 
+                             gene_subset, 
+                             n, 
+                             celltype_regex = "LHb|MHb",
                              genes_of_interest = NULL) {
-    
+
     sce_sub <- sce[gene_subset, ]
-    
+
     ratio_df <- get_mean_ratio_sparse(
         sce_sub,
         assay_name = "logcounts",
@@ -230,7 +233,8 @@ get_marker_ranks <- function(sce, gene_subset, n, celltype_regex = "LHb|MHb",
 }
 
 # Run across different gene subset sizes
-sizes <- c(2000, 4000, 6000, 8000, 10000, 12000)
+all_genes <- nrow(sce)
+sizes <- c(2000, 4000, 6000, 8000, 10000, 12000, all_genes)
 
 rank_results <- lapply(sizes, function(n) {
     gene_subset <- head(order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE), n)
@@ -288,6 +292,10 @@ unique(rank_summary$cellType.target)
 length(unique(rank_summary$cellType.target))
 # [1] 13
 
+table(rank_summary$SubsetSize)
+# 2000  4000  6000  8000 10000 12000 29690 
+# 20946 29412 31001 31106 31130 31136 31136 
+
 ## Compute Marker Stability Metrics
 stability_summary <- rank_summary |>
     group_by(gene, cellType.target) |>
@@ -344,8 +352,9 @@ marker_ranks_6000 <- rank_results[["size_6000"]]
 marker_ranks_8000 <- rank_results[["size_8000"]]
 marker_ranks_10000 <- rank_results[["size_10000"]]
 marker_ranks_12000 <- rank_results[["size_12000"]]
-f_name <- here(processedDir, "marker_ranks_6k_12k.RData")
-save(marker_ranks_6000, marker_ranks_8000, marker_ranks_10000, marker_ranks_12000, file = f_name)
+marker_ranks_all <- rank_results[["size_29690"]]
+f_name <- here(processedDir, "marker_ranks_6k_12k_allk.RData")
+save(marker_ranks_6000, marker_ranks_8000, marker_ranks_10000, marker_ranks_12000, marker_ranks_all, file = f_name)
 
 message("Mean ratio results saved !!!")
 
