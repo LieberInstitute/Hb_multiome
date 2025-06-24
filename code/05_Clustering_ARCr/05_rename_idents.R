@@ -94,17 +94,26 @@ head(summary_ct_df)
 # rename and format some columns
 summary_ct_df <- summary_ct_df |>
     rename(cluster_percentage = Perc.Cluster, 
-           all_cell_types_match = cell_types,
+           all_cell_types_by_frequency = cell_types,
            number_cells = total_clust.x)  |>
     mutate(cluster_percentage = paste0(cluster_percentage, "%"))
 head(summary_ct_df)
 
-## Polished annotation
-# Manually curated annotations to annotate Seurat clusters
+# ==============================================================================
+## Curated Manual Annotation based on: (1) gene marker match frequency (DD and LB) and (2) Clustering-Registration `Broad` and `Fine`
 # Details on: https://github.com/LieberInstitute/Hb_multiome/tree/8b614669db8f7b833e5a793fa01326f839c57cd8/data 
+
 cell_types_curated <- data.frame(
-    cell_type = c(
-        cell_type_pseudo <- c(
+    ## Seurat WNN cluster IDs
+    cluster = c(
+        "C.01", "C.02", "C.03", "C.04", "C.05", "C.06", "C.07", "C.08", "C.09", "C.10",
+        "C.11", "C.12", "C.13", "C.14", "C.15", "C.16", "C.17", "C.18", "C.19", "C.20",
+        "C.21", "C.22", "C.23", "C.24", "C.25", "C.26", "C.27", "C.28", "C.29", "C.30",
+        "C.31", "C.32", "C.33", "C.34", "C.35", "C.36", "C.37", "C.38", "C.39", "C.40",
+        "C.41", "C.42"
+    ),
+    ## Polished clusters by manual annotation based on gene marker match frequency (DD and LB)
+    ct_frequency_marker = c(
             "undetermined", "DD_Oligo", "undetermined", "undetermined", "DD_LHb",
             "DD_Excit.Thal", "DD_MHb", "undetermined", "undetermined", "DD_MHb",
             "DD_MHb", "undetermined", "no-match", "DD_MHb", "DD_Excit.Thal",
@@ -114,60 +123,99 @@ cell_types_curated <- data.frame(
             "DD_Excit.Thal", "undetermined", "DD_LHb", "DD_Oligo", "undetermined",
             "DD_MHb", "undetermined", "DD_Inhib.Thal", "DD_Inhib.Thal", "DD_LHb",
             "DD_Microglia", "no-match"
-        )
     ),
-    cluster = c(
-        "C.01", "C.02", "C.03", "C.04", "C.05", "C.06", "C.07", "C.08", "C.09", "C.10",
-        "C.11", "C.12", "C.13", "C.14", "C.15", "C.16", "C.17", "C.18", "C.19", "C.20",
-        "C.21", "C.22", "C.23", "C.24", "C.25", "C.26", "C.27", "C.28", "C.29", "C.30",
-        "C.31", "C.32", "C.33", "C.34", "C.35", "C.36", "C.37", "C.38", "C.39", "C.40",
-        "C.41", "C.42"
+    ## 2nd round of polished manual annotation based on clustering-registration correlation 
+    # broad resolution using DD genes from human pilot
+    ct_CRegistration_broad = c(
+            "DD_Inhib.Thal", "DD_Oligo", "DD_Excit.Thal", "DD_LHb", "DD_LHb", 
+            "undetermined", "DD_MHb", "DD_LHb", "DD_LHb", "DD_MHb", # no-complete
+            "DD_MHb", "DD_Excit.Thal", "DD_LHb", "DD_MHb", "DD_Excit.Thal", 
+            "DD_LHb", "DD_Excit.Thal", "DD_LHb", "DD_Inhib.Thal", "DD_Astrocyte", 
+            "DD_Astrocyte", "DD_Oligo", "DD_LHb", "undetermined", "DD_Excit.Thal", # no-complete
+            "DD_OPC", "DD_Microglia", "DD_Inhib.Thal", "DD_Endo", "undetermined", # no-complete
+            "undetermined", "DD_Excit.Thal", "DD_LHb", "undetermined", " DD_Excit.Thal", # no-complete
+            "DD_MHb", "DD_Thal", "DD_Inhib.Thal", "DD_Inhib.Thal", "DD_LHb", 
+            "DD_Microglia", "no-match"
     ),
+    # fine resolution using DD genes from human pilot
+    ct_CRegistration_fine = c(
+            "DD_Inhib.Thal", "DD_Oligo", "DD_Excit.Thal", "DD_LHb.4", "DD_LHb.2.7",
+            "undetermined", "DD_MHb.2", "DD_LHb.4", "DD_LHb.4", "DD_MHb.1",
+            "DD_MHb.1.2", "DD_Excit.Thal", "DD_LHb.4", "DD_MHb.1", "DD_Excit.Thal",
+            "DD_LHb.6", "DD_Excit.Thal", "DD_LHb.1.3.4", "DD_Inhib.Thal", "DD_Astrocyte",
+            "DD_Astrocyte", "DD_Oligo", "DD_LHb.1", "undetermined", "DD_Excit.Thal",
+            "DD_OPC", "DD_Microglia", "DD_Inhib.Thal", "DD_Endo", "undetermined",
+            "undetermined", "DD_Excit.Thal", "DD_LHb.1.3", "undetermined", " DD_Excit.Thal",
+            "DD_MHb.3", "DD_Thal", "DD_Inhib.Thal", "DD_Inhib.Thal", "DD_LHb.4",
+            "DD_Microglia", "no-match"
+        ),
     stringsAsFactors = FALSE  # Optional, prevents conversion to factors
 )
+# double check spaces 
+cell_types_curated <- cell_types_curated |>
+    dplyr::mutate(across(everything(), ~ trimws(.)))
+anyDuplicated(cell_types_curated$cluster)  # Should return 0
+
+head(cell_types_curated)
 tail(cell_types_curated)
 
-## inner join pseudo annotation (EDA) with curated annotation for supplemental material
+## inner join pseudo annotation (EDA) with curated annotation for supplementary material
 full_annotation_df <- left_join(cell_types_curated, summary_ct_df, by = "cluster")
 colnames(full_annotation_df)
 
 # filter and sort columns
-full_annotation_df <- full_annotation_df[, c("cluster", "cell_type", "number_cells", "cluster_percentage", "all_cell_types_match")]
-
-
-# ==============================================================================
-# save full summary with cluster annotations curated
-
-full_annotation_df
-#       cluster      cell_type cluster_percentage
-# 1    C.01 undetermined              7.01%
-# 2    C.02       DD_Oligo              6.05%
-# 3    C.03 undetermined              5.87%
-# 4    C.04 undetermined              5.23%
-# 5    C.05         DD_LHb              4.97%
-# 6    C.06   DD_Excit.Thal              4.79%
-# all_cell_types_match
-# 1 DD_Inhib.Thal, LB_Thalamus/MDm, LB_inhibitory_neuron, undetermined, DD_LHb, LB_excitatory_neuron
-# 2                                            DD_Oligo, undetermined, LB_oligodendrocyte, LB_neuron
-# 3                                               undetermined, DD_Endo, DD_Astrocyte, DD_Excit.Thal
-# 4               DD_Excit.Thal, undetermined, DD_Inhib.Thal, DD_LHb, DD_OPC, LB_LHB neuron specific
-# 5               DD_LHb, LB_LHB neuron specific, undetermined, LB_Hb neuron specific, DD_Excit.Thal
-# 6                                                              undetermined, DD_Excit.Thal, DD_OPC
+full_annotation_df <- full_annotation_df[, c("cluster", "ct_frequency_marker", "ct_CRegistration_broad", "ct_CRegistration_fine",
+                                             "number_cells", "cluster_percentage", "all_cell_types_by_frequency")]
+head(full_annotation_df)
+# cluster ct_frequency_marker ct_CRegistration_broad ct_CRegistration_fine
+# 1    C.01        undetermined          DD_Inhib.Thal         DD_Inhib.Thal
+# 2    C.02            DD_Oligo               DD_Oligo              DD_Oligo
+# 3    C.03        undetermined          DD_Excit.Thal         DD_Excit.Thal
+# 4    C.04        undetermined                 DD_LHb              DD_LHb.4
+# 5    C.05              DD_LHb                 DD_LHb            DD_LHb.2.7
+# 6    C.06       DD_Excit.Thal           undetermined          undetermined
+# number_cells cluster_percentage
+# 1         3906             7.012%
+# 2         3371             6.052%
+# 3         3271             5.872%
+# 4         2911             5.226%
+# 5         2771             4.975%
+# 6         2667             4.788%
+# all_cell_types_by_frequency
+# 1 DD_Inhib.Thal (10), DD_LHb (1), LB_excitatory_neuron (1), LB_inhibitory_neuron (2), LB_Thalamus/MDm (1)
+# 2                                                     DD_Oligo (5), LB_neuron (2), LB_oligodendrocyte (1)
+# 3                                                        DD_Astrocyte (1), DD_Endo (4), DD_Excit.Thal (1)
+# 4                DD_Excit.Thal (6), DD_Inhib.Thal (1), DD_LHb (2), DD_OPC (1), LB_LHB neuron specific (1)
+# 5                   DD_Excit.Thal (1), DD_LHb (10), LB_Hb neuron specific (2), LB_LHB neuron specific (1)
+# 6                                                                           DD_Excit.Thal (6), DD_OPC (1)
 
 ## save summary WNN cluster annotations
 f_name <- here(outputCSV_Dir, "WNN_full_annotation_meta_data.csv")
-write.csv(full_annotation_df, f_name), row.names = FALSE)
+write.csv(full_annotation_df, f_name, row.names = FALSE)
 
 ## create symlink path to data/ -- where I am actually storing summaries for speed searching
-dir_target <- here("../../../data")
+dir_target <- here("data")
 
 ## full symlink path
 symlink_path <- file.path(dir_target, basename(f_name))
 
 # Create the symbolic link (if it doesn't already exist)
 if (!file.exists(symlink_path)) {
-    file.symlink(from = f_name, to = symlink_path)
-    message("Symlink created: ", symlink_path)
+    success <- tryCatch({
+        file.symlink(from = f_name, to = symlink_path)
+    }, warning = function(w) {
+        message("Warning: ", conditionMessage(w))
+        FALSE
+    }, error = function(e) {
+        message("Error: ", conditionMessage(e))
+        FALSE
+    })
+    
+    if (isTRUE(success)) {
+        message("Symlink created: ", symlink_path)
+    } else {
+        message("Failed to create symlink.")
+    }
 } else {
     message("Symlink already exists: ", symlink_path)
 }
