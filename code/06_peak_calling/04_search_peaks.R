@@ -57,27 +57,48 @@ SeuratOBJ[["ATAC"]]
 
 # filter Hb clusters
 Seurat_subset <- subset(SeuratOBJ, idents = grep("MHb|LHb", levels(SeuratOBJ), value = TRUE))
+# testing with one cluster
+#Seurat_subset <- subset(SeuratOBJ, idents = grep("C.05.DD_LHb", levels(SeuratOBJ), value = TRUE))
 levels(Seurat_subset)
 # [1] "C.05.DD_LHb" "C.07.DD_MHb" "C.10.DD_MHb" "C.11.DD_MHb" "C.14.DD_MHb"
 # [6] "C.16.DD_MHb" "C.18.DD_LHb" "C.23.DD_LHb" "C.24.DD_LHb" "C.30.DD_LHb"
 # [11] "C.33.DD_LHb" "C.36.DD_MHb" "C.40.DD_LHb"
-
-colnames(Seurat_subset@meta.data)
-Seurat_subset@meta.data$seurat_clusters 
-Seurat_subset@meta.data$C.leiden_wnn
+length(Cells(Seurat_subset))
+#colnames(Seurat_subset@meta.data)
 
 ##==============================================================================
 # call peaks on a single-cell ATAC-seq dataset using MACS2
 
 peaks <- CallPeaks(
     object = Seurat_subset,
-    group.by = "seurat_clusters"
+    group.by = "seurat_clusters",
+    macs2.path = "/users/csoto/.conda/envs/macs2_conda3_env/bin/macs2"
 )
+head(peaks)
+# GRanges object with 6 ranges and 6 metadata columns:
+#     seqnames      ranges strand |            name     score fold_change
+# <Rle>   <IRanges>  <Rle> |     <character> <integer>   <numeric>
+# [1] GL000194.1 24142-25380      * | Habenula_peak_1        55     1.71652
+# [2] GL000194.1 56009-56595      * | Habenula_peak_2        37     1.58937
+# [3] GL000194.1 58210-58796      * | Habenula_peak_3        66     1.78009
+# [4] GL000194.1 59643-60256      * | Habenula_peak_4        58     1.72924
+# [5] GL000194.1 67999-68873      * | Habenula_peak_5        60     1.74195
+# [6] GL000194.1 71745-73160      * | Habenula_peak_6        62     1.75467
+# neg_log10pvalue_summit neg_log10qvalue_summit relative_summit_position
+# <numeric>              <numeric>                <integer>
+# [1]                8.62229                5.59984                     1092
+# [2]                6.32284                3.73091                      456
+# [3]                9.89004                6.62440                      189
+# [4]                8.86969                5.80120                      522
+# [5]                9.12019                6.00435                      783
+# [6]                9.37376                6.20920                      617
+# -------
+#     seqinfo: 30 sequences from an unspecified genome; no seqlengths
 
 # Convert GRanges to data frame and save as csv file
-df_peaks <- as.data.frame(peaks_by_celltype)
+df_peaks <- as.data.frame(peaks)
 head(df_peaks)
-write.csv(df_peaks, here(outputCSV_Dir, "Hb_celltype_peaks.csv"), row.names = FALSE)
+write.csv(df_peaks, here(outputCSV_Dir, "Hb_peaks_by_cluster.csv"), row.names = FALSE)
 
 
 ##==============================================================================
