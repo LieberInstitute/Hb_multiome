@@ -55,23 +55,33 @@ SeuratOBJ[["ATAC"]]
 # Motifs present: FALSE 
 # Fragment files: 10 
 
-# filter Hb clusters
-Seurat_subset <- subset(SeuratOBJ, idents = grep("MHb|LHb", levels(SeuratOBJ), value = TRUE))
-# testing with one cluster
-#Seurat_subset <- subset(SeuratOBJ, idents = grep("C.05.DD_LHb", levels(SeuratOBJ), value = TRUE))
-levels(Seurat_subset)
-# [1] "C.05.DD_LHb" "C.07.DD_MHb" "C.10.DD_MHb" "C.11.DD_MHb" "C.14.DD_MHb"
-# [6] "C.16.DD_MHb" "C.18.DD_LHb" "C.23.DD_LHb" "C.24.DD_LHb" "C.30.DD_LHb"
-# [11] "C.33.DD_LHb" "C.36.DD_MHb" "C.40.DD_LHb"
-length(Cells(Seurat_subset))
-#colnames(Seurat_subset@meta.data)
+# verification
+length(Cells(SeuratOBJ))
+colnames(SeuratOBJ@meta.data)
+
+all_clusters_df <- data.frame(
+    cluster_ann = unique(SeuratOBJ@meta.data[c("cluster_ann")]),
+    seurat_cluster = unique(SeuratOBJ@meta.data[c("seurat_clusters")]),
+    stringsAsFactors = FALSE  
+)
+all_clusters_df <- head(all_clusters_df)
+print(all_clusters_df, row.names = FALSE)
+# cluster_ann           seurat_clusters
+# C.25.undetermined              25
+# C.04.undetermined               4
+# C.09.undetermined               9
+# C.01.undetermined               1
+# C.13.no-match                   13
+# C.08.undetermined               8
+
 
 ##==============================================================================
 # call peaks on a single-cell ATAC-seq dataset using MACS2
+# I am using pseudo-annotated clusters
 
 peaks <- CallPeaks(
-    object = Seurat_subset,
-    group.by = "seurat_clusters",
+    object = SeuratOBJ,
+    group.by = "cluster_ann",
     macs2.path = "/users/csoto/.conda/envs/macs2_conda3_env/bin/macs2"
 )
 head(peaks)
@@ -101,7 +111,8 @@ head(df_peaks)
 write.csv(df_peaks, here(outputCSV_Dir, "Hb_peaks_by_cluster.csv"), row.names = FALSE)
 
 
-##==============================================================================
+
+
 
 # ## extract base_name to save plots 
 # Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+")) 
