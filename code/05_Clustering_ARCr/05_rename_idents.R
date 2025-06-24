@@ -27,7 +27,7 @@ inputCVS_cell_types_summary <- here("processed-data", "05_Clustering_ARCr", "02_
                          "FULL_SUMMARY_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_allTypes_v3.csv")
 
 outputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents")
-outputCSV_Dir <- here("data")
+outputCSV_Dir <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents")
 plotDir <- here("plots", "05_Clustering_ARCr", "05_rename_idents")
 
 ## Check directories
@@ -131,8 +131,9 @@ tail(cell_types_curated)
 full_annotation_df <- left_join(cell_types_curated, summary_ct_df, by = "cluster")
 colnames(full_annotation_df)
 
-# filtr and sort columns
+# filter and sort columns
 full_annotation_df <- full_annotation_df[, c("cluster", "cell_type", "number_cells", "cluster_percentage", "all_cell_types_match")]
+
 
 # ==============================================================================
 # save full summary with cluster annotations curated
@@ -153,8 +154,24 @@ full_annotation_df
 # 5               DD_LHb, LB_LHB neuron specific, undetermined, LB_Hb neuron specific, DD_Excit.Thal
 # 6                                                              undetermined, DD_Excit.Thal, DD_OPC
 
+## save summary WNN cluster annotations
+f_name <- here(outputCSV_Dir, "WNN_full_annotation_meta_data.csv")
+write.csv(full_annotation_df, f_name), row.names = FALSE)
 
-write.csv(full_annotation_df, here(outputCSV_Dir, "full_annotation_meta_data.csv"), row.names = FALSE)
+## create symlink path to data/ -- where I am actually storing summaries for speed searching
+dir_target <- here("../../../data")
+
+## full symlink path
+symlink_path <- file.path(dir_target, basename(f_name))
+
+# Create the symbolic link (if it doesn't already exist)
+if (!file.exists(symlink_path)) {
+    file.symlink(from = f_name, to = symlink_path)
+    message("Symlink created: ", symlink_path)
+} else {
+    message("Symlink already exists: ", symlink_path)
+}
+
 # ==============================================================================
 
 
