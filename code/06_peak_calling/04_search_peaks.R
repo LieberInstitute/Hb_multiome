@@ -111,6 +111,26 @@ head(df_peaks)
 write.csv(df_peaks, here(outputCSV_Dir, "Hb_peaks_by_cluster.csv"), row.names = FALSE)
 
 
+##==============================================================================
+
+# filter peaks for Hb clusters
+target_clusters <- grep("MHb|LHb", levels(SeuratOBJ), value = TRUE)
+message("Target Hb clusters")
+print(target_clusters)
+# [1] "C.05.DD_LHb" "C.07.DD_MHb" "C.10.DD_MHb" "C.11.DD_MHb" "C.14.DD_MHb"
+# [6] "C.16.DD_MHb" "C.18.DD_LHb" "C.23.DD_LHb" "C.24.DD_LHb" "C.30.DD_LHb"
+# [11] "C.33.DD_LHb" "C.36.DD_MHb" "C.40.DD_LHb"
+
+## Subset Peaks where any target cluster is in peak_called_in
+matches <- sapply(target_clusters, function(cl) grepl(paste0("\\b", cl, "\\b"), peaks$peak_called_in))
+matched_rows <- rowSums(matches) > 0
+peaks_subset <- peaks[matched_rows]
+peaks_subset <- as.data.frame(peaks_subset)
+
+write.csv(peaks_subset, here(outputCSV_Dir, "peaks_DD_LHb_MHb.csv"), row.names = FALSE)
+
+
+##==============================================================================
 
 
 
