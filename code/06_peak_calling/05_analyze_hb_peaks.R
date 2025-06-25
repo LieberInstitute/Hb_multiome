@@ -102,6 +102,28 @@ plot_name <- here(plot_Dir, "peaks_frequency_by_cluster.png")
 ggsave(plot_name, plot = p1, width = 10, height = 6, dpi = 300)
 
 
+##==============================================================================
+## (2) Plot by regions of interest: Hb vs Others
+
+# custom order, Hb clusters first, then the rest
+remaining_clusters <- setdiff(cluster_df$cluster_ann, target_clusters)
+custom_order <- c(target_clusters, sort(remaining_clusters))
+cluster_df$cluster_ann <- factor(cluster_df$cluster_ann, levels = custom_order)
+
+p2 <- ggplot(cluster_df, aes(x = cluster_ann, y = n_peaks)) +
+    geom_bar(stat = "identity", fill = ifelse(cluster_df$cluster_ann %in% target_clusters, "#FF6F61", "grey")) +
+    theme_minimal() +
+    labs(title = "Number of peaks called per region",
+         #x = "Cluster",
+         y = "Number of Peaks",
+         caption = paste("Number of peaks found:", nrow(peaks_hb_subset))) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 0.6),
+          axis.title.x = element_blank(),
+          plot.caption = element_text(size = 10, hjust = 0))
+#p2
+plot_name <- here(plot_Dir, "peaks_frequency_by_region.png")
+ggsave(plot_name, plot = p2, width = 10, height = 6, dpi = 300)
+
 
 
 ##==============================================================================
