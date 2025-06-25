@@ -114,7 +114,6 @@ p2 <- ggplot(cluster_df, aes(x = cluster_ann, y = n_peaks)) +
     geom_bar(stat = "identity", fill = ifelse(cluster_df$cluster_ann %in% target_clusters, "#FF6F61", "grey")) +
     theme_minimal() +
     labs(title = "Number of peaks called per region",
-         #x = "Cluster",
          y = "Number of Peaks",
          caption = paste("Number of peaks found:", nrow(peaks_hb_subset))) +
     theme(axis.text.x = element_text(angle = 90, hjust = 0.6),
@@ -124,6 +123,57 @@ p2 <- ggplot(cluster_df, aes(x = cluster_ann, y = n_peaks)) +
 plot_name <- here(plot_Dir, "peaks_frequency_by_region.png")
 ggsave(plot_name, plot = p2, width = 10, height = 6, dpi = 300)
 
+
+##==============================================================================
+## (3) Plot by cluster sub-region: MHb, LHb, Others
+
+# Assign region
+cluster_df <- cluster_df |>
+    mutate(region = case_when(
+        grepl("MHb", cluster_ann) ~ "MHb",
+        grepl("LHb", cluster_ann) ~ "LHb",
+        TRUE ~ "Other"
+    ))
+# Assign panel width weights by number of bars
+cluster_df <- cluster_df |>
+    mutate(panel = case_when(
+        region == "MHb" ~ "Hb",
+        region == "LHb" ~ "Hb",
+        TRUE ~ "Other"
+    ))
+unique(cluster_df$region)
+# [1] "Other" "LHb"   "MHb"  
+unique(cluster_df$panel)
+# [1] "Other" "Hb" 
+
+# Create separate order vectors for Hb and Other panels to avoid interleved bars 
+cluster_df <- cluster_df |>
+    mutate(
+        cluster_ann = as.character(cluster_ann),
+        order_rank = case_when(
+            panel == "Hb" ~ match(cluster_ann, target_clusters),
+            panel == "Other" ~ match(cluster_ann, sort(remaining))
+        )
+    ) |>
+    arrange(panel, order_rank) |>
+    mutate(cluster_ann = factor(cluster_ann, levels = unique(cluster_ann)))
+
+p3 <- ggplot(cluster_df, aes(x = cluster_ann, y = n_peaks)) +
+    geom_bar(stat = "identity", aes(fill = region)) +
+    scale_fill_manual(values = c("LHb" = "#4682B4", "MHb" = "#FF7F50", "Other" = "grey")) +
+    facet_grid(. ~ panel, scales = "free_x", space = "free_x") +
+    theme_minimal() +
+    labs(title = "Number of peaks called per sub-region",
+         y = "Number of Peaks",
+         caption = paste("Number of peaks found:", nrow(peaks_hb_subset))) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 0.6),
+          axis.title.x = element_blank(),
+          legend.position = "none",
+          plot.caption = element_text(size = 10, hjust = 0)
+    )
+#p3
+plot_name <- here(plot_Dir, "peaks_frequency_by_subregion.png")
+ggsave(plot_name, plot = p3, width = 10, height = 6, dpi = 300)
 
 
 ##==============================================================================
