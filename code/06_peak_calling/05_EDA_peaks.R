@@ -1,5 +1,5 @@
 ########################################################################
-## Anlayze Hb Peaks
+## Make visualizations for Peaks found on WNN clusters
 ##
 ## Authors. CSC
 ## Date. June 25, 2025
@@ -24,8 +24,14 @@ inputRDS_Dir <- here(
 plot_Dir <- here(
     "plots",
     "06_peak_calling",
-    "05_analyze_hb_peaks"
+    "05_EDA_peaks"
 )
+outputCSV_Dir  <- here(
+    "processed-data",
+    "06_peak_calling",
+    "05_EDA_peaks"
+)
+if (!dir.exists(outputCSV_Dir)) { dir.create(outputCSV_Dir) }
 if (!dir.exists(plot_Dir)) { dir.create(plot_Dir) }
 
 
@@ -76,6 +82,9 @@ head(peaks_hb_subset)
 # 3                                                                                              C.20.DD_Astrocyte,C.30.DD_LHb,C.16.DD_MHb,C.08.undetermined,C.15.DD_Excit.Thal,C.02.DD_Oligo,C.01.undetermined,C.23.DD_LHb,C.06.DD_Excit.Thal,C.19.DD_Inhib.Thal,C.32.undetermined,C.10.DD_MHb,C.18.DD_LHb,C.33.DD_LHb,C.21.DD_Astrocyte,C.14.DD_MHb,C.12.undetermined,C.13.no-match,C.04.undetermined,C.26.DD_OPC,C.05.DD_LHb,C.40.DD_LHb,C.17.DD_Excit.Thal,C.25.undetermined,C.39.DD_Inhib.Thal,C.07.DD_MHb,C.11.DD_MHb,C.36.DD_MHb,C.37.undetermined,C.28.DD_Inhib.Thal,C.22.undetermined,C.24.DD_LHb,C.29.DD_Endo,C.34.DD_Oligo,C.09.undetermined,C.27.DD_Microglia
 # 5  C.21.DD_Astrocyte,C.29.DD_Endo,C.13.no-match,C.06.DD_Excit.Thal,C.41.DD_Microglia,C.20.DD_Astrocyte,C.11.DD_MHb,C.37.undetermined,C.02.DD_Oligo,C.30.DD_LHb,C.25.undetermined,C.28.DD_Inhib.Thal,C.01.undetermined,C.05.DD_LHb,C.32.undetermined,C.33.DD_LHb,C.36.DD_MHb,C.14.DD_MHb,C.26.DD_OPC,C.27.DD_Microglia,C.34.DD_Oligo,C.15.DD_Excit.Thal,C.23.DD_LHb,C.17.DD_Excit.Thal,C.19.DD_Inhib.Thal,C.08.undetermined,C.18.DD_LHb,C.09.undetermined,C.16.DD_MHb,C.24.DD_LHb,C.10.DD_MHb,C.12.undetermined,C.22.undetermined,C.07.DD_MHb,C.40.DD_LHb,C.31.DD_Excit.Thal,C.38.DD_Inhib.Thal,C.35.undetermined,C.39.DD_Inhib.Thal,C.04.undetermined,C.03.undetermined
 # 6                                                                                                                               C.26.DD_OPC,C.24.DD_LHb,C.19.DD_Inhib.Thal,C.07.DD_MHb,C.15.DD_Excit.Thal,C.08.undetermined,C.05.DD_LHb,C.02.DD_Oligo,C.09.undetermined,C.20.DD_Astrocyte,C.04.undetermined,C.01.undetermined,C.03.undetermined,C.06.DD_Excit.Thal,C.21.DD_Astrocyte,C.28.DD_Inhib.Thal,C.17.DD_Excit.Thal,C.16.DD_MHb,C.12.undetermined,C.13.no-match,C.37.undetermined,C.25.undetermined,C.18.DD_LHb,C.22.undetermined,C.23.DD_LHb,C.30.DD_LHb,C.10.DD_MHb,C.14.DD_MHb,C.27.DD_Microglia,C.11.DD_MHb,C.31.DD_Excit.Thal,C.33.DD_LHb,C.41.DD_Microglia
+
+# save subsetted peaks
+write.csv(peaks_hb_subset, here(outputCSV_Dir, "hb_peaks.csv"), row.names = FALSE)
 
 
 ##==============================================================================
@@ -174,6 +183,19 @@ p3 <- ggplot(cluster_df, aes(x = cluster_ann, y = n_peaks)) +
 #p3
 plot_name <- here(plot_Dir, "peaks_frequency_by_subregion.png")
 ggsave(plot_name, plot = p3, width = 10, height = 6, dpi = 300)
+
+
+# library("slurmjobs")
+# job_single(
+#     "05_EDA_peaks",
+#     create_shell = TRUE,
+#     partition = "katun",
+#     memory = "60G",
+#     cores = 2,
+#     logdir = "logs",
+#     command = "05_EDA_peaks.R",
+#     #create_logdir = TRUE
+# )
 
 
 ##==============================================================================
