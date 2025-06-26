@@ -1,4 +1,14 @@
-#################### Prepare enrichment t-stats from Multiome-snRNAseq ##########################################
+##############################################################
+## Prepare enrichment t-stats from Multiome-snRNAseq
+## INPUT:
+##      (1) Seurat Object with renamed WNN
+## OUPUT:
+##      (1) RDS SingleCellExperiment derived from Seurats rna-modality
+##      (2) RDS Enrichment t-stats
+## Authors. CSC 
+## Date. Jan, 2024
+## Recommended resources on interactive mode: srun --pty --mem=80GB --x11 bash
+##############################################################
 
 library("here")
 library("Seurat")
@@ -7,10 +17,15 @@ library("rtracklayer")
 library("spatialLIBD")
 library("sessioninfo")
 
-## set hard path to Habenula multiome project WNN Ledien knn=30 resolution=2
-dir_outRDS <- here("processed-data", "05_snRNA-seq_model_stats")
-inputRDS <- "/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/05_Clustering_ARCr/05_rename_idents"
-outputRDS <- "/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/05_Clustering_ARCr/08_wnn_gene_expression_plts_renamed_idents/"
+## set dirs
+inputRDS <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents")
+# Moved from Hb_Visium Project: 08_wnn_gene_expression_plts_renamed_idents -> 08_spatial_registration_vs_multiome_snRNA
+#outputRDS <- here("processed-data", "05_Clustering_ARCr", "08_wnn_gene_expression_plts_renamed_idents") 
+outputRDS <- here("processed-data", "08_spatial_registration_vs_multiome_snRNA-seq") 
+
+# Before move scripts from Hb_Visium project
+# inputRDS <- "/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/05_Clustering_ARCr/05_rename_idents"
+# outputRDS <- "/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/05_Clustering_ARCr/08_wnn_gene_expression_plts_renamed_idents/"
 
 if (!dir.exists(outputRDS)) {
   dir.create(outputRDS, showWarnings = FALSE, recursive = TRUE)
@@ -30,29 +45,15 @@ SeuratOBJ
 # 1 other assay present: ATAC
 # 13 dimensional reductions calculated: pca, umap.unintegrated, integrated.cca, umap, integrated.harmony, lsi, umap.lsi.unintegrated, umap.integrated, tsne.integrated, integrated.lsi.harmony, umap.lsi.integrated, tsne.lsi.integrated, wnn.umap
 
-message("WNN clustering loaded!\nCells: ", length(Cells(x = SeuratOBJ)))
-message(
-  "WNN containing ",
-  nrow(unique(SeuratOBJ[["seurat_clusters"]])),
-  " clusters"
-)
-
-levels(SeuratOBJ)
+ 
 # new cluster ident 
-# [1] "C.04.DD_LHb.4"      "C.05.DD_LHb.2.7"    "C.07.DD_MHb.2"     
-# [4] "C.08.DD_LHb.4"      "C.09.DD_LHb.4"      "C.10.DD_MHb.1"     
-# [7] "C.11.DD_MHb.1.2"    "C.13.DD_LHb.4"      "C.14.DD_MHb.1"     
-# [10] "C.16.DD_LHb.6"      "C.18.DD_LHb.1.3.4"  "C.23.DD_LHb.1"     
-# [13] "C.24.DD_LHb"        "C.30.DD_LHb"        "C.33.DD_LHb.1.3"   
-# [16] "C.36.DD_MHb.3"      "C.40.DD_LHb.4"      "C.01.DD_Inhib.Thal"
-# [19] "C.02.DD_Oligo"      "C.03.DD_Excit.Thal" "C.06.DD_Excit.Thal"
-# [22] "C.12.DD_Excit.Thal" "C.15.DD_Excit.Thal" "C.17.DD_Excit.Thal"
-# [25] "C.19.DD_Inhib.Thal" "C.20.DD_Astrocyte"  "C.21.DD_Astrocyte" 
-# [28] "C.22.DD_Oligo"      "C.25.DD_Excit.Thal" "C.26.DD_OPC"       
-# [31] "C.27.DD_Microglia"  "C.28.DD_Inhib.Thal" "C.29.DD_Endo"      
-# [34] "C.31.DD_Excit.Thal" "C.32.DD_Excit.Thal" "C.34.DD_Oligo"     
-# [37] "C.35.DD_Excit.Thal" "C.37.DD_Thal"       "C.38.DD_Inhib.Thal"
-# [40] "C.39.DD_Inhib.Thal" "C.41.DD_Microglia"  "C.42.no-match"   
+# [1] "C.04.LHb.4"         "C.05.LHb.2.7"       "C.07.MHb.2"        
+# [4] "C.08.LHb.4"         "C.09.LHb.4"         "C.10.MHb.1"        
+# [7] "C.11.MHb.1.2"       "C.13.LHb.4"         "C.14.MHb.1"        
+# [10] "C.16.LHb.6"         "C.18.LHb.1.3.4"     "C.23.LHb.1"        
+# [13] "C.24.DD_LHb"        "C.30.DD_LHb"        "C.33.LHb.1.3"      
+# [16] "C.36.MHb.3"         "C.40.LHb.4"         "C.01.Inhib.Thal"   
+# ...
 
 colnames(SeuratOBJ@meta.data)
 unique(SeuratOBJ@meta.data$cluster_ann)
@@ -65,16 +66,18 @@ head(rownames(SeuratOBJ[["RNA"]]))
 # [1] "MIR1302-2HG" "FAM138A"     "OR4F5"       "AL627309.1"  "AL627309.3" 
 # [6] "AL627309.2" 
 
-## make slim Seurat with ony RNA modality, and remove reduction to avoid mismatch issues with sce convertion
-SeuratOBJ <- DietSeurat(SeuratOBJ, 
+## make slim Seurat with ony RNA modality, and remove reduction to avoid mismatch issues with sce conversion
+DefaultAssay(SeuratOBJ) <- "RNA"
+Seurat::Assays(SeuratOBJ)
+DefaultAssay(SeuratOBJ)
+SeuratOBJ <- Seurat::DietSeurat(SeuratOBJ, 
                         assays = "RNA",
                         dimreducs = NULL)
-SeuratOBJ
-Reductions(SeuratOBJ)
+Seurat::Reductions(SeuratOBJ)
 # NULL
 
 ## convert Seurat object into sce
-sce <- as.SingleCellExperiment(SeuratOBJ)
+sce <- Seurat::as.SingleCellExperiment(SeuratOBJ)
 ## verification
 sce
 # class: SingleCellExperiment 
@@ -89,6 +92,11 @@ sce
 # reducedDimNames(0):
 #     mainExpName: RNA
 # altExpNames(0):
+
+
+message("Convert Seurat object into SCE done!")
+
+rm("SeuratOBJ")
 
 head(rownames(sce))
 # [1] "MIR1302-2HG" "FAM138A"     "OR4F5"       "AL627309.1"  "AL627309.3" 
@@ -246,23 +254,20 @@ sce_modeling_results$enrichment[1:3, 1:5]
 
 ## V2 has hb clusters annotated (curated - 13 clusters)
 ## V3 has all clusters pre-annotated for EDA with Clustering-Registration
+## V4 Polished cluster annotations, based on both gene-frequency and Clustering-Registration against snRNAseq from human pilot
 
 saveRDS(
   sce,
-  # here(dir_outRDS, "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v2b.rds")
-  #here(dir_outRDS, "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v3.rds")
-  here(dir_outRDS, "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v4.rds")
+  here(outputRDS, "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v4.rds") 
 )
-message("sce derived from rna-seurat saved!")
+message("SCE derived from rna-seurat saved!")
 
 saveRDS(
   sce_modeling_results,
-  #here(dir_outRDS, "enrichment_snRNA-multiome_v2b.rds")
-  #here(dir_outRDS, "enrichment_snRNA-multiome_v3.rds")
-  here(dir_outRDS, "enrichment_snRNA-multiome_v4.rds")
+  here(outputRDS, "enrichment_snRNA-multiome_v4.rds")
 )
 
-message("rna-multiome reference saved!")
+message("rna-multiome t-stats saved!")
 
 # library("slurmjobs")
 #
