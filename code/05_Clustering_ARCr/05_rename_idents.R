@@ -1,10 +1,10 @@
 ########################################################################
 ## Annotate WNN Clusters: all cluster with cell-types identified with the human pilot annotation
 ## INPUT:
-##      (1) GEX DEG annotation
-##      (2) Seurat with WNN 
+##      (1) CSV with differentially expressed genes (DEG) computed with FindAllMarkers() from Seurat (Wilcox)
+##      (2) Seurat object with WNN clusters
 ## OUPUT:
-##      (1) Seurats with annotated idents and MERGED meta-data added
+##      (1) Seurat with clusters annotated and MERGED meta-data added
 ##      (2) Full summary with cluster annotations curated (supplementary material)
 ##      (3) Some visualizations: VPlots, DimPlot, Feature, DotPlot ...
 ## Authors. CSC 
@@ -345,30 +345,28 @@ message("Seurat with clusters renamed and merged saved!")
 
 message("Building some plots ...")
 
-# Reductions(SeuratOBJ)
+DefaultAssay(SeuratOBJ) <- "RNA"
 ## extract suffix name to give unique name to plots
 seurat_name <- str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
 # seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r2
 
 plt1 <- DimPlot(SeuratOBJ, label = TRUE, 
                 reduction = "wnn.umap", 
-                layer = "data", 
                 label.size = 3) + 
     NoLegend() +
     labs(title = paste0("**Clusters from WNN: ", seurat_name))
 
 tmp_name <- paste0(seurat_name, "_DimPlot_renamed.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
+message("WNN UMAP done!")
+
 
 ## Violin plots for the features selected
-
-DefaultAssay(SeuratOBJ) <- "RNA"
 
 features <- c("POU4F1", "GPR151") # "TAC3"
   
 plt1 <- VlnPlot(object = SeuratOBJ,
                 features = features,
-                layer = "data", 
                 pt.size = 0) +
   labs(x = paste0("**Clusters from WNN: ", seurat_name)) &
   theme(text = element_text(size = 8), 
@@ -376,15 +374,14 @@ plt1 <- VlnPlot(object = SeuratOBJ,
 
 tmp_name <- paste0(seurat_name, "_POU4F1_GPR151_Violin_plot.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 4, width = 17)
-  
+message("Violin Plots done!")  
 
-## Feature plot - visualize feature expression in low-dimensional space
-#Reductions(SeuratOBJ)
+
 # Visualize co-expression of two features simultaneously
+
 plt1 <- FeaturePlot(SeuratOBJ, 
                     features = features, 
                     reduction = "wnn.umap",
-                    layer = "data",  # specify normalized data explicitly with layer. Avoid internal deprecation warnings related to SeuratObject v5
                     blend = TRUE) +
   labs(title = paste0("**Clusters from WNN: ", seurat_name)) &
   theme(text = element_text(size = 8), 
@@ -393,13 +390,12 @@ plt1 <- FeaturePlot(SeuratOBJ,
 
 tmp_name <- paste0(seurat_name, "_POU4F1_GPR151_FeaturePlot.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 3, width = 10)
+message("Feature Plots done!")  
 
 
 ## Dot plots - the size of the dot corresponds to the percentage of cells expressing the
-# feature in each cluster. The color represents the average expression level
 plt1 <- DotPlot(SeuratOBJ, 
-                features = c(features, "TAC3"),
-                layer = "data", ) + 
+                features = c(features, "TAC3")) + 
     RotatedAxis() +
     labs(title = paste0("**Clusters from WNN: ", seurat_name)) &
     theme(text = element_text(size = 8), 
@@ -408,6 +404,7 @@ plt1 <- DotPlot(SeuratOBJ,
 
 tmp_name <- paste0(seurat_name, "_POU4F1_GPR151_DotPlot.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
+message("DotPlot done!")  
 
 message("Process completed!")
 
