@@ -14,11 +14,11 @@
 #     - Warning message: package ‘DeconvoBuddies’ is not available for Bioconductor version '3.18'
 #     - ERROR: this R is version 4.3.2, package 'DeconvoBuddies' requires R >=  4.4.0
 # (2) Alternatively, install development version from GitHub 
-#.    - BiocManager::install("LieberInstitute/DeconvoBuddies")
+#     - BiocManager::install("LieberInstitute/DeconvoBuddies")
 ########################################################################
 
 library("SingleCellExperiment")
-library("DeconvoBuddies") # [1] ‘0.99.39’
+library("DeconvoBuddies") # [1] ‘0.99.39’ -> [1] ‘1.1.1’
 library("purrr")
 library("dplyr")
 library("stringr")
@@ -29,7 +29,11 @@ library("here")
 
 ## clusters renamed for Spatial-Registration on Visium project
 
-inputSCE_Dir <- "~/Habenula_Visium/processed-data/05_snRNA-seq_model_stats/"
+#inputSCE_Dir <- "~/Habenula_Visium/processed-data/05_snRNA-seq_model_stats/"
+inputSCE_Dir <- here(
+    "processed-data", 
+    "08_spatial_registration_vs_multiome_snRNA-seq"
+)
 processedDir <- here(
     "processed-data",
     "05_Clustering_ARCr",
@@ -54,9 +58,9 @@ source(here("code", "05_Clustering_ARCr", "get_mean_ratio_sparse.R"))
 
 #===============================================================================
 
-## set hard path to `sce` object derived from Seurat multimodal dataset
-sce_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v3.rds"
-sce_name <- paste0(inputSCE_Dir, sce_base_name)
+## SingleCellExperiment object derived from Seurat rna modality
+sce_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v4.rds"
+sce_name <- here(inputSCE_Dir, sce_base_name)
 sce_name
 title_name <- str_extract(sce_base_name, regex("C\\.\\w*\\_r2"))
 title_name
@@ -109,6 +113,300 @@ if (length(low_ct)==TRUE) {
     sce <- sce[, colData(sce)$cluster_ann %in% valid_types]
 }
 #Removing cell types with less<10 cells: C.42.no-match
+
+##==============================================================================
+## To safetly pick up a threshold, I track `MeanRatio Rank` across gene subsets for Habenula genes. Goals are: 
+# - Get an stable high MeanRatio and low rank across subset sizes. Indicates robust marker performance
+# - If rank drops significantly when increasing feature space, that marker may be less specific
+
+## Note, I am using `get_mean_ratio_sparse()`, this is my custom adaptation with minimal changes
+#  - of get_mean_ratio(), that fix error of coercing a massive matrix
+
+## set some settings
+genes_of_interest <- c("GPR151", "TAC3", "POU4F1")
+all_genes <- nrow(sce)
+# sizes <- c(2000, 4000, 6000, 8000, 10000, 12000, all_genes)
+## for speeding the process, I will only tests
+sizes <- c(all_genes)
+
+message("Subset sizes: ")
+sizes
+
+# Wrapper function to compute and extract ranks
+get_marker_ranks <- function(sce, 
+                             gene_subset, 
+                             n, 
+                             celltype_regex = NULL,
+                             genes_of_interest = NULL) {
+    # celltype_regex = NULL: No filtering on cellType.target
+    # celltype_regex = "LHb|MHb": Filters clusters with names matching that regex
+    # Optional gene filtering via genes_of_interest
+    
+    sce_sub <- sce[gene_subset, ]
+
+    message("Processing mean-ratio for subset:", n)
+    
+    #ratio_df <- get_mean_ratio_sparse(
+    ratio_df <- get_mean_ratio(
+        sce_sub,
+        assay_name = "logcounts",
+        cellType_col = "cluster_ann",
+        gene_name = "gene_symbol",
+        gene_ensembl = "gene_id"
+    ) 
+   
+    message("Mean-ration done!")
+    # |>
+    #     filter(str_detect(cellType.target, celltype_regex)) |>
+    #     group_by(cellType.target) |>
+    #     mutate(Rank = rank(-MeanRatio, ties.method = "first")) |>
+    #     ungroup() |>
+    #     mutate(SubsetSize = n)
+    
+    # Apply filtering only if celltype_regex not NULL. 
+    # - For example to focus on specific clusters -- celltype_regex = "LHb|MHb"
+    if (!is.null(celltype_regex)) {
+        ratio_df <- ratio_df |>
+            filter(str_detect(cellType.target, celltype_regex))
+    }
+    
+    # Compute ranks
+    ratio_df <- ratio_df |>
+        group_by(cellType.target) |>
+        mutate(Rank = rank(-MeanRatio, ties.method = "first")) |>
+        ungroup() |>
+        mutate(SubsetSize = n)
+    
+    # Apply gene filter only if genes_of_interest is provided
+    if (!is.null(genes_of_interest)) {
+        ratio_df <- ratio_df |> filter(gene %in% genes_of_interest)
+    }   
+    
+    return(ratio_df)
+}
+
+## =============================================================================
+
+message("Processing `gene_mean_ratio` across different gene subset sizes for specific Hb clusters")
+#unique(colData(sce)$cluster_ann)
+
+rank_results <- lapply(sizes, function(n) {
+    gene_subset <- head(order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE), n)
+    get_marker_ranks(
+        sce, gene_subset, 
+        n, 
+        celltype_regex = "LHb|MHb",
+        genes_of_interest = genes_of_interest
+        )
+})
+length(rank_results)
+rank_summary <- bind_rows(rank_results)
+
+## Check how many rows were returned 
+rank_summary$SubsetSize <- as.numeric(rank_summary$SubsetSize)
+table(rank_summary$SubsetSize)
+# 4000  6000  8000 10000 12000 
+# 6    11    11    12    12 
+
+## check clusters present
+unique(rank_summary$cellType.target)
+length(unique(rank_summary$cellType.target))
+# [1] "C.11.DD_MHb" "C.05.DD_LHb" "C.07.DD_MHb" "C.10.DD_MHb" "C.30.DD_LHb"
+# [6] "C.16.DD_MHb"
+# only those 6 clusters had at least one of the genes_of_interest (GPR151, TAC3, POU4F1) ranked among the top markers
+
+f_name <- here(plotDir ,"Track_MeanRatioRank_across_Hb_genes.pdf")
+pdf(file = f_name, width = 12, height = 8)  # standard letter size
+
+ggplot(rank_summary, aes(x = SubsetSize, y = MeanRatio, color = gene)) +
+    geom_line(aes(group = interaction(gene, cellType.target))) +
+    geom_point() +
+    scale_x_continuous(breaks = sizes) +
+    theme_minimal() +
+    facet_wrap(~ cellType.target) +
+    labs(title = "MeanRatio of Habenula marker genes across gene subset sizes",
+         y = "MeanRatio", x = "Number of genes used")
+
+dev.off()
+# X-axis (SubsetSize): number of genes used in the input to get_mean_ratio_sparse()
+# y-axis: ratio of average expression in the target cell type vs the most similar (highest mean) non-target cell type for that gene
+
+
+##==============================================================================
+## Get best-performing markers by stability (low variability in MeanRatio)
+## - Compute mean-ratio for all WWN cluster
+
+message("Processing `gene_mean_ratio` across different gene subset")
+
+## arrange to first plot Hb clusters
+clusters <- unique(colData(sce)$cluster_ann)
+# get Hb and non-Hb clusters
+hb_clusters <- grep("LHb|MHb", clusters, value = TRUE)
+hb_clusters
+non_hb_clusters <- setdiff(clusters, hb_clusters)
+non_hb_clusters
+# extract numeric too to sort alphanumeric clusters labels
+extract_cluster_num <- function(x) {
+    as.numeric(sub("C\\.(\\d+).*", "\\1", x))
+}
+hb_sorted <- hb_clusters[order(extract_cluster_num(hb_clusters))]
+non_hb_sorted <- non_hb_clusters[order(extract_cluster_num(non_hb_clusters))]
+# Combine Hb clusters first
+sorted_levels <- c(hb_sorted, non_hb_sorted)
+sorted_levels
+# Reorder factor in colData
+sce$cluster_ann <- factor(sce$cluster_ann, levels = sorted_levels)
+levels(sce$cluster_ann)
+
+message("Processing `gene_mean_ratio` across different gene subset sizes for ALL clusters")
+#unique(colData(sce)$cluster_ann)
+
+rank_results <- lapply(sizes, function(n) {
+    gene_subset <- head(order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE), n)
+    get_marker_ranks(
+        sce, gene_subset, 
+        n
+    )
+})
+length(rank_results)
+names(rank_results) <- paste0("size_", sizes)
+names(rank_results)
+# [1] "size_2000"  "size_4000"  "size_6000"  "size_8000"  "size_10000"
+# [6] "size_12000" "size_29690"
+
+rank_summary <- bind_rows(rank_results)
+summary(rank_summary)
+
+message("Check clusters present:")
+
+print(unique(rank_summary$cellType.target))
+length(unique(rank_summary$cellType.target))
+
+table(rank_summary$SubsetSize)
+# 2000  4000  6000  8000 10000 12000 29690 
+# 20946 29412 31001 31106 31130 31136 31136 
+
+message("Compute Marker Stability Metrics")
+
+stability_summary <- rank_summary |>
+    group_by(gene, cellType.target) |>
+    summarise(
+        mean_ratio_mean = mean(MeanRatio, na.rm = TRUE),
+        mean_ratio_min = min(MeanRatio, na.rm = TRUE),
+        mean_ratio_max = max(MeanRatio, na.rm = TRUE),
+        stability_range = mean_ratio_max - mean_ratio_min,
+        mean_ratio_sd = sd(MeanRatio, na.rm = TRUE),
+        .groups = "drop"
+    )
+head(stability_summary)
+
+message("Plot Top 3 most stable (smallest range) per cluster")
+
+top_stable_markers <- stability_summary |>
+    group_by(cellType.target) |>
+    slice_min(order_by = stability_range, n = 3, with_ties = FALSE) |>
+    ungroup()
+head(top_stable_markers)
+
+## Filter the Original Data for These Markers
+rank_top_stable <- rank_summary |>
+    semi_join(top_stable_markers, by = c("gene", "cellType.target"))
+
+## Plot MeanRatio Over Subset Size
+
+f_name <- here(plotDir ,"Top3_Stable_MarkerGenes_per_Cluster.pdf")
+pdf(file = f_name, width = 12, height = 8)  # standard letter size
+
+ggplot(rank_top_stable, aes(x = SubsetSize, y = MeanRatio, color = gene)) +
+    geom_line(aes(group = interaction(gene, cellType.target))) +
+    geom_point() +
+    facet_wrap(~ cellType.target) +
+    scale_x_continuous(breaks = unique(rank_summary$SubsetSize)) +
+    theme_minimal() +
+    labs(title = "Top 3 Stable Marker Genes per Cluster",
+         y = "MeanRatio", x = "Number of Genes Used")
+
+dev.off()
+
+
+##==============================================================================
+
+message("save marker stats / rank_results")
+
+marker_ranks_6000 <- rank_results[["size_6000"]]
+marker_ranks_8000 <- rank_results[["size_8000"]]
+marker_ranks_10000 <- rank_results[["size_10000"]]
+marker_ranks_12000 <- rank_results[["size_12000"]]
+marker_ranks_all <- rank_results[["size_29690"]]
+f_name <- here(processedDir, "marker_ranks_6k_12k_allk.RData")
+save(marker_ranks_6000, marker_ranks_8000, marker_ranks_10000, marker_ranks_12000, marker_ranks_all, file = f_name)
+
+message("Mean ratio results saved !!!")
+
+##==============================================================================
+## plots the top n marker genes for a specified cell type based off of the stats table from get_mean_ratio()
+
+message("Prepare data to plot n marker genes for a specified cell type")
+# sort unique_ct so that clusters containing "MH" or "LH" appear first
+# valid_types = after remove ct<10 cells
+sorted_levels
+levels(sce$cluster_ann)
+
+marker_stats <- rank_results[["size_10000"]]
+marker_stats <- rank_results[["size_29690"]]
+head(marker_stats)
+# A tibble: 6 × 12
+# gene   cellType.target mean.target cellType.2nd        mean.2nd MeanRatio
+# <chr>  <chr>                 <dbl> <chr>                  <dbl>     <dbl>
+# 1 COX17  C.11.DD_MHb           0.688 C.30.DD_LHb            0.591      1.16
+# 2 CHRNA3 C.11.DD_MHb           1.12  C.07.DD_MHb            0.965      1.16
+# 3 NCS1   C.11.DD_MHb           0.858 C.03.undeterminated    0.802      1.07
+# 4 GNB1   C.11.DD_MHb           1.30  C.14.DD_MHb            1.23       1.06
+# 5 ITM2C  C.11.DD_MHb           1.74  C.10.DD_MHb            1.65       1.06
+# 6 NRN1   C.11.DD_MHb           1.20  C.10.DD_MHb            1.13       1.06
+
+valid_clusters <- unique(marker_stats$cellType.target)
+sorted_ct_valid <- sorted_levels[sorted_levels %in% valid_clusters]
+
+message("Plotting mean-ratio by cell type")
+
+f_name <- here(plotDir ,"VPlot_mean_ratio_all_wnn_cluster_genes29k.pdf")
+pdf(file = f_name, width = 8.5, height = 11)  # standard letter size
+
+for (ct in sorted_ct_valid) {
+    message("Plotting wnn cluster: ", ct)
+    p1 <- plot_marker_express(
+        sce,
+        stats = marker_stats,
+        cellType_col = "cluster_ann",
+        cell_type = ct,
+        gene_col = "gene",
+        n_genes = 10,
+        rank_col = "MeanRatio.rank",
+        anno_col = "MeanRatio.anno",
+        color_pal = NULL,
+        plot_points = FALSE,
+        ncol = 2
+    )
+    print(p1)
+}
+
+dev.off()
+
+message("Top 10 mean-ratio plots done!")
+
+
+# library("slurmjobs")
+# job_single("13_wnn_geneExp_plt_mean_ratio_annotated", cores = 2, partition = "katun", create_shell = TRUE)
+
+
+## Reproducibility information
+library("sessioninfo")
+print("Reproducibility information:")
+Sys.time()
+proc.time()
+options(width = 120)
+session_info()
 
 ##==============================================================================
 ## Get the mean ratio for each gene for each cell type defined in `cluster_ann`
@@ -193,252 +491,3 @@ if (length(low_ct)==TRUE) {
 # 6 TMTC1   C.05.DD_LHb            2.33 C.07.DD_MHb            2.09      1.12
 
 
-##==============================================================================
-## To safetly pick up a threshold, I track `MeanRatio Rank` across gene subsets for Habenula genes. Goals are: 
-# - Get an stable high MeanRatio and low rank across subset sizes. Indicates robust marker performance
-# - If rank drops significantly when increasing feature space, that marker may be less specific
-
-## Note, I am using `get_mean_ratio_sparse()`, this is my custom adaptation with minimal changes
-#  - of get_mean_ratio(), that fix error of coercing a massive matrix
-
-genes_of_interest <- c("GPR151", "TAC3", "POU4F1")
-
-# Wrapper function to compute and extract ranks
-get_marker_ranks <- function(sce, 
-                             gene_subset, 
-                             n, 
-                             celltype_regex = "LHb|MHb",
-                             genes_of_interest = NULL) {
-
-    sce_sub <- sce[gene_subset, ]
-
-    ratio_df <- get_mean_ratio_sparse(
-        sce_sub,
-        assay_name = "logcounts",
-        cellType_col = "cluster_ann",
-        gene_name = "gene_symbol",
-        gene_ensembl = "gene_id"
-    ) |>
-        filter(str_detect(cellType.target, celltype_regex)) |>
-        group_by(cellType.target) |>
-        mutate(Rank = rank(-MeanRatio, ties.method = "first")) |>
-        ungroup() |>
-        mutate(SubsetSize = n)
-    # Apply gene filter only if genes_of_interest is provided
-    if (!is.null(genes_of_interest)) {
-        ratio_df <- ratio_df |> filter(gene %in% genes_of_interest)
-    }   
-    
-    return(ratio_df)
-}
-
-# Run across different gene subset sizes
-all_genes <- nrow(sce)
-sizes <- c(2000, 4000, 6000, 8000, 10000, 12000, all_genes)
-
-rank_results <- lapply(sizes, function(n) {
-    gene_subset <- head(order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE), n)
-    get_marker_ranks(sce, gene_subset, n, genes_of_interest = genes_of_interest)
-})
-length(rank_results)
-rank_summary <- bind_rows(rank_results)
-
-## Check how many rows were returned 
-rank_summary$SubsetSize <- as.numeric(rank_summary$SubsetSize)
-table(rank_summary$SubsetSize)
-# 4000  6000  8000 10000 12000 
-# 6    11    11    12    12 
-
-## check clusters present
-unique(rank_summary$cellType.target)
-length(unique(rank_summary$cellType.target))
-# [1] "C.11.DD_MHb" "C.05.DD_LHb" "C.07.DD_MHb" "C.10.DD_MHb" "C.30.DD_LHb"
-# [6] "C.16.DD_MHb"
-# only those 6 clusters had at least one of the genes_of_interest (GPR151, TAC3, POU4F1) ranked among the top markers
-
-f_name <- here(plotDir ,"Track_MeanRatioRank_across_Hb_genes.pdf")
-pdf(file = f_name, width = 12, height = 8)  # standard letter size
-
-ggplot(rank_summary, aes(x = SubsetSize, y = MeanRatio, color = gene)) +
-    geom_line(aes(group = interaction(gene, cellType.target))) +
-    geom_point() +
-    scale_x_continuous(breaks = sizes) +
-    theme_minimal() +
-    facet_wrap(~ cellType.target) +
-    labs(title = "MeanRatio of Habenula marker genes across gene subset sizes",
-         y = "MeanRatio", x = "Number of genes used")
-
-dev.off()
-# X-axis (SubsetSize): number of genes used in the input to get_mean_ratio_sparse()
-# y-axis: ratio of average expression in the target cell type vs the most similar (highest mean) non-target cell type for that gene
-
-
-##==============================================================================
-## Get best-performing markers by stability (low variability in MeanRatio)
-
-rank_results <- lapply(sizes, function(n) {
-    gene_subset <- head(order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE), n)
-    get_marker_ranks(sce, gene_subset, n)
-})
-length(rank_results)
-names(rank_results) <- paste0("size_", sizes)
-rank_summary <- bind_rows(rank_results)
-
-## check clusters present
-unique(rank_summary$cellType.target)
-# [1] "C.11.DD_MHb" "C.23.DD_LHb" "C.05.DD_LHb" "C.18.DD_LHb" "C.14.DD_MHb"
-# [6] "C.24.DD_LHb" "C.07.DD_MHb" "C.36.DD_MHb" "C.10.DD_MHb" "C.33.DD_LHb"
-# [11] "C.30.DD_LHb" "C.16.DD_MHb" "C.40.DD_LHb"
-length(unique(rank_summary$cellType.target))
-# [1] 13
-
-table(rank_summary$SubsetSize)
-# 2000  4000  6000  8000 10000 12000 29690 
-# 20946 29412 31001 31106 31130 31136 31136 
-
-## Compute Marker Stability Metrics
-stability_summary <- rank_summary |>
-    group_by(gene, cellType.target) |>
-    summarise(
-        mean_ratio_mean = mean(MeanRatio, na.rm = TRUE),
-        mean_ratio_min = min(MeanRatio, na.rm = TRUE),
-        mean_ratio_max = max(MeanRatio, na.rm = TRUE),
-        stability_range = mean_ratio_max - mean_ratio_min,
-        mean_ratio_sd = sd(MeanRatio, na.rm = TRUE),
-        .groups = "drop"
-    )
-head(stability_summary)
-# gene  cellType.target mean_ratio_mean mean_ratio_min mean_ratio_max
-# <chr> <chr>                     <dbl>          <dbl>          <dbl>
-# 1 AAK1  C.05.DD_LHb               0.721          0.721          0.721
-# 2 AAK1  C.07.DD_MHb               0.511          0.511          0.511
-# 3 AAK1  C.10.DD_MHb               0.562          0.562          0.562
-# 4 AAK1  C.11.DD_MHb               0.589          0.589          0.589
-# 5 AAK1  C.14.DD_MHb               0.583          0.583          0.583
-# 6 AAK1  C.16.DD_MHb               0.543          0.543          0.543
-
-# Top 5 most stable (smallest range) per cluster
-top_stable_markers <- stability_summary |>
-    group_by(cellType.target) |>
-    slice_min(order_by = stability_range, n = 3, with_ties = FALSE) |>
-    ungroup()
-head(top_stable_markers)
-
-## Filter the Original Data for These Markers
-rank_top_stable <- rank_summary |>
-    semi_join(top_stable_markers, by = c("gene", "cellType.target"))
-
-## Plot MeanRatio Over Subset Size
-
-f_name <- here(plotDir ,"Top3_Stable_MarkerGenes_per_Cluster.pdf")
-pdf(file = f_name, width = 12, height = 8)  # standard letter size
-
-ggplot(rank_top_stable, aes(x = SubsetSize, y = MeanRatio, color = gene)) +
-    geom_line(aes(group = interaction(gene, cellType.target))) +
-    geom_point() +
-    facet_wrap(~ cellType.target) +
-    scale_x_continuous(breaks = unique(rank_summary$SubsetSize)) +
-    theme_minimal() +
-    labs(title = "Top 3 Stable Marker Genes per Cluster",
-         y = "MeanRatio", x = "Number of Genes Used")
-
-dev.off()
-
-
-##==============================================================================
-
-## save marker stats / rank_results
-marker_ranks_6000 <- rank_results[["size_6000"]]
-marker_ranks_8000 <- rank_results[["size_8000"]]
-marker_ranks_10000 <- rank_results[["size_10000"]]
-marker_ranks_12000 <- rank_results[["size_12000"]]
-marker_ranks_all <- rank_results[["size_29690"]]
-f_name <- here(processedDir, "marker_ranks_6k_12k_allk.RData")
-save(marker_ranks_6000, marker_ranks_8000, marker_ranks_10000, marker_ranks_12000, marker_ranks_all, file = f_name)
-
-message("Mean ratio results saved !!!")
-
-##==============================================================================
-## plots the top n marker genes for a specified cell type based off of the stats table from get_mean_ratio()
-
-# Prepare data
-# sort unique_ct so that clusters containing "MH" or "LH" appear first
-# valid_types = after remove ct<10 cells
-sorted_ct <- valid_types|>
-    sort() |>
-    tibble(cluster = _) |>
-    mutate(priority = str_detect(cluster, "MHb|LHb")) |>
-    arrange(desc(priority), cluster) |>
-    pull(cluster)
-sorted_ct
-# [1] "C.05.DD_LHb"         "C.07.DD_MHb"         "C.10.DD_MHb"        
-# [4] "C.11.DD_MHb"         "C.14.DD_MHb"         "C.16.DD_MHb"        
-# [7] "C.18.DD_LHb"         "C.23.DD_LHb"         "C.24.DD_LHb"        
-# [10] "C.30.DD_LHb"         "C.33.DD_LHb"         "C.36.DD_MHb"        
-# [13] "C.40.DD_LHb"         "C.01.undeterminated" "C.02.DD_Oligo"      
-# [16] "C.03.undeterminated" "C.04.undeterminated" "C.06.DD_Exit.Thal"  
-# [19] "C.08.undeterminated" "C.09.undeterminated" "C.12.undeterminated"
-# [22] "C.13.no-match"       "C.15.DD_Exit.Thal"   "C.17.DD_Exit.Thal"  
-# [25] "C.19.DD_Inhib.Thal"  "C.20.DD_Astrocyte"   "C.21.DD_Astrocyte"  
-# [28] "C.22.undeterminated" "C.25.undeterminated" "C.26.DD_OPC"        
-# [31] "C.27.DD_Microglia"   "C.28.DD_Inhib.Thal"  "C.29.DD_Endo"       
-# [34] "C.31.DD_Exit.Thal"   "C.32.undeterminated" "C.34.DD_Oligo"      
-# [37] "C.35.undeterminated" "C.37.undeterminated" "C.38.DD_Inhib.Thal" 
-# [40] "C.39.DD_Inhib.Thal"  "C.41.DD_Microglia"  
-
-# set as factor of sce[[cellType_col]] to match sorted_ct on the plots
-sce$cluster_ann <- factor(sce$cluster_ann, levels = sorted_ct)
-
-f_name <- here(plotDir ,"VPlot_mean_ratio_all_wnn_cluster_genes10k.pdf")
-pdf(file = f_name, width = 8.5, height = 11)  # standard letter size
-
-marker_stats <- rank_results[["size_10000"]]
-head(marker_stats)
-# A tibble: 6 × 12
-# gene   cellType.target mean.target cellType.2nd        mean.2nd MeanRatio
-# <chr>  <chr>                 <dbl> <chr>                  <dbl>     <dbl>
-# 1 COX17  C.11.DD_MHb           0.688 C.30.DD_LHb            0.591      1.16
-# 2 CHRNA3 C.11.DD_MHb           1.12  C.07.DD_MHb            0.965      1.16
-# 3 NCS1   C.11.DD_MHb           0.858 C.03.undeterminated    0.802      1.07
-# 4 GNB1   C.11.DD_MHb           1.30  C.14.DD_MHb            1.23       1.06
-# 5 ITM2C  C.11.DD_MHb           1.74  C.10.DD_MHb            1.65       1.06
-# 6 NRN1   C.11.DD_MHb           1.20  C.10.DD_MHb            1.13       1.06
-
-valid_clusters <- unique(marker_stats$cellType.target)
-sorted_ct_valid <- sorted_ct[sorted_ct %in% valid_clusters]
-
-# Loop through each habenula cluster
-for (ct in sorted_ct_valid) {
-    message("Plotting wnn cluster: ", ct)
-    p1 <- plot_marker_express(
-        sce,
-        stats = marker_stats,
-        cellType_col = "cluster_ann",
-        cell_type = ct,
-        gene_col = "gene",
-        n_genes = 10,
-        rank_col = "MeanRatio.rank",
-        anno_col = "MeanRatio.anno",
-        color_pal = NULL,
-        plot_points = FALSE,
-        ncol = 2
-    )
-    print(p1)
-}
-
-dev.off()
-
-message("Mean ratio Plots for genes subset 10k saved !!!")
-
-
-# library("slurmjobs")
-# job_single("13_wnn_geneExp_plt_mean_ratio_annotated", cores = 2, partition = "katun", create_shell = TRUE)
-
-
-## Reproducibility information
-library("sessioninfo")
-print("Reproducibility information:")
-Sys.time()
-proc.time()
-options(width = 120)
-session_info()
