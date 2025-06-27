@@ -151,55 +151,6 @@ cell_types_curated <- tribble(
     "C.42", "no-match",            "no-match",             "no-match",               "no-match"
 )
 
-
-# cell_types_curated <- data.frame(
-#     ## Seurat WNN cluster IDs
-#     cluster = c(
-#         "C.01", "C.02", "C.03", "C.04", "C.05", "C.06", "C.07", "C.08", "C.09", "C.10",
-#         "C.11", "C.12", "C.13", "C.14", "C.15", "C.16", "C.17", "C.18", "C.19", "C.20",
-#         "C.21", "C.22", "C.23", "C.24", "C.25", "C.26", "C.27", "C.28", "C.29", "C.30",
-#         "C.31", "C.32", "C.33", "C.34", "C.35", "C.36", "C.37", "C.38", "C.39", "C.40",
-#         "C.41", "C.42"
-#     ),
-#     ## Polished clusters by manual annotation based on gene marker match frequency (DD and LB)
-#     ct_frequency_in2ct = c(
-#             "undetermined", "DD_Oligo", "undetermined", "undetermined", "DD_LHb",
-#             "DD_Excit.Thal", "DD_MHb", "undetermined", "undetermined", "DD_MHb",
-#             "DD_MHb", "undetermined", "no-match", "DD_MHb", "DD_Excit.Thal",
-#             "DD_MHb", "DD_Excit.Thal", "DD_LHb", "DD_Inhib.Thal", "DD_Astrocyte",
-#             "DD_Astrocyte", "undetermined", "DD_LHb", "DD_LHb", "undetermined",
-#             "DD_OPC", "DD_Microglia", "DD_Inhib.Thal", "DD_Endo", "DD_LHb",
-#             "DD_Excit.Thal", "undetermined", "DD_LHb", "DD_Oligo", "undetermined",
-#             "DD_MHb", "undetermined", "DD_Inhib.Thal", "DD_Inhib.Thal", "DD_LHb",
-#             "DD_Microglia", "no-match"
-#     ),
-#     ## 2nd round of polished manual annotation based on clustering-registration correlation 
-#     # broad resolution using DD genes from human pilot
-#     ct_CRegistration_broad = c(
-#             "Inhib.Thal", "Oligo", "Excit.Thal", "LHb", "LHb", 
-#             "undetermined", "MHb", "LHb", "LHb", "MHb", # no-complete
-#             "MHb", "Excit.Thal", "LHb", "MHb", "Excit.Thal", 
-#             "LHb", "Excit.Thal", "LHb", "Inhib.Thal", "Astrocyte", 
-#             "Astrocyte", "Oligo", "LHb", "undetermined", "Excit.Thal", # no-complete
-#             "OPC", "Microglia", "Inhib.Thal", "Endo", "undetermined", # no-complete
-#             "undetermined", "Excit.Thal", "LHb", "undetermined", " Excit.Thal", # no-complete
-#             "MHb", "Thal", "Inhib.Thal", "Inhib.Thal", "LHb", 
-#             "Microglia", "no-match"
-#     ),
-#     # fine resolution using DD genes from human pilot
-#     ct_CRegistration_fine = c(
-#             "Inhib.Thal", "Oligo", "Excit.Thal", "LHb.4", "LHb.2.7",
-#             "undetermined", "MHb.2", "LHb.4", "LHb.4", "MHb.1",
-#             "MHb.1.2", "Excit.Thal", "LHb.4", "MHb.1", "Excit.Thal",
-#             "LHb.6", "Excit.Thal", "LHb.1.3.4", "Inhib.Thal", "Astrocyte",
-#             "Astrocyte", "Oligo", "LHb.1", "undetermined", "Excit.Thal",
-#             "OPC", "Microglia", "Inhib.Thal", "Endo", "undetermined",
-#             "undetermined", "Excit.Thal", "LHb.1.3", "undetermined", " Excit.Thal",
-#             "MHb.3", "Thal", "Inhib.Thal", "Inhib.Thal", "LHb.4",
-#             "Microglia", "no-match"
-#         ),
-#     stringsAsFactors = FALSE  # Optional, prevents conversion to factors
-# )
 # double check spaces 
 cell_types_curated <- cell_types_curated |>
     dplyr::mutate(across(everything(), ~ trimws(.)))
