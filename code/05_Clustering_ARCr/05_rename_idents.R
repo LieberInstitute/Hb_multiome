@@ -15,12 +15,15 @@
 library("Seurat")
 library("Signac")
 library("purrr")
+library("tibble")
 library("ggplot2")
 library("dplyr")
 library("stringr")
 library("here")
 
 ## input directories
+
+if (packageVersion("Seurat") != "5.0.1") stop("Incompatible Seurat version")
 
 inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
 inputCVS_cell_types_summary <- here("processed-data", "05_Clustering_ARCr", "02_Hb_celltypes_from_seurat_reanalyze_v3", 
@@ -102,70 +105,117 @@ head(summary_ct_df)
 # ==============================================================================
 ## Curated Manual Annotation based on: (1) gene marker match frequency (DD and LB) and (2) Clustering-Registration `Broad` and `Fine`
 # Details on: https://github.com/LieberInstitute/Hb_multiome/tree/8b614669db8f7b833e5a793fa01326f839c57cd8/data 
-
-cell_types_curated <- data.frame(
-    ## Seurat WNN cluster IDs
-    cluster = c(
-        "C.01", "C.02", "C.03", "C.04", "C.05", "C.06", "C.07", "C.08", "C.09", "C.10",
-        "C.11", "C.12", "C.13", "C.14", "C.15", "C.16", "C.17", "C.18", "C.19", "C.20",
-        "C.21", "C.22", "C.23", "C.24", "C.25", "C.26", "C.27", "C.28", "C.29", "C.30",
-        "C.31", "C.32", "C.33", "C.34", "C.35", "C.36", "C.37", "C.38", "C.39", "C.40",
-        "C.41", "C.42"
-    ),
-    ## Polished clusters by manual annotation based on gene marker match frequency (DD and LB)
-    ct_frequency_in2ct = c(
-            "undetermined", "DD_Oligo", "undetermined", "undetermined", "DD_LHb",
-            "DD_Excit.Thal", "DD_MHb", "undetermined", "undetermined", "DD_MHb",
-            "DD_MHb", "undetermined", "no-match", "DD_MHb", "DD_Excit.Thal",
-            "DD_MHb", "DD_Excit.Thal", "DD_LHb", "DD_Inhib.Thal", "DD_Astrocyte",
-            "DD_Astrocyte", "undetermined", "DD_LHb", "DD_LHb", "undetermined",
-            "DD_OPC", "DD_Microglia", "DD_Inhib.Thal", "DD_Endo", "DD_LHb",
-            "DD_Excit.Thal", "undetermined", "DD_LHb", "DD_Oligo", "undetermined",
-            "DD_MHb", "undetermined", "DD_Inhib.Thal", "DD_Inhib.Thal", "DD_LHb",
-            "DD_Microglia", "no-match"
-    ),
-    ## 2nd round of polished manual annotation based on clustering-registration correlation 
-    # broad resolution using DD genes from human pilot
-    ct_CRegistration_broad = c(
-            "Inhib.Thal", "Oligo", "Excit.Thal", "LHb", "LHb", 
-            "undetermined", "MHb", "LHb", "LHb", "MHb", # no-complete
-            "MHb", "Excit.Thal", "LHb", "MHb", "Excit.Thal", 
-            "LHb", "Excit.Thal", "LHb", "Inhib.Thal", "Astrocyte", 
-            "Astrocyte", "Oligo", "LHb", "undetermined", "Excit.Thal", # no-complete
-            "OPC", "Microglia", "Inhib.Thal", "Endo", "undetermined", # no-complete
-            "undetermined", "Excit.Thal", "LHb", "undetermined", " Excit.Thal", # no-complete
-            "MHb", "Thal", "Inhib.Thal", "Inhib.Thal", "LHb", 
-            "Microglia", "no-match"
-    ),
-    # fine resolution using DD genes from human pilot
-    ct_CRegistration_fine = c(
-            "Inhib.Thal", "Oligo", "Excit.Thal", "LHb.4", "LHb.2.7",
-            "undetermined", "MHb.2", "LHb.4", "LHb.4", "MHb.1",
-            "MHb.1.2", "Excit.Thal", "LHb.4", "MHb.1", "Excit.Thal",
-            "LHb.6", "Excit.Thal", "LHb.1.3.4", "Inhib.Thal", "Astrocyte",
-            "Astrocyte", "Oligo", "LHb.1", "undetermined", "Excit.Thal",
-            "OPC", "Microglia", "Inhib.Thal", "Endo", "undetermined",
-            "undetermined", "Excit.Thal", "LHb.1.3", "undetermined", " Excit.Thal",
-            "MHb.3", "Thal", "Inhib.Thal", "Inhib.Thal", "LHb.4",
-            "Microglia", "no-match"
-        ),
-    stringsAsFactors = FALSE  # Optional, prevents conversion to factors
+cell_types_curated <- tribble(
+    ~cluster, ~ct_frequency_in2ct, ~ct_CRegistration_broad, ~ct_CRegistration_fine, ~ct_MeanRatio_support,
+    "C.01", "undetermined",        "Inhib.Thal",          "Inhib.Thal",             "Inhib.Thal",
+    "C.02", "DD_Oligo",            "Oligo",                "Oligo",                  "Oligo",
+    "C.03", "undetermined",        "Excit.Thal",           "Excit.Thal",             "Excit.Thal", # checking
+    "C.04", "undetermined",        "LHb",                  "LHb.4",                  "Excit.Thal", # checking
+    "C.05", "DD_LHb",              "LHb",                  "LHb.2.7",                "LHb.2.7",
+    "C.06", "DD_Excit.Thal",       "undetermined",         "undetermined",           "LHb.4",  # checking
+    "C.07", "DD_MHb",              "MHb",                  "MHb.2",                  "MHb.2",
+    "C.08", "undetermined",        "LHb",                  "LHb.4",                  "LHb.4",
+    "C.09", "undetermined",        "LHb",                  "LHb.4",                  "LHb.4",  # checking
+    "C.10", "DD_MHb",              "MHb",                  "MHb.1",                  "MHb.1",
+    "C.11", "DD_MHb",              "MHb",                  "MHb.1.2",                "MHb.1.2",
+    "C.12", "undetermined",        "Excit.Thal",           "Excit.Thal",             "Excit.Thal",
+    "C.13", "no-match",            "LHb",                  "LHb.4",                  "LHb.Excit.Thal",  # checking - HD
+    "C.14", "DD_MHb",              "MHb",                  "MHb.1",                  "MHb.1",
+    "C.15", "DD_Excit.Thal",       "Excit.Thal",           "Excit.Thal",             "Excit.Thal",
+    "C.16", "DD_MHb",              "LHb",                  "LHb.6",                  "MHb.1.2",  # checking
+    "C.17", "DD_Excit.Thal",       "Excit.Thal",           "Excit.Thal",             "Excit.Thal",
+    "C.18", "DD_LHb",              "LHb",                  "LHb.1.3.4",              "LHb.1.3.4",
+    "C.19", "DD_Inhib.Thal",       "Inhib.Thal",           "Inhib.Thal",             "Inhib.Thal",
+    "C.20", "DD_Astrocyte",        "Astrocyte",            "Astrocyte",              "Astrocyte",
+    "C.21", "DD_Astrocyte",        "Astrocyte",            "Astrocyte",              "Astrocyte",
+    "C.22", "undetermined",        "Oligo",                "Oligo",                  "Oligo",
+    "C.23", "DD_LHb",              "LHb",                  "LHb.1",                  "LHb.1",
+    "C.24", "DD_LHb",              "undetermined",         "undetermined",           "LHb", # checking
+    "C.25", "undetermined",        "Excit.Thal",           "Excit.Thal",             "Excit.Thal",
+    "C.26", "DD_OPC",              "OPC",                  "OPC",                    "OPC",
+    "C.27", "DD_Microglia",        "Microglia",            "Microglia",              "Microglia",
+    "C.28", "DD_Inhib.Thal",       "Inhib.Thal",           "Inhib.Thal",             "Inhib.Thal",
+    "C.29", "DD_Endo",             "Endo",                 "Endo",                   "Endo",
+    "C.30", "DD_LHb",              "undetermined",         "undetermined",           "MHb.LHb", # checking HD
+    "C.31", "DD_Excit.Thal",       "undetermined",         "undetermined",           "Excit.Thal.LHb", # checking HD
+    "C.32", "undetermined",        "Excit.Thal",           "Excit.Thal",             "Excit.Thal",
+    "C.33", "DD_LHb",              "LHb",                  "LHb.1.3",                "LHb.1.3",
+    "C.34", "DD_Oligo",            "undetermined",         "undetermined",           "Oligo", # checking
+    "C.35", "undetermined",        " Excit.Thal",          " Excit.Thal",            " Excit.Thal",
+    "C.36", "DD_MHb",              "MHb",                  "MHb.3",                  "MHb.3",
+    "C.37", "undetermined",        "Thal",                 "Thal",                   "Thal",
+    "C.38", "DD_Inhib.Thal",       "Inhib.Thal",           "Inhib.Thal",             "Inhib.Thal",
+    "C.39", "DD_Inhib.Thal",       "Inhib.Thal",           "Inhib.Thal",             "Inhib.Thal",
+    "C.40", "DD_LHb",              "LHb",                  "LHb.4",                  "LHb.4",
+    "C.41", "DD_Microglia",        "Microglia",            "Microglia",              "Microglia",
+    "C.42", "no-match",            "no-match",             "no-match",               "no-match"
 )
+
+
+# cell_types_curated <- data.frame(
+#     ## Seurat WNN cluster IDs
+#     cluster = c(
+#         "C.01", "C.02", "C.03", "C.04", "C.05", "C.06", "C.07", "C.08", "C.09", "C.10",
+#         "C.11", "C.12", "C.13", "C.14", "C.15", "C.16", "C.17", "C.18", "C.19", "C.20",
+#         "C.21", "C.22", "C.23", "C.24", "C.25", "C.26", "C.27", "C.28", "C.29", "C.30",
+#         "C.31", "C.32", "C.33", "C.34", "C.35", "C.36", "C.37", "C.38", "C.39", "C.40",
+#         "C.41", "C.42"
+#     ),
+#     ## Polished clusters by manual annotation based on gene marker match frequency (DD and LB)
+#     ct_frequency_in2ct = c(
+#             "undetermined", "DD_Oligo", "undetermined", "undetermined", "DD_LHb",
+#             "DD_Excit.Thal", "DD_MHb", "undetermined", "undetermined", "DD_MHb",
+#             "DD_MHb", "undetermined", "no-match", "DD_MHb", "DD_Excit.Thal",
+#             "DD_MHb", "DD_Excit.Thal", "DD_LHb", "DD_Inhib.Thal", "DD_Astrocyte",
+#             "DD_Astrocyte", "undetermined", "DD_LHb", "DD_LHb", "undetermined",
+#             "DD_OPC", "DD_Microglia", "DD_Inhib.Thal", "DD_Endo", "DD_LHb",
+#             "DD_Excit.Thal", "undetermined", "DD_LHb", "DD_Oligo", "undetermined",
+#             "DD_MHb", "undetermined", "DD_Inhib.Thal", "DD_Inhib.Thal", "DD_LHb",
+#             "DD_Microglia", "no-match"
+#     ),
+#     ## 2nd round of polished manual annotation based on clustering-registration correlation 
+#     # broad resolution using DD genes from human pilot
+#     ct_CRegistration_broad = c(
+#             "Inhib.Thal", "Oligo", "Excit.Thal", "LHb", "LHb", 
+#             "undetermined", "MHb", "LHb", "LHb", "MHb", # no-complete
+#             "MHb", "Excit.Thal", "LHb", "MHb", "Excit.Thal", 
+#             "LHb", "Excit.Thal", "LHb", "Inhib.Thal", "Astrocyte", 
+#             "Astrocyte", "Oligo", "LHb", "undetermined", "Excit.Thal", # no-complete
+#             "OPC", "Microglia", "Inhib.Thal", "Endo", "undetermined", # no-complete
+#             "undetermined", "Excit.Thal", "LHb", "undetermined", " Excit.Thal", # no-complete
+#             "MHb", "Thal", "Inhib.Thal", "Inhib.Thal", "LHb", 
+#             "Microglia", "no-match"
+#     ),
+#     # fine resolution using DD genes from human pilot
+#     ct_CRegistration_fine = c(
+#             "Inhib.Thal", "Oligo", "Excit.Thal", "LHb.4", "LHb.2.7",
+#             "undetermined", "MHb.2", "LHb.4", "LHb.4", "MHb.1",
+#             "MHb.1.2", "Excit.Thal", "LHb.4", "MHb.1", "Excit.Thal",
+#             "LHb.6", "Excit.Thal", "LHb.1.3.4", "Inhib.Thal", "Astrocyte",
+#             "Astrocyte", "Oligo", "LHb.1", "undetermined", "Excit.Thal",
+#             "OPC", "Microglia", "Inhib.Thal", "Endo", "undetermined",
+#             "undetermined", "Excit.Thal", "LHb.1.3", "undetermined", " Excit.Thal",
+#             "MHb.3", "Thal", "Inhib.Thal", "Inhib.Thal", "LHb.4",
+#             "Microglia", "no-match"
+#         ),
+#     stringsAsFactors = FALSE  # Optional, prevents conversion to factors
+# )
 # double check spaces 
 cell_types_curated <- cell_types_curated |>
     dplyr::mutate(across(everything(), ~ trimws(.)))
 
-anyDuplicated(cell_types_curated$cluster)  # Should return 0
+if (anyDuplicated(cell_types_curated$cluster)) { stop("There are duplicated clusters") }
 
 head(cell_types_curated)
 tail(cell_types_curated)
+cell_types_curated <- as.data.frame(cell_types_curated)
 
 ## inner join pseudo annotation (EDA) with curated annotation for supplementary material
 full_annotation_df <- left_join(cell_types_curated, summary_ct_df, by = "cluster")
 colnames(full_annotation_df)
 
 # filter and sort columns
-full_annotation_df <- full_annotation_df[, c("cluster", "ct_frequency_in2ct", "ct_CRegistration_broad", "ct_CRegistration_fine",
+full_annotation_df <- full_annotation_df[, c("cluster", "ct_frequency_in2ct", "ct_CRegistration_fine", "ct_MeanRatio_support", 
                                              "number_cells", "cluster_percentage", "all_cell_types_by_frequency")]
 head(full_annotation_df)
 # cluster ct_frequency_in2ct ct_CRegistration_broad ct_CRegistration_fine
@@ -200,8 +250,7 @@ full_annotation_df <- full_annotation_df |>
         )
     )
 # filter and sort columns
-full_annotation_df <- full_annotation_df[, c("cluster", "ct_frequency_in2ct", "ct_CRegistration_broad", "ct_CRegistration_fine", "cell_type_final",
-                                             "number_cells", "cluster_percentage", "all_cell_types_by_frequency")]
+full_annotation_df <- full_annotation_df[, c("cluster", "ct_frequency_in2ct", "ct_CRegistration_fine", "cell_type_final", "ct_MeanRatio_support", "number_cells", "cluster_percentage", "all_cell_types_by_frequency")]
 message("Updating full annotation summary ...")
 head(full_annotation_df)
 
@@ -351,7 +400,8 @@ seurat_name <- str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
 # seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r2
 
 plt1 <- DimPlot(SeuratOBJ, label = TRUE, 
-                reduction = "wnn.umap", 
+                reduction = "wnn.umap",
+                layer = "data",
                 label.size = 3) + 
     NoLegend() +
     labs(title = paste0("**Clusters from WNN: ", seurat_name))
@@ -418,28 +468,11 @@ message("Process completed!")
 #   partition = "katun"
 # )
 
+library("sessioninfo")
+print('Reproducibility information:')
+Sys.time()
+proc.time()
+options(width = 120)
+session_info()
 
-## Additional plots prepared to  TLDR slides 2025
-
-# features <- "GPR151"
-# features <- "POU4F1"
-# features <- "CDH4"
-# idents_to_plt <- c("C.00 DD_MHb", "C.01 DD_LHb", "C.02 DD_MHb","C.03 DD_LHb","C.04", "C.05", "C.06 DD_MHb", "C.07", "C.08 DD_MHb", "C.09 LB_Hb ne", "C.10 DD_LHb", "C.11 DD_MHb")  
-# idents_to_plt <- c("C.00 DD_MHb", "C.01 DD_LHb", "C.02 DD_MHb","C.03 DD_LHb","C.08 DD_MHb","C.28","C.20","C.21","C.22","C.23","C.24","C.25")  
-# 
-# plt1 <- CoveragePlot(
-#   object = SeuratOBJ,
-#   region = features,
-#   features = features,
-#   expression.assay = "RNA",
-#   extend.upstream = 500,
-#   extend.downstream = 500,
-#   idents = idents_to_plt
-# )  +
-#   labs(title = paste0("**Clusters from WNN: ", seurat_name)) +
-#   theme(text = element_text(size = 8), 
-#         axis.text.x= element_text(size = 7), axis.text.y= element_text(size = 7),
-#         plot.title=element_text(hjust=0.5)) 
-# tmp_name <- paste0(seurat_name, "_", features, "_CoveragePlt.pdf")
-# ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
 
