@@ -40,13 +40,16 @@ message("Loading all peaks found")
 f_name <- here(inputRDS_Dir, "all_peaks_by_cluster.csv") 
 peaks_df <- read.csv(f_name, header = TRUE)
 
+message("Number of peaks found: ", nrow(peaks_df))
+
+message("Define target clusters: Habenula")
+
 # extract all unique cluster labels listed in the peak_called_in column of peaks_df
 all_clusters <- unlist(strsplit(peaks_df$peak_called_in, ","))
 unique_clusters <- sort(unique(trimws(all_clusters)))  # trimws removes any leading/trailing spaces
 unique_clusters
 length(unique_clusters)
 
-# Define target clusters: Habenula
 target_clusters <- unique_clusters[grepl("MHb|LHb", unique_clusters)]
 target_clusters
 # [1] "C.05.DD_LHb" "C.07.DD_MHb" "C.10.DD_MHb" "C.11.DD_MHb" "C.14.DD_MHb"
@@ -65,7 +68,6 @@ matched_rows <- rowSums(matches) > 0
 # Subset matched rows
 peaks_hb_subset <- peaks_df[matched_rows, ]
 
-# Preview
 message("Number of peaks in Hb clusters: ", nrow(peaks_hb_subset))
 # Number of peaks in Hb clusters: 100975
 
@@ -83,12 +85,13 @@ head(peaks_hb_subset)
 # 5  C.21.DD_Astrocyte,C.29.DD_Endo,C.13.no-match,C.06.DD_Excit.Thal,C.41.DD_Microglia,C.20.DD_Astrocyte,C.11.DD_MHb,C.37.undetermined,C.02.DD_Oligo,C.30.DD_LHb,C.25.undetermined,C.28.DD_Inhib.Thal,C.01.undetermined,C.05.DD_LHb,C.32.undetermined,C.33.DD_LHb,C.36.DD_MHb,C.14.DD_MHb,C.26.DD_OPC,C.27.DD_Microglia,C.34.DD_Oligo,C.15.DD_Excit.Thal,C.23.DD_LHb,C.17.DD_Excit.Thal,C.19.DD_Inhib.Thal,C.08.undetermined,C.18.DD_LHb,C.09.undetermined,C.16.DD_MHb,C.24.DD_LHb,C.10.DD_MHb,C.12.undetermined,C.22.undetermined,C.07.DD_MHb,C.40.DD_LHb,C.31.DD_Excit.Thal,C.38.DD_Inhib.Thal,C.35.undetermined,C.39.DD_Inhib.Thal,C.04.undetermined,C.03.undetermined
 # 6                                                                                                                               C.26.DD_OPC,C.24.DD_LHb,C.19.DD_Inhib.Thal,C.07.DD_MHb,C.15.DD_Excit.Thal,C.08.undetermined,C.05.DD_LHb,C.02.DD_Oligo,C.09.undetermined,C.20.DD_Astrocyte,C.04.undetermined,C.01.undetermined,C.03.undetermined,C.06.DD_Excit.Thal,C.21.DD_Astrocyte,C.28.DD_Inhib.Thal,C.17.DD_Excit.Thal,C.16.DD_MHb,C.12.undetermined,C.13.no-match,C.37.undetermined,C.25.undetermined,C.18.DD_LHb,C.22.undetermined,C.23.DD_LHb,C.30.DD_LHb,C.10.DD_MHb,C.14.DD_MHb,C.27.DD_Microglia,C.11.DD_MHb,C.31.DD_Excit.Thal,C.33.DD_LHb,C.41.DD_Microglia
 
-# save subsetted peaks
 write.csv(peaks_hb_subset, here(outputCSV_Dir, "hb_peaks.csv"), row.names = FALSE)
+message("Saved subsetted peaks for target clusters")
 
-
+        
 ##==============================================================================
-## previews plots - EDA 
+
+message("Make plots for EDA")
 
 # Count Occurrences
 cluster_peak_counts <- sort(table(all_clusters), decreasing = TRUE)
@@ -105,11 +108,14 @@ p1 <- ggplot(cluster_df, aes(x = reorder(cluster_ann, -n_peaks), y = n_peaks)) +
          caption = paste("Number of peaks found:", nrow(peaks_hb_subset))) +
     theme(axis.text.x = element_text(angle = 90, hjust = 0.6),
           axis.title.x = element_blank(),
-          plot.caption = element_text(size = 10, hjust = 0))
+          plot.caption = element_text(size = 10, hjust = 0),
+          panel.background = element_rect(fill = "white", color = NA),
+          plot.background = element_rect(fill = "white", color = NA))
 #p1
 plot_name <- here(plot_Dir, "peaks_frequency_by_cluster.png")
 ggsave(plot_name, plot = p1, width = 10, height = 6, dpi = 300)
 
+message("Plot for number of peaks called per cluster done!")
 
 ##==============================================================================
 ## (2) Plot by regions of interest: Hb vs Others
@@ -122,15 +128,19 @@ cluster_df$cluster_ann <- factor(cluster_df$cluster_ann, levels = custom_order)
 p2 <- ggplot(cluster_df, aes(x = cluster_ann, y = n_peaks)) +
     geom_bar(stat = "identity", fill = ifelse(cluster_df$cluster_ann %in% target_clusters, "#FF6F61", "grey")) +
     theme_minimal() +
-    labs(title = "Number of peaks called per region",
+    labs(title = "Number of peaks called per cluster and region",
          y = "Number of Peaks",
          caption = paste("Number of peaks found:", nrow(peaks_hb_subset))) +
     theme(axis.text.x = element_text(angle = 90, hjust = 0.6),
           axis.title.x = element_blank(),
-          plot.caption = element_text(size = 10, hjust = 0))
+          plot.caption = element_text(size = 10, hjust = 0),
+          panel.background = element_rect(fill = "white", color = NA),
+          plot.background = element_rect(fill = "white", color = NA))
 #p2
 plot_name <- here(plot_Dir, "peaks_frequency_by_region.png")
 ggsave(plot_name, plot = p2, width = 10, height = 6, dpi = 300)
+
+message("Plot for number of peaks called per cluster and region done!")
 
 
 ##==============================================================================
@@ -161,7 +171,7 @@ cluster_df <- cluster_df |>
         cluster_ann = as.character(cluster_ann),
         order_rank = case_when(
             panel == "Hb" ~ match(cluster_ann, target_clusters),
-            panel == "Other" ~ match(cluster_ann, sort(remaining))
+            panel == "Other" ~ match(cluster_ann, sort(remaining_clusters))
         )
     ) |>
     arrange(panel, order_rank) |>
@@ -169,20 +179,24 @@ cluster_df <- cluster_df |>
 
 p3 <- ggplot(cluster_df, aes(x = cluster_ann, y = n_peaks)) +
     geom_bar(stat = "identity", aes(fill = region)) +
-    scale_fill_manual(values = c("LHb" = "#4682B4", "MHb" = "#FF7F50", "Other" = "grey")) +
+    scale_fill_manual(values = c("LHb" = "darkblue", "MHb" = "#FF7F50", "Other" = "grey")) +
     facet_grid(. ~ panel, scales = "free_x", space = "free_x") +
     theme_minimal() +
-    labs(title = "Number of peaks called per sub-region",
+    labs(title = "Number of peaks called per cluster and Hb sub-region",
          y = "Number of Peaks",
          caption = paste("Number of peaks found:", nrow(peaks_hb_subset))) +
     theme(axis.text.x = element_text(angle = 90, hjust = 0.6),
           axis.title.x = element_blank(),
           legend.position = "none",
-          plot.caption = element_text(size = 10, hjust = 0)
+          plot.caption = element_text(size = 10, hjust = 0),
+          panel.background = element_rect(fill = "white", color = NA),
+          plot.background = element_rect(fill = "white", color = NA)
     )
 #p3
 plot_name <- here(plot_Dir, "peaks_frequency_by_subregion.png")
 ggsave(plot_name, plot = p3, width = 10, height = 6, dpi = 300)
+
+message("Plot for number of peaks called per cluster and Hb region done!")
 
 
 # library("slurmjobs")
