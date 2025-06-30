@@ -28,12 +28,12 @@ inputSCE_Dir <- here(
 processedDir <- here(
     "processed-data",
     "05_Clustering_ARCr",
-    "13_wnn_geneExp_plt_mean_ratio_annotated"
+    "15_wnn_geneExp_plt_1vsALL_annotated"
 )
 plotDir <- here(
     "plots",
     "05_Clustering_ARCr",
-    "13_wnn_geneExp_plt_mean_ratio_annotated"
+    "15_wnn_geneExp_plt_1vsALL_annotated"
 )
 
 ## Check directories
@@ -191,3 +191,22 @@ message("Check clusters present:")
 print(sort(unique(rank_summary$cellType.target)))
 length(unique(rank_summary$cellType.target))
 # 41
+
+##==============================================================================
+
+message("save marker stats / rank_results")
+
+# marker_ranks_6000 <- rank_results[["size_6000"]]
+# marker_ranks_8000 <- rank_results[["size_8000"]]
+# marker_ranks_10000 <- rank_results[["size_10000"]]
+# marker_ranks_12000 <- rank_results[["size_12000"]]
+marker_ranks_all <- rank_results[["size_29690"]]
+f_name <- here(processedDir, "marker_1vsALL_29k.RData")
+save(marker_ranks_all, file = f_name)
+
+message("Mean ratio results saved !!!")
+
+
+##==============================================================================
+## plots the top n marker genes for a specified cell type based off of the stats table from get_mean_ratio()
+
