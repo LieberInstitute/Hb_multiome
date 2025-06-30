@@ -101,4 +101,93 @@ if (length(low_ct)==TRUE) {
     sce <- sce[, colData(sce)$cluster_ann %in% valid_types]
 }
 
+## =============================================================================
+## Function to compute 1vsALL across several sizes of datasets
+##==============================================================================
 
+## set some settings
+genes_of_interest <- c("GPR151", "TAC3", "POU4F1")
+all_genes <- nrow(sce)
+# sizes <- c(2000, 4000, 6000, 8000, 10000, 12000, all_genes)
+## for speeding the process, I will only tests
+sizes <- c(all_genes)
+
+message("Subset sizes: ")
+sizes
+
+
+# Wrapper function to compute and extract ranks
+get_marker_ranks_1vsALL <- function(sce, 
+                                    gene_subset, 
+                                    n, 
+                                    celltype_regex = NULL,
+                                    genes_of_interest = NULL) {
+    # celltype_regex = NULL: No filtering on cellType.target
+    # celltype_regex = "LHb|MHb": Filters clusters with names matching that regex
+    # Optional gene filtering via genes_of_interest
+    
+    sce_sub <- sce[gene_subset, ]
+    
+    message("Processing mean-ratio for subset:", n)
+    
+    # Apply test.type="binom" (Scran/Deconvobuddies)
+    One_vsALL_df <-  findMarkers_1vAll(
+        sce_sub,
+        assay_name = "logcounts",
+        cellType_col = "cluster_ann",
+        mod = NULL, 
+        add_symbol = FALSE,
+        verbose = TRUE,
+        direction = "up"
+    ) 
+    
+    message("1vsALL done!")
+    
+    return(One_vsALL_df)
+}
+
+
+rank_results <- lapply(sizes, function(n) {
+    if (as.integer(n) < as.integer(all_genes)) {
+        gene_subset <- head(order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE), n)
+    } else {
+        message("Processing full dataset!")
+        gene_subset <- head(order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE))
+    }
+    get_marker_ranks_1vsALL(
+        sce,
+        gene_subset,
+        n
+    )
+})
+
+## verification
+
+length(rank_results)
+names(rank_results) <- paste0("size_", sizes)
+names(rank_results)
+# [1] "size_29690"
+
+rank_summary <- bind_rows(rank_results)
+summary(rank_summary)
+# gene               logFC           log.p.value          log.FDR       
+# Length:246         Min.   :-2.66888   Min.   :-2532.12   Min.   :-2530.3  
+# Class :character   1st Qu.:-0.23933   1st Qu.: -195.72   1st Qu.: -195.1  
+# Mode  :character   Median : 0.13408   Median :  -22.79   Median :  -22.5  
+# Mean   :-0.02792   Mean   : -224.27   Mean   : -223.7  
+# 3rd Qu.: 0.47191   3rd Qu.:    0.00   3rd Qu.:    0.0  
+# Max.   : 1.56867   Max.   :    0.00   Max.   :    0.0  
+# std.logFC        cellType.target    std.logFC.rank std.logFC.anno    
+# Min.   :-2.53057   Length:246         Min.   :1.0    Length:246        
+# 1st Qu.:-0.22443   Class :character   1st Qu.:2.0    Class :character  
+# Median : 0.16215   Mode  :character   Median :3.5    Mode  :character  
+# Mean   :-0.03141                      Mean   :3.5                      
+# 3rd Qu.: 0.47591                      3rd Qu.:5.0                      
+# Max.   : 1.27905                      Max.   :6.0    
+
+
+message("Check clusters present:")
+
+print(sort(unique(rank_summary$cellType.target)))
+length(unique(rank_summary$cellType.target))
+# 41
