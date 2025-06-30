@@ -112,14 +112,14 @@ cell_types_curated <- tribble(
     "C.03", "undetermined",        "Excit.Thal",           "Excit.Thal",             "Excit.Thal", # checking
     "C.04", "undetermined",        "LHb",                  "LHb.4",                  "Excit.Thal", # checking
     "C.05", "DD_LHb",              "LHb",                  "LHb.2.7",                "LHb.2.7",
-    "C.06", "DD_Excit.Thal",       "undetermined",         "undetermined",           "LHb.4",  # checking
+    "C.06", "DD_Excit.Thal",       "undetermined",         "undetermined",           "ExcitT.LHb.4",  # checking
     "C.07", "DD_MHb",              "MHb",                  "MHb.2",                  "MHb.2",
     "C.08", "undetermined",        "LHb",                  "LHb.4",                  "LHb.4",
-    "C.09", "undetermined",        "LHb",                  "LHb.4",                  "LHb.4",  # checking
+    "C.09", "undetermined",        "LHb",                  "LHb.4",                  "ExcitT.LHb.4",  # checking ?
     "C.10", "DD_MHb",              "MHb",                  "MHb.1",                  "MHb.1",
     "C.11", "DD_MHb",              "MHb",                  "MHb.1.2",                "MHb.1.2",
     "C.12", "undetermined",        "Excit.Thal",           "Excit.Thal",             "Excit.Thal",
-    "C.13", "no-match",            "LHb",                  "LHb.4",                  "LHb.Excit.Thal",  # checking - HD
+    "C.13", "no-match",            "LHb",                  "LHb.4",                  "Thal",  # checking - HD
     "C.14", "DD_MHb",              "MHb",                  "MHb.1",                  "MHb.1",
     "C.15", "DD_Excit.Thal",       "Excit.Thal",           "Excit.Thal",             "Excit.Thal",
     "C.16", "DD_MHb",              "LHb",                  "LHb.6",                  "MHb.1.2",  # checking
@@ -137,11 +137,11 @@ cell_types_curated <- tribble(
     "C.28", "DD_Inhib.Thal",       "Inhib.Thal",           "Inhib.Thal",             "Inhib.Thal",
     "C.29", "DD_Endo",             "Endo",                 "Endo",                   "Endo",
     "C.30", "DD_LHb",              "undetermined",         "undetermined",           "MHb.LHb", # checking HD
-    "C.31", "DD_Excit.Thal",       "undetermined",         "undetermined",           "Excit.Thal.LHb", # checking HD
+    "C.31", "DD_Excit.Thal",       "undetermined",         "undetermined",           "ExcitT.LHb.4", # checking HD
     "C.32", "undetermined",        "Excit.Thal",           "Excit.Thal",             "Excit.Thal",
     "C.33", "DD_LHb",              "LHb",                  "LHb.1.3",                "LHb.1.3",
     "C.34", "DD_Oligo",            "undetermined",         "undetermined",           "Oligo", # checking
-    "C.35", "undetermined",        " Excit.Thal",          " Excit.Thal",            " Excit.Thal",
+    "C.35", "undetermined",        " Excit.Thal",          " Excit.Thal",            "Excit.Thal",
     "C.36", "DD_MHb",              "MHb",                  "MHb.3",                  "MHb.3",
     "C.37", "undetermined",        "Thal",                 "Thal",                   "Thal",
     "C.38", "DD_Inhib.Thal",       "Inhib.Thal",           "Inhib.Thal",             "Inhib.Thal",
@@ -157,17 +157,19 @@ cell_types_curated <- cell_types_curated |>
 
 if (anyDuplicated(cell_types_curated$cluster)) { stop("There are duplicated clusters") }
 
-head(cell_types_curated)
-tail(cell_types_curated)
+message("Cell typers manually curated:")
 cell_types_curated <- as.data.frame(cell_types_curated)
+## ct_MeanRatio_support was used to give support to cell_type_final, but this could be adjusted as the results support
+## So, I duplicated the column to keept code consistent
+cell_types_curated$cell_type_final <- cell_types_curated$ct_MeanRatio_support
+cell_types_curated
 
 ## inner join pseudo annotation (EDA) with curated annotation for supplementary material
 full_annotation_df <- left_join(cell_types_curated, summary_ct_df, by = "cluster")
 colnames(full_annotation_df)
 
 # filter and sort columns
-full_annotation_df <- full_annotation_df[, c("cluster", "ct_frequency_in2ct", "ct_CRegistration_fine", "ct_MeanRatio_support", 
-                                             "number_cells", "cluster_percentage", "all_cell_types_by_frequency")]
+full_annotation_df <- full_annotation_df[, c("cluster", "ct_frequency_in2ct", "ct_CRegistration_fine", "ct_MeanRatio_support", "cell_type_final", "number_cells", "cluster_percentage", "all_cell_types_by_frequency")]
 head(full_annotation_df)
 # cluster ct_frequency_in2ct ct_CRegistration_broad ct_CRegistration_fine
 # 1    C.01       undetermined             Inhib.Thal            Inhib.Thal
@@ -201,7 +203,8 @@ full_annotation_df <- full_annotation_df |>
         )
     )
 # filter and sort columns
-full_annotation_df <- full_annotation_df[, c("cluster", "ct_frequency_in2ct", "ct_CRegistration_fine", "cell_type_final", "ct_MeanRatio_support", "number_cells", "cluster_percentage", "all_cell_types_by_frequency")]
+full_annotation_df <- full_annotation_df[, c("cluster", "ct_frequency_in2ct", "ct_CRegistration_fine", "ct_MeanRatio_support", "cell_type_final", 
+                                             "number_cells", "cluster_percentage", "all_cell_types_by_frequency")]
 message("Updating full annotation summary ...")
 head(full_annotation_df)
 
@@ -335,7 +338,7 @@ unique(SeuratOBJ$merged_cluster)
 
 ## save RDS
 rds_file_name <- here(outputRDS_Dir, paste0(Seurat_base_name, "_renamed_visium.rds"))
-saveRDS(SeuratOBJ, rds_file_name)
+#saveRDS(SeuratOBJ, rds_file_name)
 
 message("Seurat with clusters renamed and merged saved!")
 
@@ -350,14 +353,27 @@ DefaultAssay(SeuratOBJ) <- "RNA"
 seurat_name <- str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
 # seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k40_C.leiden_lsi_r2
 
-plt1 <- DimPlot(SeuratOBJ, label = TRUE, 
+plt1 <- DimPlot(SeuratOBJ, 
+                label = TRUE, 
                 reduction = "wnn.umap",
-                layer = "data",
+                group.by = "cluster_ann", 
                 label.size = 3) + 
     NoLegend() +
-    labs(title = paste0("**Clusters from WNN: ", seurat_name))
+    labs(title = paste0("**WNN Clusters: ", seurat_name))
 
 tmp_name <- paste0(seurat_name, "_DimPlot_renamed.pdf")
+ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
+message("WNN UMAP done!")
+
+plt1 <- DimPlot(SeuratOBJ, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                group.by = "merged_cluster", 
+                label.size = 3) + 
+    NoLegend() +
+    labs(title = paste0("**WNN Merged Hb Clusters: ", seurat_name))
+
+tmp_name <- paste0(seurat_name, "_Hb_merged_DimPlot_renamed.pdf")
 ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
 message("WNN UMAP done!")
 
@@ -368,6 +384,7 @@ features <- c("POU4F1", "GPR151") # "TAC3"
   
 plt1 <- VlnPlot(object = SeuratOBJ,
                 features = features,
+                group.by = "cluster_ann",
                 pt.size = 0) +
   labs(x = paste0("**Clusters from WNN: ", seurat_name)) &
   theme(text = element_text(size = 8), 
@@ -383,6 +400,7 @@ message("Violin Plots done!")
 plt1 <- FeaturePlot(SeuratOBJ, 
                     features = features, 
                     reduction = "wnn.umap",
+                    slot = "data",
                     blend = TRUE) +
   labs(title = paste0("**Clusters from WNN: ", seurat_name)) &
   theme(text = element_text(size = 8), 
@@ -396,6 +414,7 @@ message("Feature Plots done!")
 
 ## Dot plots - the size of the dot corresponds to the percentage of cells expressing the
 plt1 <- DotPlot(SeuratOBJ, 
+                group.by = "cluster_ann",
                 features = c(features, "TAC3")) + 
     RotatedAxis() +
     labs(title = paste0("**Clusters from WNN: ", seurat_name)) &
