@@ -53,7 +53,8 @@ if (!dir.exists(processedDir)) {
     dir.create(processedDir)
 }
 
-source(here("code", "05_Clustering_ARCr", "get_mean_ratio_sparse.R"))
+# no longer required - fixed on recent deconvobuddies release
+#source(here("code", "05_Clustering_ARCr", "get_mean_ratio_sparse.R"))
 #get_mean_ratio_sparse
 
 #===============================================================================
@@ -114,6 +115,8 @@ if (length(low_ct)==TRUE) {
 }
 #Removing cell types with less<10 cells: C.42.no-match
 
+## =============================================================================
+## Function to compute mean-ratio across several sizes of datasets
 ##==============================================================================
 ## To safetly pick up a threshold, I track `MeanRatio Rank` across gene subsets for Habenula genes. Goals are: 
 # - Get an stable high MeanRatio and low rank across subset sizes. Indicates robust marker performance
@@ -185,7 +188,22 @@ get_marker_ranks <- function(sce,
     return(ratio_df)
 }
 
+
 ## =============================================================================
+
+## set some settings
+genes_of_interest <- c("GPR151", "TAC3", "POU4F1")
+all_genes <- nrow(sce)
+# sizes <- c(2000, 4000, 6000, 8000, 10000, 12000, all_genes)
+## for speeding the process, I will only tests
+sizes <- c(all_genes)
+
+message("Subset sizes: ")
+sizes
+
+## =============================================================================
+
+
 
 message("Processing `gene_mean_ratio` across different gene subset sizes for specific Hb clusters")
 #unique(colData(sce)$cluster_ann)
@@ -193,7 +211,8 @@ message("Processing `gene_mean_ratio` across different gene subset sizes for spe
 rank_results <- lapply(sizes, function(n) {
     gene_subset <- head(order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE), n)
     get_marker_ranks(
-        sce, gene_subset, 
+        sce, 
+        gene_subset, 
         n, 
         celltype_regex = "LHb|MHb",
         genes_of_interest = genes_of_interest
