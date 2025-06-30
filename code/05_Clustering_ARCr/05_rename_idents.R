@@ -50,7 +50,7 @@ message("Processing ", Seurat_base_name)
 ##### (1) Load Seurat with WNN idents given by default 
 
 seurat_RDSname <- here(inputRDS_Dir, paste0(Seurat_base_name, ".rds"))
-     
+# "processed-data/05_Clustering_ARCr/05_rename_idents/seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds"
 SeuratOBJ <- readRDS(seurat_RDSname)
 
 total_cells <- length(Cells(x = SeuratOBJ))
@@ -193,20 +193,23 @@ head(full_annotation_df)
 # 5                   DD_Excit.Thal (1), DD_LHb (10), LB_Hb neuron specific (2), LB_LHB neuron specific (1)
 # 6                                                                           DD_Excit.Thal (6), DD_OPC (1)
 
+## We do not need this chunck any more, as we already have a polished annotation 
 ## Keep ct_frequency_in2ct only when ct_CRegistration_fine is "undetermined", otherwise use ct_CRegistration_fine
-full_annotation_df <- full_annotation_df |>
-    mutate(
-        cell_type_final = if_else(
-            ct_CRegistration_fine == "undetermined",
-            ct_frequency_in2ct,
-            ct_CRegistration_fine
-        )
-    )
+# full_annotation_df <- full_annotation_df |>
+#     mutate(
+#         cell_type_final = if_else(
+#             ct_CRegistration_fine == "undetermined",
+#             ct_frequency_in2ct,
+#             ct_CRegistration_fine
+#         )
+#     )
+
 # filter and sort columns
 full_annotation_df <- full_annotation_df[, c("cluster", "ct_frequency_in2ct", "ct_CRegistration_fine", "ct_MeanRatio_support", "cell_type_final", 
                                              "number_cells", "cluster_percentage", "all_cell_types_by_frequency")]
 message("Updating full annotation summary ...")
 head(full_annotation_df)
+sort(unique(full_annotation_df$cell_type_final))
 
 ## save summary WNN cluster annotations
 f_name <- here(outputCSV_Dir, "WNN_full_annotation_meta_data.csv")
@@ -253,7 +256,8 @@ levels(SeuratOBJ)
 
 # now remove from full_annotation_df
 full_annotation_df <- full_annotation_df[!full_annotation_df$number_cells<10, ]
-
+head(full_annotation_df)
+sort(unique(full_annotation_df$cell_type_final))
 
 ## extract original idents (clusters) and prepare the new ident names to rename Seurat clusters
 
@@ -266,7 +270,7 @@ if (!identical(Seurat_clusterIDS, full_annotation_df$cluster)) {
 
 # Extract numeric part from "C.XX" and convert to character
 full_annotation_df$cluster_id <- as.character(as.numeric(sub("C\\.", "", full_annotation_df$cluster)))
-# Use polished cell-types after inspect clustering-registration at fine res
+# Use polished cell-types after inspect clustering-registration at fine res, plus mean-ratio scores
 new_names <- setNames(paste0(full_annotation_df$cluster, ".", full_annotation_df$cell_type_final), full_annotation_df$cluster_id)
 new_names
 
@@ -338,7 +342,7 @@ unique(SeuratOBJ$merged_cluster)
 
 ## save RDS
 rds_file_name <- here(outputRDS_Dir, paste0(Seurat_base_name, "_renamed_visium.rds"))
-#saveRDS(SeuratOBJ, rds_file_name)
+saveRDS(SeuratOBJ, rds_file_name)
 
 message("Seurat with clusters renamed and merged saved!")
 
@@ -356,7 +360,7 @@ seurat_name <- str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
 plt1 <- DimPlot(SeuratOBJ, 
                 label = TRUE, 
                 reduction = "wnn.umap",
-                group.by = "cluster_ann", 
+                #group.by = "cluster_ann", 
                 label.size = 3) + 
     NoLegend() +
     labs(title = paste0("**WNN Clusters: ", seurat_name))
@@ -384,6 +388,7 @@ features <- c("POU4F1", "GPR151") # "TAC3"
   
 plt1 <- VlnPlot(object = SeuratOBJ,
                 features = features,
+                layer = "data", 
                 group.by = "cluster_ann",
                 pt.size = 0) +
   labs(x = paste0("**Clusters from WNN: ", seurat_name)) &
@@ -400,7 +405,6 @@ message("Violin Plots done!")
 plt1 <- FeaturePlot(SeuratOBJ, 
                     features = features, 
                     reduction = "wnn.umap",
-                    slot = "data",
                     blend = TRUE) +
   labs(title = paste0("**Clusters from WNN: ", seurat_name)) &
   theme(text = element_text(size = 8), 
