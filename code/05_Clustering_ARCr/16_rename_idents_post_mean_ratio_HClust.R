@@ -84,7 +84,7 @@ nrow(marker_ranks_all_top10)
 
 ## takes top 10 MeanRatio genes per cluster and collapse `cellType.2nd + MeanRatio` per cluster
 collapsed_df <- marker_ranks_all_top10 |>
-    group_by(gene, cellType.target) |>
+    group_by(cellType.target) |>
     summarise(
         comparisons = str_c(
             paste0(cellType.2nd, " (", round(MeanRatio, 2), ")"),
@@ -95,13 +95,48 @@ collapsed_df <- marker_ranks_all_top10 |>
 head(collapsed_df)
 
 ## Now collapse all `comparisons` per cluster in `mean_ratio_detail` column
-collapsed_summary <- collapsed_df |>     
+collapsed_mean_ratio <- collapsed_df |>     
     group_by(cellType.target) |>
     summarise(
         mean_ratio_detail = str_c(comparisons, collapse = ", "),
         .groups = "drop"
     )
-collapsed_summary
+head(collapsed_mean_ratio)
+#   cellType.target mean_ratio_detail                                             
+#   <fct>           <chr>                                                         
+# 1 C.05.DD_LHb     C.24.DD_LHb (2.45), C.36.DD_MHb (1.5), C.31.DD_Exit.Thal (1.3…
+# 2 C.07.DD_MHb     C.26.DD_OPC (1.87), C.11.DD_MHb (1.8), C.36.DD_MHb (1.63), C.…
+# 3 C.10.DD_MHb     C.14.DD_MHb (2.14), C.07.DD_MHb (1.81), C.14.DD_MHb (1.65), C…
+
+
+## takes top 10 MeanRatio genes per cluster and extract Range of MeanRatio
+collapsed_df <- marker_ranks_all_top10 |>
+    group_by(cellType.target) |>
+    summarise(
+        mean_ratio_ranges = str_c(
+            round(MeanRatio, 2),
+            collapse = ", "
+        ),
+        .groups = "drop"
+    )
+head(collapsed_df)
+
+## Add mean_ratio_range per cluster
+collapsed_summary_range <- collapsed_df |>     
+    mutate(
+        mean_ratio_range = map_chr(mean_ratio_ranges, function(x) {
+            vals <- as.numeric(str_split(x, ",\\s*")[[1]]) # splits your string into a vector by commas, removing spaces
+            rng <- range(vals, na.rm = TRUE) 
+            paste0("[", round(rng[2], 2), "-", round(rng[1], 2), "]")
+        })
+    )
+collapsed_summary_range
+# cellType.target mean_ratio_ranges                            mean_ratio_range
+# <fct>           <chr>                                        <chr>           
+# 1 C.05.DD_LHb     2.45, 1.5, 1.38, 1.31, 1.27, 1.24, 1.21, 1.… [2.45-1.16]     
+# 2 C.07.DD_MHb     1.87, 1.8, 1.63, 1.57, 1.54, 1.44, 1.39, 1.… [1.87-1.37]     
+# 3 C.10.DD_MHb     2.14, 1.81, 1.65, 1.59, 1.58, 1.42, 1.39, 1… [2.14-1.33] 
+
 
 ## ==============================================================================
 ## load Seurat with WNN clusters
