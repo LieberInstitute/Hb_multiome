@@ -1,7 +1,7 @@
 ########################################################################
 ## Compute and Plot gene expression plots for top marker genes for one cell type 
 ## I used Deconvobuddies::findMarkers_1vAll(), a convenient wrapped (Scran/Deconvobuddies) to compute test.type="binom" (1vsALL)
-## - Used: Default direction = "up"
+## - Used: Default direction = "up".  Impacts p-values: if "up" genes with logFC < 0 will have p.value = 1
 ##
 ## Authors. CSC
 ## Date. Jun 30, 2025
@@ -64,16 +64,7 @@ sce <- readRDS(sce_name)
 sce
 # class: SingleCellExperiment 
 # dim: 29690 55702 
-# metadata(0):
-#     assays(3): counts logcounts scaledata
-# rownames(29690): MIR1302-2HG FAM138A ... AC007325.4 AC007325.2
-# rowData names(2): gene_symbol gene_id
-# colnames(55702): S04_AAACAGCCAGAATGAC-1 S04_AAACAGCCAGCAAGGC-1 ...
-# S09_TTTGTTGGTCATGCAA-1 S09_TTTGTTGGTTGTTCAC-1
-# colData names(31): orig.ident nCount_RNA ... cluster_ann ident
-# reducedDimNames(0):
-#     mainExpName: RNA
-# altExpNames(0):
+# ...
 
 head(rownames(sce))
 
@@ -107,12 +98,11 @@ if (length(low_ct)==TRUE) {
 ##==============================================================================
 
 ## set some settings
-genes_of_interest <- c("GPR151", "TAC3", "POU4F1")
+
 all_genes <- nrow(sce)
 # sizes <- c(2000, 4000, 6000, 8000, 10000, 12000, all_genes)
 ## for speeding the process, I will only tests
 sizes <- c(all_genes)
-
 message("Subset sizes: ")
 sizes
 
@@ -120,13 +110,7 @@ sizes
 # Wrapper function to compute and extract ranks
 get_marker_ranks_1vsALL <- function(sce, 
                                     gene_subset, 
-                                    n, 
-                                    celltype_regex = NULL,
-                                    genes_of_interest = NULL) {
-    # celltype_regex = NULL: No filtering on cellType.target
-    # celltype_regex = "LHb|MHb": Filters clusters with names matching that regex
-    # Optional gene filtering via genes_of_interest
-    
+                                    n) {
     sce_sub <- sce[gene_subset, ]
     
     message("Processing mean-ratio for subset:", n)
@@ -207,11 +191,40 @@ save(marker_ranks_all, file = f_name)
 
 message("Mean ratio results saved !!!")
 
+##==============================================================================
+
+## Create summary table
+# top_genes_list <- list()
+# 
+# for (ct in sorted_ct_valid) {
+#     message("Processing cluster: ", ct)
+#     
+#     # Filter top 10 genes for this cluster with log.FDR < -0.05
+#     top_genes_df <- marker_stats %>%
+#         filter(cellType.target == ct, log.FDR < 0.05) %>%
+#         arrange(std.logFC.rank) %>%
+#         slice_head(n = 10) %>%
+#         select(cellType.target, gene, logFC, log.FDR, std.logFC, std.logFC.rank)
+#     
+#     # Only append if any genes found
+#     if (nrow(top_genes_df) > 0) {
+#         top_genes_list[[ct]] <- top_genes_df
+#     } else {
+#         message("No significant genes found for ", ct, ".")
+#     }
+# }
+# 
+# # Combine all into a single tibble
+# top_genes_summary <- bind_rows(top_genes_list)
+# 
+# # Write to CSV
+# write_csv(top_genes_summary, "top_marker_genes_per_cluster.csv")
+
 
 ##==============================================================================
 ## plots the top n marker genes for a specified cell type based off of the stats table from get_mean_ratio()
 
-message("Prepare data to plot top 'n' marker genes")
+message("Preparing data to plot top marker genes ...")
 
 sorted_levels <- sort(unique(colData(sce)$cluster_ann))
 levels(sce$cluster_ann)
@@ -236,6 +249,11 @@ sorted_ct_valid <- sorted_levels[sorted_levels %in% valid_clusters]
 
 message("Plotting 1vsALL by cell type")
 
+# marker_stats |>
+#     filter(cellType.target == "C.06.ExcitT.LHb.4", log.FDR < 0.05) |>
+#     summarise(count = n())
+
+
 f_name <- here(plotDir ,"VPlot_1vsALL_wnn_cluster_genes29k.pdf")
 pdf(file = f_name, width = 8.5, height = 11)  # standard letter size
 
@@ -252,7 +270,7 @@ for (ct in sorted_ct_valid) {
     if (length(top_genes) == 0) {
         message("No significant genes found for ", ct, ". Skipping.")
         next
-    } else { message(length(top_genes), " passed the filter.") }
+    } else { message(length(top_genes), " passed the filter on ", ct) }
     
     ## plot expression of top 10 genes
     p1 <- plot_gene_express(
@@ -261,7 +279,7 @@ for (ct in sorted_ct_valid) {
         genes = top_genes
     ) + 
         ggtitle(paste0("Cluster: ", ct, " — Top 10 marker genes")) +
-        labs(caption= paste0("Top10 on log.FDR < 0.05 / Binom-Test, Direction UP"))
+        labs(caption= paste0("Filtered on log.FDR < 0.05 / Binom-Test, Direction UP"))
     print(p1)
 }
 
