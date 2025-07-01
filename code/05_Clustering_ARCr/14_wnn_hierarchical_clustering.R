@@ -11,10 +11,7 @@
 ########################################################################
 
 library("SingleCellExperiment")
-#library("DeconvoBuddies")
-library("purrr")
 library("dplyr")
-library("stringr")
 library("ggplot2")
 library("here")
 
@@ -127,6 +124,25 @@ dend_scaled <- set(dend_scaled, "branches_col", "red")
 message(Sys.time(), " - Save")
 save(dend_scaled, file = here(processedDir, "wnn_hierarchical_cluster_scale_data.Rdata"))
 
+#===============================================================================
+
+message(Sys.time(), " - Plot Dendrograms Side by side comparison")
+
+pdf(file = here("plots", "dendrogram_comparison_logcounts_vs_scaled.pdf"), width = 12, height = 8)
+
+tanglegram(dend_logcounts, dend_scaled,
+           main_left = "Logcounts (unscaled)",
+           main_right = "Scaled data (gene z-scores)",
+           common_subtrees_color_lines = TRUE,
+           highlight_distinct_edges = TRUE,
+           columns_width = c(5,5),
+           lab.cex = 0.5)
+
+dev.off()
+
+
+# library("slurmjobs")
+# job_single("14_wnn_hierarchical_clustering", cores = 2, partition = "katun", create_shell = TRUE)
 
 
 
