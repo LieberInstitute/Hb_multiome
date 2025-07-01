@@ -65,6 +65,7 @@ message("Loading Mean-Ratio dataset:\n ", basename(inputMeanRatio_RDS))
 
 meanRatio_sets <- load(inputMeanRatio_RDS)
 ls()
+unique(marker_ranks_all$cellType.target)
 
 ## filter top 10 mean-ratio genes by cluster
 marker_ranks_all_top10 <- marker_ranks_all |>
@@ -72,6 +73,7 @@ marker_ranks_all_top10 <- marker_ranks_all |>
     slice_max(order_by = MeanRatio, n = 10, with_ties = FALSE) |>
     ungroup()
 
+unique(marker_ranks_all_top10$cellType.target)
 head(marker_ranks_all_top10)
 nrow(marker_ranks_all_top10)
 
@@ -80,9 +82,26 @@ nrow(marker_ranks_all_top10)
 ## ==============================================================================
 ## summarizes new meta-data for mean-ratio: mean_ratio_detail	mean_ratio_summary	mean_ratio_range
 
+## takes top 10 MeanRatio genes per cluster and collapse `cellType.2nd + MeanRatio` per cluster
+collapsed_df <- marker_ranks_all_top10 |>
+    group_by(gene, cellType.target) |>
+    summarise(
+        comparisons = str_c(
+            paste0(cellType.2nd, " (", round(MeanRatio, 2), ")"),
+            collapse = ", "
+        ),
+        .groups = "drop"
+    )
+head(collapsed_df)
 
-
-
+## Now collapse all `comparisons` per cluster in `mean_ratio_detail` column
+collapsed_summary <- collapsed_df |>     
+    group_by(cellType.target) |>
+    summarise(
+        mean_ratio_detail = str_c(comparisons, collapse = ", "),
+        .groups = "drop"
+    )
+collapsed_summary
 
 ## ==============================================================================
 ## load Seurat with WNN clusters
