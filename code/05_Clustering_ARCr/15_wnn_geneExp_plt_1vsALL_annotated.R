@@ -1,7 +1,8 @@
 ########################################################################
 ## Compute and Plot gene expression plots for top marker genes for one cell type 
 ## I used Deconvobuddies::findMarkers_1vAll(), a convenient wrapped (Scran/Deconvobuddies) to compute test.type="binom" (1vsALL)
-## 
+## - Used: Default direction = "up"
+##
 ## Authors. CSC
 ## Date. Jun 30, 2025
 ##
@@ -209,4 +210,62 @@ message("Mean ratio results saved !!!")
 
 ##==============================================================================
 ## plots the top n marker genes for a specified cell type based off of the stats table from get_mean_ratio()
+
+message("Prepare data to plot top 'n' marker genes")
+
+sorted_levels <- sort(unique(colData(sce)$cluster_ann))
+levels(sce$cluster_ann)
+head(sce[["cluster_ann"]])
+
+marker_stats <- rank_results[["size_29690"]]
+print(marker_stats, n=50)
+# # A tibble: 6 × 8
+# # Groups:   cellType.target [1]
+# gene      logFC log.p.value   log.FDR std.logFC cellType.target std.logFC.rank
+# <chr>     <dbl>       <dbl>     <dbl>     <dbl> <chr>                    <int>
+#     1 SNHG14  3.92e-1   -1.41e+ 2 -1.39e+ 2   3.71e-1 C.25.Excit.Thal          1
+# 2 MALAT1  1.18e-1   -1.33e+ 1 -1.22e+ 1   2.20e-1 C.25.Excit.Thal              2
+# 3 CNTNA… -1.12e-4   -6.91e- 1 -3.27e-11  -8.63e-5 C.25.Excit.Thal              3
+# 4 NRXN1  -1.27e-1   -3.33e- 4 -3.27e-11  -1.17e-1 C.25.Excit.Thal              4
+# 5 LRP1B  -2.24e-1   -4.10e- 6 -3.27e-11  -1.79e-1 C.25.Excit.Thal              5
+# 6 CADM2  -2.71e-1   -3.27e-11 -3.27e-11  -2.64e-1 C.25.Excit.Thal              6
+# # ℹ 1 more variable: std.logFC.anno <chr>
+
+valid_clusters <- unique(marker_stats$cellType.target)
+sorted_ct_valid <- sorted_levels[sorted_levels %in% valid_clusters]
+
+message("Plotting 1vsALL by cell type")
+
+f_name <- here(plotDir ,"VPlot_1vsALL_wnn_cluster_genes29k.pdf")
+pdf(file = f_name, width = 8.5, height = 11)  # standard letter size
+
+for (ct in sorted_ct_valid) {
+    message("Plotting wnn cluster: ", ct)
+    
+    # Filter top 10 genes for this cluster with log.FDR < -0.05
+    top_genes <- marker_stats |>
+        filter(cellType.target == ct, log.FDR < 0.05) |>
+        arrange(std.logFC.rank) |>
+        slice_head(n = 10) |>
+        pull(gene)
+    
+    if (length(top_genes) == 0) {
+        message("No significant genes found for ", ct, ". Skipping.")
+        next
+    } else { message(length(top_genes), " passed the filter.") }
+    
+    ## plot expression of top 10 genes
+    p1 <- plot_gene_express(
+        sce = sce,
+        category = "cluster_ann",
+        genes = top_genes
+    ) + 
+        ggtitle(paste0("Cluster: ", ct, " — Top 10 marker genes")) +
+        labs(caption= paste0("Top10 on log.FDR < 0.05 / Binom-Test, Direction UP"))
+    print(p1)
+}
+
+dev.off()
+
+message("Top 10 mean-ratio plots done!")
 
