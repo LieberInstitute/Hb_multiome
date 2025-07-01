@@ -27,13 +27,13 @@ procData_Dir <- here("processed-data", "05_Clustering_ARCr")
 inputSeurat_RDS <- here(procData_Dir, "05_rename_idents", 
                         "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds")
 
-inputCVS_cell_types_summary <- here(procData_Dir, "05_rename_idents", 
+input_ct_summary_CSV <- here(procData_Dir, "05_rename_idents", 
                                     "WNN_full_annotation_meta_data.csv")
 
-inputCVS_mean_ratio <- here(procData_Dir, "13_wnn_geneExp_plt_mean_ratio_annotated", 
+inputMeanRatio_RDS <- here(procData_Dir, "13_wnn_geneExp_plt_mean_ratio_annotated", 
                             "marker_ranks_6k_12k_allk.RData")
 
-outputCSV_Dir <- here(procData_Dir, "14_wnn_hierarchical_clustering")
+outputRDS_Dir <- here(procData_Dir, "14_wnn_hierarchical_clustering")
 plotDir <- here("plots", "05_Clustering_ARCr", "14_wnn_hierarchical_clustering")
 
 ## Check directories
@@ -41,29 +41,62 @@ if (!dir.exists(outputRDS_Dir)) {dir.create(outputRDS_Dir)}
 if (!dir.exists(plotDir)) {dir.create(plotDir)}
 
 
-## Load Seurat with WNN idents given by default 
-
-message("Loading Seurat:\n ", basename(inputSeurat_RDS))
-
-SeuratOBJ <- readRDS(inputSeurat_RDS)
-
-total_cells <- length(Cells(x = SeuratOBJ))
-
-message(nrow(unique(SeuratOBJ[["seurat_clusters"]])), " clusters for ", Seurat_base_name)
-
-
+## ==============================================================================
 ## load summary with cell_types and percentages by clusters 
 
-summary_ct_df <- read.csv(inputCVS_cell_types_summary)
-head(summary_ct_df)
+summary_ct_df <- read.csv(input_ct_summary_CSV)
+
+## verification
 colnames(summary_ct_df)
 summary_ct_df |>
-    select(seurat_clusters, Perc.Cluster, cell_types) |>
+    select(cluster, ct_frequency_in2ct, ct_CRegistration_fine) |>
     head()
 
-summary_ct_df$seurat_clusters
+# now remove from full_annotation_df
+summary_ct_df <- summary_ct_df[!summary_ct_df$number_cells<10, ]
+summary_ct_df$number_cells
+if (anyDuplicated(summary_ct_df$cluster)) { stop("There are duplicated clusters") }
 
+
+## ==============================================================================
+## load mean-ratio dataset 29k
+
+message("Loading Mean-Ratio dataset:\n ", basename(inputMeanRatio_RDS))
+
+meanRatio_sets <- load(inputMeanRatio_RDS)
+ls()
+
+## filter top 10 mean-ratio genes by cluster
+marker_ranks_all_top10 <- marker_ranks_all |>
+    group_by(cellType.target) |>
+    slice_max(order_by = MeanRatio, n = 10, with_ties = FALSE) |>
+    ungroup()
+
+head(marker_ranks_all_top10)
+nrow(marker_ranks_all_top10)
+
+
+
+## ==============================================================================
+## summarizes new meta-data for mean-ratio: mean_ratio_detail	mean_ratio_summary	mean_ratio_range
+
+
+
+
+
+## ==============================================================================
+## load Seurat with WNN clusters
 # 
+# message("Loading Seurat:\n ", basename(inputSeurat_RDS))
+# 
+# SeuratOBJ <- readRDS(inputSeurat_RDS)
+# SeuratOBJ
+# 
+# total_cells <- length(Cells(x = SeuratOBJ))
+# message("Total cells: ", total_cells)
+# message("Processing ", nrow(unique(SeuratOBJ[["seurat_clusters"]])), " clusters")
+
+
 # # ==============================================================================
 # ## Curated Manual Annotation based on: (1) gene marker match frequency (DD and LB) and (2) Clustering-Registration `Broad` and `Fine`
 # # Details on: https://github.com/LieberInstitute/Hb_multiome/tree/8b614669db8f7b833e5a793fa01326f839c57cd8/data 
