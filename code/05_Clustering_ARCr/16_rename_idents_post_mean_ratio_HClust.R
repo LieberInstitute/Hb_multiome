@@ -31,7 +31,7 @@ input_ct_summary_CSV <- here(procData_Dir, "05_rename_idents",
                                     "WNN_full_annotation_meta_data.csv")
 
 inputMeanRatio_RDS <- here(procData_Dir, "13_wnn_geneExp_plt_mean_ratio_annotated", 
-                            "marker_ranks_6k_12k_allk.RData")
+                            "marker_ranks_6_8_10_12_29k.RData") # marker_ranks_6k_12k_allk.RData
 
 outputRDS_Dir <- here(procData_Dir, "14_wnn_hierarchical_clustering")
 plotDir <- here("plots", "05_Clustering_ARCr", "14_wnn_hierarchical_clustering")
@@ -102,11 +102,14 @@ collapsed_mean_ratio <- collapsed_df |>
         .groups = "drop"
     )
 head(collapsed_mean_ratio)
-#   cellType.target mean_ratio_detail                                             
-#   <fct>           <chr>                                                         
-# 1 C.05.DD_LHb     C.24.DD_LHb (2.45), C.36.DD_MHb (1.5), C.31.DD_Exit.Thal (1.3…
-# 2 C.07.DD_MHb     C.26.DD_OPC (1.87), C.11.DD_MHb (1.8), C.36.DD_MHb (1.63), C.…
-# 3 C.10.DD_MHb     C.14.DD_MHb (2.14), C.07.DD_MHb (1.81), C.14.DD_MHb (1.65), C…
+#   cellType.target   mean_ratio_detail                                           
+#   <fct>             <chr>                                                       
+# 1 C.01.Inhib.Thal   C.19.Inhib.Thal (1.27), C.38.Inhib.Thal (1.17), C.38.Inhib.…
+# 2 C.02.Oligo        C.34.Oligo (2.08), C.34.Oligo (2.07), C.34.Oligo (1.7), C.4…
+# 3 C.03.Excit.Thal   C.37.Thal (1.8), C.37.Thal (1.51), C.37.Thal (1.5), C.37.Th…
+# 4 C.04.Excit.Thal   C.32.Excit.Thal (1.29), C.06.ExcitT.LHb.4 (1.27), C.31.Exci…
+# 5 C.05.LHb.2.7      C.24.LHb (2.45), C.36.MHb.3 (1.5), C.31.ExcitT.LHb.4 (1.38)…
+# 6 C.06.ExcitT.LHb.4 C.04.Excit.Thal (1), C.39.Inhib.Thal (0.98), C.04.Excit.Tha…
 
 
 ## takes top 10 MeanRatio genes per cluster and extract Range of MeanRatio
@@ -127,15 +130,58 @@ collapsed_summary_range <- collapsed_df |>
         mean_ratio_range = map_chr(mean_ratio_ranges, function(x) {
             vals <- as.numeric(str_split(x, ",\\s*")[[1]]) # splits your string into a vector by commas, removing spaces
             rng <- range(vals, na.rm = TRUE) 
-            paste0("[", round(rng[2], 2), "-", round(rng[1], 2), "]")
+            paste0("[", round(rng[2], 2), " - ", round(rng[1], 2), "]")
         })
     )
-collapsed_summary_range
-# cellType.target mean_ratio_ranges                            mean_ratio_range
-# <fct>           <chr>                                        <chr>           
-# 1 C.05.DD_LHb     2.45, 1.5, 1.38, 1.31, 1.27, 1.24, 1.21, 1.… [2.45-1.16]     
-# 2 C.07.DD_MHb     1.87, 1.8, 1.63, 1.57, 1.54, 1.44, 1.39, 1.… [1.87-1.37]     
-# 3 C.10.DD_MHb     2.14, 1.81, 1.65, 1.59, 1.58, 1.42, 1.39, 1… [2.14-1.33] 
+head(collapsed_summary_range)
+#   cellType.target   mean_ratio_ranges                           mean_ratio_range
+#   <fct>             <chr>                                       <chr>           
+# 1 C.01.Inhib.Thal   1.27, 1.17, 1.12, 1.12, 1.09, 1.06, 1.06, … [1.27 - 1.04]   
+# 2 C.02.Oligo        2.08, 2.07, 1.7, 1.66, 1.63, 1.58, 1.58, 1… [2.08 - 1.57]   
+# 3 C.03.Excit.Thal   1.8, 1.51, 1.5, 1.49, 1.45, 1.45, 1.43, 1.… [1.8 - 1.41]    
+# 4 C.04.Excit.Thal   1.29, 1.27, 1.24, 1.24, 1.22, 1.2, 1.18, 1… [1.29 - 1.17]   
+# 5 C.05.LHb.2.7      2.45, 1.5, 1.38, 1.31, 1.27, 1.24, 1.21, 1… [2.45 - 1.16]   
+# 6 C.06.ExcitT.LHb.4 1, 0.98, 0.97, 0.97, 0.96, 0.96, 0.96, 0.9… [1 - 0.94]  
+
+mean_ratio_new_columns <- inner_join(collapsed_mean_ratio, collapsed_summary_range, by = "cellType.target")
+
+
+## ==============================================================================
+## Add new meta-data into previous WNN_full_annotation_meta_data.csv 
+
+## df with mean-ratio data
+head(mean_ratio_new_columns)
+#grep("^C\\.\\w\\d", mean_ratio_new_columns$cellType.target)
+collapsed_summary_range <- mean_ratio_new_columns |>
+    mutate(cluster = str_sub(cellType.target, 1, 4))
+head(collapsed_summary_range)
+
+## df with previous ct data
+head(summary_ct_df)
+
+## join both df
+if (!identical(collapsed_summary_range$cluster, summary_ct_df$cluster)) { stop("Not equal cluster ID information on dataframes!") }
+
+WNN_full_annotation_df <- inner_join(summary_ct_df, collapsed_summary_range, by = "cluster")
+
+WNN_full_annotation_df <- 
+    WNN_full_annotation_df |>
+    select(cluster,
+           ct_frequency_in2ct, 
+           ct_CRegistration_fine,
+           mean_ratio_range,
+           number_cells, 
+           cluster_percentage,
+           all_cell_types_by_frequency,
+           mean_ratio_detail)
+
+ct_ambiguous
+ct_post_mean_ratio 
+HClust
+ct_post_HCLust
+annotation_reason
+
+
 
 
 ## ==============================================================================
