@@ -16,6 +16,7 @@ library("purrr")
 library("tibble")
 library("ggplot2")
 library("dplyr")
+library("tidyr")
 library("stringr")
 library("here")
 
@@ -186,7 +187,8 @@ head(mean_ratio_new_columns)
 
 
 ## ==============================================================================
-## Inner new meta-data into previous WNN_full_annotation_meta_data.csv 
+
+message("Itegrating new meta-data into previous WNN_full_annotation_meta_data.csv") 
 
 collapsed_summary_range <- mean_ratio_new_columns |>
     mutate(cluster = str_sub(cellType.target, 1, 4))
@@ -226,16 +228,54 @@ f_name <- here(outputCSV_Dir, "WNN_full_annotation_meta_data.csv")
 write.csv(WNN_full_annotation_df, f_name, row.names = FALSE)
 
 
-## Add extra columns o use later 
-WNN_full_annotation_df <- WNN_full_annotation_df |>
-    mutate(
-        ct_ambiguous = "",
-        HClust = "",
-        ct_post_HCLust = "",
-        annotation_reason = ""
-    )
 
-colnames(WNN_full_annotation_df)
+## ==============================================================================
+
+message("Adding new meta-data for ambiguous clusters") 
+
+# ## Add extra columns o use later 
+# WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_df |>
+#     mutate(
+#         ct_ambiguous = "",
+#         ct_post_HCLust_manual = "",
+#         ct_final = "",
+#         annotation_reason = ""
+#     )
+# 
+# colnames(WNN_full_annotation_with_ambiguous_df)
+
+## Add ambiguous clusters
+lookup_ct <- tibble(
+    cluster = c("C.03", "C.04", "C.06", "C.09", "C.13", 
+                "C.16", "C.24", "C.30", "C.31", "C.34", "C.35"),
+    ct_ambiguous = c("Endo vs Excit.Thal", "LHb4", "LHb4", "LHb4", "LHb4", 
+                     "MHb vs LHb", "MHb vs LHb", "MHb vs LHb", "LHb4", "Oligo", "Excit.Thal")
+)
+lookup_ct
+
+WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_df |>
+    left_join(lookup_ct, by = "cluster")
+head(WNN_full_annotation_with_ambiguous_df)
+
+# WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_with_ambiguous_df |>
+#     mutate(ct_ambiguous = replace_na(ct_ambiguous, "Solved.on.review"))
+# head(WNN_full_annotation_with_ambiguous_df)
+
+## rearrange again
+WNN_full_annotation_with_ambiguous_df <- 
+    WNN_full_annotation_with_ambiguous_df |>
+    select(cluster,
+           ct_frequency_in2ct, 
+           ct_CRegistration_fine,
+           ct_ambiguous,
+           mean_ratio_top2,
+           ct_post_mean_ratio,
+           mean_ratio_range,
+           number_cells, 
+           cluster_percentage,
+           all_cell_types_by_frequency,
+           mean_ratio_detail)
+head(WNN_full_annotation_with_ambiguous_df)
 
 ## save summary WNN cluster annotations
 f_name <- here(outputCSV_Dir, "WNN_full_annotation_meta_data.csv")
