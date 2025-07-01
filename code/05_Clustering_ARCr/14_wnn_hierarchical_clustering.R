@@ -11,6 +11,8 @@
 ########################################################################
 
 library("SingleCellExperiment")
+library("dendextend")
+library("dynamicTreeCut")
 library("dplyr")
 library("ggplot2")
 library("here")
@@ -46,8 +48,8 @@ if (!dir.exists(processedDir)) {
 sce_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v4.rds"
 sce_name <- here(inputSCE_Dir, sce_base_name)
 sce_name
-title_name <- str_extract(sce_base_name, regex("C\\.\\w*\\_r2"))
-title_name
+# title_name <- str_extract(sce_base_name, regex("C\\.\\w*\\_r2"))
+# title_name
 
 ## Load SCE derived from Seurat WNN
 sce <- readRDS(sce_name)
@@ -76,23 +78,19 @@ as.data.frame(celltype_counts)
 
 #===============================================================================
 
-library("dendextend")
-library("dynamicTreeCut")
-
-
-## Perform hierarchical clustering based on relative expression patterns across genes for exploratory single-cell analysis
-
-# Compuse dist.mtx and scale each gene to make clustering based on patterns of up/down regulation, not on raw magnitude [range 0-1]
-dend <- dist(t(logcounts(sce))) |> 
-    scale() |> 
-    hclust(mat_scaled, "ward.D2") |>
-    as.dendrogram(hang = 0.2) 
-
-dend |> unclass |> str
-
-dend |> head
-
-dend |> plot
+# ## Perform hierarchical clustering based on relative expression patterns across genes for exploratory single-cell analysis
+# 
+# # Compuse dist.mtx and scale each gene to make clustering based on patterns of up/down regulation, not on raw magnitude [range 0-1]
+# dend <- dist(t(logcounts(sce))) |> 
+#     scale() |> 
+#     hclust(mat_scaled, "ward.D2") |>
+#     as.dendrogram(hang = 0.2) 
+# 
+# dend |> unclass |> str
+# 
+# dend |> head
+# 
+# dend |> plot
 
 
 #===============================================================================
@@ -108,7 +106,7 @@ dend_logcounts <- set(dend_logcounts, "branches_col", "blue") # optional color f
 
 ## Save data
 message(Sys.time(), " - Save")
-save(dend_logcounts, file = here(processedDir, "wnn_hierarchical_cluster_logcounts.Rdata"))
+#save(dend_logcounts, file = here(processedDir, "wnn_hierarchical_cluster_logcounts.Rdata"))
 
 
 
@@ -122,7 +120,7 @@ dend_scaled <- set(dend_scaled, "branches_col", "red")
 
 ## Save data
 message(Sys.time(), " - Save")
-save(dend_scaled, file = here(processedDir, "wnn_hierarchical_cluster_scale_data.Rdata"))
+#save(dend_scaled, file = here(processedDir, "wnn_hierarchical_cluster_scale_data.Rdata"))
 
 #===============================================================================
 
@@ -141,9 +139,12 @@ tanglegram(dend_logcounts, dend_scaled,
 dev.off()
 
 
+message(Sys.time(), "Dendrograms Done!")
+
+
+
 # library("slurmjobs")
 # job_single("14_wnn_hierarchical_clustering", cores = 2, partition = "katun", create_shell = TRUE)
-
 
 ## Reproducibility information
 library("sessioninfo")
