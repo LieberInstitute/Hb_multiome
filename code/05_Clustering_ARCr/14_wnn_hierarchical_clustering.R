@@ -79,5 +79,56 @@ as.data.frame(celltype_counts)
 
 #===============================================================================
 
+library("dendextend")
+library("dynamicTreeCut")
+
+
+## Perform hierarchical clustering based on relative expression patterns across genes for exploratory single-cell analysis
+
+# Compuse dist.mtx and scale each gene to make clustering based on patterns of up/down regulation, not on raw magnitude [range 0-1]
+dend <- dist(t(logcounts(sce))) |> 
+    scale() |> 
+    hclust(mat_scaled, "ward.D2") |>
+    as.dendrogram(hang = 0.2) 
+
+dend |> unclass |> str
+
+dend |> head
+
+dend |> plot
+
+
+#===============================================================================
+## Compute Hierarchical Clustering for both logcounts (for magnitude differences) and scale data (highlights relative patterns)
+
+message(Sys.time(), " - Cluster Dendrogram from logcounts (no scaling) ")
+
+mat_logcounts <- t(logcounts(sce)) # cells as rows, genes as columns
+dist_logcounts <- dist(mat_logcounts)
+hc_logcounts <- hclust(dist_logcounts, method = "ward.D2")
+dend_logcounts <- as.dendrogram(hc_logcounts, hang = 0.2)
+dend_logcounts <- set(dend_logcounts, "branches_col", "blue") # optional color for clarity
+
+## Save data
+message(Sys.time(), " - Save")
+save(dend_logcounts, file = here(processedDir, "wnn_hierarchical_cluster_logcounts.Rdata"))
+
+
+
+message(Sys.time(), " - Cluster Dendrogram from scaled data ")
+
+mat_scaled <- scale(mat_logcounts) # scale genes to mean=0, sd=1
+dist_scaled <- dist(mat_scaled)
+hc_scaled <- hclust(dist_scaled, method = "ward.D2")
+dend_scaled <- as.dendrogram(hc_scaled, hang = 0.2)
+dend_scaled <- set(dend_scaled, "branches_col", "red")
+
+## Save data
+message(Sys.time(), " - Save")
+save(dend_scaled, file = here(processedDir, "wnn_hierarchical_cluster_scale_data.Rdata"))
+
+
+
+
 
 
