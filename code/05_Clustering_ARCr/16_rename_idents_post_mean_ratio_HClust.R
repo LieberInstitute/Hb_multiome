@@ -33,8 +33,10 @@ input_ct_summary_CSV <- here(procData_Dir, "05_rename_idents",
 inputMeanRatio_RDS <- here(procData_Dir, "13_wnn_geneExp_plt_mean_ratio_annotated", 
                             "marker_ranks_6_8_10_12_29k.RData") # marker_ranks_6k_12k_allk.RData
 
-outputRDS_Dir <- here(procData_Dir, "14_wnn_hierarchical_clustering")
-plotDir <- here("plots", "05_Clustering_ARCr", "14_wnn_hierarchical_clustering")
+outputRDS_Dir <- here(procData_Dir, "16_rename_idents_post_mean_ratio_HClust")
+outputCSV_Dir <- here(procData_Dir, "16_rename_idents_post_mean_ratio_HClust")
+
+plotDir <- here("plots", "05_Clustering_ARCr", "16_rename_idents_post_mean_ratio_HClust")
 
 ## Check directories
 if (!dir.exists(outputRDS_Dir)) {dir.create(outputRDS_Dir)}
@@ -61,7 +63,7 @@ if (anyDuplicated(summary_ct_df$cluster)) { stop("There are duplicated clusters"
 ## ==============================================================================
 ## load mean-ratio dataset 29k
 
-message("Loading Mean-Ratio dataset:\n ", basename(inputMeanRatio_RDS))
+message("=========== Loading Mean-Ratio dataset:\n ", basename(inputMeanRatio_RDS))
 
 meanRatio_sets <- load(inputMeanRatio_RDS)
 ls()
@@ -80,37 +82,77 @@ nrow(marker_ranks_all_top10)
 
 
 ## ==============================================================================
-## summarizes new meta-data for mean-ratio: mean_ratio_detail	mean_ratio_summary	mean_ratio_range
+## summarizes new meta-data for mean-ratio: mean_ratio_detail	mean_ratio_detail	mean_ratio_range
+
+message("=========== Summarizing Mean-Ratio dataset")
 
 ## takes top 10 MeanRatio genes per cluster and collapse `cellType.2nd + MeanRatio` per cluster
 collapsed_df <- marker_ranks_all_top10 |>
     group_by(cellType.target) |>
     summarise(
-        comparisons = str_c(
-            paste0(cellType.2nd, " (", round(MeanRatio, 2), ")"),
-            collapse = ", "
-        ),
+        comparisons = str_c(cellType.2nd, collapse = ", "),
+            #paste0(cellType.2nd, " (", round(MeanRatio, 2), ")"),
+            #collapse = ", "
+        #),
         .groups = "drop"
     )
 head(collapsed_df)
+nrow(collapsed_df)
 
-## Now collapse all `comparisons` per cluster in `mean_ratio_detail` column
-collapsed_mean_ratio <- collapsed_df |>     
-    group_by(cellType.target) |>
-    summarise(
-        mean_ratio_detail = str_c(comparisons, collapse = ", "),
-        .groups = "drop"
+## count repeated clusters based on mean-ratio 'comparisons'
+collapsed_summary_mean_ratio <- collapsed_df |>
+    mutate(
+        mean_ratio_detail = map_chr(comparisons, function(comp_str) {
+            clusters <- str_split(comp_str, ",\\s*")[[1]] # # split by comma, trim spaces
+            cluster_counts <- table(clusters) # count repeated clusters
+            # format like "C.38.Inhib.Thal x2"
+            summary_str <- paste0(names(cluster_counts), " x", cluster_counts, collapse = ", ")
+            summary_str
+        })
     )
-head(collapsed_mean_ratio)
-#   cellType.target   mean_ratio_detail                                           
-#   <fct>             <chr>                                                       
-# 1 C.01.Inhib.Thal   C.19.Inhib.Thal (1.27), C.38.Inhib.Thal (1.17), C.38.Inhib.…
-# 2 C.02.Oligo        C.34.Oligo (2.08), C.34.Oligo (2.07), C.34.Oligo (1.7), C.4…
-# 3 C.03.Excit.Thal   C.37.Thal (1.8), C.37.Thal (1.51), C.37.Thal (1.5), C.37.Th…
-# 4 C.04.Excit.Thal   C.32.Excit.Thal (1.29), C.06.ExcitT.LHb.4 (1.27), C.31.Exci…
-# 5 C.05.LHb.2.7      C.24.LHb (2.45), C.36.MHb.3 (1.5), C.31.ExcitT.LHb.4 (1.38)…
-# 6 C.06.ExcitT.LHb.4 C.04.Excit.Thal (1), C.39.Inhib.Thal (0.98), C.04.Excit.Tha…
+collapsed_summary_mean_ratio$mean_ratio_detail
+colnames(collapsed_summary_mean_ratio)
+collapsed_summary_mean_ratio$comparisons <- NULL
+head(collapsed_summary_mean_ratio)
 
+## extract the top 2 most repeated patterns from each mean_ratio_detail
+collapsed_summary_mean_ratio <- collapsed_summary_mean_ratio |>
+    mutate(
+        mean_ratio_top2 = map_chr(mean_ratio_detail, function(summary_str) {
+            items <- str_split(summary_str, ",\\s*")[[1]] # # split by comma
+            # extract the counts (xN) as numbers
+            counts <- as.numeric(str_extract(items, "(?<= x)\\d+"))
+            # order descending by counts
+            top_items <- items[order(-counts)]
+            # take top 2 and collapse back
+            paste(top_items[1:min(2, length(top_items))], collapse = ", ")
+        })
+    )
+head(collapsed_summary_mean_ratio)
+## extract the top 1 most repeated patterns from each mean_ratio_detail
+collapsed_summary_mean_ratio <- collapsed_summary_mean_ratio |>
+    mutate(
+        ct_post_mean_ratio = map_chr(mean_ratio_detail, function(summary_str) {
+            items <- str_split(summary_str, ",\\s*")[[1]] # # split by comma
+            # extract the counts (xN) as numbers
+            counts <- as.numeric(str_extract(items, "(?<= x)\\d+"))
+            # order descending by counts
+            top_items <- items[order(-counts)]
+            # take top 1
+            top_items[1]
+        })
+    )
+head(collapsed_summary_mean_ratio$ct_post_mean_ratio)
+## clean ct_post_mean_ratio output, remove x4 characters
+collapsed_summary_mean_ratio <- collapsed_summary_mean_ratio |>
+    mutate(
+        #ct_post_mean_ratio = str_replace(ct_post_mean_ratio, "^C\\.\\d+\\.", "") |> str_remove("\\s.*")
+        ct_post_mean_ratio = str_remove(ct_post_mean_ratio, "\\s.*")
+    )
+head(collapsed_summary_mean_ratio$ct_post_mean_ratio)
+
+
+message("=========== Summarizing Mean-Ratio ranges")
 
 ## takes top 10 MeanRatio genes per cluster and extract Range of MeanRatio
 collapsed_df <- marker_ranks_all_top10 |>
@@ -133,54 +175,71 @@ collapsed_summary_range <- collapsed_df |>
             paste0("[", round(rng[2], 2), " - ", round(rng[1], 2), "]")
         })
     )
+collapsed_summary_range$mean_ratio_ranges <- NULL
 head(collapsed_summary_range)
-#   cellType.target   mean_ratio_ranges                           mean_ratio_range
-#   <fct>             <chr>                                       <chr>           
-# 1 C.01.Inhib.Thal   1.27, 1.17, 1.12, 1.12, 1.09, 1.06, 1.06, … [1.27 - 1.04]   
-# 2 C.02.Oligo        2.08, 2.07, 1.7, 1.66, 1.63, 1.58, 1.58, 1… [2.08 - 1.57]   
-# 3 C.03.Excit.Thal   1.8, 1.51, 1.5, 1.49, 1.45, 1.45, 1.43, 1.… [1.8 - 1.41]    
-# 4 C.04.Excit.Thal   1.29, 1.27, 1.24, 1.24, 1.22, 1.2, 1.18, 1… [1.29 - 1.17]   
-# 5 C.05.LHb.2.7      2.45, 1.5, 1.38, 1.31, 1.27, 1.24, 1.21, 1… [2.45 - 1.16]   
-# 6 C.06.ExcitT.LHb.4 1, 0.98, 0.97, 0.97, 0.96, 0.96, 0.96, 0.9… [1 - 0.94]  
 
-mean_ratio_new_columns <- inner_join(collapsed_mean_ratio, collapsed_summary_range, by = "cellType.target")
+
+message("=========== Joining Mean-Ratio summary and range summary")
+
+mean_ratio_new_columns <- inner_join(collapsed_summary_mean_ratio, collapsed_summary_range, by = "cellType.target")
+head(mean_ratio_new_columns)
 
 
 ## ==============================================================================
-## Add new meta-data into previous WNN_full_annotation_meta_data.csv 
+## Inner new meta-data into previous WNN_full_annotation_meta_data.csv 
 
-## df with mean-ratio data
-head(mean_ratio_new_columns)
-#grep("^C\\.\\w\\d", mean_ratio_new_columns$cellType.target)
 collapsed_summary_range <- mean_ratio_new_columns |>
     mutate(cluster = str_sub(cellType.target, 1, 4))
 head(collapsed_summary_range)
 
 ## df with previous ct data
-head(summary_ct_df)
+head(summary_ct_df[1:4])
 
 ## join both df
 if (!identical(collapsed_summary_range$cluster, summary_ct_df$cluster)) { stop("Not equal cluster ID information on dataframes!") }
 
+colnames(collapsed_summary_range)
+colnames(summary_ct_df)
+
 WNN_full_annotation_df <- inner_join(summary_ct_df, collapsed_summary_range, by = "cluster")
+head(WNN_full_annotation_df)
+
+colnames(WNN_full_annotation_df)
 
 WNN_full_annotation_df <- 
     WNN_full_annotation_df |>
     select(cluster,
            ct_frequency_in2ct, 
            ct_CRegistration_fine,
+           ct_post_mean_ratio,
            mean_ratio_range,
            number_cells, 
            cluster_percentage,
            all_cell_types_by_frequency,
+           mean_ratio_top2, 
            mean_ratio_detail)
 
-ct_ambiguous
-ct_post_mean_ratio 
-HClust
-ct_post_HCLust
-annotation_reason
+head(WNN_full_annotation_df[1:7])
 
+## save summary WNN cluster annotations
+f_name <- here(outputCSV_Dir, "WNN_full_annotation_meta_data.csv")
+write.csv(WNN_full_annotation_df, f_name, row.names = FALSE)
+
+
+## Add extra columns o use later 
+WNN_full_annotation_df <- WNN_full_annotation_df |>
+    mutate(
+        ct_ambiguous = "",
+        HClust = "",
+        ct_post_HCLust = "",
+        annotation_reason = ""
+    )
+
+colnames(WNN_full_annotation_df)
+
+## save summary WNN cluster annotations
+f_name <- here(outputCSV_Dir, "WNN_full_annotation_meta_data.csv")
+write.csv(WNN_full_annotation_df, f_name, row.names = FALSE)
 
 
 
