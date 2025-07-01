@@ -145,6 +145,13 @@ dev.off()
 # job_single("14_wnn_hierarchical_clustering", cores = 2, partition = "katun", create_shell = TRUE)
 
 
+## Reproducibility information
+library("sessioninfo")
+print("Reproducibility information:")
+Sys.time()
+proc.time()
+options(width = 120)
+session_info()
 
 
 
