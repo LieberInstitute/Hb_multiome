@@ -133,11 +133,12 @@ get_marker_ranks_1vsALL <- function(sce,
 
 
 rank_results <- lapply(sizes, function(n) {
-    if (as.integer(n) < as.integer(all_genes)) {
+    #if (as.integer(n) < as.integer(all_genes)) {
+    if (n!=as.integer(all_genes)) {
         gene_subset <- head(order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE), n)
     } else {
         message("Processing full dataset!")
-        gene_subset <- head(order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE))
+        gene_subset <- order(Matrix::rowMeans(assay(sce, "logcounts")), decreasing = TRUE)
     }
     get_marker_ranks_1vsALL(
         sce,
@@ -186,6 +187,7 @@ message("save marker stats / rank_results")
 # marker_ranks_10000 <- rank_results[["size_10000"]]
 # marker_ranks_12000 <- rank_results[["size_12000"]]
 marker_ranks_all <- rank_results[["size_29690"]]
+head(marker_ranks_all)
 f_name <- here(processedDir, "marker_1vsALL_29k.RData")
 save(marker_ranks_all, file = f_name)
 
@@ -231,27 +233,19 @@ levels(sce$cluster_ann)
 head(sce[["cluster_ann"]])
 
 marker_stats <- rank_results[["size_29690"]]
+
+table(marker_stats$cellType.target)
+
 print(marker_stats, n=50)
-# # A tibble: 6 × 8
-# # Groups:   cellType.target [1]
-# gene      logFC log.p.value   log.FDR std.logFC cellType.target std.logFC.rank
-# <chr>     <dbl>       <dbl>     <dbl>     <dbl> <chr>                    <int>
-#     1 SNHG14  3.92e-1   -1.41e+ 2 -1.39e+ 2   3.71e-1 C.25.Excit.Thal          1
-# 2 MALAT1  1.18e-1   -1.33e+ 1 -1.22e+ 1   2.20e-1 C.25.Excit.Thal              2
-# 3 CNTNA… -1.12e-4   -6.91e- 1 -3.27e-11  -8.63e-5 C.25.Excit.Thal              3
-# 4 NRXN1  -1.27e-1   -3.33e- 4 -3.27e-11  -1.17e-1 C.25.Excit.Thal              4
-# 5 LRP1B  -2.24e-1   -4.10e- 6 -3.27e-11  -1.79e-1 C.25.Excit.Thal              5
-# 6 CADM2  -2.71e-1   -3.27e-11 -3.27e-11  -2.64e-1 C.25.Excit.Thal              6
-# # ℹ 1 more variable: std.logFC.anno <chr>
 
 valid_clusters <- unique(marker_stats$cellType.target)
 sorted_ct_valid <- sorted_levels[sorted_levels %in% valid_clusters]
 
+
+
 message("Plotting 1vsALL by cell type")
 
-# marker_stats |>
-#     filter(cellType.target == "C.06.ExcitT.LHb.4", log.FDR < 0.05) |>
-#     summarise(count = n())
+
 
 
 f_name <- here(plotDir ,"VPlot_1vsALL_wnn_cluster_genes29k.pdf")
@@ -260,7 +254,7 @@ pdf(file = f_name, width = 8.5, height = 11)  # standard letter size
 for (ct in sorted_ct_valid) {
     message("Plotting wnn cluster: ", ct)
     
-    # Filter top 10 genes for this cluster with log.FDR < -0.05
+    # Filter top 10 genes for this cluster with log.FDR < 0.05
     top_genes <- marker_stats |>
         filter(cellType.target == ct, log.FDR < 0.05) |>
         arrange(std.logFC.rank) |>
