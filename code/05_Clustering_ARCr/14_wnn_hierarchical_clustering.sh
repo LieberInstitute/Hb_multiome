@@ -3,7 +3,7 @@
 #SBATCH --mem=80G
 #SBATCH --job-name=14_wnn_hierarchical_clustering
 #SBATCH -c 2
-#SBATCH -t 1-00:00:00
+#SBATCH -t 2-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
