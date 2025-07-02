@@ -245,7 +245,34 @@ sorted_ct_valid <- sorted_levels[sorted_levels %in% valid_clusters]
 
 message("Plotting 1vsALL by cell type")
 
+## pre-filter from marker_stats the top50 genes with log.FDR < 0.05 for each cellType.target
+top50_marker_stats <- marker_stats |>
+    filter(log.FDR < 0.05) |>
+    group_by(cellType.target) |>
+    arrange(std.logFC.rank, .by_group = TRUE) |>
+    slice_head(n = 50) |>
+    ungroup()
+nrow(top50_marker_stats) # sould be 50x41 = 2050
 
+## arrange to first plot Hb clusters
+clusters <- unique(colData(sce)$cluster_ann)
+# get Hb and non-Hb clusters
+hb_clusters <- grep("LHb|MHb", clusters, value = TRUE)
+hb_clusters
+non_hb_clusters <- setdiff(clusters, hb_clusters)
+non_hb_clusters
+# extract numeric too to sort alphanumeric clusters labels
+extract_cluster_num <- function(x) {
+    as.numeric(sub("C\\.(\\d+).*", "\\1", x))
+}
+hb_sorted <- hb_clusters[order(extract_cluster_num(hb_clusters))]
+non_hb_sorted <- non_hb_clusters[order(extract_cluster_num(non_hb_clusters))]
+# Combine Hb clusters first
+sorted_levels <- c(hb_sorted, non_hb_sorted)
+sorted_levels
+# Reorder factor in colData
+sce$cluster_ann <- factor(sce$cluster_ann, levels = sorted_levels)
+levels(sce$cluster_ann)
 
 
 f_name <- here(plotDir ,"VPlot_1vsALL_wnn_cluster_genes29k.pdf")
@@ -255,7 +282,7 @@ for (ct in sorted_ct_valid) {
     message("Plotting wnn cluster: ", ct)
     
     # Filter top 10 genes for this cluster with log.FDR < 0.05
-    top_genes <- marker_stats |>
+    top_genes <- top50_marker_stats |> # marker_stats
         filter(cellType.target == ct, log.FDR < 0.05) |>
         arrange(std.logFC.rank) |>
         slice_head(n = 10) |>
