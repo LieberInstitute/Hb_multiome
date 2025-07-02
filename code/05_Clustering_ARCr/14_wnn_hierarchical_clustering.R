@@ -94,49 +94,107 @@ as.data.frame(celltype_counts)
 
 
 #===============================================================================
-## Compute Hierarchical Clustering for both logcounts (for magnitude differences) and scale data (highlights relative patterns)
 
-message(Sys.time(), " - Cluster Dendrogram from logcounts (no scaling) ")
 
-mat_logcounts <- t(logcounts(sce)) # cells as rows, genes as columns
-dist_logcounts <- dist(mat_logcounts)
-hc_logcounts <- hclust(dist_logcounts, method = "ward.D2")
-dend_logcounts <- as.dendrogram(hc_logcounts, hang = 0.2)
-dend_logcounts <- set(dend_logcounts, "branches_col", "blue") # optional color for clarity
+## Compute Hierarchical Clustering on PC. 
+## - means only ~10–30 dimensions, making it fast.
+## - generate the average profiles per cluster
+## - even randomly sample cells for a quick dendrogram
 
-## Save data
+message(Sys.time(), " - Cluster Dendrogram on Seurat rna-PCA")
+
+library(Seurat)
+outputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents")
+Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2"
+Seurat_base_name <- paste0(Seurat_base_name, "_renamed_visium.rds")
+# Load Seurat with WNN idents given by default 
+seurat_RDSname <- here(outputRDS_Dir, Seurat_base_name)
+SeuratOBJ <- readRDS(seurat_RDSname)
+SeuratOBJ
+DefaultAssay(SeuratOBJ) <- "RNA"
+
+## Pull PCA embeddings: cells x PCs
+## Get cluster identities
+clusters <- Idents(SeuratOBJ)  # or SeuratOBJ$seurat_clusters or your renamed idents
+head(clusters)
+head(SeuratOBJ$cluster_ann)
+pca_mat <- Embeddings(SeuratOBJ, reduction = "pca")
+head(pca_mat)
+
+## Compute cluster centroids in PCA space
+cluster_means <- as.data.frame(pca_mat) %>%
+    mutate(cluster = clusters) %>%
+    group_by(cluster) %>%
+    summarize(across(starts_with("PC"), mean), .groups = "drop")
+
+# Convert back to matrix (clusters x PCs)
+cluster_mat <- as.matrix(cluster_means[,-1])
+rownames(cluster_mat) <- cluster_means$cluster
+head(rownames(cluster_mat))
+
+dist_cluster <- dist(cluster_mat)
+hc_cluster <- hclust(dist_cluster, method = "ward.D2")
+dend_cluster <- as.dendrogram(hc_cluster, hang = 0.2)
+dend_cluster <- set(dend_cluster, "branches_col", "darkgreen")
+
+## Save data & plot
 message(Sys.time(), " - Save")
-#save(dend_logcounts, file = here(processedDir, "wnn_hierarchical_cluster_logcounts.Rdata"))
+#save(dend_pca, file = here(processedDir, "wnn_hierarchical_cluster_rna-pca.Rdata"))
+
+plot(
+    dend_cluster, 
+    main = "Hierarchical clustering of cluster centroids (PCA space)",
+    ylab = "Height",
+    cex = 0.8,
+    lwd = 1.5
+)
 
 
 
-message(Sys.time(), " - Cluster Dendrogram from scaled data ")
 
-mat_scaled <- scale(mat_logcounts) # scale genes to mean=0, sd=1
-dist_scaled <- dist(mat_scaled)
-hc_scaled <- hclust(dist_scaled, method = "ward.D2")
-dend_scaled <- as.dendrogram(hc_scaled, hang = 0.2)
-dend_scaled <- set(dend_scaled, "branches_col", "red")
-
-## Save data
-message(Sys.time(), " - Save")
-#save(dend_scaled, file = here(processedDir, "wnn_hierarchical_cluster_scale_data.Rdata"))
-
-#===============================================================================
-
-message(Sys.time(), " - Plot Dendrograms Side by side comparison")
-
-pdf(file = here("plots", "dendrogram_comparison_logcounts_vs_scaled.pdf"), width = 12, height = 8)
-
-tanglegram(dend_logcounts, dend_scaled,
-           main_left = "Logcounts (unscaled)",
-           main_right = "Scaled data (gene z-scores)",
-           common_subtrees_color_lines = TRUE,
-           highlight_distinct_edges = TRUE,
-           columns_width = c(5,5),
-           lab.cex = 0.5)
-
-dev.off()
+# ## Compute Hierarchical Clustering for both logcounts (for magnitude differences) and scale data (highlights relative patterns)
+# 
+# message(Sys.time(), " - Cluster Dendrogram from logcounts (no scaling) ")
+# 
+# mat_logcounts <- t(logcounts(sce)) # cells as rows, genes as columns
+# dist_logcounts <- dist(mat_logcounts)
+# hc_logcounts <- hclust(dist_logcounts, method = "ward.D2")
+# dend_logcounts <- as.dendrogram(hc_logcounts, hang = 0.2)
+# dend_logcounts <- set(dend_logcounts, "branches_col", "blue") # optional color for clarity
+# 
+# ## Save data
+# message(Sys.time(), " - Save")
+# #save(dend_logcounts, file = here(processedDir, "wnn_hierarchical_cluster_logcounts.Rdata"))
+# 
+# 
+# 
+# message(Sys.time(), " - Cluster Dendrogram from scaled data ")
+# 
+# mat_scaled <- scale(mat_logcounts) # scale genes to mean=0, sd=1
+# dist_scaled <- dist(mat_scaled)
+# hc_scaled <- hclust(dist_scaled, method = "ward.D2")
+# dend_scaled <- as.dendrogram(hc_scaled, hang = 0.2)
+# dend_scaled <- set(dend_scaled, "branches_col", "red")
+# 
+# ## Save data
+# message(Sys.time(), " - Save")
+# #save(dend_scaled, file = here(processedDir, "wnn_hierarchical_cluster_scale_data.Rdata"))
+# 
+# #===============================================================================
+# 
+# message(Sys.time(), " - Plot Dendrograms Side by side comparison")
+# 
+# pdf(file = here("plots", "dendrogram_comparison_logcounts_vs_scaled.pdf"), width = 12, height = 8)
+# 
+# tanglegram(dend_logcounts, dend_scaled,
+#            main_left = "Logcounts (unscaled)",
+#            main_right = "Scaled data (gene z-scores)",
+#            common_subtrees_color_lines = TRUE,
+#            highlight_distinct_edges = TRUE,
+#            columns_width = c(5,5),
+#            lab.cex = 0.5)
+# 
+# dev.off()
 
 
 message(Sys.time(), "Dendrograms Done!")
