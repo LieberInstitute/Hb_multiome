@@ -144,13 +144,13 @@ collapsed_summary_mean_ratio <- collapsed_summary_mean_ratio |>
         })
     )
 head(collapsed_summary_mean_ratio$mean_ratio_repeated_ct)
-## clean mean_ratio_repeated_ct output, remove x4 characters
-collapsed_summary_mean_ratio <- collapsed_summary_mean_ratio |>
-    mutate(
-        #mean_ratio_repeated_ct = str_replace(mean_ratio_repeated_ct, "^C\\.\\d+\\.", "") |> str_remove("\\s.*")
-        mean_ratio_repeated_ct = str_remove(mean_ratio_repeated_ct, "\\s.*")
-    )
-head(collapsed_summary_mean_ratio$mean_ratio_repeated_ct)
+# ## clean mean_ratio_repeated_ct output, remove x4 characters
+# collapsed_summary_mean_ratio <- collapsed_summary_mean_ratio |>
+#     mutate(
+#         #mean_ratio_repeated_ct = str_replace(mean_ratio_repeated_ct, "^C\\.\\d+\\.", "") |> str_remove("\\s.*")
+#         mean_ratio_repeated_ct = str_remove(mean_ratio_repeated_ct, "\\s.*")
+#     )
+# head(collapsed_summary_mean_ratio$mean_ratio_repeated_ct)
 
 
 message("=========== Summarizing Mean-Ratio ranges")
