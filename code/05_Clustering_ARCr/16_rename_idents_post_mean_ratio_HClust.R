@@ -92,9 +92,6 @@ collapsed_df <- marker_ranks_all_top10 |>
     group_by(cellType.target) |>
     summarise(
         comparisons = str_c(cellType.2nd, collapse = ", "),
-            #paste0(cellType.2nd, " (", round(MeanRatio, 2), ")"),
-            #collapse = ", "
-        #),
         .groups = "drop"
     )
 head(collapsed_df)
@@ -188,7 +185,7 @@ head(mean_ratio_new_columns)
 
 ## ==============================================================================
 
-message("Itegrating new meta-data into previous WNN_full_annotation_meta_data.csv") 
+message("Integrating new meta-data into previous WNN_full_annotation_meta_data.csv") 
 
 collapsed_summary_range <- mean_ratio_new_columns |>
     mutate(cluster = str_sub(cellType.target, 1, 4))
@@ -200,8 +197,11 @@ head(summary_ct_df[1:4])
 ## join both df
 if (!identical(collapsed_summary_range$cluster, summary_ct_df$cluster)) { stop("Not equal cluster ID information on dataframes!") }
 
+## check column names and rename if necessary
 colnames(collapsed_summary_range)
 colnames(summary_ct_df)
+summary_ct_df <- summary_ct_df |> 
+    rename(frequency_repeated_ct = all_cell_types_by_frequency)
 
 WNN_full_annotation_df <- inner_join(
     summary_ct_df, 
@@ -212,26 +212,27 @@ colnames(WNN_full_annotation_df)
 head(WNN_full_annotation_df)
 
 
-WNN_full_annotation_df <- 
-    WNN_full_annotation_df |>
-    select(
-        cluster,
-        ct_frequency_in2ct, 
-        ct_CRegistration_fine,
-        mean_ratio_repeated_ct,
-        mean_ratio_range,
-        ct_MeanRatio_support,
-        number_cells, 
-        cluster_percentage,
-        all_cell_types_by_frequency,
-        mean_ratio_top2, 
-        mean_ratio_detail)
-
-head(WNN_full_annotation_df[1:7])
-
-## save summary WNN cluster annotations
-f_name <- here(outputCSV_Dir, "WNN_full_annotation_meta_data.csv")
-write.csv(WNN_full_annotation_df, f_name, row.names = FALSE)
+# WNN_full_annotation_df <- 
+#     WNN_full_annotation_df |>
+#     select(
+#         cluster,
+#         ct_frequency_in2ct, 
+#         ct_CRegistration_fine,
+#         ct_MeanRatio_support,
+#         mean_ratio_repeated_ct,
+#         mean_ratio_top2,
+#         mean_ratio_detail,
+#         mean_ratio_range,
+#         number_cells, 
+#         cluster_percentage,
+#         frequency_repeated_ct
+#         )
+# 
+# head(WNN_full_annotation_df[1:7])
+# 
+# ## save summary WNN cluster annotations
+# f_name <- here(outputCSV_Dir, "WNN_full_annotation_meta_data.csv")
+# write.csv(WNN_full_annotation_df, f_name, row.names = FALSE)
 
 
 
@@ -300,7 +301,7 @@ head(WNN_full_annotation_with_ambiguous_df)
 #            )
 # WNN_full_annotation_with_ambiguous_df$HClust_support
 
-## Update HClust_support from HClustering results, only branches with two leaves from the same ct
+## Update HClust_support column from HClustering results, only branches with two leaves from the same ct
 cluster_hclust_map <- tribble(
     ~cluster, ~HClust_support,
     "C.02", "2-22",
@@ -335,18 +336,6 @@ WNN_full_annotation_with_ambiguous_df$HClust_support
 
 ## copy ct_MeanRatio_support on ct_final only if ct_final empty or blank
 WNN_full_annotation_with_ambiguous_df$ct_final
-
-# # `ct_ambiguous` is assumed to be a vector of cluster names, e.g.:
-# # ct_ambiguous <- c("C.02", "C.22", "C.07", "C.36", "C.11", "C.14", ...)
-# WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_with_ambiguous_df %>%
-#     mutate(
-#         ct_final = if_else(
-#             ct_ambiguous != "", 
-#             "",                  # leave blank if ct_ambiguous has data
-#             ct_MeanRatio_support # otherwise copy from support
-#         )
-#     )
-
 WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_with_ambiguous_df |>
     mutate(
         ct_final = if_else(
@@ -363,29 +352,27 @@ WNN_full_annotation_df <-
     select(
         cluster,
         ct_frequency_in2ct, 
+        frequency_repeated_ct,
         ct_CRegistration_fine,
-        ct_ambiguous,
+        ct_MeanRatio_support,
         mean_ratio_repeated_ct,
+        mean_ratio_top2,
+        mean_ratio_detail,
         mean_ratio_range,
-        #ct_MeanRatio_support,
         HClust_support,
         ct_final,
         description_support,
         number_cells, 
-        cluster_percentage,
-        mean_ratio_top2, 
-        mean_ratio_detail,
-        all_cell_types_by_frequency)
+        cluster_percentage
+        )
 head(WNN_full_annotation_df)
 
 ## save summary WNN cluster annotations
 f_name <- here(outputCSV_Dir, "WNN_full_annotation_meta_data.csv")
 write.csv(WNN_full_annotation_df, f_name, row.names = FALSE)
 
-
-
-library("slurmjobs")
-job_single("16_rename_idents_post_mean_ratio_HClust", cores = 2, memory = 80, partition = "katun", create_shell = TRUE)
+# library("slurmjobs")
+# job_single("16_rename_idents_post_mean_ratio_HClust", cores = 2, memory = 80, partition = "katun", create_shell = TRUE)
 
 
 library("sessioninfo")
