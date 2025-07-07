@@ -19,8 +19,6 @@ library("sessioninfo")
 
 ## set dirs
 inputRDS <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents")
-# Moved from Hb_Visium Project: 08_wnn_gene_expression_plts_renamed_idents -> 08_spatial_registration_vs_multiome_snRNA
-#outputRDS <- here("processed-data", "05_Clustering_ARCr", "08_wnn_gene_expression_plts_renamed_idents") 
 outputRDS <- here("processed-data", "08_spatial_registration_vs_multiome_snRNA-seq") 
 
 # Before move scripts from Hb_Visium project
@@ -44,19 +42,15 @@ SeuratOBJ
 # 3 layers present: data, counts, scale.data
 # 1 other assay present: ATAC
 # 13 dimensional reductions calculated: pca, umap.unintegrated, integrated.cca, umap, integrated.harmony, lsi, umap.lsi.unintegrated, umap.integrated, tsne.integrated, integrated.lsi.harmony, umap.lsi.integrated, tsne.lsi.integrated, wnn.umap
-
- 
-# new cluster ident 
-# [1] "C.04.LHb.4"         "C.05.LHb.2.7"       "C.07.MHb.2"        
-# [4] "C.08.LHb.4"         "C.09.LHb.4"         "C.10.MHb.1"        
-# [7] "C.11.MHb.1.2"       "C.13.LHb.4"         "C.14.MHb.1"        
-# [10] "C.16.LHb.6"         "C.18.LHb.1.3.4"     "C.23.LHb.1"        
-# [13] "C.24.DD_LHb"        "C.30.DD_LHb"        "C.33.LHb.1.3"      
-# [16] "C.36.MHb.3"         "C.40.LHb.4"         "C.01.Inhib.Thal"   
-# ...
-
+levels(SeuratOBJ)
 colnames(SeuratOBJ@meta.data)
 unique(SeuratOBJ@meta.data$cluster_ann)
+
+# C.04.Excit.Thal
+# C.06.ExcitT.LHb.4
+# C.09.ExcitT.LHb.4
+# C.16.MHb.1.2
+# C.30.MHb.LHb
 
 
 ## Import RNA assay into sce object
@@ -260,14 +254,14 @@ saveRDS(
   sce,
   here(outputRDS, "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v4.rds") 
 )
-message("SCE derived from rna-seurat saved!")
+message("SCE derived from rna-seurat saved on: ", outputRDS)
 
 saveRDS(
   sce_modeling_results,
   here(outputRDS, "enrichment_snRNA-multiome_v4.rds")
 )
 
-message("rna-multiome t-stats saved!")
+message("rna-multiome t-stats saved saved on: ", outputRDS)
 
 # library("slurmjobs")
 #
