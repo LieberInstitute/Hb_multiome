@@ -20,23 +20,22 @@ library("tidyr")
 library("stringr")
 library("here")
 
-## input directories
+## Directories
 
-#inputRDS_Dir <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
 procData_Dir <- here("processed-data", "05_Clustering_ARCr")
 
+# Seurat with Ident names 
 inputSeurat_RDS <- here(procData_Dir, "05_rename_idents", 
                         "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds")
-
+# Meta-data summary 
 input_ct_summary_CSV <- here(procData_Dir, "05_rename_idents", 
                                     "WNN_full_annotation_meta_data.csv")
-
+# Mean-ratio data
 inputMeanRatio_RDS <- here(procData_Dir, "13_wnn_geneExp_plt_mean_ratio_annotated", 
                             "marker_ranks_6_8_10_12_29k.RData") # marker_ranks_6k_12k_allk.RData
 
 outputRDS_Dir <- here(procData_Dir, "16_rename_idents_post_mean_ratio_HClust")
 outputCSV_Dir <- here(procData_Dir, "16_rename_idents_post_mean_ratio_HClust")
-
 plotDir <- here("plots", "05_Clustering_ARCr", "16_rename_idents_post_mean_ratio_HClust")
 
 ## Check directories
@@ -47,6 +46,8 @@ if (!dir.exists(plotDir)) {dir.create(plotDir)}
 ## ==============================================================================
 ## load summary with cell_types and percentages by clusters 
 
+message("=========== Loading Full Summary:\n ", basename(input_ct_summary_CSV))
+
 summary_ct_df <- read.csv(input_ct_summary_CSV)
 
 ## verification
@@ -55,7 +56,7 @@ summary_ct_df |>
     select(cluster, ct_frequency_in2ct, ct_CRegistration_fine) |>
     head()
 
-# now remove from full_annotation_df
+## remove clusters<10 cells from full_annotation_df
 summary_ct_df <- summary_ct_df[!summary_ct_df$number_cells<10, ]
 summary_ct_df$number_cells
 if (anyDuplicated(summary_ct_df$cluster)) { stop("There are duplicated clusters") }
@@ -83,7 +84,8 @@ nrow(marker_ranks_all_top10)
 
 
 ## ==============================================================================
-## summarizes new meta-data for mean-ratio: mean_ratio_detail	mean_ratio_detail	mean_ratio_range
+## summarizes new meta-data for mean-ratio: mean_ratio_detail	mean_ratio_top2	    mean_ratio_repeated_ct
+##                                          mean_ratio_range     mean_ratio_range
 
 message("=========== Summarizing Mean-Ratio dataset")
 
@@ -108,7 +110,7 @@ collapsed_summary_mean_ratio <- collapsed_df |>
             summary_str
         })
     )
-collapsed_summary_mean_ratio$mean_ratio_detail
+#nchar(collapsed_summary_mean_ratio$mean_ratio_detail[7])
 colnames(collapsed_summary_mean_ratio)
 collapsed_summary_mean_ratio$comparisons <- NULL
 head(collapsed_summary_mean_ratio)
@@ -127,6 +129,7 @@ collapsed_summary_mean_ratio <- collapsed_summary_mean_ratio |>
         })
     )
 head(collapsed_summary_mean_ratio)
+
 ## extract the top 1 most repeated patterns from each mean_ratio_detail
 collapsed_summary_mean_ratio <- collapsed_summary_mean_ratio |>
     mutate(
@@ -140,7 +143,7 @@ collapsed_summary_mean_ratio <- collapsed_summary_mean_ratio |>
             top_items[1]
         })
     )
-head(collapsed_summary_mean_ratio$mean_ratio_repeated_ct)
+head(collapsed_summary_mean_ratio)
 # ## clean mean_ratio_repeated_ct output, remove x4 characters
 # collapsed_summary_mean_ratio <- collapsed_summary_mean_ratio |>
 #     mutate(
@@ -168,7 +171,7 @@ head(collapsed_df)
 collapsed_summary_range <- collapsed_df |>     
     mutate(
         mean_ratio_range = map_chr(mean_ratio_ranges, function(x) {
-            vals <- as.numeric(str_split(x, ",\\s*")[[1]]) # splits your string into a vector by commas, removing spaces
+            vals <- as.numeric(str_split(x, ",\\s*")[[1]]) # splits string into a vector by commas, removing spaces
             rng <- range(vals, na.rm = TRUE) 
             paste0("[", round(rng[2], 2), " - ", round(rng[1], 2), "]")
         })
@@ -212,74 +215,33 @@ colnames(WNN_full_annotation_df)
 head(WNN_full_annotation_df)
 
 
-# WNN_full_annotation_df <- 
-#     WNN_full_annotation_df |>
-#     select(
-#         cluster,
-#         ct_frequency_in2ct, 
-#         ct_CRegistration_fine,
-#         ct_MeanRatio_support,
-#         mean_ratio_repeated_ct,
-#         mean_ratio_top2,
-#         mean_ratio_detail,
-#         mean_ratio_range,
-#         number_cells, 
-#         cluster_percentage,
-#         frequency_repeated_ct
-#         )
-# 
-# head(WNN_full_annotation_df[1:7])
-# 
-# ## save summary WNN cluster annotations
-# f_name <- here(outputCSV_Dir, "WNN_full_annotation_meta_data.csv")
-# write.csv(WNN_full_annotation_df, f_name, row.names = FALSE)
-
-
-
 ## ==============================================================================
 
 message("Adding new meta-data for ambiguous clusters") 
 
-# ## Create column with ambiguous clusters
-# lookup_ct <- tribble(
-#     ~cluster, ~ct_ambiguous,
-#     "C.03", "Endo vs Excit.Thal",
-#     "C.04", "LHb4",
-#     "C.06", "LHb4",
-#     "C.09", "LHb4",
-#     "C.13", "LHb4",
-#     "C.16", "MHb vs LHb",
-#     "C.24", "MHb vs LHb",
-#     "C.30", "MHb vs LHb",
-#     "C.31", "LHb4",
-#     "C.34", "Oligo",
-#     "C.35", "Excit.Thal"
-# )
-
-# ## Join to main table 
-# WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_df |>
-#     left_join(lookup_ct, by = "cluster") |>
-#     mutate(
-#         ct_ambiguous = coalesce(ct_ambiguous, "")
-#     )
-# head(WNN_full_annotation_with_ambiguous_df)
-
+## Create column with ambiguous clusters
 colnames(WNN_full_annotation_df)
 
 update_ct_info <- tribble(
     ~cluster, ~ct_ambiguous,        ~ct_final,     ~description_support,
-    "C.03",   "Endo vs Excit.T",    "*Excit.Thal",  "SReg support for Thal + mean-ratio support too + HClust support too",
-    "C.04",   "LHb4",               "*ExcitT.LHb.4","SReg support for LHb + similar mean-ratio for Thal and LHb + HClust support for both too",
-    "C.06",   "LHb4",               "*ExcitT.LHb.4","mean-ratio support for Thal and LHb + HClust support for both too",
-    "C.09",   "LHb4",               "*ExcitT.LHb.4","SReg support for LHb + similar mean-ratio for Thal and LHb + HClust support for both too",
-    "C.13",   "LHb4",               "*Thal",        "SReg support for LHb + strong mean-ratio support too + HClust support too",
-    "C.16",   "MHb vs LHb",         "*MHb.1.2",     "SReg support for LHb + mean-ratio support for MHb and LHb + HClust support for MHb",
-    "C.24",   "MHb vs LHb",         "*LHb.1.3.4",   "strong mean-ratio support for LHb + HClust support too",
-    "C.30",   "MHb vs LHb",         "*MHb.LHb",     "similar mean-ratio for MHb and LHb + HClust support for LHb",
-    "C.31",   "LHb4",               "*ExcitT.LHb.4","strong mean-ratio support for Thal + HClust support for ExcitT.LHb.4",
-    "C.34",   "Oligo",              "*MHb.1.2",     "mean-ratio support for MHb and LHb + HClust support too",
-    "C.35",   "Excit.Thal",         "*Excit.Thal",  "SR support for Thal + HClust support too"
+    "C.03",   "Endo vs Excit.T",    "*Excit.Thal",  "SReg for Thal + mean-ratio for Thal + \nHClust in Thal clade", 
+    "C.04",   "LHb4",               "*LHb.4",       "SReg for LHb + mean-ratio for Thal and LHb + \nVisiumHD for LHb + HClust in LHb clade",
+    "C.06",   "LHb4",               "*LHb.4",       "mean-ratio for Thal and LHb + VisiumHD for LHb",
+    "C.09",   "LHb4",               "*LHb.4",       "SReg for LHb + mean-ratio for Thal and LHb + \nVisiumHD for LHb + HClust in LHb clade",
+    "C.13",   "LHb4",               "*LHb.4",       "SReg for LHb + mean-ratio for Thal + \nVisiumHD for LHb + HClust in LHb clade",
+    "C.16",   "MHb vs LHb",         "*MHb.1.2",     "SReg for LHb + mean-ratio for MHb and LHb + \nVisiumHD for Hb + HClust support for MHb",
+    "C.24",   "MHb vs LHb",         "*LHb.1.3.4",   "mean-ratio for LHb + HClust Hb clade",
+    "C.30",   "MHb vs LHb",         "*MHb.LHb",     "mean-ratio for MHb and LHb + VisiumHD for Hb (low) + \nHClust in Hb clade",
+    "C.31",   "LHb4",               "*LHb.4",       "mean-ratio for Thal and LHb + VisiumHD for Hb (low) + \nHClust in Hb clade",
+    "C.34",   "Oligo",              "*MHb.1.2",     "mean-ratio for MHb + VisiumHD for Hb + \nHClust in MHb clade",
+    "C.35",   "Excit.Thal",         "*Excit.Thal",  "SReg for Thal + HClust in Thal clade"
 )
+
+## ??
+# C.25 still Thal ? -- In LHb clade
+# C.31 still Thal ? -- In LHb clade
+# C.24 
+
 ## Join to main table
 WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_df |>
     left_join(update_ct_info, by = "cluster") |>
@@ -291,15 +253,6 @@ WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_df |>
     )
 colnames(WNN_full_annotation_with_ambiguous_df)
 head(WNN_full_annotation_with_ambiguous_df)
-
-# ## Add additional columns with ct_final and description_support
-# WNN_full_annotation_with_ambiguous_df <- 
-#     WNN_full_annotation_with_ambiguous_df |>
-#     mutate(HClust_support = "",
-#            ct_final = "",
-#            description_support=""
-#            )
-# WNN_full_annotation_with_ambiguous_df$HClust_support
 
 ## Update HClust_support column from HClustering results, only branches with two leaves from the same ct
 cluster_hclust_map <- tribble(
