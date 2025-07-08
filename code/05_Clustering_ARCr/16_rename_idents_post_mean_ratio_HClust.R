@@ -206,7 +206,10 @@ if (!identical(collapsed_summary_range$cluster, summary_ct_df$cluster)) { stop("
 colnames(collapsed_summary_range)
 colnames(summary_ct_df)
 summary_ct_df <- summary_ct_df |> 
-    rename(frequency_repeated_ct = all_cell_types_by_frequency)
+    rename(
+        frequency_repeated_ct = all_cell_types_by_frequency) |>
+    mutate(
+        frequency_repeated_ct = str_wrap(frequency_repeated_ct, width = 70))
 
 WNN_full_annotation_df <- inner_join(
     summary_ct_df, 
