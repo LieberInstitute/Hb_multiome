@@ -13,6 +13,7 @@ library("dendextend")
 library("dynamicTreeCut")
 library("dplyr")
 library("ggplot2")
+library("stringr")
 library("here")
 
 
@@ -158,8 +159,91 @@ plot(
 
 dev.off()
 
+#===============================================================================
+
+
+## Substract pairs of leaves form all clusters to add to full summary meta-data
+
+#str(dend_cluster)
+dend_cluster %>% nnodes
+# [1] 81
+dend %>% nleaves
+# [1] 41
+dend_cluster %>% get_nodes_attr("label")
+# [1] NA                  NA                  "C.21.Astrocyte"   
+# [4] NA                  NA                  "C.41.Microglia"   
+# [7] NA                  "C.02.Oligo"        "C.22.Oligo"   ...
+dend_cluster %>% labels
+# [1] "C.21.Astrocyte"    "C.41.Microglia"    "C.02.Oligo"       
+# [4] "C.22.Oligo"        "C.29.Endo"         "C.27.Microglia"   
+# [7] "C.20.Astrocyte"    "C.26.OPC"          "C.07.MHb.2"   
+
+dend_cluster %>% get_nodes_attr("members")
+dend_cluster %>% get_nodes_attr("members", id = c(2)) # number of members for nodes 2 and 5
+
+# Apply to all nodes and extract all leaves at any level
+all_leaves_per_node <- list()
+i <- 0
+
+extract_leaves <- function(node) {
+    if (!is.leaf(node)) {
+        # collect all leaf labels under the corresponding node
+        leaves <- labels(node)
+        if (length(leaves) > 1) {
+            # store only if it's a true branch
+            i <<- i + 1
+            all_leaves_per_node[[i]] <<- leaves
+        }
+    }
+    return(node)
+}
+dendrapply(dend_cluster, extract_leaves)
+
+## check the character vectors with all leaves
+str(all_leaves_per_node)
+## only keep branches that have exactly two items (two leaves under that branch)
+branches_with_two_leaves <- Filter(function(x) length(x) == 2, all_leaves_per_node)
+branches_with_two_leaves
+
+## compose a df
+two_leaf_pairs_df <- lapply(
+    seq_along(
+        branches_with_two_leaves
+        ), function(branch_id) {
+    leaves <- branches_with_two_leaves[[branch_id]]
+    data.frame(branch_id = branch_id,
+               leaf1 = grep("^C\\.dd\\.", leaves[1]),
+               leaf2 = leaves[2],
+               stringsAsFactors = FALSE)
+}) |> bind_rows()
+
+two_leaf_pairs_df
+
+str_extract("C.02.Oligo", "\\d{2}")
+
+
+two_leaf_pairs_df |>
+    mutate(
+        HClust_pairs = paste(str_extract(two_leaf_pairs_df$leaf1, "\\d{2}"), "-", str_extract(two_leaf_pairs_df$leaf2, "\\d{2}"))
+    )
+# branch_id             leaf1           leaf2 HClust_pairs
+# 1          1        C.02.Oligo      C.22.Oligo      02 - 22
+# 2          2    C.20.Astrocyte        C.26.OPC      20 - 26
+# 3          3        C.07.MHb.2      C.36.MHb.3      07 - 36
+# 4          4      C.11.MHb.1.2      C.14.MHb.1      11 - 14
+# 5          5         C.13.Thal C.39.Inhib.Thal      13 - 39
+# 6          6 C.06.ExcitT.LHb.4 C.04.Excit.Thal      06 - 04
+# 7          7          C.24.LHb    C.30.MHb.LHb      24 - 30
+# 8          8    C.18.LHb.1.3.4      C.23.LHb.1      18 - 23
+# 9          9   C.28.Inhib.Thal C.38.Inhib.Thal      28 - 38
+# 10        10   C.01.Inhib.Thal C.19.Inhib.Thal      01 - 19
+# 11        11   C.12.Excit.Thal C.32.Excit.Thal      12 - 32
+# 12        12   C.03.Excit.Thal       C.37.Thal      03 - 37
+# 13        13   C.15.Excit.Thal C.35.Excit.Thal      15 - 35
 
 #===============================================================================
+
+
 
 
 ## Compute Hierarchical Clustering for both logcounts (for magnitude differences) and scale data (highlights relative patterns)
