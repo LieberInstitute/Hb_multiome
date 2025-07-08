@@ -217,15 +217,11 @@ two_leaf_pairs_df <- lapply(
                stringsAsFactors = FALSE)
 }) |> bind_rows()
 
-two_leaf_pairs_df
-
-str_extract("C.02.Oligo", "\\d{2}")
-
-
-two_leaf_pairs_df |>
+two_leaf_pairs_df <- two_leaf_pairs_df |>
     mutate(
         HClust_pairs = paste(str_extract(two_leaf_pairs_df$leaf1, "\\d{2}"), "-", str_extract(two_leaf_pairs_df$leaf2, "\\d{2}"))
     )
+head(two_leaf_pairs_df)
 # branch_id             leaf1           leaf2 HClust_pairs
 # 1          1        C.02.Oligo      C.22.Oligo      02 - 22
 # 2          2    C.20.Astrocyte        C.26.OPC      20 - 26
@@ -241,9 +237,16 @@ two_leaf_pairs_df |>
 # 12        12   C.03.Excit.Thal       C.37.Thal      03 - 37
 # 13        13   C.15.Excit.Thal C.35.Excit.Thal      15 - 35
 
+## check
+all_leaves_with_pairs <- sort(c(str_extract(two_leaf_pairs_df$leaf1, "\\d{2}"), str_extract(two_leaf_pairs_df$leaf2, "\\d{2}")))
+all_leaves_with_pairs
+
+## save HCLust leave-pairs
+f_name <- here(processedDir, "WNN_HClust_leave_pair.csv")
+write.csv(two_leaf_pairs_df, f_name, row.names = FALSE)
+
+
 #===============================================================================
-
-
 
 
 ## Compute Hierarchical Clustering for both logcounts (for magnitude differences) and scale data (highlights relative patterns)
