@@ -148,14 +148,41 @@ message(Sys.time(), " - Plot Dendrograms - Cluster centroids in PCA")
 
 pdf(file = here(plotDir, "dendrogram_cluster_centroid_on_pca.pdf"), width = 12, height = 8)
 
+# Extract node heights
+dend_with_heights <- dend_cluster |> 
+    set("labels_cex", 0.8)
+
+dend_with_heights <- dendrapply(dend_with_heights, function(node) {
+    if (!is.leaf(node)) {
+        attr(node, "nodePar") <- c(attr(node, "nodePar"),
+                                   lab.cex = 0.7,
+                                   lab.col = "darkred",
+                                   lab.font = 1)
+        attr(node, "label") <- as.integer(round(attr(node, "height")))
+    }
+    return(node)
+})
+
 plot(
-    dend_cluster, 
+    dend_with_heights,
     main = "WNN Hierarchical clustering",
     ylab = "squared PCA distances (ward.D2)",
-    #xlab = "WNN clusters",
-    cex = 0.8,
     lwd = 1.5
-    )
+)
+
+# # Now overlay text directly on the internal nodes
+# xy <- get_nodes_xy(dend_with_heights)
+# internal_nodes <- which(xy[,1] > 0)
+# 
+# # Place rounded integer height labels
+# text(
+#     x = xy[,2][internal_nodes],
+#     y = xy[,1][internal_nodes],
+#     labels = as.integer(round(xy[,1][internal_nodes])),
+#     pos = 1,
+#     cex = 0.7,
+#     col = "darkred"
+# )
 
 dev.off()
 
