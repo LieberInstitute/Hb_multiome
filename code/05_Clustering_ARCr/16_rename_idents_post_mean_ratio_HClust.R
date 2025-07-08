@@ -107,7 +107,8 @@ collapsed_summary_mean_ratio <- collapsed_df |>
             cluster_counts <- table(clusters) # count repeated clusters
             # format like "C.38.Inhib.Thal x2"
             summary_str <- paste0(names(cluster_counts), " x", cluster_counts, collapse = ", ")
-            summary_str
+            # insert \n every ~70 chars
+            str_wrap(summary_str, width = 70)
         })
     )
 #nchar(collapsed_summary_mean_ratio$mean_ratio_detail[7])
