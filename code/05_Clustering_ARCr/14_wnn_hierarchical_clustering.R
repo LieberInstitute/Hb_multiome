@@ -1,13 +1,10 @@
 ########################################################################
 ## Compute and Plot gene expression plots for top marker genes for one cell type 
-## I used Deconvobuddies::findMarkers_1vAll(), a convenient wrapped (Scran/Deconvobuddies) to compute test.type="binom" (1vsALL)
-## - Used: Default direction = "up".  Impacts p-values: if "up" genes with logFC < 0 will have p.value = 1
 ##
 ## Authors. CSC
 ## Date. Jun 30, 2025
 ##
 ## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
-## DeconvoBuddies 1.1+ is not available for Bioconductor 3.18 (conda_R/4.3.x), so I am using conda_R/4.4.x instead
 ########################################################################
 
 library("Seurat")
@@ -109,19 +106,28 @@ cluster_means <- as.data.frame(pca_mat) |>
     mutate(cluster = clusters) |>
     group_by(cluster) |>
     summarize(across(starts_with("PC"), mean), .groups = "drop")
+head(cluster_means)
 
-# Convert back to matrix (clusters x PCs)
+## Convert back to matrix (clusters x PCs)
 cluster_mat <- as.matrix(cluster_means[,-1])
 rownames(cluster_mat) <- cluster_means$cluster
 head(rownames(cluster_mat))
 
-dist_cluster <- dist(cluster_mat)
-hc_cluster <- hclust(dist_cluster, method = "ward.D2")
-dend_cluster <- as.dendrogram(hc_cluster, hang = 0.2)
+dend_cluster <- dist(cluster_mat) |> 
+    hclust(method = "ward.D2") |> 
+    as.dendrogram(hang = 0.2)
+
+str(dend_cluster)
+# main branch: 'dendrogram' with 2 branches and 41 members total, at height 73.22106
+
+## Method: "ward.D2"
+# - improved method, mathematically consistent version of Ward’s hierarchical clustering
+# - minimizes the total within-cluster variance (the sum of squared deviations from cluster means)
+# - tells hclust to explicitly compute merges using squared Euclidean distances
 
 ## Save data & plot
 message(Sys.time(), " - Save")
-#save(dend_pca, file = here(processedDir, "wnn_hierarchical_cluster_rna-pca.Rdata"))
+save(dend_cluster, file = here(processedDir, "wnn_hierarchical_cluster_wnn-pca.Rdata"))
 
 # Create categories to color branches
 cluster_means$cluster
@@ -143,8 +149,9 @@ pdf(file = here(plotDir, "dendrogram_cluster_centroid_on_pca.pdf"), width = 12, 
 
 plot(
     dend_cluster, 
-    main = "Hierarchical clustering of WNN cluster centroids (PCA space)",
-    ylab = "Height",
+    main = "WNN Hierarchical clustering",
+    ylab = "squared PCA distances (ward.D2)",
+    #xlab = "WNN clusters",
     cex = 0.8,
     lwd = 1.5
     )
@@ -153,6 +160,7 @@ dev.off()
 
 
 #===============================================================================
+
 
 ## Compute Hierarchical Clustering for both logcounts (for magnitude differences) and scale data (highlights relative patterns)
 
