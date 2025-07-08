@@ -1,4 +1,4 @@
-s########################################################################
+########################################################################
 ## Refine Annotation on WNN Clusters post Mean-Ratio Scores and HClustering Patterns
 ## INPUT:
 ##      (1) CSV with mean-ratio scores
@@ -40,6 +40,7 @@ plotDir <- here("plots", "05_Clustering_ARCr", "16_rename_idents_post_mean_ratio
 
 ## Check directories
 if (!dir.exists(outputRDS_Dir)) {dir.create(outputRDS_Dir)}
+if (!dir.exists(outputCSV_Dir)) {dir.create(outputCSV_Dir)}
 if (!dir.exists(plotDir)) {dir.create(plotDir)}
 
 
@@ -103,7 +104,7 @@ nrow(collapsed_df)
 collapsed_summary_mean_ratio <- collapsed_df |>
     mutate(
         mean_ratio_detail = map_chr(comparisons, function(comp_str) {
-            clusters <- str_split(comp_str, ",\\s*")[[1]] # # split by comma, trim spaces
+            clusters <- str_split(comp_str, ",\\s*")[[1]] # split by comma, trim spaces
             cluster_counts <- table(clusters) # count repeated clusters
             # format like "C.38.Inhib.Thal x2"
             summary_str <- paste0(names(cluster_counts), " x", cluster_counts, collapse = ", ")
@@ -326,7 +327,7 @@ f_name <- here(outputCSV_Dir, "WNN_full_annotation_meta_data.csv")
 write.csv(WNN_full_annotation_df, f_name, row.names = FALSE)
 
 # library("slurmjobs")
-# job_single("16_rename_idents_post_mean_ratio_HClust", cores = 2, memory = 80, partition = "katun", create_shell = TRUE)
+# job_single("16_rename_idents_post_mean_ratio_HClust", cores = 2, partition = "katun", create_shell = TRUE)
 
 
 library("sessioninfo")
