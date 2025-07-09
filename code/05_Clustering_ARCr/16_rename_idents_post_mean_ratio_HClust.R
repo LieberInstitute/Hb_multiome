@@ -15,6 +15,7 @@ library("Seurat")
 library("purrr")
 library("tibble")
 library("ggplot2")
+library("purrr")
 library("dplyr")
 library("tidyr")
 library("stringr")
@@ -33,6 +34,10 @@ input_ct_summary_CSV <- here(procData_Dir, "05_rename_idents",
 # Mean-ratio data
 inputMeanRatio_RDS <- here(procData_Dir, "13_wnn_geneExp_plt_mean_ratio_annotated", 
                             "marker_ranks_6_8_10_12_29k.RData") # marker_ranks_6k_12k_allk.RData
+
+# HClustering summary
+inputHClust_summary <- here(procData_Dir, "14_wnn_hierarchical_clustering", 
+                           "WNN_HClust_leave_pairs.csv")
 
 outputRDS_Dir <- here(procData_Dir, "16_rename_idents_post_mean_ratio_HClust")
 outputCSV_Dir <- here(procData_Dir, "16_rename_idents_post_mean_ratio_HClust")
@@ -188,6 +193,7 @@ mean_ratio_new_columns <- inner_join(collapsed_summary_mean_ratio, collapsed_sum
 head(mean_ratio_new_columns)
 
 
+
 ## ==============================================================================
 
 message("Integrating new meta-data into previous WNN_full_annotation_meta_data.csv") 
@@ -222,30 +228,31 @@ head(WNN_full_annotation_df)
 
 ## ==============================================================================
 
-message("Adding new meta-data for ambiguous clusters") 
+message("Adding new meta-data for ambiguous clusters (HClust and Visium HD") 
 
 ## Create column with ambiguous clusters
 colnames(WNN_full_annotation_df)
 
 update_ct_info <- tribble(
     ~cluster, ~ct_ambiguous,        ~ct_final,     ~description_support,
-    "C.03",   "Endo vs Excit.T",    "*Excit.Thal",  "SReg for Thal + mean-ratio for Thal + \nHClust in Thal clade", 
-    "C.04",   "LHb4",               "*LHb.4",       "SReg for LHb + mean-ratio for Thal and LHb + \nVisiumHD for LHb + HClust in LHb clade",
-    "C.06",   "LHb4",               "*LHb.4",       "mean-ratio for Thal and LHb + VisiumHD for LHb",
-    "C.09",   "LHb4",               "*LHb.4",       "SReg for LHb + mean-ratio for Thal and LHb + \nVisiumHD for LHb + HClust in LHb clade",
-    "C.13",   "LHb4",               "*LHb.4",       "SReg for LHb + mean-ratio for Thal + \nVisiumHD for LHb + HClust in LHb clade",
-    "C.16",   "MHb vs LHb",         "*MHb.1.2",     "SReg for LHb + mean-ratio for MHb and LHb + \nVisiumHD for Hb + HClust support for MHb",
-    "C.24",   "MHb vs LHb",         "*LHb.1.3.4",   "mean-ratio for LHb + HClust Hb clade",
-    "C.30",   "MHb vs LHb",         "*MHb.LHb",     "mean-ratio for MHb and LHb + VisiumHD for Hb (low) + \nHClust in Hb clade",
-    "C.31",   "LHb4",               "*LHb.4",       "mean-ratio for Thal and LHb + VisiumHD for Hb (low) + \nHClust in Hb clade",
-    "C.34",   "Oligo",              "*MHb.1.2",     "mean-ratio for MHb + VisiumHD for Hb + \nHClust in MHb clade",
+    "C.03",   "Endo vs Excit.T",    "*Excit.Thal",  "SReg for Thal + mean-ratio for Thal + HClust in Thal clade", 
+    "C.04",   "LHb4",               "*LHb.4",       "SReg for LHb + mean-ratio for Thal and LHb + VisiumHD (res.0.4) for LHb (K07,SpD2) + HClust in LHb clade",
+    "C.06",   "LHb4",               "*LHb.4",       "mean-ratio for Thal and LHb + VisiumHD (res.0.4) for LHb (K07,SpD2)",
+    "C.09",   "LHb4",               "*LHb.4",       "SReg for LHb + mean-ratio for Thal and LHb + VisiumHD (res.0.4) for LHb (K07,SpD2) + HClust in LHb clade",
+    "C.13",   "LHb4",               "*LHb.4",       "SReg for LHb + mean-ratio for Thal + VisiumHD (res.0.4) for LHb (K07,SpD2) + HClust in LHb clade",
+    "C.16",   "MHb vs LHb",         "*MHb.1.2",     "SReg for LHb + mean-ratio for MHb and LHb + VisiumHD for Hb + HClust support for MHb",
+    "C.24",   "MHb vs LHb",         "*LHb.4",       "mean-ratio for LHb + VisiumHD (res1.7) for LHb (K23,SpD05) + HClust Hb clade",
+    "C.30",   "MHb vs LHb",         "*LHb.4",       "mean-ratio for MHb and LHb + VisiumHD (res.0.4) for LHb (K07,SpD2) + \nHClust in Hb clade",
+    "C.31",   "LHb4",               "*LHb.4",       "mean-ratio for Thal and LHb + VisiumHD (res.0.4) for LHb (K07,SpD2) + \nHClust in Hb clade",
+    "C.34",   "Oligo",              "*Oligo",       "mean-ratio for MHb + VisiumHD (res.0.4) for LHb (K07,SpD4) + \nHClust in MHb clade",
     "C.35",   "Excit.Thal",         "*Excit.Thal",  "SReg for Thal + HClust in Thal clade"
 )
 
-## ??
-# C.25 still Thal ? -- In LHb clade
-# C.31 still Thal ? -- In LHb clade
-# C.24 
+## CLusters to track:
+# C.24 Track because VisumHD is suggesting LHb with some Oligos 
+# C.30 Track beacuse it share SReg with LHb and Thal in Visium-HD
+# C.31 Track beacuse it share SReg with LHb and Thal in Visium-HD
+# C.34 Likely it should be removed 
 
 ## Join to main table
 WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_df |>
@@ -257,54 +264,91 @@ WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_df |>
         HClust_support = ""
     )
 colnames(WNN_full_annotation_with_ambiguous_df)
+
+WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_with_ambiguous_df |>
+    mutate(description_support = str_wrap(description_support, width = 70))
+
 head(WNN_full_annotation_with_ambiguous_df)
 
-## Update HClust_support column from HClustering results, only branches with two leaves from the same ct
-cluster_hclust_map <- tribble(
-    ~cluster, ~HClust_support,
-    "C.02", "2-22",
-    "C.22", "2-22",
-    "C.07", "7-36",
-    "C.36", "7-36",
-    "C.11", "11-14",
-    "C.14", "11-14",
-    "C.13", "13-39",
-    "C.39", "13-39",
-    "C.28", "28-38",
-    "C.01", "01-19",
-    "C.19", "01-19",
-    "C.12", "12-32",
-    "C.32", "12-32",
-    "C.03", "03-37",
-    "C.37", "03-37",
-    "C.15", "15-35",
-    "C.35", "15-35"
-)
-cluster_hclust_map
 
-## Joint to main table
-WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_with_ambiguous_df |>
-    select(-HClust_support) |>
-    left_join(cluster_hclust_map, by = "cluster") |>
-    mutate(
-        HClust_support = coalesce(HClust_support, "")
-    )
-WNN_full_annotation_with_ambiguous_df$HClust_support
+## Add ct_MeanRatio_support on ct_final only if ct_final empty or blank
 
-
-## copy ct_MeanRatio_support on ct_final only if ct_final empty or blank
 WNN_full_annotation_with_ambiguous_df$ct_final
 WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_with_ambiguous_df |>
     mutate(
         ct_final = if_else(
-            ct_final == "", 
+            ct_final == "",
             ct_MeanRatio_support,
             ct_final
         )
     )
 WNN_full_annotation_with_ambiguous_df$ct_final
 
-## rearrange columns again
+
+## ==============================================================================
+
+## Update HClust_support column from HClustering results, only branches with two leaves from the same ct
+
+message("=========== Loading HClustering data")
+
+summary_HClust <- read.csv(inputHClust_summary)
+
+colnames(WNN_full_annotation_df)
+
+branches <- summary_HClust$branch_id
+
+leaf1 = map(branches, ~
+        paste0("C.", trimws(str_split_i(summary_HClust$HClust_pairs[.x], "-", 1)))
+) |> flatten_chr()
+leaf2 = map(branches, ~
+        paste0("C.", trimws(str_split_i(summary_HClust$HClust_pairs[.x], "-", 2)))
+) |> flatten_chr()
+
+## Build df
+summary_HClust$clust1 = leaf1
+summary_HClust$clust2 = leaf2
+summary_HClust
+# branch_id             leaf1           leaf2 HClust_pairs clust1 clust2
+# 1          1        C.02.Oligo      C.22.Oligo      02 - 22   C.02   C.22
+# 2          2    C.20.Astrocyte        C.26.OPC      20 - 26   C.20   C.26
+# 3          3        C.07.MHb.2      C.36.MHb.3      07 - 36   C.07   C.36
+# 4          4      C.11.MHb.1.2      C.14.MHb.1      11 - 14   C.11   C.14
+
+## Joint to main table
+WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_with_ambiguous_df |>
+    # join on clust1
+    left_join(summary_HClust |> select(clust1, HClust_pairs1 = HClust_pairs), 
+              by = c("cluster" = "clust1")) |>
+    # join on clust2
+    left_join(summary_HClust |> select(clust2, HClust_pairs2 = HClust_pairs), 
+              by = c("cluster" = "clust2")) |>
+    # combine them
+    mutate(HClust_pairs = coalesce(HClust_pairs1, HClust_pairs2),
+           HClust_pairs = coalesce(HClust_pairs, "")) |>
+    # drop temp columns
+    select(-HClust_pairs1, -HClust_pairs2)
+
+## verify
+WNN_full_annotation_with_ambiguous_df[c("cluster", "HClust_pairs")]
+
+
+## ==============================================================================
+
+# ## copy ct_MeanRatio_support on ct_final only if ct_final empty or blank
+# 
+# WNN_full_annotation_with_ambiguous_df$ct_final
+# WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_with_ambiguous_df |>
+#     mutate(
+#         ct_final = if_else(
+#             ct_final == "", 
+#             ct_MeanRatio_support,
+#             ct_final
+#         )
+#     )
+# WNN_full_annotation_with_ambiguous_df$ct_final
+
+## rearrange columns
+
 WNN_full_annotation_df <- 
     WNN_full_annotation_with_ambiguous_df |>
     select(
@@ -317,7 +361,7 @@ WNN_full_annotation_df <-
         mean_ratio_top2,
         mean_ratio_detail,
         mean_ratio_range,
-        HClust_support,
+        HClust_pairs,
         ct_final,
         description_support,
         number_cells, 
