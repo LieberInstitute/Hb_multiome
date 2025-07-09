@@ -323,29 +323,16 @@ WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_with_ambiguous_df |
     left_join(summary_HClust |> select(clust2, HClust_pairs2 = HClust_pairs), 
               by = c("cluster" = "clust2")) |>
     # combine them
-    mutate(HClust_pairs = coalesce(HClust_pairs1, HClust_pairs2),
-           HClust_pairs = coalesce(HClust_pairs, "")) |>
+    mutate(HClust_pair_leaves = coalesce(HClust_pairs1, HClust_pairs2),
+           HClust_pair_leaves = coalesce(HClust_pair_leaves, "")) |>
     # drop temp columns
     select(-HClust_pairs1, -HClust_pairs2)
 
 ## verify
-WNN_full_annotation_with_ambiguous_df[c("cluster", "HClust_pairs")]
+WNN_full_annotation_with_ambiguous_df[c("cluster", "HClust_pair_leaves")]
 
 
 ## ==============================================================================
-
-# ## copy ct_MeanRatio_support on ct_final only if ct_final empty or blank
-# 
-# WNN_full_annotation_with_ambiguous_df$ct_final
-# WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_with_ambiguous_df |>
-#     mutate(
-#         ct_final = if_else(
-#             ct_final == "", 
-#             ct_MeanRatio_support,
-#             ct_final
-#         )
-#     )
-# WNN_full_annotation_with_ambiguous_df$ct_final
 
 ## rearrange columns
 
@@ -361,9 +348,9 @@ WNN_full_annotation_df <-
         mean_ratio_top2,
         mean_ratio_detail,
         mean_ratio_range,
-        HClust_pairs,
         ct_final,
         description_support,
+        HClust_pair_leaves,
         number_cells, 
         cluster_percentage
         )
@@ -372,6 +359,9 @@ head(WNN_full_annotation_df)
 ## save summary WNN cluster annotations
 f_name <- here(outputCSV_Dir, "WNN_full_annotation_meta_data.csv")
 write.csv(WNN_full_annotation_df, f_name, row.names = FALSE)
+
+message("Full summary updated done!!")
+
 
 # library("slurmjobs")
 # job_single("16_rename_idents_post_mean_ratio_HClust", cores = 2, partition = "katun", create_shell = TRUE)
