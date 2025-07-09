@@ -269,7 +269,7 @@ all_leaves_with_pairs <- sort(c(str_extract(two_leaf_pairs_df$leaf1, "\\d{2}"), 
 all_leaves_with_pairs
 
 ## save HCLust leave-pairs
-f_name <- here(processedDir, "WNN_HClust_leave_pair.csv")
+f_name <- here(processedDir, "WNN_HClust_leave_pairs.csv")
 write.csv(two_leaf_pairs_df, f_name, row.names = FALSE)
 
 
