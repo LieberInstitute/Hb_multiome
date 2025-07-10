@@ -8,11 +8,12 @@
 ########################################################################
 
 library("Seurat")
-library("SingleCellExperiment")
-library("dendextend")
-library("dynamicTreeCut")
-library("dplyr")
+#library("SingleCellExperiment")
+#library("dendextend")
+#library("dynamicTreeCut")
 library("ggplot2")
+library("patchwork")
+library("dplyr")
 library("stringr")
 library("here")
 
@@ -162,9 +163,6 @@ message("Seurat with clusters renamed saved!")
 ## =============================================================================
 ## Some visualizations: VPlots, DimPlot, Feature, DotPlot ...
 
-
-#===============================================================================
-
 ## extract suffix name to give unique name to plots
 seurat_name <- str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
 
@@ -176,10 +174,19 @@ plt1 <- DimPlot(SeuratOBJ,
     NoLegend() +
     labs(title = paste0("**WNN Clusters: ", seurat_name))
 
-tmp_name <- paste0(seurat_name, "_DimPlot_renamed.pdf")
-ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
-message("WNN UMAP done!")
+plt2 <- DimPlot(SeuratOBJ, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                group.by = "merged_cluster", 
+                label.size = 3) + 
+    NoLegend() +
+    labs(title ="")
 
+tmp_name <- paste0(seurat_name, "_Hb_DimPlot_all_merged_side_to_side.pdf")
+dim_plots <- (plt1 + plt2)
+ggsave(here(plotDir, tmp_name), dim_plots, width = 10, height = 5)
+
+message("WNN UMAP done!")
 
 
 # ## Compute Hierarchical Clustering on PC. ----- FASTER VERSION
