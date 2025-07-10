@@ -140,61 +140,53 @@ names(cluster_categories) <- cluster_means$cluster
 category_colors <- ifelse(cluster_categories[labels(dend_cluster)] == "LHb", "tomato",
                      ifelse(cluster_categories[labels(dend_cluster)] == "MHb", "darkblue", "black"))
 
-# Set colors
-dend_cluster <- dend_cluster |> set("labels_col", category_colors)
-
-
 message(Sys.time(), " - Plot Dendrograms - Cluster centroids in PCA")
 
 pdf(file = here(plotDir, "dendrogram_cluster_centroid_on_pca.pdf"), width = 12, height = 8)
 
-# Extract node heights
+# Set settings 
 dend_with_heights <- dend_cluster |> 
-    set("labels_cex", 0.8)
+    set("labels_cex", 0.8) |>
+    set("labels_col", category_colors) |>
+    set("nodes_pch", 19) |>
+    set("nodes_cex", 0.7) |>
+    set("nodes_col", "blue") |>
+    set("leaves_col", "darkred") 
 
-dend_with_heights <- dendrapply(dend_with_heights, function(node) {
-    if (!is.leaf(node)) {
-        attr(node, "nodePar") <- c(attr(node, "nodePar"),
-                                   lab.cex = 0.7,
-                                   lab.col = "darkred",
-                                   lab.font = 1)
-        attr(node, "label") <- as.integer(round(attr(node, "height")))
-    }
-    return(node)
-})
+## to add rectangules at specific k (optional)
+# dend_cluster |> rect.dendrogram(k=4, 
+#                                 border = 8, lty = 5, lwd = 2)
+
+# dend_with_heights <- dendrapply(dend_with_heights, function(node) {
+#     if (!is.leaf(node)) {
+#         attr(node, "nodePar") <- c(attr(node, "nodePar"),
+#                                    lab.cex = 0.7,
+#                                    lab.col = "darkred",
+#                                    lab.font = 1)
+#         attr(node, "label") <- as.integer(round(attr(node, "height")))
+#     }
+#     return(node)
+# })
+# dend_with_heights
 
 plot(
-    dend_with_heights,
+    dend_cluster,
     main = "WNN Hierarchical clustering",
     ylab = "squared PCA distances (ward.D2)",
     lwd = 1.5
 )
 
-# # Now overlay text directly on the internal nodes
-# xy <- get_nodes_xy(dend_with_heights)
-# internal_nodes <- which(xy[,1] > 0)
-# 
-# # Place rounded integer height labels
-# text(
-#     x = xy[,2][internal_nodes],
-#     y = xy[,1][internal_nodes],
-#     labels = as.integer(round(xy[,1][internal_nodes])),
-#     pos = 1,
-#     cex = 0.7,
-#     col = "darkred"
-# )
-
 dev.off()
+
 
 #===============================================================================
 
-
-## Substract pairs of leaves form all clusters to add to full summary meta-data
+## Extract pairs of leaves from all clusters to add to full summary meta-data later
 
 #str(dend_cluster)
 dend_cluster %>% nnodes
 # [1] 81
-dend %>% nleaves
+dend_cluster %>% nleaves
 # [1] 41
 dend_cluster %>% get_nodes_attr("label")
 # [1] NA                  NA                  "C.21.Astrocyte"   
