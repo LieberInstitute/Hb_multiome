@@ -125,6 +125,33 @@ message("Added new cluster arrangement")
 levels(SeuratOBJ)
 
 
+
+## =============================================================================
+## Add 3 meta-cluster as column: MHb, LHb and No-Habenula
+
+## Update "cluster_ann" column to Seurat meta-data for visualizations
+colnames(SeuratOBJ@meta.data)
+SeuratOBJ$cluster_ann <- Idents(SeuratOBJ)
+
+# extract the ident ID for the 3 meta-groups
+LHb_clusters_to_merge <- grep("LHb", hb_clusters, value = TRUE)
+MHb_clusters_to_merge <- grep("MHb", hb_clusters, value = TRUE)
+
+# Add meta-data "merged_cluster" with 3 merged clusters classes: LHb, MHb and No-Hb clusters
+current_idents <- as.character(Idents(SeuratOBJ))
+# Assign merged labels
+merged_cluster <- ifelse(current_idents %in% LHb_clusters_to_merge, "LHb_merged",
+                         ifelse(current_idents %in% MHb_clusters_to_merge, "MHb_merged",
+                                ifelse(current_idents %in% no_hb_clust, "No-Hb_merged", current_idents)))
+unique(merged_cluster)
+
+# add to new metadata MERGED ident labels for further analysis
+SeuratOBJ$merged_cluster <- merged_cluster
+unique(SeuratOBJ$merged_cluster)
+#[1] "No-Hb_merged" "MHb_merged"   "LHb_merged" 
+
+message("Clusters rearrenged and big categories merged!")
+
 ## save RDS
 rds_file_name <- here(processedDir, paste0(Seurat_base_name, "_renamed_visium_HD.rds"))
 saveRDS(SeuratOBJ, rds_file_name)
