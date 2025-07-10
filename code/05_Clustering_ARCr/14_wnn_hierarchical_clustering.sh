@@ -33,6 +33,7 @@ module list
 
 ## Edit with your job command
 Rscript 14_wnn_hierarchical_clustering.R
+ret=$?
 
 echo "**** Job ends ****"
 date
