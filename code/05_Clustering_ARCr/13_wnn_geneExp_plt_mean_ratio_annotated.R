@@ -176,7 +176,7 @@ get_marker_ranks <- function(sce,
 ## set some settings
 genes_of_interest
 all_genes
-# sizes <- c(2000, 4000, 6000, 8000, 10000, 12000, all_genes)
+sizes <- c(2000, 4000, 6000, 8000, 10000, 12000, all_genes)
 ## for speeding the process, I will only tests
 sizes <- c(all_genes)
 
