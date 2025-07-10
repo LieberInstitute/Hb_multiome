@@ -17,15 +17,7 @@ library("stringr")
 library("here")
 
 # directories
-# inputSCE_Dir <- here(
-#     "processed-data",
-#     "08_spatial_registration_vs_multiome_snRNA-seq"
-# )
-# processedDir <- here(
-#     "processed-data",
-#     "05_Clustering_ARCr",
-#     "14_wnn_hierarchical_clustering"
-# )
+
 Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds"
 inputSeuratRDS <- here(
     "processed-data", 
@@ -38,6 +30,12 @@ input_ct_summary_CSV <- here(
     "05_Clustering_ARCr",
     "16_rename_idents_post_mean_ratio_HClust",
     "WNN_full_annotation_meta_data.csv")
+
+processedDir <- here(
+    "processed-data",
+    "05_Clustering_ARCr",
+    "17_wnn_hierarchical_clustering_final_ct"
+)
 
 plotDir <- here(
     "plots",
@@ -104,6 +102,57 @@ names(new_ct) <- current_ct
 SeuratOBJ <- RenameIdents(SeuratOBJ, new_ct)
 levels(SeuratOBJ)
 #head(Idents(SeuratOBJ))
+
+## Set factor levels for identities to arrange clusters, first we want Hb clusters
+all_clusters <- as.vector(new_ct)
+hb_clusters <- grep("MHb|LHb", all_clusters, value = TRUE)
+hb_clusters
+# [1] "C.04.LHb.4"     "C.05.LHb.2.7"   "C.06.LHb.4"     "C.07.MHb.2"    
+# [5] "C.08.LHb.4"     "C.09.LHb.4"     "C.10.MHb.1"     "C.11.MHb.1.2"  
+# [9] "C.13.LHb.4"     "C.14.MHb.1"     "C.16.MHb.1.2"   "C.18.LHb.1.3.4"
+# [13] "C.23.LHb.1"     "C.24.LHb.4"     "C.30.LHb.4"     "C.31.LHb.4"    
+# [17] "C.33.LHb.1.3"   "C.36.MHb.3"     "C.40.LHb.4"  
+no_hb_clust <- grep("MHb|LHb", all_clusters, value = TRUE, invert = TRUE)
+no_hb_clust
+
+# ensure all clusters are included
+new_levels <- c(hb_clusters, setdiff(all_clusters, hb_clusters))
+new_levels
+# Apply the new order to Seurat object identities
+SeuratOBJ <- SetIdent(SeuratOBJ, value = factor(Idents(SeuratOBJ), levels = new_levels))
+
+message("Added new cluster arrangement")
+levels(SeuratOBJ)
+
+
+## save RDS
+rds_file_name <- here(processedDir, paste0(Seurat_base_name, "_renamed_visium_HD.rds"))
+saveRDS(SeuratOBJ, rds_file_name)
+
+message("Seurat with clusters renamed saved!")
+
+
+## =============================================================================
+## Some visualizations: VPlots, DimPlot, Feature, DotPlot ...
+
+
+#===============================================================================
+
+## extract suffix name to give unique name to plots
+seurat_name <- str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
+
+plt1 <- DimPlot(SeuratOBJ, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                #group.by = "cluster_ann", 
+                label.size = 3) + 
+    NoLegend() +
+    labs(title = paste0("**WNN Clusters: ", seurat_name))
+
+tmp_name <- paste0(seurat_name, "_DimPlot_renamed.pdf")
+ggsave(plt1, filename = here(plotDir, tmp_name), height = 6, width = 6)
+message("WNN UMAP done!")
+
 
 
 # ## Compute Hierarchical Clustering on PC. ----- FASTER VERSION
