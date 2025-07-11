@@ -236,23 +236,18 @@ colnames(WNN_full_annotation_df)
 update_ct_info <- tribble(
     ~cluster, ~ct_ambiguous,        ~ct_final,     ~description_support,
     "C.03",   "Endo vs Excit.T",    "*Excit.Thal",  "SReg for Thal + mean-ratio for Thal + HClust in Thal clade", 
-    "C.04",   "LHb4",               "*LHb.4",       "SReg for LHb + mean-ratio for Thal and LHb + VisiumHD (res.0.4) for LHb (K07,SpD2) + HClust in LHb clade",
-    "C.06",   "LHb4",               "*LHb.4",       "mean-ratio for Thal and LHb + VisiumHD (res.0.4) for LHb (K07,SpD2)",
-    "C.09",   "LHb4",               "*LHb.4",       "SReg for LHb + mean-ratio for Thal and LHb + VisiumHD (res.0.4) for LHb (K07,SpD2) + HClust in LHb clade",
-    "C.13",   "LHb4",               "*LHb.4",       "SReg for LHb + mean-ratio for Thal + VisiumHD (res.0.4) for LHb (K07,SpD2) + HClust in LHb clade",
-    "C.16",   "MHb vs LHb",         "*MHb.1.2",     "SReg for LHb + mean-ratio for MHb and LHb + VisiumHD for Hb + HClust support for MHb",
-    "C.24",   "MHb vs LHb",         "*LHb.4",       "mean-ratio for LHb + VisiumHD (res1.7) for LHb (K23,SpD05) + HClust Hb clade",
-    "C.30",   "MHb vs LHb",         "*LHb.4",       "mean-ratio for MHb and LHb + VisiumHD (res.0.4) for LHb (K07,SpD2) + \nHClust in Hb clade",
-    "C.31",   "LHb4",               "*LHb.4",       "mean-ratio for Thal and LHb + VisiumHD (res.0.4) for LHb (K07,SpD2) + \nHClust in Hb clade",
-    "C.34",   "Oligo",              "*Oligo",       "mean-ratio for MHb + VisiumHD (res.0.4) for LHb (K07,SpD4) + \nHClust in MHb clade",
+    "C.04",   "LHb4",               "*LHb.4",       "SReg for LHb + mean-ratio for Thal and LHb + VisiumHD support for LHb + HClust in the LHb clade",
+    "C.06",   "LHb4",               "*LHb.4",       "mean-ratio for Thal and LHb + VisiumHD support for LHb + HClust in the LHb clade",
+    "C.09",   "LHb4",               "*LHb.4",       "SReg for LHb + mean-ratio for Thal and LHb + VisiumHD support for LHb + HClust in the LHb clade",
+    "C.13",   "LHb4",               "*LHb.4",       "SReg for LHb + mean-ratio for Thal + VisiumHD support for LHb + HClust in the LHb clade",
+    "C.16",   "MHb vs LHb",         "*MHb.1.2",     "SReg for LHb + mean-ratio for MHb and LHb + VisiumHD support for MHb.1.2 + HClust in the MHb clade",
+    "C.24",   "MHb vs LHb",         "*LHb.4",       "mean-ratio for LHb + HClust in the LHb clade",
+    "C.30",   "MHb vs LHb",         "*LHb.7",       "mean-ratio for MHb and LHb + VisiumHD support for LHb.7 + HClust in the LHb clade",
+    "C.31",   "LHb4",               "*LHb.4",       "mean-ratio for Thal and LHb + VisiumHD support for LHb.4 + HClust in the LHb clade",
+    "C.34",   "Oligo",              "*Oligo",       "mean-ratio for MHb + VisiumHD support for Oligos + HClust in MHb clade. Wear cell-composition (remove)",
     "C.35",   "Excit.Thal",         "*Excit.Thal",  "SReg for Thal + HClust in Thal clade"
 )
 
-## CLusters to track:
-# C.24 Track because VisumHD is suggesting LHb with some Oligos 
-# C.30 Track beacuse it share SReg with LHb and Thal in Visium-HD
-# C.31 Track beacuse it share SReg with LHb and Thal in Visium-HD
-# C.34 Likely it should be removed 
 
 ## Join to main table
 WNN_full_annotation_with_ambiguous_df <- WNN_full_annotation_df |>
