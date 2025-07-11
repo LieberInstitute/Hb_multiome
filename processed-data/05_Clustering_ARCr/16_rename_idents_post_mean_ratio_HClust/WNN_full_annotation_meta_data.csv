@@ -6,22 +6,23 @@ C.38.Inhib.Thal x6","[1.27 - 1.04]","Inhib.Thal","","01 - 19",3906,"7.012%"
 "C.03","undetermined","DD_Astrocyte (1), DD_Endo (4), DD_Excit.Thal (1)","Excit.Thal","Excit.Thal","C.37.Thal x10","C.37.Thal x10","C.37.Thal x10","[1.8 - 1.41]","*Excit.Thal","SReg for Thal + mean-ratio for Thal + HClust in Thal clade","03 - 37",3271,"5.872%"
 "C.04","undetermined","DD_Excit.Thal (6), DD_Inhib.Thal (1), DD_LHb (2), DD_OPC (1), LB_LHB
 neuron specific (1)","LHb.4","Excit.Thal","C.39.Inhib.Thal x3","C.39.Inhib.Thal x3, C.06.ExcitT.LHb.4 x2","C.06.ExcitT.LHb.4 x2, C.31.ExcitT.LHb.4 x1, C.32.Excit.Thal x2,
-C.39.Inhib.Thal x3, C.40.LHb.4 x2","[1.29 - 1.17]","*LHb.4","SReg for LHb + mean-ratio for Thal and LHb + VisiumHD (res.0.4) for
-LHb (K07,SpD2) + HClust in LHb clade","06 - 04",2911,"5.226%"
+C.39.Inhib.Thal x3, C.40.LHb.4 x2","[1.29 - 1.17]","*LHb.4","SReg for LHb + mean-ratio for Thal and LHb + VisiumHD support for LHb
++ HClust in the LHb clade","06 - 04",2911,"5.226%"
 "C.05","DD_LHb","DD_Excit.Thal (1), DD_LHb (10), LB_Hb neuron specific (2), LB_LHB
 neuron specific (1)","LHb.2.7","LHb.2.7","C.07.MHb.2 x3","C.07.MHb.2 x3, C.33.LHb.1.3 x2","C.07.MHb.2 x3, C.10.MHb.1 x1, C.16.MHb.1.2 x1, C.24.LHb x1,
 C.31.ExcitT.LHb.4 x1, C.33.LHb.1.3 x2, C.36.MHb.3 x1","[2.45 - 1.16]","LHb.2.7","","",2771,"4.975%"
 "C.06","DD_Excit.Thal","DD_Excit.Thal (6), DD_OPC (1)","undetermined","ExcitT.LHb.4","C.04.Excit.Thal x4","C.04.Excit.Thal x4, C.08.LHb.4 x1","C.04.Excit.Thal x4, C.08.LHb.4 x1, C.15.Excit.Thal x1,
 C.31.ExcitT.LHb.4 x1, C.33.LHb.1.3 x1, C.36.MHb.3 x1, C.39.Inhib.Thal
-x1","[1 - 0.94]","*LHb.4","mean-ratio for Thal and LHb + VisiumHD (res.0.4) for LHb (K07,SpD2)","06 - 04",2667,"4.788%"
+x1","[1 - 0.94]","*LHb.4","mean-ratio for Thal and LHb + VisiumHD support for LHb + HClust in the
+LHb clade","06 - 04",2667,"4.788%"
 "C.07","DD_MHb","DD_MHb (10), DD_OPC (1), LB_Hb neuron specific (1)","MHb.2","MHb.2","C.10.MHb.1 x2","C.10.MHb.1 x2, C.36.MHb.3 x2","C.10.MHb.1 x2, C.11.MHb.1.2 x1, C.26.OPC x1, C.30.MHb.LHb x1,
 C.32.Excit.Thal x1, C.33.LHb.1.3 x1, C.36.MHb.3 x2, C.38.Inhib.Thal x1","[1.87 - 1.37]","MHb.2","","07 - 36",2610,"4.686%"
 "C.08","undetermined","DD_Astrocyte (1), DD_Excit.Thal (3), DD_Inhib.Thal (1), DD_LHb (7),
 DD_OPC (1)","LHb.4","LHb.4","C.24.LHb x3","C.24.LHb x3, C.40.LHb.4 x2","C.10.MHb.1 x1, C.16.MHb.1.2 x1, C.18.LHb.1.3.4 x1, C.21.Astrocyte x1,
 C.24.LHb x3, C.31.ExcitT.LHb.4 x1, C.40.LHb.4 x2","[1.83 - 1.38]","LHb.4","","",2537,"4.555%"
 "C.09","undetermined","DD_Excit.Thal (4), DD_OPC (4)","LHb.4","ExcitT.LHb.4","C.17.Excit.Thal x3","C.17.Excit.Thal x3, C.33.LHb.1.3 x3","C.04.Excit.Thal x1, C.12.Excit.Thal x1, C.17.Excit.Thal x3,
-C.32.Excit.Thal x1, C.33.LHb.1.3 x3, C.39.Inhib.Thal x1","[1.1 - 0.95]","*LHb.4","SReg for LHb + mean-ratio for Thal and LHb + VisiumHD (res.0.4) for
-LHb (K07,SpD2) + HClust in LHb clade","",2430,"4.363%"
+C.32.Excit.Thal x1, C.33.LHb.1.3 x3, C.39.Inhib.Thal x1","[1.1 - 0.95]","*LHb.4","SReg for LHb + mean-ratio for Thal and LHb + VisiumHD support for LHb
++ HClust in the LHb clade","",2430,"4.363%"
 "C.10","DD_MHb","DD_Excit.Thal (1), DD_LHb (1), DD_MHb (7), DD_OPC (1), LB_Hb neuron
 specific (2)","MHb.1","MHb.1","C.14.MHb.1 x5","C.14.MHb.1 x5, C.07.MHb.2 x1","C.07.MHb.2 x1, C.11.MHb.1.2 x1, C.14.MHb.1 x5, C.16.MHb.1.2 x1,
 C.35.Excit.Thal x1, C.36.MHb.3 x1","[2.14 - 1.33]","MHb.1","","",2344,"4.208%"
@@ -30,15 +31,15 @@ C.14.MHb.1 x1, C.30.MHb.LHb x2, C.34.Oligo x1","[1.16 - 1.02]","MHb.1.2","","11 
 "C.12","undetermined","DD_Excit.Thal (5), DD_Inhib.Thal (1), DD_LHb (3), DD_OPC (1)","Excit.Thal","Excit.Thal","C.32.Excit.Thal x4","C.32.Excit.Thal x4, C.03.Excit.Thal x1","C.03.Excit.Thal x1, C.08.LHb.4 x1, C.15.Excit.Thal x1, C.19.Inhib.Thal
 x1, C.23.LHb.1 x1, C.32.Excit.Thal x4, C.33.LHb.1.3 x1","[2.55 - 1.7]","Excit.Thal","","12 - 32",2187,"3.926%"
 "C.13","no-match",NA,"LHb.4","Thal","C.12.Excit.Thal x4","C.12.Excit.Thal x4, C.39.Inhib.Thal x4","C.12.Excit.Thal x4, C.17.Excit.Thal x1, C.30.MHb.LHb x1,
-C.39.Inhib.Thal x4","[1.74 - 1.63]","*LHb.4","SReg for LHb + mean-ratio for Thal + VisiumHD (res.0.4) for LHb
-(K07,SpD2) + HClust in LHb clade","13 - 39",2036,"3.655%"
+C.39.Inhib.Thal x4","[1.74 - 1.63]","*LHb.4","SReg for LHb + mean-ratio for Thal + VisiumHD support for LHb + HClust
+in the LHb clade","13 - 39",2036,"3.655%"
 "C.14","DD_MHb","DD_Excit.Thal (1), DD_MHb (9), LB_MHB neuron specific (1)","MHb.1","MHb.1","C.10.MHb.1 x2","C.10.MHb.1 x2, C.16.MHb.1.2 x2","C.03.Excit.Thal x1, C.10.MHb.1 x2, C.11.MHb.1.2 x1, C.13.Thal x1,
 C.16.MHb.1.2 x2, C.18.LHb.1.3.4 x1, C.20.Astrocyte x1, C.30.MHb.LHb x1","[2.26 - 1.04]","MHb.1","","11 - 14",2026,"3.637%"
 "C.15","DD_Excit.Thal","DD_Endo (2), DD_Excit.Thal (8), LB_Thalamus broad (1)","Excit.Thal","Excit.Thal","C.35.Excit.Thal x3","C.35.Excit.Thal x3, C.17.Excit.Thal x2","C.03.Excit.Thal x1, C.17.Excit.Thal x2, C.21.Astrocyte x1,
 C.31.ExcitT.LHb.4 x1, C.35.Excit.Thal x3, C.37.Thal x2","[2.21 - 1.25]","Excit.Thal","","15 - 35",1625,"2.917%"
 "C.16","DD_MHb","DD_Excit.Thal (1), DD_LHb (2), DD_MHb (8), LB_Hb neuron specific (1)","LHb.6","MHb.1.2","C.07.MHb.2 x3","C.07.MHb.2 x3, C.10.MHb.1 x3","C.05.LHb.2.7 x1, C.07.MHb.2 x3, C.10.MHb.1 x3, C.14.MHb.1 x1,
-C.18.LHb.1.3.4 x1, C.34.Oligo x1","[2.66 - 1.3]","*MHb.1.2","SReg for LHb + mean-ratio for MHb and LHb + VisiumHD for Hb + HClust
-support for MHb","",1607,"2.885%"
+C.18.LHb.1.3.4 x1, C.34.Oligo x1","[2.66 - 1.3]","*MHb.1.2","SReg for LHb + mean-ratio for MHb and LHb + VisiumHD support for
+MHb.1.2 + HClust in the MHb clade","",1607,"2.885%"
 "C.17","DD_Excit.Thal","DD_Excit.Thal (11), LB_excitatory_neuron (1), LB_Hb neuron specific
 (1), LB_Thalamus broad (1)","Excit.Thal","Excit.Thal","C.15.Excit.Thal x5","C.15.Excit.Thal x5, C.12.Excit.Thal x2","C.03.Excit.Thal x1, C.12.Excit.Thal x2, C.15.Excit.Thal x5,
 C.25.Excit.Thal x1, C.36.MHb.3 x1","[1.8 - 1.18]","Excit.Thal","","",1587,"2.849%"
@@ -53,8 +54,7 @@ C.33.LHb.1.3 x1","[1.83 - 1.12]","LHb.1.3.4","","18 - 23",1535,"2.756%"
 "C.23","DD_LHb","DD_LHb (7), LB_LHB neuron specific (2)","LHb.1","LHb.1","C.18.LHb.1.3.4 x5","C.18.LHb.1.3.4 x5, C.33.LHb.1.3 x2","C.03.Excit.Thal x1, C.04.Excit.Thal x1, C.18.LHb.1.3.4 x5,
 C.33.LHb.1.3 x2, C.34.Oligo x1","[2.21 - 1.19]","LHb.1","","18 - 23",1269,"2.278%"
 "C.24","DD_LHb","DD_LHb (8), DD_MHb (4)","undetermined","LHb","C.18.LHb.1.3.4 x5","C.18.LHb.1.3.4 x5, C.40.LHb.4 x2","C.16.MHb.1.2 x1, C.18.LHb.1.3.4 x5, C.33.LHb.1.3 x1, C.35.Excit.Thal
-x1, C.40.LHb.4 x2","[1.14 - 1.08]","*LHb.4","mean-ratio for LHb + VisiumHD (res1.7) for LHb (K23,SpD05) + HClust Hb
-clade","24 - 30",825,"1.481%"
+x1, C.40.LHb.4 x2","[1.14 - 1.08]","*LHb.4","mean-ratio for LHb + HClust in the LHb clade","24 - 30",825,"1.481%"
 "C.25","undetermined","DD_Excit.Thal (1), DD_OPC (1)","Excit.Thal","Excit.Thal","C.31.ExcitT.LHb.4 x2","C.31.ExcitT.LHb.4 x2, C.33.LHb.1.3 x2","C.04.Excit.Thal x1, C.15.Excit.Thal x1, C.18.LHb.1.3.4 x1,
 C.31.ExcitT.LHb.4 x2, C.32.Excit.Thal x1, C.33.LHb.1.3 x2, C.36.MHb.3
 x1, C.38.Inhib.Thal x1","[1.19 - 0.77]","Excit.Thal","","",707,"1.269%"
@@ -67,17 +67,17 @@ LB_Thalamus/MDm (1)","Inhib.Thal","Inhib.Thal","C.38.Inhib.Thal x9","C.38.Inhib.
 x1, C.27.Microglia x1, C.40.LHb.4 x2, C.41.Microglia x1","[25.8 - 5.46]","Endo","","",343,"0.616%"
 "C.30","DD_LHb","DD_LHb (11), LB_Hb neuron specific (1), LB_LHB neuron specific (2)","undetermined","MHb.LHb","C.10.MHb.1 x2","C.10.MHb.1 x2, C.05.LHb.2.7 x1","C.05.LHb.2.7 x1, C.08.LHb.4 x1, C.10.MHb.1 x2, C.16.MHb.1.2 x1,
 C.19.Inhib.Thal x1, C.34.Oligo x1, C.36.MHb.3 x1, C.37.Thal x1,
-C.38.Inhib.Thal x1","[1.57 - 1.38]","*LHb.4","mean-ratio for MHb and LHb + VisiumHD (res.0.4) for LHb (K07,SpD2) +
-HClust in Hb clade","24 - 30",213,"0.382%"
+C.38.Inhib.Thal x1","[1.57 - 1.38]","*LHb.7","mean-ratio for MHb and LHb + VisiumHD support for LHb.7 + HClust in
+the LHb clade","24 - 30",213,"0.382%"
 "C.31","DD_Excit.Thal","DD_Excit.Thal (6), LB_Endo/CP (1)","undetermined","ExcitT.LHb.4","C.04.Excit.Thal x4","C.04.Excit.Thal x4, C.35.Excit.Thal x2","C.04.Excit.Thal x4, C.18.LHb.1.3.4 x1, C.24.LHb x1, C.32.Excit.Thal
-x2, C.35.Excit.Thal x2","[1.55 - 1.23]","*LHb.4","mean-ratio for Thal and LHb + VisiumHD (res.0.4) for LHb (K07,SpD2) +
-HClust in Hb clade","",209,"0.375%"
+x2, C.35.Excit.Thal x2","[1.55 - 1.23]","*LHb.4","mean-ratio for Thal and LHb + VisiumHD support for LHb.4 + HClust in
+the LHb clade","",209,"0.375%"
 "C.32","undetermined","DD_Endo (1), DD_Excit.Thal (3), DD_LHb (2), DD_MHb (1), DD_OPC (1)","Excit.Thal","Excit.Thal","C.12.Excit.Thal x7","C.12.Excit.Thal x7, C.20.Astrocyte x1","C.12.Excit.Thal x7, C.20.Astrocyte x1, C.25.Excit.Thal x1,
 C.31.ExcitT.LHb.4 x1","[2.07 - 1.51]","Excit.Thal","","12 - 32",196,"0.352%"
 "C.33","DD_LHb","*** DD_LHb (6)","LHb.1.3","LHb.1.3","C.23.LHb.1 x5","C.23.LHb.1 x5, C.10.MHb.1 x3","C.05.LHb.2.7 x1, C.10.MHb.1 x3, C.23.LHb.1 x5, C.31.ExcitT.LHb.4 x1","[3.05 - 1.61]","LHb.1.3","","",186,"0.334%"
 "C.34","DD_Oligo","DD_Oligo (17), LB_oligodendrocyte (1)","undetermined","Oligo","C.30.MHb.LHb x3","C.30.MHb.LHb x3, C.10.MHb.1 x2","C.01.Inhib.Thal x1, C.10.MHb.1 x2, C.24.LHb x1, C.30.MHb.LHb x3,
-C.35.Excit.Thal x1, C.36.MHb.3 x1, C.39.Inhib.Thal x1","[1.26 - 1.11]","*Oligo","mean-ratio for MHb + VisiumHD (res.0.4) for LHb (K07,SpD4) + HClust in
-MHb clade","",184,"0.33%"
+C.35.Excit.Thal x1, C.36.MHb.3 x1, C.39.Inhib.Thal x1","[1.26 - 1.11]","*Oligo","mean-ratio for MHb + VisiumHD support for Oligos + HClust in MHb
+clade. Wear cell-composition (remove)","",184,"0.33%"
 "C.35","undetermined","DD_Astrocyte (1), DD_Endo (1), DD_Excit.Thal (6), DD_OPC (2),
 LB_Endo/CP (1)","Excit.Thal","Excit.Thal","C.31.ExcitT.LHb.4 x6","C.31.ExcitT.LHb.4 x6, C.21.Astrocyte x2","C.12.Excit.Thal x1, C.15.Excit.Thal x1, C.21.Astrocyte x2,
 C.31.ExcitT.LHb.4 x6","[1.5 - 1.25]","*Excit.Thal","SReg for Thal + HClust in Thal clade","15 - 35",165,"0.296%"
