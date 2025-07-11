@@ -124,7 +124,17 @@ SeuratOBJ <- SetIdent(SeuratOBJ, value = factor(Idents(SeuratOBJ), levels = new_
 
 message("Added new cluster arrangement")
 levels(SeuratOBJ)
+unique(Idents(SeuratOBJ))
+## =============================================================================
 
+## Remove clusters with wear cell-types
+
+# Drop cluster "C.34.Oligo"
+cells_to_keep <- WhichCells(SeuratOBJ, idents = NULL)[Idents(SeuratOBJ) != "C.34.Oligo"]
+SeuratOBJ <- subset(SeuratOBJ, cells = cells_to_keep)
+levels(SeuratOBJ)
+unique(Idents(SeuratOBJ))
+head(Idents(SeuratOBJ))
 
 
 ## =============================================================================
