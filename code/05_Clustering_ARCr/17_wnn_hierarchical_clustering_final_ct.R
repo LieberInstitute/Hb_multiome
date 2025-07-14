@@ -280,7 +280,13 @@ message("WNN UMAP done!")
 
 
 # library("slurmjobs")
-# job_single("14_wnn_hierarchical_clustering", cores = 2, partition = "katun", create_shell = TRUE)
+# job_single(
+#     "17_wnn_hierarchical_clustering_final_ct", 
+#     cores = 2, 
+#     partition = "katun", 
+#     memory = "80G", 
+#     create_shell = TRUE
+#     )
 
 ## Reproducibility information
 library("sessioninfo")
