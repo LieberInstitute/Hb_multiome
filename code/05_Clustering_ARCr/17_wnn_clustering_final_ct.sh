@@ -1,14 +1,14 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=80G
-#SBATCH --job-name=17_wnn_hierarchical_clustering_final_ct
+#SBATCH --job-name=17_wnn_clustering_final_ct
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
 
-log_path=logs/17_wnn_hierarchical_clustering_final_ct.txt
+log_path=logs/17_wnn_clustering_final_ct.txt
 
 {
 set -e
@@ -30,7 +30,7 @@ module load conda_R/4.3.x
 module list
 
 ## Edit with your job command
-Rscript 17_wnn_hierarchical_clustering_final_ct.R
+Rscript 17_wnn_clustering_final_ct.R
 res=$?
 
 echo "**** Job ends ****"
