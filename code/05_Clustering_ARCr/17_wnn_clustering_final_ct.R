@@ -1,18 +1,14 @@
 ########################################################################
-## Compute and Plot gene expression plots for top marker genes for one cell type 
+## Rename Seurat with final cell types 
+## Save RDS with Seurat renamed idents and table with merged clusters
 ##
 ## Authors. CSC
 ## Date. Jun 30, 2025
 ##
-## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
+## Recommended resources on interactive mode: srun --pty --mem=80GB --x11 bash
 ########################################################################
 
 library("Seurat")
-#library("SingleCellExperiment")
-#library("dendextend")
-#library("dynamicTreeCut")
-library("ggplot2")
-library("patchwork")
 library("dplyr")
 library("stringr")
 library("here")
@@ -38,16 +34,7 @@ processedDir <- here(
     "17_wnn_hierarchical_clustering_final_ct"
 )
 
-plotDir <- here(
-    "plots",
-    "05_Clustering_ARCr",
-    "17_wnn_hierarchical_clustering_final_ct"
-)
-
 ## Check directories
-if (!dir.exists(plotDir)) {
-    dir.create(plotDir)
-}
 if (!dir.exists(processedDir)) {
     dir.create(processedDir)
 }
@@ -226,18 +213,8 @@ message("Summary table saved at: ", f_file)
 
 message("Clusters rearrenged in big categories merged!")
 
+
 ## =============================================================================
-
-## plot histogram with merged clusters
-p1 <- ggplot(merged_table, aes(x = reorder(merged_cluster, -percent), y = percent)) +
-    geom_bar(stat = "identity", fill = "steelblue") +
-    labs(x = "Merged Cluster", y = "Percentage of Cells",
-         title = "Cell percentages per merged cluster") +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ggsave(here(plotDir, "Percentage_of_merged_clusters.pdf"), p1, width = 5, height = 4)
-
 
 ## save RDS
 rds_file_name <- here(processedDir, paste0(Seurat_base_name, "_renamed_visium_HD.rds"))
@@ -246,122 +223,9 @@ saveRDS(SeuratOBJ, rds_file_name)
 message("Seurat with clusters renamed saved!")
 
 
-
-## Some visualizations: VPlots, DimPlot, Feature, DotPlot ...
-
-## extract suffix name to give unique name to plots
-seurat_name <- str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
-
-plt1 <- DimPlot(SeuratOBJ, 
-                label = TRUE, 
-                reduction = "wnn.umap",
-                label.size = 3) + 
-    NoLegend() +
-    labs(title = "**WNN Clusters")
-
-ggsave(here(plotDir, "Hb_DimPlot_WNN_clusters.pdf"), plt1, width = 7, height = 7)
-
-
-plt2 <- DimPlot(SeuratOBJ, 
-                label = TRUE, 
-                reduction = "wnn.umap",
-                group.by = "merged_cluster", 
-                label.size = 3) + 
-    NoLegend() +
-    labs(title = "**WNN Merged Clusters")
-
-ggsave(here(plotDir, "Hb_DimPlot_WNN_merged_clusters.pdf"), plt2, width = 7, height = 7)
-
-dim_plots <- (plt1 + plt2)
-ggsave(here(plotDir, "Hb_DimPlot_WNN_ALL_merged_clusters_side_to_side.pdf"), dim_plots, width = 10, height = 5)
-
-
-message("WNN UMAP done!")
-
-
-# ## Compute Hierarchical Clustering on PC. ----- FASTER VERSION
-# ## - means only ~10–30 dimensions, making it fast.
-# ## - generate the average profiles per cluster
-# ## - even randomly sample cells for a quick dendrogram
-# 
-# ## Pull PCA embeddings: cells x PCs
-# ## Get cluster identities
-# clusters <- Idents(SeuratOBJ)
-# head(clusters)
-# head(SeuratOBJ$cluster_ann)
-# pca_mat <- Embeddings(SeuratOBJ, reduction = "pca")
-# head(pca_mat)
-# rm("SeuratOBJ")
-# 
-# ## Compute cluster centroids in PCA space
-# cluster_means <- as.data.frame(pca_mat) |>
-#     mutate(cluster = clusters) |>
-#     group_by(cluster) |>
-#     summarize(across(starts_with("PC"), mean), .groups = "drop")
-# head(cluster_means)
-# 
-# ## Convert back to matrix (clusters x PCs)
-# cluster_mat <- as.matrix(cluster_means[,-1])
-# rownames(cluster_mat) <- cluster_means$cluster
-# head(rownames(cluster_mat))
-# 
-# dend_cluster <- dist(cluster_mat) |> 
-#     hclust(method = "ward.D2") |> 
-#     as.dendrogram(hang = 0.2)
-# 
-# str(dend_cluster)
-# # main branch: 'dendrogram' with 2 branches and 41 members total, at height 73.22106
-# 
-# ## Method: "ward.D2"
-# # - improved method, mathematically consistent version of Ward’s hierarchical clustering
-# # - minimizes the total within-cluster variance (the sum of squared deviations from cluster means)
-# # - tells hclust to explicitly compute merges using squared Euclidean distances
-# 
-# ## Save data & plot
-# message(Sys.time(), " - Save")
-# save(dend_cluster, file = here(processedDir, "wnn_hierarchical_cluster_wnn-pca.Rdata"))
-# 
-# # Create categories to color branches
-# cluster_means$cluster
-# cluster_categories <- ifelse(grepl("LHb", cluster_means$cluster), "LHb",
-#                              ifelse(grepl("MHb", cluster_means$cluster), "MHb", "No-Hb"))
-# names(cluster_categories) <- cluster_means$cluster
-# 
-# # Map categories to colors
-# category_colors <- ifelse(cluster_categories[labels(dend_cluster)] == "LHb", "tomato",
-#                      ifelse(cluster_categories[labels(dend_cluster)] == "MHb", "darkblue", "black"))
-# 
-# message(Sys.time(), " - Plot Dendrograms - Cluster centroids in PCA")
-# 
-# pdf(file = here(plotDir, "dendrogram_cluster_centroid_on_pca.pdf"), width = 12, height = 8)
-# 
-# # Set settings 
-# dend_with_heights <- dend_cluster |> 
-#     set("labels_cex", 0.8) |>
-#     set("labels_col", category_colors) |>
-#     set("nodes_pch", 19) |>
-#     set("nodes_cex", 0.7) |>
-#     set("nodes_col", "blue") |>
-#     set("leaves_col", "darkred") 
-# 
-# plot(
-#     dend_cluster,
-#     main = "WNN Hierarchical clustering",
-#     ylab = "squared PCA distances (ward.D2)",
-#     lwd = 1.5
-# )
-# 
-# dev.off()
-# 
-# 
-# 
-# message(Sys.time(), "Dendrograms Done!")
-
-
-
 # library("slurmjobs")
 # job_single(
-#     "17_wnn_hierarchical_clustering_final_ct", 
+#     "17_wnn_clustering_final_ct", 
 #     cores = 2, 
 #     partition = "katun", 
 #     memory = "80G", 
