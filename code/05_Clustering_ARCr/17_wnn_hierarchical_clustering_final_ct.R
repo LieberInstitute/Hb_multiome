@@ -59,6 +59,7 @@ message(Sys.time(), " - Load Seurat with WNN clusters")
 SeuratOBJ <- readRDS(inputSeuratRDS)
 SeuratOBJ
 DefaultAssay(SeuratOBJ) <- "RNA"
+class(SeuratOBJ[["ATAC"]])
 current_ct <- levels(SeuratOBJ)
 current_ct <- sort(current_ct)
 
@@ -102,6 +103,17 @@ names(new_ct) <- current_ct
 ## rename idents with new cell-types
 SeuratOBJ <- RenameIdents(SeuratOBJ, new_ct)
 levels(SeuratOBJ)
+[1] "C.01.Inhib.Thal" "C.02.Oligo"      "C.03.Excit.Thal" "C.04.LHb.4"     
+[5] "C.05.LHb.2.7"    "C.06.LHb.4"      "C.07.MHb.2"      "C.08.LHb.4"     
+[9] "C.09.LHb.4"      "C.10.MHb.1"      "C.11.MHb.1.2"    "C.12.Excit.Thal"
+[13] "C.13.LHb.4"      "C.14.MHb.1"      "C.15.Excit.Thal" "C.16.MHb.1.2"   
+[17] "C.17.Excit.Thal" "C.18.LHb.1.3.4"  "C.19.Inhib.Thal" "C.20.Astrocyte" 
+[21] "C.21.Astrocyte"  "C.22.Oligo"      "C.23.LHb.1"      "C.24.LHb.4"     
+[25] "C.25.Excit.Thal" "C.26.OPC"        "C.27.Microglia"  "C.28.Inhib.Thal"
+[29] "C.29.Endo"       "C.30.LHb.7"      "C.31.LHb.4"      "C.32.Excit.Thal"
+[33] "C.33.LHb.1.3"    "C.34.Oligo"      "C.35.Excit.Thal" "C.36.MHb.3"     
+[37] "C.37.Thal"       "C.38.Inhib.Thal" "C.39.Inhib.Thal" "C.40.LHb.4"     
+[41] "C.41.Microglia" 
 #head(Idents(SeuratOBJ))
 
 ## Set factor levels for identities to arrange clusters, first we want Hb clusters
@@ -123,13 +135,16 @@ new_levels
 SeuratOBJ <- SetIdent(SeuratOBJ, value = factor(Idents(SeuratOBJ), levels = new_levels))
 
 message("Added new cluster arrangement")
+
 levels(SeuratOBJ)
 unique(Idents(SeuratOBJ))
+
 ## =============================================================================
 
 ## Remove clusters with wear cell-types
 
 # Drop cluster "C.34.Oligo"
+# For details go to: https://github.com/LieberInstitute/Hb_multiome/blob/da5cd6c9ab6c51a63553fbb2cc1080260e089628/processed-data/05_Clustering_ARCr/16_rename_idents_post_mean_ratio_HClust/WNN_full_annotation_meta_data.csv 
 cells_to_keep <- WhichCells(SeuratOBJ, idents = NULL)[Idents(SeuratOBJ) != "C.34.Oligo"]
 SeuratOBJ <- subset(SeuratOBJ, cells = cells_to_keep)
 levels(SeuratOBJ)
@@ -147,6 +162,17 @@ SeuratOBJ$cluster_ann <- Idents(SeuratOBJ)
 # extract the ident ID for the 3 meta-groups
 LHb_clusters_to_merge <- grep("LHb", hb_clusters, value = TRUE)
 MHb_clusters_to_merge <- grep("MHb", hb_clusters, value = TRUE)
+Oligo_clusters_to_merge <- grep("Oligo", no_hb_clust, value = TRUE)
+Astrocyte_clusters_to_merge <- grep("Astrocyte", no_hb_clust, value = TRUE)
+OPC_clusters_to_merge <- grep("OPC", no_hb_clust, value = TRUE)
+Microglia_clusters_to_merge <- grep("Microglia", no_hb_clust, value = TRUE)
+Endo_clusters_to_merge <- grep("Endo", no_hb_clust, value = TRUE)
+## I will keep the 3 classes of Thal
+Inhib_Thal_clusters_to_merge <- grep("Inhib.Thal", no_hb_clust, value = TRUE)
+Excit_Thal_clusters_to_merge <- grep("Excit.Thal", no_hb_clust, value = TRUE)
+all_Thal_only <- grep("Thal", no_hb_clust, value = TRUE)
+Thal_clusters_to_merge <- all_Thal_only[!grepl("\\.Excit\\.Thal|\\.Inhib\\.Thal", all_Thal_only)]
+
 
 # Add meta-data "merged_cluster" with 3 merged clusters classes: LHb, MHb and No-Hb clusters
 current_idents <- as.character(Idents(SeuratOBJ))
