@@ -228,6 +228,15 @@ message("Summary table saved at: ", f_file)
 
 message("Clusters rearrenged in big categories merged!")
 
+## plot histogram with merged clusters
+p1 <- ggplot(merged_table, aes(x = reorder(merged_cluster, -percent), y = percent)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    labs(x = "Merged Cluster", y = "Percentage of Cells",
+         title = "Cell percentages per merged cluster") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave(here(plotDir, "Percentage_of_merged_clusters.pdf"), p1, width = 5, height = 5)
 
 
 ## save RDS
