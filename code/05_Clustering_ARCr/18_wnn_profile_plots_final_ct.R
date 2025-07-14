@@ -88,7 +88,7 @@ plt1 <- DimPlot(SeuratOBJ,
                 reduction = "wnn.umap",
                 label.size = 3) + 
     NoLegend() +
-    labs(title = "WNN Clusters")
+    labs(title = "WNN cell types")
 
 ggsave(here(plotDir, "WNN_umap.pdf"), plt1, width = 7, height = 7)
 
@@ -97,7 +97,7 @@ plt2 <- DimPlot(SeuratOBJ,
                 reduction = "umap.lsi.integrated",
                 label.size = 3) + 
     NoLegend() +
-    labs(title = "WNN Clusters in atac")
+    labs(title = "WNN cell types in atac")
 
 ggsave(here(plotDir, "WNN_umap_lsi_integrated.pdf"), plt2, width = 7, height = 7)
 
@@ -105,16 +105,30 @@ dim_plots <- (plt1 + plt2)
 ggsave(here(plotDir, "Hb_DimPlot_WNN_ALL_merged_clusters_side_to_side.pdf"), dim_plots, width = 10, height = 5)
 
 
-## merged clusters
+## merged clusters, I picked up Hex color codes similar to those used on human pilot
+my_colors <- c(
+    LHb = "#1f78b4",
+    MHb = "#b74d4d",
+    Oligo = "#384a08",
+    Astrocyte = "#890606", 
+    OPC = "#829454",
+    Microglia = "#141b02",
+    Endo = "#d95f02",
+    Inhib_Thal = "#9a9fe7",
+    Excit_Thal = "#42467b",
+    Thal = "#4d55b7"
+)
+
 plt1 <- DimPlot(SeuratOBJ, 
-                label = TRUE, 
+                label = FALSE, 
                 reduction = "wnn.umap",
                 group.by = "merged_cluster", 
-                label.size = 3) + 
-    NoLegend() +
-    labs(title = "WNN Merged Clusters")
+                label.size = 3,
+                cols = my_colors) + 
+    #NoLegend() +
+    labs(title = "WNN Broad cell-types")
 
-ggsave(here(plotDir, "WNN_merged_clusters.pdf"), plt2, width = 7, height = 7)
+ggsave(here(plotDir, "WNN_merged_clusters.pdf"), plt1, width = 8, height = 7)
 
 
 message("WNN UMAP done!")
