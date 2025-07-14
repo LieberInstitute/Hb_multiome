@@ -182,18 +182,18 @@ assign_merged_clusters <- function(cluster_vector, cluster_groups, default = "Ot
 all_Thal_only <- grep("Thal", no_hb_clust, value = TRUE)
 
 cluster_merged_groups <- list(
-    LHb_merged = grep("LHb", hb_clusters, value = TRUE),
-    MHb_merged = grep("MHb", hb_clusters, value = TRUE)
+    LHb = grep("LHb", hb_clusters, value = TRUE),
+    MHb = grep("MHb", hb_clusters, value = TRUE)
 ) |>
     append(list(
-        Oligo_merged = grep("Oligo", no_hb_clust, value = TRUE),
-        Astrocyte_merged = grep("Astrocyte", no_hb_clust, value = TRUE),
-        OPC_merged = grep("OPC", no_hb_clust, value = TRUE),
-        Microglia_merged = grep("Microglia", no_hb_clust, value = TRUE),
-        Endo_merged = grep("Endo", no_hb_clust, value = TRUE),
-        Inhib_Thal_merged = grep("Inhib.Thal", no_hb_clust, value = TRUE),
-        Excit_Thal_merged = grep("Excit.Thal", no_hb_clust, value = TRUE),
-        Thal_merged = if (length(all_Thal_only) > 0) all_Thal_only[!grepl("\\.Excit\\.Thal|\\.Inhib\\.Thal", all_Thal_only)] else character(0)
+        Oligo = grep("Oligo", no_hb_clust, value = TRUE),
+        Astrocyte = grep("Astrocyte", no_hb_clust, value = TRUE),
+        OPC = grep("OPC", no_hb_clust, value = TRUE),
+        Microglia = grep("Microglia", no_hb_clust, value = TRUE),
+        Endo = grep("Endo", no_hb_clust, value = TRUE),
+        Inhib_Thal = grep("Inhib.Thal", no_hb_clust, value = TRUE),
+        Excit_Thal = grep("Excit.Thal", no_hb_clust, value = TRUE),
+        Thal = if (length(all_Thal_only) > 0) all_Thal_only[!grepl("\\.Excit\\.Thal|\\.Inhib\\.Thal", all_Thal_only)] else character(0)
     ))
 
 # Add meta-data "merged_cluster" with x merged clusters defined above
@@ -203,12 +203,10 @@ SeuratOBJ$merged_cluster <- merged_cluster
 
 # check
 table(SeuratOBJ$merged_cluster)
-# Astrocyte_merged       Endo_merged Excit_Thal_merged Inhib_Thal_merged 
-# 2684               343              9738              6024 
-# LHb_merged        MHb_merged  Microglia_merged      Oligo_merged 
-# 19673             10944               663              4882 
-# OPC_merged       Thal_merged 
-# 638               111 
+# Astrocyte       Endo Excit_Thal Inhib_Thal        LHb        MHb  Microglia 
+# 2684        343       9738       6024      19673      10944        663 
+# Oligo        OPC       Thal 
+# 4882        638        111 
 
 ## Table summary of merged clusters
 merged_table <- table(SeuratOBJ$merged_cluster) |> as.data.frame()
@@ -219,14 +217,16 @@ merged_table <- merged_table |>
     )
 
 merged_table <- merged_table |> arrange(desc(cell_count))
-
 print(merged_table)
+
 f_file <- here(processedDir, "merged_clusters_summary.csv")
 write.csv(merged_table, file = f_file, row.names = FALSE)
 
 message("Summary table saved at: ", f_file)
 
 message("Clusters rearrenged in big categories merged!")
+
+## =============================================================================
 
 ## plot histogram with merged clusters
 p1 <- ggplot(merged_table, aes(x = reorder(merged_cluster, -percent), y = percent)) +
@@ -236,7 +236,7 @@ p1 <- ggplot(merged_table, aes(x = reorder(merged_cluster, -percent), y = percen
     theme_minimal() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave(here(plotDir, "Percentage_of_merged_clusters.pdf"), p1, width = 5, height = 5)
+ggsave(here(plotDir, "Percentage_of_merged_clusters.pdf"), p1, width = 5, height = 4)
 
 
 ## save RDS
@@ -246,7 +246,7 @@ saveRDS(SeuratOBJ, rds_file_name)
 message("Seurat with clusters renamed saved!")
 
 
-## =============================================================================
+
 ## Some visualizations: VPlots, DimPlot, Feature, DotPlot ...
 
 ## extract suffix name to give unique name to plots
@@ -255,10 +255,12 @@ seurat_name <- str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
 plt1 <- DimPlot(SeuratOBJ, 
                 label = TRUE, 
                 reduction = "wnn.umap",
-                #group.by = "cluster_ann", 
                 label.size = 3) + 
     NoLegend() +
-    labs(title = paste0("**WNN Clusters: ", seurat_name))
+    labs(title = "**WNN Clusters")
+
+ggsave(here(plotDir, "Hb_DimPlot_WNN_clusters.pdf"), plt1, width = 7, height = 7)
+
 
 plt2 <- DimPlot(SeuratOBJ, 
                 label = TRUE, 
@@ -266,11 +268,13 @@ plt2 <- DimPlot(SeuratOBJ,
                 group.by = "merged_cluster", 
                 label.size = 3) + 
     NoLegend() +
-    labs(title ="")
+    labs(title = "**WNN Merged Clusters")
 
-tmp_name <- paste0(seurat_name, "_Hb_DimPlot_all_merged_side_to_side.pdf")
+ggsave(here(plotDir, "Hb_DimPlot_WNN_merged_clusters.pdf"), plt2, width = 7, height = 7)
+
 dim_plots <- (plt1 + plt2)
-ggsave(here(plotDir, tmp_name), dim_plots, width = 10, height = 5)
+ggsave(here(plotDir, "Hb_DimPlot_WNN_ALL_merged_clusters_side_to_side.pdf"), dim_plots, width = 10, height = 5)
+
 
 message("WNN UMAP done!")
 
