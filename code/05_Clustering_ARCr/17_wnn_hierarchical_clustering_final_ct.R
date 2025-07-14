@@ -210,8 +210,25 @@ table(SeuratOBJ$merged_cluster)
 # OPC_merged       Thal_merged 
 # 638               111 
 
+## Table summary of merged clusters
+merged_table <- table(SeuratOBJ$merged_cluster) |> as.data.frame()
+colnames(merged_table) <- c("merged_cluster", "cell_count")
+merged_table <- merged_table |> 
+    mutate(
+        percent = round(100 * cell_count / sum(cell_count), 2)
+    )
 
-message("Clusters rearrenged and big categories merged!")
+merged_table <- merged_table |> arrange(desc(cell_count))
+
+print(merged_table)
+f_file <- here(processedDir, "merged_clusters_summary.csv")
+write.csv(merged_table, file = f_file, row.names = FALSE)
+
+message("Summary table saved at: ", f_file)
+
+message("Clusters rearrenged in big categories merged!")
+
+
 
 ## save RDS
 rds_file_name <- here(processedDir, paste0(Seurat_base_name, "_renamed_visium_HD.rds"))
