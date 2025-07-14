@@ -103,17 +103,17 @@ names(new_ct) <- current_ct
 ## rename idents with new cell-types
 SeuratOBJ <- RenameIdents(SeuratOBJ, new_ct)
 levels(SeuratOBJ)
-[1] "C.01.Inhib.Thal" "C.02.Oligo"      "C.03.Excit.Thal" "C.04.LHb.4"     
-[5] "C.05.LHb.2.7"    "C.06.LHb.4"      "C.07.MHb.2"      "C.08.LHb.4"     
-[9] "C.09.LHb.4"      "C.10.MHb.1"      "C.11.MHb.1.2"    "C.12.Excit.Thal"
-[13] "C.13.LHb.4"      "C.14.MHb.1"      "C.15.Excit.Thal" "C.16.MHb.1.2"   
-[17] "C.17.Excit.Thal" "C.18.LHb.1.3.4"  "C.19.Inhib.Thal" "C.20.Astrocyte" 
-[21] "C.21.Astrocyte"  "C.22.Oligo"      "C.23.LHb.1"      "C.24.LHb.4"     
-[25] "C.25.Excit.Thal" "C.26.OPC"        "C.27.Microglia"  "C.28.Inhib.Thal"
-[29] "C.29.Endo"       "C.30.LHb.7"      "C.31.LHb.4"      "C.32.Excit.Thal"
-[33] "C.33.LHb.1.3"    "C.34.Oligo"      "C.35.Excit.Thal" "C.36.MHb.3"     
-[37] "C.37.Thal"       "C.38.Inhib.Thal" "C.39.Inhib.Thal" "C.40.LHb.4"     
-[41] "C.41.Microglia" 
+# [1] "C.01.Inhib.Thal" "C.02.Oligo"      "C.03.Excit.Thal" "C.04.LHb.4"     
+# [5] "C.05.LHb.2.7"    "C.06.LHb.4"      "C.07.MHb.2"      "C.08.LHb.4"     
+# [9] "C.09.LHb.4"      "C.10.MHb.1"      "C.11.MHb.1.2"    "C.12.Excit.Thal"
+# [13] "C.13.LHb.4"      "C.14.MHb.1"      "C.15.Excit.Thal" "C.16.MHb.1.2"   
+# [17] "C.17.Excit.Thal" "C.18.LHb.1.3.4"  "C.19.Inhib.Thal" "C.20.Astrocyte" 
+# [21] "C.21.Astrocyte"  "C.22.Oligo"      "C.23.LHb.1"      "C.24.LHb.4"     
+# [25] "C.25.Excit.Thal" "C.26.OPC"        "C.27.Microglia"  "C.28.Inhib.Thal"
+# [29] "C.29.Endo"       "C.30.LHb.7"      "C.31.LHb.4"      "C.32.Excit.Thal"
+# [33] "C.33.LHb.1.3"    "C.34.Oligo"      "C.35.Excit.Thal" "C.36.MHb.3"     
+# [37] "C.37.Thal"       "C.38.Inhib.Thal" "C.39.Inhib.Thal" "C.40.LHb.4"     
+# [41] "C.41.Microglia" 
 #head(Idents(SeuratOBJ))
 
 ## Set factor levels for identities to arrange clusters, first we want Hb clusters
@@ -153,39 +153,63 @@ head(Idents(SeuratOBJ))
 
 
 ## =============================================================================
-## Add 3 meta-cluster as column: MHb, LHb and No-Habenula
+## Add x meta-cluster as column; eg: MHb, LHb and No-Habenula
 
 ## Update "cluster_ann" column to Seurat meta-data for visualizations
 colnames(SeuratOBJ@meta.data)
+
 SeuratOBJ$cluster_ann <- Idents(SeuratOBJ)
 
-# extract the ident ID for the 3 meta-groups
-LHb_clusters_to_merge <- grep("LHb", hb_clusters, value = TRUE)
-MHb_clusters_to_merge <- grep("MHb", hb_clusters, value = TRUE)
-Oligo_clusters_to_merge <- grep("Oligo", no_hb_clust, value = TRUE)
-Astrocyte_clusters_to_merge <- grep("Astrocyte", no_hb_clust, value = TRUE)
-OPC_clusters_to_merge <- grep("OPC", no_hb_clust, value = TRUE)
-Microglia_clusters_to_merge <- grep("Microglia", no_hb_clust, value = TRUE)
-Endo_clusters_to_merge <- grep("Endo", no_hb_clust, value = TRUE)
-## I will keep the 3 classes of Thal
-Inhib_Thal_clusters_to_merge <- grep("Inhib.Thal", no_hb_clust, value = TRUE)
-Excit_Thal_clusters_to_merge <- grep("Excit.Thal", no_hb_clust, value = TRUE)
+assign_merged_clusters <- function(cluster_vector, cluster_groups, default = "Other") {
+    # cluster_vector : character vector of cluster IDs (e.g. from Idents(SeuratOBJ))
+    # cluster_groups : named list, names = merged group names, values = cluster IDs to merge
+    # default : fallback category
+    
+    # Initialize with default value
+    merged_vector <- rep(default, length(cluster_vector))
+    
+    # For each merged group, overwrite matching values
+    for (group_name in names(cluster_groups)) {
+        matched_idx <- cluster_vector %in% cluster_groups[[group_name]]
+        merged_vector[matched_idx] <- group_name
+    }
+    
+    return(merged_vector)
+}
+
+## Define new classes to merge
+
 all_Thal_only <- grep("Thal", no_hb_clust, value = TRUE)
-Thal_clusters_to_merge <- all_Thal_only[!grepl("\\.Excit\\.Thal|\\.Inhib\\.Thal", all_Thal_only)]
 
+cluster_merged_groups <- list(
+    LHb_merged = grep("LHb", hb_clusters, value = TRUE),
+    MHb_merged = grep("MHb", hb_clusters, value = TRUE)
+) |>
+    append(list(
+        Oligo_merged = grep("Oligo", no_hb_clust, value = TRUE),
+        Astrocyte_merged = grep("Astrocyte", no_hb_clust, value = TRUE),
+        OPC_merged = grep("OPC", no_hb_clust, value = TRUE),
+        Microglia_merged = grep("Microglia", no_hb_clust, value = TRUE),
+        Endo_merged = grep("Endo", no_hb_clust, value = TRUE),
+        Inhib_Thal_merged = grep("Inhib.Thal", no_hb_clust, value = TRUE),
+        Excit_Thal_merged = grep("Excit.Thal", no_hb_clust, value = TRUE),
+        Thal_merged = if (length(all_Thal_only) > 0) all_Thal_only[!grepl("\\.Excit\\.Thal|\\.Inhib\\.Thal", all_Thal_only)] else character(0)
+    ))
 
-# Add meta-data "merged_cluster" with 3 merged clusters classes: LHb, MHb and No-Hb clusters
+# Add meta-data "merged_cluster" with x merged clusters defined above
 current_idents <- as.character(Idents(SeuratOBJ))
-# Assign merged labels
-merged_cluster <- ifelse(current_idents %in% LHb_clusters_to_merge, "LHb_merged",
-                         ifelse(current_idents %in% MHb_clusters_to_merge, "MHb_merged",
-                                ifelse(current_idents %in% no_hb_clust, "No-Hb_merged", current_idents)))
-unique(merged_cluster)
-
-# add to new metadata MERGED ident labels for further analysis
+merged_cluster <- assign_merged_clusters(current_idents, cluster_merged_groups)
 SeuratOBJ$merged_cluster <- merged_cluster
-unique(SeuratOBJ$merged_cluster)
-#[1] "No-Hb_merged" "MHb_merged"   "LHb_merged" 
+
+# check
+table(SeuratOBJ$merged_cluster)
+# Astrocyte_merged       Endo_merged Excit_Thal_merged Inhib_Thal_merged 
+# 2684               343              9738              6024 
+# LHb_merged        MHb_merged  Microglia_merged      Oligo_merged 
+# 19673             10944               663              4882 
+# OPC_merged       Thal_merged 
+# 638               111 
+
 
 message("Clusters rearrenged and big categories merged!")
 
