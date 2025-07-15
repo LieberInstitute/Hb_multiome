@@ -9,8 +9,8 @@
 
 library("Seurat")
 #library("SingleCellExperiment")
-#library("dendextend")
-#library("dynamicTreeCut")
+library("dendextend")
+library("dynamicTreeCut")
 library("ggplot2")
 library("patchwork")
 library("dplyr")
@@ -64,17 +64,39 @@ DefaultAssay(SeuratOBJ) <- "RNA"
 class(SeuratOBJ[["ATAC"]])
 levels(SeuratOBJ)
 colnames(SeuratOBJ@meta.data)
+
 # check cell-types
+table(SeuratOBJ$seurat_clusters)
+# 1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16 
+# 3906 3371 3271 2911 2771 2667 2610 2537 2430 2344 2212 2187 2036 2026 1625 1607 
+# 17   18   19   20   21   22   23   24   25   26   27   28   29   30   31   32 
+# 1587 1535 1380 1343 1341 1327 1269  825  707  638  587  543  343  213  209  196 
+# 33   34   35   36   37   38   39   40   41 
+# 186  184  165  145  111  105   90   84   76 
+
+table(sort(SeuratOBJ$cluster_ann))
+# C.01.Inhib.Thal        C.02.Oligo   C.03.Excit.Thal   C.04.Excit.Thal 
+# 3906              3371              3271              2911 
+# C.05.LHb.2.7 C.06.ExcitT.LHb.4        C.07.MHb.2        C.08.LHb.4 
+# 2771              2667              2610              2537 
+
 table(SeuratOBJ$merged_cluster)
 # Astrocyte       Endo Excit_Thal Inhib_Thal        LHb        MHb  Microglia 
 # 2684        343       9738       6024      19673      10944        663 
 # Oligo        OPC       Thal 
 # 4882        638        111 
 
+levels(SeuratOBJ)
+# [1] "C.04.LHb.4"      "C.05.LHb.2.7"    "C.06.LHb.4"      "C.07.MHb.2"     
+# [5] "C.08.LHb.4"      "C.09.LHb.4"      "C.10.MHb.1"      "C.11.MHb.1.2"   
+# [9] "C.13.LHb.4"      "C.14.MHb.1"      "C.16.MHb.1.2"    "C.18.LHb.1.3.4" 
+# [13] "C.23.LHb.1"      "C.24.LHb.4"      "C.30.LHb.7"      "C.31.LHb.4"     
+# [17] "C.33.LHb.1.3"    "C.36.MHb.3"      "C.40.LHb.4"      "C.01.Inhib.Thal" ....
+
 ## =============================================================================
 
 
-message("Processing plots on final cell-types ...")
+message("Processing UMAP plots ...")
 
 ## Some visualizations: VPlots, DimPlot, Feature, DotPlot ...
 
@@ -134,83 +156,103 @@ ggsave(here(plotDir, "WNN_merged_clusters.pdf"), plt1, width = 8, height = 7)
 message("WNN UMAP done!")
 
 
-# ## Compute Hierarchical Clustering on PC. ----- FASTER VERSION
-# ## - means only ~10–30 dimensions, making it fast.
-# ## - generate the average profiles per cluster
-# ## - even randomly sample cells for a quick dendrogram
-# 
-# ## Pull PCA embeddings: cells x PCs
-# ## Get cluster identities
-# clusters <- Idents(SeuratOBJ)
-# head(clusters)
-# head(SeuratOBJ$cluster_ann)
-# pca_mat <- Embeddings(SeuratOBJ, reduction = "pca")
-# head(pca_mat)
+
+message("Processing HClust plots ...")
+
+## Compute Hierarchical Clustering on PC. ----- FASTER VERSION
+## - means only ~10–30 dimensions, making it fast.
+## - generate the average profiles per cluster
+## - even randomly sample cells for a quick dendrogram
+
+## Pull PCA embeddings: cells x PCs
+## Get cluster identities
+clusters <- Idents(SeuratOBJ)
+table(clusters)
+head(clusters)
+head(SeuratOBJ$cluster_ann)
+pca_mat <- Embeddings(SeuratOBJ, reduction = "pca")
+head(pca_mat)
 # rm("SeuratOBJ")
-# 
-# ## Compute cluster centroids in PCA space
-# cluster_means <- as.data.frame(pca_mat) |>
-#     mutate(cluster = clusters) |>
-#     group_by(cluster) |>
-#     summarize(across(starts_with("PC"), mean), .groups = "drop")
-# head(cluster_means)
-# 
-# ## Convert back to matrix (clusters x PCs)
-# cluster_mat <- as.matrix(cluster_means[,-1])
-# rownames(cluster_mat) <- cluster_means$cluster
-# head(rownames(cluster_mat))
-# 
-# dend_cluster <- dist(cluster_mat) |> 
-#     hclust(method = "ward.D2") |> 
-#     as.dendrogram(hang = 0.2)
-# 
-# str(dend_cluster)
-# # main branch: 'dendrogram' with 2 branches and 41 members total, at height 73.22106
-# 
-# ## Method: "ward.D2"
-# # - improved method, mathematically consistent version of Ward’s hierarchical clustering
-# # - minimizes the total within-cluster variance (the sum of squared deviations from cluster means)
-# # - tells hclust to explicitly compute merges using squared Euclidean distances
-# 
-# ## Save data & plot
-# message(Sys.time(), " - Save")
-# save(dend_cluster, file = here(processedDir, "wnn_hierarchical_cluster_wnn-pca.Rdata"))
-# 
-# # Create categories to color branches
-# cluster_means$cluster
-# cluster_categories <- ifelse(grepl("LHb", cluster_means$cluster), "LHb",
-#                              ifelse(grepl("MHb", cluster_means$cluster), "MHb", "No-Hb"))
-# names(cluster_categories) <- cluster_means$cluster
-# 
-# # Map categories to colors
-# category_colors <- ifelse(cluster_categories[labels(dend_cluster)] == "LHb", "tomato",
-#                      ifelse(cluster_categories[labels(dend_cluster)] == "MHb", "darkblue", "black"))
-# 
-# message(Sys.time(), " - Plot Dendrograms - Cluster centroids in PCA")
-# 
-# pdf(file = here(plotDir, "dendrogram_cluster_centroid_on_pca.pdf"), width = 12, height = 8)
-# 
-# # Set settings 
-# dend_with_heights <- dend_cluster |> 
-#     set("labels_cex", 0.8) |>
-#     set("labels_col", category_colors) |>
-#     set("nodes_pch", 19) |>
-#     set("nodes_cex", 0.7) |>
-#     set("nodes_col", "blue") |>
-#     set("leaves_col", "darkred") 
-# 
-# plot(
-#     dend_cluster,
-#     main = "WNN Hierarchical clustering",
-#     ylab = "squared PCA distances (ward.D2)",
-#     lwd = 1.5
-# )
-# 
-# dev.off()
-# 
-# 
-# 
-# message(Sys.time(), "Dendrograms Done!")
+
+## Compute cluster centroids in PCA space
+cluster_means <- as.data.frame(pca_mat) |>
+    mutate(cluster = clusters) |>
+    group_by(cluster) |>
+    summarize(across(starts_with("PC"), mean), .groups = "drop")
+head(cluster_means)
+ 
+## Convert back to matrix (clusters x PCs)
+cluster_mat <- as.matrix(cluster_means[,-1])
+rownames(cluster_mat) <- cluster_means$cluster
+head(rownames(cluster_mat))
+
+dend_cluster <- dist(cluster_mat) |>
+    hclust(method = "ward.D2") |>
+    as.dendrogram(hang = 0.2)
+
+str(dend_cluster)
+# main branch: 'dendrogram' with 2 branches and 41 members total, at height 73.22106
+ 
+## Method: "ward.D2"
+# - improved method, mathematically consistent version of Ward’s hierarchical clustering
+# - minimizes the total within-cluster variance (the sum of squared deviations from cluster means)
+# - tells hclust to explicitly compute merges using squared Euclidean distances
+ 
+## Save data & plot
+message(Sys.time(), " - Save")
+#save(dend_cluster, file = here(processedDir, "wnn_hierarchical_cluster_wnn-pca.Rdata"))
+
+# Create categories to color branches based on 
+head(cluster_means$cluster)
+
+## merged clusters, I picked up Hex color codes similar to those used on human pilot
+cluster_means <- cluster_means |>
+    mutate(category = case_when(
+        grepl("LHb", cluster) ~ "LHb",
+        grepl("MHb", cluster) ~ "MHb",
+        grepl("Oligo", cluster) ~ "Oligo",
+        grepl("Astrocyte", cluster) ~ "Astrocyte",
+        grepl("OPC", cluster) ~ "OPC",
+        grepl("Microglia", cluster) ~ "Microglia",
+        grepl("Endo", cluster) ~ "Endo",
+        grepl("Inhib", cluster) ~ "Inhib_Thal",
+        grepl("Excit", cluster) ~ "Excit_Thal",
+        grepl("Thal", cluster) ~ "Thal",
+        TRUE ~ "Other"
+    ))
+
+
+# Named vector mapping each cluster to its category
+cluster_categories <- cluster_means$category
+names(cluster_categories) <- cluster_means$cluster
+
+# Map labels on the dendrogram to categories, then to hex colors
+label_categories <- cluster_categories[labels(dend_cluster)]
+label_colors <- my_colors[label_categories]
+
+message(Sys.time(), " - Plot Dendrogram - Cluster centroids in PCA")
+
+#pdf(file = here(plotDir, "dendrogram_cluster_centroid_on_pca.pdf"), width = 12, height = 8)
+ 
+# Set settings and color vector
+dend_with_heights <- dend_cluster |>
+    set("labels_cex", 0.8) |>
+    set("labels_col", label_colors) |>
+    set("nodes_pch", 19) |>
+    set("nodes_cex", 0.7) |>
+    # set("nodes_col", "blue") |>
+    # set("leaves_col", "darkred")
+
+plot(
+    dend_with_heights,
+    main = "WNN Hierarchical clustering",
+    ylab = "squared PCA distances (ward.D2)",
+    lwd = 1.5
+)
+
+#dev.off()
+
+message(Sys.time(), "Dendrograms Done!")
 
 
 
