@@ -165,30 +165,48 @@ plt1 <- DimPlot(SeuratOBJ,
 
 ggsave(here(plotDir, "WNN_merged_clusters.pdf"), plt1, width = 8, height = 7)
 
-colnames(SeuratOBJ@meta.data)
-gen <- c("GPR151", "TAC3", "POU4F1")
-MHb_plt <- VlnPlot(
-    object = SeuratOBJ,
-    slot = "data",
-    group.by = "merged_cluster", 
-    features = gen,
-    #flip = TRUE,
-    pt.size = 0.3,
-    alpha = 0.1,
-    cols = my_colors
-) +
-    labs(title = gen) +
-    theme(
-        text = element_text(size = 10),
-        axis.text.x = element_text(size = 10),
-        axis.text.y = element_text(size = 10),
-        plot.title = element_text(hjust = 0.5, size = 12)
-    ) +
-    coord_flip() +  # manually flip axes
-    NoLegend()
-MHb_plt
+## =============================================================================
 
 
+message("Processing Violin plots ...")
+
+## Plot Hb canonical genes for merged_clusters
+
+plot_violin_merged_clusters <- function(seurat_obj, genes, group_col = "merged_cluster", colors = NULL) {
+    
+    plots <- purrr::map(genes, ~ {
+        VlnPlot(
+            object = SeuratOBJ,
+            slot = "data",
+            group.by = group_col, 
+            features = .x,
+            pt.size = 0.2,
+            alpha = 0.1,
+            cols = my_colors
+        ) +
+            labs(title = .x) +
+            theme(
+                text = element_text(size = 10),
+                axis.text.x = element_text(size = 10, angle = 0, vjust = 0.5, hjust = 1),
+                axis.text.y = element_text(size = 10),
+                axis.title.x = element_blank(),
+                axis.title.y = element_blank(),
+                plot.title = element_text(hjust = 0.5, size = 12)
+            ) +
+            coord_flip() +
+            NoLegend()
+    }) |> purrr::set_names(genes)
+    
+    return(plots)
+    
+}
+
+genes_to_plot <- c("GPR151", "POU4F1", "TAC3")
+my_plots <- plot_violin_merged_clusters(SeuratOBJ, genes_to_plot, colors = my_colors)
+
+plt1 <- my_plots[["GPR151"]] + my_plots[["POU4F1"]] + my_plots[["TAC3"]] 
+
+ggsave(here(plotDir, "WNN_Vplots_Hb_canonical_merged_clusters.pdf"), plt1, width = 6, height = 7)
 
 message("WNN UMAP done!")
 
