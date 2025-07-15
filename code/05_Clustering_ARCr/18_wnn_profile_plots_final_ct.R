@@ -11,6 +11,7 @@ library("Seurat")
 #library("SingleCellExperiment")
 library("dendextend")
 library("dynamicTreeCut")
+library("purrr")
 library("ggplot2")
 library("patchwork")
 library("dplyr")
@@ -114,6 +115,18 @@ plt1 <- DimPlot(SeuratOBJ,
 
 ggsave(here(plotDir, "WNN_umap.pdf"), plt1, width = 7, height = 7)
 
+
+plt1 <- DimPlot(SeuratOBJ, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                group.by = "seurat_clusters",
+                label.size = 3) + 
+    NoLegend() +
+    labs(title = "WNN cell types")
+
+ggsave(here(plotDir, "WNN_umap_clusterID.pdf"), plt1, width = 7, height = 7)
+
+
 plt2 <- DimPlot(SeuratOBJ, 
                 label = TRUE, 
                 reduction = "umap.lsi.integrated",
@@ -130,9 +143,9 @@ ggsave(here(plotDir, "Hb_DimPlot_WNN_ALL_merged_clusters_side_to_side.pdf"), dim
 ## merged clusters, I picked up Hex color codes similar to those used on human pilot
 my_colors <- c(
     LHb = "#1f78b4",
-    MHb = "#b74d4d",
+    MHb = "#ad1d8c",
     Oligo = "#384a08",
-    Astrocyte = "#890606", 
+    Astrocyte = "#532222", 
     OPC = "#829454",
     Microglia = "#141b02",
     Endo = "#d95f02",
@@ -152,10 +165,37 @@ plt1 <- DimPlot(SeuratOBJ,
 
 ggsave(here(plotDir, "WNN_merged_clusters.pdf"), plt1, width = 8, height = 7)
 
+colnames(SeuratOBJ@meta.data)
+gen <- c("GPR151", "TAC3", "POU4F1")
+MHb_plt <- VlnPlot(
+    object = SeuratOBJ,
+    slot = "data",
+    group.by = "merged_cluster", 
+    features = gen,
+    #flip = TRUE,
+    pt.size = 0.3,
+    alpha = 0.1,
+    cols = my_colors
+) +
+    labs(title = gen) +
+    theme(
+        text = element_text(size = 10),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(hjust = 0.5, size = 12)
+    ) +
+    coord_flip() +  # manually flip axes
+    NoLegend()
+MHb_plt
+
+
 
 message("WNN UMAP done!")
 
 
+
+
+## =============================================================================
 
 message("Processing HClust plots ...")
 
@@ -190,7 +230,7 @@ dend_cluster <- dist(cluster_mat) |>
     hclust(method = "ward.D2") |>
     as.dendrogram(hang = 0.2)
 
-str(dend_cluster)
+#str(dend_cluster)
 # main branch: 'dendrogram' with 2 branches and 41 members total, at height 73.22106
  
 ## Method: "ward.D2"
@@ -232,25 +272,30 @@ label_colors <- my_colors[label_categories]
 
 message(Sys.time(), " - Plot Dendrogram - Cluster centroids in PCA")
 
-#pdf(file = here(plotDir, "dendrogram_cluster_centroid_on_pca.pdf"), width = 12, height = 8)
+pdf(file = here(plotDir, "dendrogram_cluster_centroid_on_pca.pdf"), width = 12, height = 8)
  
 # Set settings and color vector
 dend_with_heights <- dend_cluster |>
     set("labels_cex", 0.8) |>
     set("labels_col", label_colors) |>
     set("nodes_pch", 19) |>
-    set("nodes_cex", 0.7) |>
+    set("nodes_cex", 0.7) # |>
     # set("nodes_col", "blue") |>
     # set("leaves_col", "darkred")
 
+# Rotate the tree to change orientation
+dend_flipped <- rotate(dend_with_heights, order = rev(labels(dend_with_heights)))
+
 plot(
     dend_with_heights,
+    #dend_flipped,
+    #horiz = TRUE,
     main = "WNN Hierarchical clustering",
     ylab = "squared PCA distances (ward.D2)",
     lwd = 1.5
 )
 
-#dev.off()
+dev.off()
 
 message(Sys.time(), "Dendrograms Done!")
 
