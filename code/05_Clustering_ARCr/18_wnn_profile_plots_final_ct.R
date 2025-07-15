@@ -8,11 +8,11 @@
 ########################################################################
 
 library("Seurat")
-#library("SingleCellExperiment")
 library("dendextend")
 library("dynamicTreeCut")
 library("purrr")
 library("ggplot2")
+library("ggtext") # Build names with HTML color tags / DotPlot
 library("patchwork")
 library("dplyr")
 library("stringr")
@@ -209,6 +209,34 @@ plt1 <- my_plots[["GPR151"]] + my_plots[["POU4F1"]] + my_plots[["TAC3"]]
 ggsave(here(plotDir, "WNN_Vplots_Hb_canonical_merged_clusters.pdf"), plt1, width = 6, height = 7)
 
 message("WNN UMAP done!")
+
+## =============================================================================
+
+
+message("Processing GeneExpression Dot plots ...")
+
+# Build color mapping: LHb and MHb get colors, others default to black
+label_colors <- ifelse(grepl("LHb", clusters), "#1f78b4", 
+                       ifelse(grepl("MHb", clusters), "#ad1d8c",
+                              "black"))
+# Build names with HTML color tags
+clusters_colored <- paste0("<span style='color:", label_colors, "'>", clusters, "</span>")
+names(clusters_colored) <- clusters  # keep mapping
+
+plt1 <- DotPlot(SeuratOBJ, 
+        features = genes_to_plot) +
+        #group.by = "merged_cluster") +
+    theme(
+        text = element_text(size = 12),
+        axis.text.x = element_text(size = 9),
+        axis.text.y = element_markdown(size = 9),  # ggtext to parse html
+        plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()
+    )  +
+    scale_y_discrete(labels = clusters_colored)  # apply colored labels
+
+ggsave(here(plotDir, "WNN_DotPlot_Hb_canonical_all_clusters.pdf"), plt1, width = 5, height = 7)
 
 
 
