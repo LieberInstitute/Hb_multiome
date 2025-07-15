@@ -318,7 +318,7 @@ label_colors <- my_colors[label_categories]
 
 message(Sys.time(), " - Plot Dendrogram - Cluster centroids in PCA")
 
-pdf(file = here(plotDir, "dendrogram_cluster_centroid_on_pca.pdf"), width = 12, height = 8)
+pdf(file = here(plotDir, "dendrogram_cluster_centroid_on_pca.pdf"), width = 10, height = 4)
  
 # Set settings and color vector
 dend_with_heights <- dend_cluster |>
@@ -336,10 +336,12 @@ plot(
     dend_with_heights,
     #dend_flipped,
     #horiz = TRUE,
-    main = "WNN Hierarchical clustering",
+    #main = "WNN Hierarchical clustering",
     ylab = "squared PCA distances (ward.D2)",
     lwd = 1.5
-)
+) +
+    theme(plot.margin = margin(10, 10, 30, 10))  # t, r, b, l
+
 
 dev.off()
 
