@@ -115,11 +115,12 @@ hb_clusters
 no_hb_clust <- grep("MHb|LHb", all_clusters, value = TRUE, invert = TRUE)
 no_hb_clust
 
-# ensure all clusters are included
+## ensure all clusters are included
 new_levels <- c(hb_clusters, setdiff(all_clusters, hb_clusters))
 new_levels
-# Apply the new order to Seurat object identities
+##  reorder or set the levels explicitly and store them in meta.data as a simple character vector for easy plotting / joining
 SeuratOBJ <- SetIdent(SeuratOBJ, value = factor(Idents(SeuratOBJ), levels = new_levels))
+SeuratOBJ$cluster_ann <- as.character(Idents(SeuratOBJ))
 
 message("Added new cluster arrangement")
 
