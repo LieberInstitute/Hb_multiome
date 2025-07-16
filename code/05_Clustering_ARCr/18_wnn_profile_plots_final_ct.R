@@ -20,7 +20,7 @@ library("here")
 
 # directories
 
-Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds_renamed_visium_HD.rds"
+Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
 inputSeuratRDS <- here(
     "processed-data", 
     "05_Clustering_ARCr", 
