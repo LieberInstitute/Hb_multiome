@@ -36,7 +36,7 @@ res=$?
 echo "**** Job ends ****"
 date
 echo "Exit code: $ret"
-exit $ret
+exit $res
 
 } >$log_path 2>&1
 
