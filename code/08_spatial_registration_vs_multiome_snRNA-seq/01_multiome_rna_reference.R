@@ -17,8 +17,8 @@ library("rtracklayer")
 library("spatialLIBD")
 library("sessioninfo")
 
-## set dirs
-inputRDS <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents")
+## set directories
+inputRDS <- here("processed-data", "05_Clustering_ARCr", "17_wnn_hierarchical_clustering_final_ct") # has final WNN annotations
 outputRDS <- here("processed-data", "08_spatial_registration_vs_multiome_snRNA-seq") 
 
 # Before move scripts from Hb_Visium project
@@ -32,7 +32,7 @@ if (!dir.exists(outputRDS)) {
 ## Read seurat object
 rds_name <- here(
   inputRDS,
-  "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds"
+  "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
 )
 SeuratOBJ <- readRDS(rds_name)
 SeuratOBJ
@@ -43,7 +43,7 @@ SeuratOBJ
 # 1 other assay present: ATAC
 # 13 dimensional reductions calculated: pca, umap.unintegrated, integrated.cca, umap, integrated.harmony, lsi, umap.lsi.unintegrated, umap.integrated, tsne.integrated, integrated.lsi.harmony, umap.lsi.integrated, tsne.lsi.integrated, wnn.umap
 levels(SeuratOBJ)
-colnames(SeuratOBJ@meta.data)
+#colnames(SeuratOBJ@meta.data)
 unique(SeuratOBJ@meta.data$cluster_ann)
 
 # C.04.Excit.Thal
@@ -252,7 +252,7 @@ sce_modeling_results$enrichment[1:3, 1:5]
 
 saveRDS(
   sce,
-  here(outputRDS, "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v4.rds") 
+  here(outputRDS, "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v5.rds") 
 )
 message("SCE derived from rna-seurat saved on: ", outputRDS)
 
