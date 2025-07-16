@@ -15,12 +15,12 @@ library("here")
 
 # directories
 
-Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds"
+Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium"
 inputSeuratRDS <- here(
     "processed-data", 
     "05_Clustering_ARCr", 
     "05_rename_idents", 
-    Seurat_base_name)
+    paste0(Seurat_base_name, ".rds"))
 
 input_ct_summary_CSV <- here(
     "processed-data",
@@ -217,7 +217,7 @@ message("Clusters rearrenged in big categories merged!")
 ## =============================================================================
 
 ## save RDS
-rds_file_name <- here(processedDir, paste0(Seurat_base_name, "_renamed_visium_HD.rds"))
+rds_file_name <- here(processedDir, paste0(Seurat_base_name, "_HD.rds"))
 saveRDS(SeuratOBJ, rds_file_name)
 
 message("Seurat with clusters renamed saved!")
