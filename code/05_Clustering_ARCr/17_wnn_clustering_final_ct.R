@@ -31,7 +31,7 @@ input_ct_summary_CSV <- here(
 processedDir <- here(
     "processed-data",
     "05_Clustering_ARCr",
-    "17_wnn_hierarchical_clustering_final_ct"
+    "17_wnn_clustering_final_ct"
 )
 
 ## Check directories
