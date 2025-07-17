@@ -14,11 +14,7 @@ library("Seurat")
 library("Signac")
 library("ggplot2")
 library("bluster")
-# library("viridisLite")
 library("patchwork")
-# library("ggplotify")
-# library("gridExtra")
-library("purrr")
 library("tidyverse")
 library("stringr")
 library("here")
@@ -33,7 +29,8 @@ here()
 inputRDS_Dir <- here(
     "processed-data",
     "05_Clustering_ARCr",
-    "08_wnn_gene_expression_plts_renamed_idents"
+    #"08_wnn_gene_expression_plts_renamed_idents"
+    "17_wnn_clustering_final_ct"
 )
 plotDir <- here(
     "plots",
@@ -54,36 +51,28 @@ if (!dir.exists(plotDir)) {
 
 ## Load Seurat with WNN
 
-# WNN clustering results of interest. To plot annotated or not annotated clusters
-# For inputRDS_Dir_not_annotated
-# inputRDS_Dir_not_annotated <- here("processed-data", "05_Clustering_ARCr", "01_clustering_std_method")
-# Seurat_base_name <- "seurat.norm_counts_Harmony_ARCr_QCed_WNN_k30_C.louvain_lsi_r1"
-# For inputRDS_Dir_annotated
-# inputRDS_Dir_annotated <- here("processed-data", "05_Clustering_ARCr", "05_rename_idents")
-# Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2.rds"
-
-# For inputRDS_Dir, clusters renamed for Spatial-Registration on Visium project
-Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds"
+# clusters renamed for sharing with Visium project(s)
+Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
+# old: "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds"
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 
 # Load Seurat
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
 DefaultAssay(SeuratOBJ) <- "RNA"
-#levels(SeuratOBJ)
-## Levels should be
-# [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
-# [6] "C.16 DD_MHb" "C.18 DD_LHb" "C.23 DD_LHb" "C.24 DD_LHb" "C.30 DD_LHb"
-# [11] "C.33 DD_LHb" "C.36 DD_MHb" "C.40 DD_LHb" "C.01"        "C.02"
-# [16] "C.03"        "C.04"        "C.06"        "C.08"        "C.09"
-# [21] "C.12"        "C.13"        "C.15"        "C.17"        "C.19"
-# [26] "C.20"        "C.21"        "C.22"        "C.25"        "C.26"
-# [31] "C.27"        "C.28"        "C.29"        "C.31"        "C.32"
-# [36] "C.34"        "C.35"        "C.37"        "C.38"        "C.39"
-# [41] "C.41"        "C.42"
+levels(SeuratOBJ)
+# [1] "C.04.LHb.4"      "C.05.LHb.2.7"    "C.06.LHb.4"      "C.07.MHb.2"     
+# [5] "C.08.LHb.4"      "C.09.LHb.4"      "C.10.MHb.1"      "C.11.MHb.1.2"   
+# [9] "C.13.LHb.4"      "C.14.MHb.1"      "C.16.MHb.1.2"    "C.18.LHb.1.3.4" 
+# [13] "C.23.LHb.1"      "C.24.LHb.4"      "C.30.LHb.7"      "C.31.LHb.4"     
+# [17] "C.33.LHb.1.3"    "C.36.MHb.3"      "C.40.LHb.4"      "C.01.Inhib.Thal"
+# [21] "C.02.Oligo"      "C.03.Excit.Thal" "C.12.Excit.Thal" "C.15.Excit.Thal"
+# [25] "C.17.Excit.Thal" "C.19.Inhib.Thal" "C.20.Astrocyte"  "C.21.Astrocyte" 
+# [29] "C.22.Oligo"      "C.25.Excit.Thal" "C.26.OPC"        "C.27.Microglia" 
+# [33] "C.28.Inhib.Thal" "C.29.Endo"       "C.32.Excit.Thal" "C.35.Excit.Thal"
+# [37] "C.37.Thal"       "C.38.Inhib.Thal" "C.39.Inhib.Thal" "C.41.Microglia" 
 
-Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
-Seurat_base_name
-# C.leiden_lsi_r2_renamed_visium
+base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
+base_name
 
 ## Read DEG file
 
@@ -109,14 +98,6 @@ markers.custom <- get_multiple_markers_genes_lst()
 tmp <- names(markers.custom)
 tmp <- paste(tmp, collapse=', ')
 message("Processing ", length(markers.custom), " categories of gene-markers list \n *****(", tmp, ")*****")
-
-# ## Check duplicated marker genes
-# names(markers.custom)
-# x <- markers.custom
-# length(unlist(x)) # 481
-# # table(unname(unlist(x)))
-# v_dup <- duplicated(unname(unlist(x)))
-# dup_genes <- unname(unlist(x))[v_dup]
 
 
 ## merge DD markers for heatmap with 'Data-driven' markers and merge LB markers for heatmap with 'Literature-Based'markers
@@ -149,14 +130,13 @@ names(combined_named_list)
 ## prepare Seurat object
 
 # Set cell type as the identity class for grouping
-#colnames(SeuratOBJ@meta.data)
-head(SeuratOBJ@meta.data$seurat_clusters)
-Idents(SeuratOBJ) <- "seurat_clusters"
-## add / tranfer cell-types if you want to plot by cell-type
+colnames(SeuratOBJ@meta.data)
+head(SeuratOBJ@meta.data$cluster_ann)
+unique(SeuratOBJ@meta.data$cluster_ann)
+#Idents(SeuratOBJ) <- "seurat_clusters"
 
 # Multi-cell-type heatmap, scale all relevant genes once, across all cells
 genes_to_scale <- as.vector(unlist(append(combined_named_list[1], combined_named_list[2])))
-# SeuratOBJ <- NormalizeData(SeuratOBJ)
 SeuratOBJ <- ScaleData(SeuratOBJ, features = genes_to_scale)
 
 
@@ -167,7 +147,7 @@ heatmap_list <- list()
 
 for (ct in seq_along(combined_named_list)) {
 
-    # ct=1
+    # ct=2
     # grab cell type names and label
     ct_name <- names(combined_named_list[ct])
     print(paste0("Cell-type: ", ct_name))
@@ -178,9 +158,9 @@ for (ct in seq_along(combined_named_list)) {
     
     # ####### this heatmap plot all Hb medial and lateral markers across all clusters - cluster size aware
     # heatmap_plot <- DoHeatmap(SeuratOBJ,
-    #                           group.by = "seurat_clusters", 
+    #                           group.by = "cluster_ann",
     #                           features = markers_to_plt, size = 2,
-    #                           disp.min = -2.5, disp.max = 2.5, 
+    #                           disp.min = -2.5, disp.max = 2.5,
     #                           group.bar = TRUE, # Omits color bar by identity class (from group.by)
     #                           slot = "scale.data") +
     #     scale_fill_gradientn(colors = c("blue", "white", "red")) +
@@ -206,11 +186,11 @@ for (ct in seq_along(combined_named_list)) {
     meta_df$cell_id <- rownames(meta_df)
     # Sample cells evenly across clusters
     cells_to_plot <- meta_df |>
-        group_by(seurat_clusters) |>
+        group_by(cluster_ann) |>
         sample_n(size = min(n_cells, n()), replace = FALSE) |>
-        arrange(seurat_clusters) |>   # This sets a fixed order to remove dendogram manually
+        arrange(cluster_ann) |>   # This sets a fixed order to remove dendogram manually
         pull(cell_id)
-    
+    length(cells_to_plot)
     # Reorder markers if needed
     # ordered_markers <- markers_to_plt[markers_to_plt %in% rownames(SeuratOBJ)]
     
@@ -218,7 +198,7 @@ for (ct in seq_along(combined_named_list)) {
     
     temp_plot <- DoHeatmap(SeuratOBJ,
                               features = markers_to_plt,
-                              group.by = "seurat_clusters",
+                              group.by = "cluster_ann",
                               cells = cells_to_plot,
                               group.bar = TRUE,
                               label = TRUE,
@@ -236,7 +216,7 @@ for (ct in seq_along(combined_named_list)) {
             axis.ticks.x = element_blank(),       # remove x-axis ticks
             legend.position = "none"
         )
-
+    print(temp_plot)
     # Optionally add horizontal lines for this specific marker group
     
     if (ct_name == "Hb_LB_markers") {
@@ -272,7 +252,7 @@ combined_plot <- wrap_plots(heatmap_list, ncol = length(heatmap_list)) +
     )
 
 f_name <- paste0(
-    Seurat_base_name,
+    base_name,
     "_heatmap_all_reference_markers_width5.pdf"
 )
 pdf(file = here(plotDir, f_name), width = 4 * length(heatmap_list), height = 6)
@@ -282,7 +262,7 @@ dev.off()
 length(heatmap_list)
 #heatmap_list[1]
 f_name <- paste0(
-    Seurat_base_name,
+    base_name,
     "_heatmap_all_reference_markers_width10.pdf"
 )
 combined_plot <- wrap_plots(heatmap_list, ncol = length(heatmap_list))
@@ -308,9 +288,9 @@ meta_df <- SeuratOBJ@meta.data
 meta_df$cell_id <- rownames(meta_df)
 # Sample cells evenly across clusters
 cells_to_plot <- meta_df |>
-    group_by(seurat_clusters) |>
+    group_by(cluster_ann) |>
     sample_n(size = min(n_cells, n()), replace = FALSE) |>
-    arrange(seurat_clusters) |>   # This sets a fixed order to remove dendogram manually
+    arrange(cluster_ann) |>   # This sets a fixed order to remove dendogram manually
     pull(cell_id)
 
 # extract top 10 genes per cluster
@@ -323,11 +303,11 @@ marker_genes <- unique(top_markers$gene)
 marker_genes <- marker_genes[marker_genes %in% rownames(SeuratOBJ)]
 #SeuratOBJ <- ScaleData(SeuratOBJ, features = marker_genes, verbose = FALSE)
 
-Idents(SeuratOBJ) <- "seurat_clusters"
+#Idents(SeuratOBJ) <- "cluster_ann"
 
 plt <- DoHeatmap(SeuratOBJ,
           features = marker_genes,
-          group.by = "seurat_clusters",
+          group.by = "cluster_ann",
           cells = cells_to_plot,
           group.bar = TRUE,
           size = 3) +
@@ -341,114 +321,16 @@ plt <- DoHeatmap(SeuratOBJ,
           legend.position = "none")
 
 f_name <- paste0(
-    Seurat_base_name,
+    base_name,
     "_heatmap_top10genes.pdf"
 )
 pdf(file = here(plotDir, f_name), width = 5 * length(heatmap_list), height = 6)
 print(plt)
 dev.off()
 
+message("All plots done!")
 
 
-######## Plot 3: plot top marker genes across all the clusters in transposed format: big issue here with Seurat
-
-## doHeatmap does not support transpose matrix
-## also, found a bug with AggregateExpression() in SeuratV5 to transpose manually. 
-## SeuratV5 needs to be updated: https://github.com/satijalab/seurat/issues/8309 
-
-# library("pheatmap")
-# Assays(SeuratOBJ)
-# Layers(SeuratOBJ[["RNA"]])  # replace "RNA" with the actual assay name
-# 
-# # Calculate average expression
-# # Use AggregateExpression (new in Seurat v5)
-# agg_expr_list <- AggregateExpression(
-#     object = SeuratOBJ,
-#     features = marker_genes,
-#     group.by = "seurat_clusters",
-#     assays = list(RNA = "scale.data")
-# )
-# # Extract matrix directly (assumes only one assay was returned)
-# avg_expr <- agg_expr_list[["RNA"]]  # This is a genes x clusters matrix
-# 
-# # Filter only those clusters and genes you want
-# avg_expr <- avg_expr[marker_genes, ]  # Rows = genes, columns = clusters
-# 
-# # Step 3: Transpose for clusters on Y-axis
-# avg_expr_t <- t(avg_expr)
-# 
-# # Step 4: Plot with pheatmap
-# pheatmap(avg_expr_t,
-#          cluster_rows = TRUE,       # cluster clusters (optional)
-#          cluster_cols = FALSE,      # don't cluster genes
-#          angle_col = 45,            # rotate gene names
-#          fontsize_row = 10,         # cluster label font
-#          fontsize_col = 8,          # gene label font
-#          main = "Clusters on Y-axis")
-
-
-######## Plot 4: plot Subset of Hb clusters
-
-## Subset Hb clusters. Use length of cluster ID as criteria
-## extract clusters IDs and cluster label
-## Subset Hb clusters. Use length of cluster ID as criteria
-## extract clusters IDs and cluster label
-
-# SeuOBJ_clusters <- Idents(SeuratOBJ)
-
-# all_clusters <- levels(SeuOBJ_clusters)
-# no_hb_clust <- all_clusters[nchar(all_clusters) <= 4]
-# hb_clusters <- all_clusters[!all_clusters %in% c(no_hb_clust)]
-# hb_clusters_ann <- hb_clusters
-# hb_clusters_ann
-# # [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
-# # [6] "C.16 DD_MHb" "C.18 DD_LHb" "C.23 DD_LHb" "C.24 DD_LHb" "C.30 DD_LHb"
-# # [11] "C.33 DD_LHb" "C.36 DD_MHb" "C.40 DD_LHb"
-# # length(hb_clusters)
-# hb_clusters <- as.integer(substr(hb_clusters, 3, 4))
-# hb_clusters
-# 
-# hb_df <- data.frame(
-#     cluster = hb_clusters,
-#     cluster_ann = hb_clusters_ann,
-#     stringsAsFactors = FALSE 
-# )
-# hb_df
-
-# ##########Heatmap 1: plot the top genes by cluster
-# 
-# f_name <- paste0(
-#     Seurat_base_name,
-#     "_heatmap_hb_top20_fdr5.pdf"
-# )
-# pdf(file = here(plotDir, f_name))
-# 
-# # Loop through all clusters in your list
-# for (i in seq_along(hb_df$cluster_ann)) {
-#     #i=2
-#     # Get cluster ID and annotation
-#     cluster_id <- hb_df$cluster[i]
-#     cluster_label <- hb_df$cluster_ann[i]
-#     
-#     # Subset Seurat object to current cluster
-#     seurat_subset <- subset(SeuratOBJ, idents = cluster_label)
-#     
-#     # Filter top 50 genes for this cluster
-#     TopGenes <- df_cluster_names %>%
-#         filter(cluster == cluster_id) %>%
-#         top_n(n = 50, wt = avg_log2FC)
-#     
-#     # Filter genes that exist in Seurat object
-#     TopGenes <- TopGenes %>% filter(gene %in% rownames(seurat_subset))
-#     
-#     # Plot heatmap
-#     heatmap_plot <- DoHeatmap(seurat_subset, features = TopGenes$gene, size = 3) +
-#         scale_fill_gradientn(colors = c("blue", "white", "red")) +
-#         ggtitle(paste("Cluster", cluster_label))
-#     print(heatmap_plot)
-#     
-# }
-# dev.off()
 
 
 
