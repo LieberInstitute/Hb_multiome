@@ -1,0 +1,50 @@
+#!/bin/bash
+#SBATCH -p katun
+#SBATCH --mem=60G
+#SBATCH --job-name=01_compute_cor_snRnaseq_multiomeRnaseq
+#SBATCH -c 2
+#SBATCH -t 1-00:00:00
+#SBATCH -o /dev/null
+#SBATCH -e /dev/null
+# SBATCH --mail-type=ALL
+#SBATCH --array=1-2%20
+
+# Old rds objects with only rna and lsi harmonized
+design_format=("vertical" "horizontal") 
+
+design=${design_format[$(( $SLURM_ARRAY_TASK_ID / 1 % 2 ))]}
+
+## Explicitly pipe script output to a log
+log_path=logs/01_compute_cor_snRnaseq_multiomeRnaseq_${design}_${SLURM_ARRAY_TASK_ID}.txt
+
+{
+set -e
+
+echo "**** Job starts ****"
+date
+
+echo "**** JHPCE info ****"
+echo "User: ${USER}"
+echo "Job id: ${SLURM_JOB_ID}"
+echo "Job name: ${SLURM_JOB_NAME}"
+echo "Node name: ${HOSTNAME}"
+echo "Task id: ${SLURM_ARRAY_TASK_ID}"
+
+echo "Computing correlations and plotting in ${design_format} format"
+
+## Load the R module
+module load conda_R/4.4.x
+
+## List current modules for reproducibility
+module list
+
+## Edit with your job command
+Rscript 01_compute_cor_snRnaseq_multiomeRnaseq.R --design ${design}
+
+echo "**** Job ends ****"
+date
+
+} > $log_path 2>&1
+
+## This script was made using slurmjobs version 1.2.5
+## available from http://research.libd.org/slurmjobs/
