@@ -17,18 +17,21 @@ library("sessioninfo")
 library("tidyverse")
 
 
-## Input dir
+## Input / Output dirs
 rds_input <- here(
   "processed-data",
-  "05_snRNA-seq_model_stats",
-  "enrichment_snRNA-multiome_v3.rds"
-)
+  "08_spatial_registration_vs_multiome_snRNA-seq",
+  "enrichment_snRNA-multiome_v5.rds"
+  )
 ## Create output directories
 dir_rdata <- here(
   "processed-data",
-  "07_spatial_registration_vs_multiome_snRNA-seq"
-)
-dir_plot <- here("plots", "07_spatial_registration_vs_multiome_snRNA-seq")
+  "08_spatial_registration_vs_multiome_snRNA-seq"
+  )
+dir_plot <- here(
+    "plots", 
+    "08_spatial_registration_vs_multiome_snRNA-seq"
+    )
 dir.create(dir_rdata, showWarnings = FALSE, recursive = TRUE)
 dir.create(dir_plot, showWarnings = FALSE, recursive = TRUE)
 
@@ -45,11 +48,7 @@ message("Compute correlations and Spatial-Registration in ", designF, " design")
 
 ## load snRNAseq t-stats enrichment data (fine resolution)
 
-results_enrichment <- readRDS(here(
-  "processed-data",
-  "05_snRNA-seq_model_stats",
-  "enrichment_final_Annotations.rds"
-))
+results_enrichment <- readRDS(here(dir_rdata, "enrichment_final_Annotations.rds"))
 colnames(results_enrichment)
 
 ## filter only enrichment t-stats
@@ -152,11 +151,8 @@ save(cor_fine, file = file.path(dir_rdata, f_name))
 
 ##   Make heatmaps fine clusters snRNAseq vs Multiome snRNAseq
 
-plt_name <- paste0(
-  "cor_top100_registration_snMultiome_snRNAseq_v2_",
-  designF,
-  ".pdf"
-)
+plt_name <- paste0("cor_top100_registration_snMultiome_snRNAseq_v2_", designF, ".pdf")
+# cor_top100_registration_snMultiome_snRNAseq_v2_vertical.pdf
 pdf(here(dir_plot, plt_name))
 
 layer_stat_cor_plot(
@@ -170,7 +166,7 @@ layer_stat_cor_plot(
 dev.off()
 
 
-message("Spatial Registration DONE!!!")
+message("Spatial Registration for FINE cluster annotations done!")
 
 
 ################################################################################
@@ -182,16 +178,16 @@ message("Spatial Registration DONE!!!")
 # subset columns that contain "LHb", "MHb", or "Thal"? in the matrix 
 colnames(cor_fine)
 rownames(cor_fine)
-cor_fine_subset <- cor_fine[, grep("LHb|MHb|Thal", colnames(cor_fine))]
+cor_fine_subset <- cor_fine[, grep("LHb|MHb", colnames(cor_fine))]
 colnames(cor_fine_subset)
-head(cor_fine_subset)
+rownames(cor_fine_subset)
 # subset rows in the matrix that contain "LHb", "MHb", or "Thal"
 rownames(cor_fine_subset)
 cor_fine_subset <- cor_fine_subset[grep("LHb|MHb", rownames(cor_fine_subset)), ]
+colnames(cor_fine_subset)
 rownames(cor_fine_subset)
 
-
-# sort the rownnames for visualization purposes, first "MHb" and then by number of cluster
+# arrange rownnames for visualization purposes, first "MHb" and then by number of cluster
 rows <- rownames(cor_fine_subset)
 is_mhb <- grepl("MHb", rows)
 get_num <- function(x) as.numeric(sub("C\\.(\\d+)\\..*", "\\1", x))
@@ -206,21 +202,12 @@ lhb_sorted <- lhb_rows[order(get_num(lhb_rows))]
 sorted_rows <- c(mhb_sorted, lhb_sorted)
 # apply to the matrix
 cor_fine_subset <- cor_fine_subset[sorted_rows, ]
-
-
-# check
+colnames(cor_fine_subset)
+rownames(cor_fine_subset)
 head(cor_fine_subset)
-# Excit.Thal  Inhib.Thal        LHb.1      LHb.2       LHb.3
-# C.07.DD_MHb -0.18087455 -0.20929663 -0.083099549 0.30069393 -0.19154713
-# C.10.DD_MHb -0.20214284 -0.18294131 -0.099094669 0.24391521 -0.16154950
-# C.11.DD_MHb -0.14751211 -0.26859964 -0.089097330 0.20954318 -0.16646870
-# C.14.DD_MHb -0.12910366 -0.13226261 -0.117463725 0.14939333 -0.20291995
-# C.16.DD_MHb -0.20638743 -0.16717636 -0.092611301 0.34953884 -0.10334603
-# C.36.DD_MHb -0.01983263 -0.07641907 -0.009109298 0.01957877 -0.06863969
-
 
 # extract Hb annotations of interest from 'annotated_clusters_fine' 
-annotated_clusters_fine_subset <- annotated_clusters_fine[grepl("LHb|MHb|Thal", annotated_clusters_fine$cluster), ]
+annotated_clusters_fine_subset <- annotated_clusters_fine[grepl("LHb|MHb", annotated_clusters_fine$cluster), ]
 head(annotated_clusters_fine_subset)
 # cluster layer_confidence       layer_label
 # 1  C.05.DD_LHb             good       LHb.7/LHb.2
@@ -231,7 +218,7 @@ head(annotated_clusters_fine_subset)
 # 34 C.10.DD_MHb             good             MHb.1
 
 
-# sort the rownnames for visualization purposes, first "MHb" and then by number of cluster
+# arrange rownnames for visualization purposes, first "MHb" and then by number of cluster
 rows <- annotated_clusters_fine_subset$cluster
 is_mhb <- grepl("MHb", rows)
 get_num <- function(x) as.numeric(sub("C\\.(\\d+)\\..*", "\\1", x))
@@ -251,26 +238,22 @@ annotated_clusters_fine_subset <- annotated_clusters_fine_subset[
 ]
 annotated_clusters_fine_subset$cluster
 
-
 ## plot heatmap
 plt_name <- "cor_top100_registration_snMultiome_snRNAseq_Habenula_clusters.pdf"
 pdf(here(dir_plot, plt_name), width = 10, height = 10)
 
-hm <- layer_stat_cor_plot(
+layer_stat_cor_plot(
     cor_fine_subset,
     annotation = annotated_clusters_fine_subset,
     heatmap_legend_param = list(title = "Cor", at = c(-1, 0, 1)),
     column_names_gp = gpar(fontsize = 14),
     row_names_gp = gpar(fontsize = 14),
-    cluster_rows = FALSE  # <-- turn off row clustering
+    #cluster_rows = FALSE  # <-- turn off row clustering
 ) 
-
-# Draw the heatmap with title
-draw(
-    hm,
-    column_title = "Spatial-Registration: LHb, MHb, and Thal",
-    column_title_gp = gpar(fontsize = 16, fontface = "bold")
-)
+# hm + draw( # # Draw the heatmap with title
+#     hm,
+#     column_title = "Spatial-Registration: LHb, MHb, and Thal",
+#     column_title_gp = gpar(fontsize = 16, fontface = "bold"))
 
 
 dev.off()
