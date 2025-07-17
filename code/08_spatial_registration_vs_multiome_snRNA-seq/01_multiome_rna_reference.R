@@ -18,7 +18,7 @@ library("spatialLIBD")
 library("sessioninfo")
 
 ## set directories
-inputRDS <- here("processed-data", "05_Clustering_ARCr", "17_wnn_hierarchical_clustering_final_ct") # has final WNN annotations
+inputRDS <- here("processed-data", "05_Clustering_ARCr", "17_wnn_clustering_final_ct") # has final WNN annotations
 outputRDS <- here("processed-data", "08_spatial_registration_vs_multiome_snRNA-seq") 
 
 # Before move scripts from Hb_Visium project
@@ -28,6 +28,10 @@ outputRDS <- here("processed-data", "08_spatial_registration_vs_multiome_snRNA-s
 if (!dir.exists(outputRDS)) {
   dir.create(outputRDS, showWarnings = FALSE, recursive = TRUE)
 }
+
+
+## ==============================================================================
+message("Converting Seurat into SCE object ...")
 
 ## Read seurat object
 rds_name <- here(
@@ -44,7 +48,7 @@ SeuratOBJ
 # 13 dimensional reductions calculated: pca, umap.unintegrated, integrated.cca, umap, integrated.harmony, lsi, umap.lsi.unintegrated, umap.integrated, tsne.integrated, integrated.lsi.harmony, umap.lsi.integrated, tsne.lsi.integrated, wnn.umap
 levels(SeuratOBJ)
 #colnames(SeuratOBJ@meta.data)
-unique(SeuratOBJ@meta.data$cluster_ann)
+table(SeuratOBJ@meta.data$cluster_ann)
 
 # C.04.Excit.Thal
 # C.06.ExcitT.LHb.4
@@ -62,7 +66,7 @@ head(rownames(SeuratOBJ[["RNA"]]))
 
 ## make slim Seurat with ony RNA modality, and remove reduction to avoid mismatch issues with sce conversion
 DefaultAssay(SeuratOBJ) <- "RNA"
-Seurat::Assays(SeuratOBJ)
+#Seurat::Assays(SeuratOBJ)
 DefaultAssay(SeuratOBJ)
 SeuratOBJ <- Seurat::DietSeurat(SeuratOBJ, 
                         assays = "RNA",
@@ -75,14 +79,14 @@ sce <- Seurat::as.SingleCellExperiment(SeuratOBJ)
 ## verification
 sce
 # class: SingleCellExperiment 
-# dim: 36601 55702 
+# dim: 36601 55516 
 # metadata(0):
 #     assays(3): counts logcounts scaledata
 # rownames(36601): MIR1302-2HG FAM138A ... AC007325.4 AC007325.2
 # rowData names(0):
-#     colnames(55702): S04_AAACAGCCAGAATGAC-1 S04_AAACAGCCAGCAAGGC-1 ...
+#     colnames(55516): S04_AAACAGCCAGAATGAC-1 S04_AAACAGCCAGCAAGGC-1 ...
 # S09_TTTGTTGGTCATGCAA-1 S09_TTTGTTGGTTGTTCAC-1
-# colData names(30): orig.ident nCount_RNA ... merged_cluster ident
+# colData names(31): orig.ident nCount_RNA ... merged_cluster ident
 # reducedDimNames(0):
 #     mainExpName: RNA
 # altExpNames(0):
@@ -96,8 +100,9 @@ head(rownames(sce))
 # [1] "MIR1302-2HG" "FAM138A"     "OR4F5"       "AL627309.1"  "AL627309.3" 
 # [6] "AL627309.2" 
 
+## ==============================================================================
+## Retrieve Ensembl IDs for Gene Symbols
 
-###################### Retrieve Ensembl IDs for Gene Symbols. ######################
 ## Note.Cell Ranger ARC reanalyze are barcodes identified as valid barcodes from both
 #       `cell-ranger-count` (rna) and `cell-ranger-atac` pipelines run separately
 
@@ -167,12 +172,10 @@ table(is.na(rowData(sce)$gene_id))
 unmatched <- is.na(rowData(sce)$gene_id)
 unmatched_genes <- rowData(sce)$gene_symbol[unmatched]
 unmatched_genes
-# [1] "TBCE.1"           "LINC01238.1"      "CYB561D2.1"       "MATR3.1"         
-# [5] "LINC01505.1"      "HSPA14.1"         "GOLGA8M.1"        "GGT1.1"          
-# [9] "ARMCX5-GPRASP2.1" "TMSB15B.1"
+# NULL
 
 # Handle unmatched genes, removing those rows from sce
-if (length(unmatched_genes > 0)) {
+if (length(unmatched_genes) > 0) {
     # Identify genes ending with ".1"
     genes_to_remove <- grep("\\.1$", rownames(sce), value = TRUE)
     
@@ -186,14 +189,11 @@ if (length(unmatched_genes > 0)) {
     rowData(sce)$gene_symbol <- matched_symbols
     rowData(sce)$gene_id <- matched_ids
     
+    if (length(genes_to_remove) > 0) { message("Genes removed ", length(genes_to_remove)) }
+    
 }
 # Check matched genes, like those having gene.1 suffix
 table(is.na(rowData(sce)$gene_id))
-# FALSE
-# 29690
-
-message("Genes removed ", length(genes_to_remove))
-# Genes removed 6911
 
 # View some annotated entries
 head(rowData(sce))
@@ -258,7 +258,7 @@ message("SCE derived from rna-seurat saved on: ", outputRDS)
 
 saveRDS(
   sce_modeling_results,
-  here(outputRDS, "enrichment_snRNA-multiome_v4.rds")
+  here(outputRDS, "enrichment_snRNA-multiome_v5.rds")
 )
 
 message("rna-multiome t-stats saved saved on: ", outputRDS)
