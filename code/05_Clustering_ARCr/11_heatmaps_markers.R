@@ -62,6 +62,7 @@ seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 
 # Load Seurat
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
+colnames(SeuratOBJ@meta.data)
 DefaultAssay(SeuratOBJ) <- "RNA"
 levels(SeuratOBJ)
 # [1] "C.04.LHb.4"      "C.05.LHb.2.7"    "C.06.LHb.4"      "C.07.MHb.2"     
@@ -116,7 +117,60 @@ mat_ordered <- mat[ordered_genes, ]
 # Scale across rows (genes)
 mat_scaled <- t(scale(t(as.matrix(mat_ordered))))
 
+# Define unique cluster names and assign colors based on keywords in cluster names
+clusters <- colnames(mat)
+
+# define group membership
+merged_cluster <- sapply(clusters, function(cl) {
+    if (grepl("LHb", cl)) {
+        "LHb"
+    } else if (grepl("MHb", cl)) {
+        "MHb"
+    } else if (grepl("Thal", cl)) {
+        "Thal"
+    } else {
+        "Other"
+    }
+})
+# make it a named factor 
+merged_cluster <- factor(merged_cluster, levels = c("LHb", "MHb", "Thal", "Other"))
+names(merged_cluster) <- clusters
+## define colors for the group
+group_colors <- c(
+    LHb = "#1f78b4",
+    MHb = "#ad1d8c",
+    Thal = "#4d55b7",
+    Other = "black"
+)
+
+top_anno <- HeatmapAnnotation(
+    Region = merged_cluster,  # name shown in legend
+    col = list(Region = group_colors),
+    annotation_name_side = "left"
+)
+
+# cluster_colors <- sapply(clusters, function(cl) {
+#     if (grepl("LHb", cl)) {
+#         my_colors["LHb"]
+#     } else if (grepl("MHb", cl)) {
+#         my_colors["MHb"]
+#     } else if (grepl("Thal", cl)) {
+#         my_colors["Thal"]
+#     } else {
+#         "black"
+#     }
+# })
+# names(cluster_colors) <- clusters
+
+# # create the top annotation object
+# top_anno <- HeatmapAnnotation(
+#     Cluster = anno_simple(clusters, col = cluster_colors),
+#     annotation_name_side = "left"
+# )
+
 # Heatmap
+pdf(here(plotDir, "top3_marker_heatmap.pdf"), width = 14, height = 10)
+
 Heatmap(
     mat_scaled,
     name = "Z-score",
@@ -125,9 +179,11 @@ Heatmap(
     show_row_names = TRUE,
     show_column_names = TRUE,
     col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
-    row_names_gp = gpar(fontsize = 8)
+    top_annotation = top_anno,
+    row_names_gp = gpar(fontsize = 7)
 )
 
+dev.off()
 
 
 ########## Gene markers lists. New function to join LB and DD gene markers lists
