@@ -13,9 +13,12 @@
 
 library("Seurat")
 library("Signac")
-library("ggplot2")
-library("bluster")
-library("patchwork")
+library("Matrix")
+library("ComplexHeatmap")
+library("circlize")
+# library("ggplot2")
+# library("bluster")
+# library("patchwork")
 library("tidyverse")
 library("stringr")
 library("here")
@@ -73,7 +76,9 @@ levels(SeuratOBJ)
 # [37] "C.37.Thal"       "C.38.Inhib.Thal" "C.39.Inhib.Thal" "C.41.Microglia" 
 
 base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
-base_name
+
+message("Processing Heatmap for ", base_name)
+
 
 ## Read DEG file
 
@@ -93,12 +98,32 @@ top_markers <- df_cluster_names |>
     top_n(n = 1, wt = avg_log2FC)
 head(top_markers)
 
-library(Matrix)
 avg_expr <- AggregateExpression(SeuratOBJ, group.by = "cluster_ann", return.seurat = FALSE)$RNA
 head(avg_expr)
 
 # Subset only for top genes
 mat <- avg_expr[unique(top_markers$gene), ]
+
+# order rows to match the cluster (diagonal layout)
+ordered_genes <- top_markers |>
+    arrange(match(cluster, colnames(mat))) |>
+    pull(gene)
+
+mat_ordered <- mat[ordered_genes, ]
+
+# Scale across rows (genes)
+mat_scaled <- t(scale(t(as.matrix(mat_ordered))))
+
+# Heatmap
+Heatmap(
+    mat_scaled,
+    name = "Z-score",
+    cluster_rows = FALSE,
+    cluster_columns = FALSE,
+    show_row_names = TRUE,
+    show_column_names = TRUE,
+    col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red"))
+)
 
 
 
