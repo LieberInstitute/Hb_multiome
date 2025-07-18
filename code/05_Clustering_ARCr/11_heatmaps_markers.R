@@ -1,6 +1,7 @@
 ########################################################################
 ## Plot Heatmaps of GEX on WNN clustering
-##
+## - Downsample to equal cell numbers per group (n=50)
+## - Plot top50 DEG match cell-types by LB or DD marker genes 
 ## Authors. CSC
 ## Date. May 08, 2024
 ## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
@@ -85,6 +86,19 @@ head(df_cluster_names)
 # 1     0   4.336764 0.938 0.100         0       1 OTX2-AS1        DD_Inhib.Thal
 # 2     0   3.849508 0.900 0.083         0       1      KIT        DD_Inhib.Thal
 # 3     0   3.682782 0.927 0.122         0       1    MEIS2      LB_Thalamus/MDm
+
+# Find top gene per cluster (highest avg_log2FC or pct diff)
+top_markers <- df_cluster_names |>
+    group_by(cluster) |>
+    top_n(n = 1, wt = avg_log2FC)
+head(top_markers)
+
+library(Matrix)
+avg_expr <- AggregateExpression(SeuratOBJ, group.by = "cluster_ann", return.seurat = FALSE)$RNA
+head(avg_expr)
+
+# Subset only for top genes
+mat <- avg_expr[unique(top_markers$gene), ]
 
 
 
@@ -290,7 +304,7 @@ meta_df$cell_id <- rownames(meta_df)
 cells_to_plot <- meta_df |>
     group_by(cluster_ann) |>
     sample_n(size = min(n_cells, n()), replace = FALSE) |>
-    arrange(cluster_ann) |>   # This sets a fixed order to remove dendogram manually
+    arrange(cluster_ann) |>   # This sets a fixed order to remove dendrogram manually
     pull(cell_id)
 
 # extract top 10 genes per cluster
@@ -331,7 +345,14 @@ dev.off()
 message("All plots done!")
 
 
-
+# library("slurmjobs")
+# job_single(
+#     "11_heatmaps_markers",
+#     cores = 2,
+#     partition = "katun",
+#     memory = "80G",
+#     create_shell = TRUE
+#     )
 
 
 ## Reproducibility information
