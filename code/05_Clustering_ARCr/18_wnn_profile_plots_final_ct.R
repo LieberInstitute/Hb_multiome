@@ -36,13 +36,13 @@ inputSeuratRDS <- here(
 processedDir <- here(
     "processed-data",
     "05_Clustering_ARCr",
-    "18_wnn_profile_plots_final_ct.R"
+    "18_wnn_profile_plots_final_ct"
 )
 
 plotDir <- here(
     "plots",
     "05_Clustering_ARCr",
-    "18_wnn_profile_plots_final_ct.R"
+    "18_wnn_profile_plots_final_ct"
 )
 
 ## Check directories
