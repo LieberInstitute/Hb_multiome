@@ -95,19 +95,21 @@ head(df_cluster_names)
 # Find top gene per cluster (highest avg_log2FC or pct diff)
 top_markers <- df_cluster_names |>
     group_by(cluster) |>
-    top_n(n = 1, wt = avg_log2FC)
+    top_n(n = 3, wt = avg_log2FC)
 head(top_markers)
 
-avg_expr <- AggregateExpression(SeuratOBJ, group.by = "cluster_ann", return.seurat = FALSE)$RNA
+avg_expr <- AggregateExpression(
+    SeuratOBJ, 
+    group.by = "cluster_ann", 
+    return.seurat = FALSE)$RNA
 head(avg_expr)
 
 # Subset only for top genes
 mat <- avg_expr[unique(top_markers$gene), ]
 
-# order rows to match the cluster (diagonal layout)
+# order genes per cluster order
 ordered_genes <- top_markers |>
-    arrange(match(cluster, colnames(mat))) |>
-    pull(gene)
+    arrange(factor(cluster, levels = colnames(mat)), desc(avg_log2FC))
 
 mat_ordered <- mat[ordered_genes, ]
 
@@ -122,7 +124,8 @@ Heatmap(
     cluster_columns = FALSE,
     show_row_names = TRUE,
     show_column_names = TRUE,
-    col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red"))
+    col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
+    row_names_gp = gpar(fontsize = 8)
 )
 
 
