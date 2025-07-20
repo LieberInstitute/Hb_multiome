@@ -85,16 +85,16 @@ message("Processing Heatmap for ", base_name)
 
 DEG_file_name <- "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_cellTypes_integrated_top50.csv"
 DEG_file_name <- here(inputCVS_Dir, DEG_file_name)
-df_cluster_names <- read.csv(DEG_file_name)
-df_cluster_names <- df_cluster_names |> drop_na(cell_type)
-head(df_cluster_names)
+df_markers_findALLSeurat <- read.csv(DEG_file_name)
+df_markers_findALLSeurat <- df_markers_findALLSeurat |> drop_na(cell_type)
+head(df_markers_findALLSeurat)
 # p_val avg_log2FC pct.1 pct.2 p_val_adj cluster     gene            cell_type
 # 1     0   4.336764 0.938 0.100         0       1 OTX2-AS1        DD_Inhib.Thal
 # 2     0   3.849508 0.900 0.083         0       1      KIT        DD_Inhib.Thal
 # 3     0   3.682782 0.927 0.122         0       1    MEIS2      LB_Thalamus/MDm
 
 # Find top gene per cluster (highest avg_log2FC or pct diff)
-top_markers <- df_cluster_names |>
+top_markers <- df_markers_findALLSeurat |>
     group_by(cluster) |>
     top_n(n = 3, wt = avg_log2FC)
 head(top_markers)
@@ -151,41 +151,68 @@ top_anno <- HeatmapAnnotation(
     annotation_name_side = "left"
 )
 
-# cluster_colors <- sapply(clusters, function(cl) {
-#     if (grepl("LHb", cl)) {
-#         my_colors["LHb"]
-#     } else if (grepl("MHb", cl)) {
-#         my_colors["MHb"]
-#     } else if (grepl("Thal", cl)) {
-#         my_colors["Thal"]
-#     } else {
-#         "black"
-#     }
-# })
-# names(cluster_colors) <- clusters
-
-# # create the top annotation object
-# top_anno <- HeatmapAnnotation(
-#     Cluster = anno_simple(clusters, col = cluster_colors),
-#     annotation_name_side = "left"
-# )
 
 # Heatmap
+make_heatmap <- function(mat_scaled, top_anno) {
+    
+    hm <- Heatmap(
+        mat_scaled,
+        name = "Z-score",
+        cluster_rows = FALSE,
+        cluster_columns = FALSE,
+        show_row_names = TRUE,
+        show_column_names = TRUE,
+        col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
+        top_annotation = top_anno,
+        row_names_gp = gpar(fontsize = 7)
+    )
+
+    return(hm)    
+}
+
+hm1 <- make_heatmap(mat_scaled, top_anno)
 pdf(here(plotDir, "top3_marker_heatmap.pdf"), width = 14, height = 10)
-
-Heatmap(
-    mat_scaled,
-    name = "Z-score",
-    cluster_rows = FALSE,
-    cluster_columns = FALSE,
-    show_row_names = TRUE,
-    show_column_names = TRUE,
-    col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
-    top_annotation = top_anno,
-    row_names_gp = gpar(fontsize = 7)
-)
-
+print(hm1)
 dev.off()
+
+
+## =============================================================================
+## Subset Medial, Lateral and Thal CLusters
+
+# cluster_levels <- levels(SeuratOBJ)
+# MHb <- grep("MHb", cluster_levels, value = TRUE)
+# LHb <- grep("LHb", cluster_levels, value = TRUE)
+# Thal <- grep("Thal", cluster_levels, value = TRUE)
+# 
+# ## get thalamus clusters
+# cells_to_keep <- WhichCells(SeuratOBJ, idents = Thal)
+# SeuratOBJ_subset <- subset(SeuratOBJ, cells = cells_to_keep)
+# levels(SeuratOBJ_subset)
+# unique(Idents(SeuratOBJ_subset))
+
+## Filter markers for Thal clusters
+colnames(df_markers_findALLSeurat)
+thal_markers <- df_markers_findALLSeurat |>
+    filter(grepl("Thal", cell_type))
+
+## Subset the matrix 
+# Keep only Thal columns
+#colnames(mat)
+thal_cols <- grep("Thal", colnames(mat), value = TRUE)
+mat_thal <- mat[, thal_cols]
+
+# Keep only Thal marker genes
+mat_thal <- mat_thal[intersect(thal_markers$gene, rownames(mat_thal)), ]
+# Scale
+mat_thal_scaled <- t(scale(t(as.matrix(mat_thal))))
+
+
+## =============================================================================
+
+
+
+
+
 
 
 ########## Gene markers lists. New function to join LB and DD gene markers lists
@@ -374,9 +401,9 @@ dev.off()
 
 ######## Plot 2: plot the top-x genes (markers) used to annotate each cluster
 
-# df_cluster_names$cluster
-# df_cluster_names$gene
-# df_cluster_names$cell_type
+# df_markers_findALLSeurat$cluster
+# df_markers_findALLSeurat$gene
+# df_markers_findALLSeurat$cell_type
 
 # Downsample to equal cell numbers per group
 # Number of cells per group you want (e.g., 50)
@@ -394,7 +421,7 @@ cells_to_plot <- meta_df |>
     pull(cell_id)
 
 # extract top 10 genes per cluster
-top_markers <- df_cluster_names %>%
+top_markers <- df_markers_findALLSeurat %>%
     group_by(cluster) %>%
     top_n(n = 10, wt = avg_log2FC)
 
