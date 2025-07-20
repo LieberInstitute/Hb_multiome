@@ -212,7 +212,7 @@ plot_violin_clusters <- function(seurat_obj, genes, group_col = "merged_cluster"
     plots <- purrr::map(genes, ~ {
         VlnPlot(
             object = SeuratOBJ,
-            slot = "data",
+            layer = "data",
             group.by = group_col, 
             features = .x,
             pt.size = 0.2,
@@ -242,7 +242,7 @@ genes_to_plot <- c("GPR151", "POU4F1", "TAC3")
 
 my_plots <- plot_violin_clusters(SeuratOBJ, genes_to_plot, colors = my_colors)
 plt1 <- my_plots[["GPR151"]] + my_plots[["POU4F1"]] + my_plots[["TAC3"]] 
-plt1[[2]]
+plt1[[3]]
 ggsave(here(plotDir, "WNN_Vplots_Hb_canonical_broad_clusters.pdf"), plt1, width = 6, height = 7)
 
 ## make violin plots for all clusters detail - with gradient tonalities for MHb and LHb, other cell-types solid color
@@ -260,29 +260,42 @@ message("WNN UMAP done!")
 message("Processing GeneExpression Dot plots ...")
 
 # Build color mapping: LHb and MHb get colors, others default to black
-label_colors <- ifelse(grepl("LHb", clusters), "#1f78b4", 
-                       ifelse(grepl("MHb", clusters), "#ad1d8c",
+
+## for fine res
+cluster_levels <- levels(SeuratOBJ)
+label_colors <- ifelse(grepl("LHb", cluster_levels), "#1f78b4", 
+                       ifelse(grepl("MHb", cluster_levels), "#ad1d8c",
                               "black"))
 # Build names with HTML color tags
-clusters_colored <- paste0("<span style='color:", label_colors, "'>", clusters, "</span>")
-names(clusters_colored) <- clusters  # keep mapping
+clusters_colored <- paste0("<span style='color:", label_colors, "'>", cluster_levels, "</span>")
+names(clusters_colored) <- cluster_levels  # keep mapping
 
-plt1 <- DotPlot(SeuratOBJ, 
-        features = genes_to_plot) +
-        #group.by = "merged_cluster") +
-    theme(
-        text = element_text(size = 12),
-        axis.text.x = element_text(size = 9),
-        axis.text.y = element_markdown(size = 9),  # ggtext to parse html
-        plot.title = element_text(hjust = 0.5),
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()
-    )  +
-    scale_y_discrete(labels = clusters_colored)  # apply colored labels
+## function to make dotPlot for fine and broad clusters
+plot_dot_clusters <- name <- function(SeuratOBJ, genes_to_plot,  group_col = NULL, clusters_colored = NULL) {
 
+    plt1 <- DotPlot(SeuratOBJ, 
+                    features = genes_to_plot,
+                    group.by = group_col) +
+        theme(
+            text = element_text(size = 12),
+            axis.text.x = element_text(size = 9),
+            axis.text.y = element_markdown(size = 9),  # ggtext to parse html
+            plot.title = element_text(hjust = 0.5),
+            axis.title.x = element_blank(),
+            axis.title.y = element_blank()
+        )  +
+        scale_y_discrete(labels = clusters_colored)
+    
+    return(plt1)
+}
+
+## plot all clusters at fine
+plt1 <- plot_dot_clusters(SeuratOBJ, genes_to_plot, "cluster_ann", clusters_colored)
 ggsave(here(plotDir, "WNN_DotPlot_Hb_canonical_all_clusters.pdf"), plt1, width = 5, height = 7)
 
-
+## plot merged clusters
+plt1 <- plot_dot_clusters(SeuratOBJ, genes_to_plot, "merged_cluster", clusters_colored)
+ggsave(here(plotDir, "WNN_DotPlot_Hb_canonical_merged_clusters.pdf"), plt1, width = 5, height = 7)
 
 
 ## =============================================================================
