@@ -154,31 +154,39 @@ plt1 <- DimPlot(SeuratOBJ,
 
 ggsave(here(plotDir, "WNN_umap_fine.pdf"), plt1, width = 7, height = 7)
 
-## umap rna+atac
-plt_atac <- DimPlot(SeuratOBJ, 
-                label = TRUE, 
-                reduction = "umap.lsi.integrated",
-                label.size = 3,
-                cols = my_colors_fine) + 
-    NoLegend() +
-    labs(title = "WNN cell types in atac")
-plt_rna <- DimPlot(SeuratOBJ, 
-                label = TRUE, 
-                reduction = "umap.integrated",
-                label.size = 3,
-                cols = my_colors_fine) + 
-    NoLegend() +
-    labs(title = "WNN cell types in rna")
+## umap rna+atac side to side 
+plot_umap_side_side <- function(seurat_obj, group_col = NULL, colors = NULL) {
+    
+    plt_atac <- DimPlot(SeuratOBJ, 
+                    label = TRUE, 
+                    reduction = "umap.lsi.integrated",
+                    group.by = group_col,
+                    label.size = 3,
+                    cols = colors) + 
+        NoLegend() +
+        labs(title = "WNN cell types in atac")
+    plt_rna <- DimPlot(SeuratOBJ, 
+                    label = TRUE, 
+                    reduction = "umap.integrated",
+                    group.by = group_col,
+                    label.size = 3,
+                    cols = colors) + 
+        NoLegend() +
+        labs(title = "WNN cell types in rna")
+    
+    plts <- plt_rna + plt_atac  + plot_layout(ncol = 2)
+    
+    return(plts)
+}
 
-class(plt_rna)
-rna_atac_plots <- plt_rna + plt_atac  + plot_layout(ncol = 2)
+rna_atac_plots <- plot_umap_side_side(SeuratOBJ, "cluster_ann", my_colors_fine)
 ggsave(
-    filename = here(rna_atac_plots, "WNN_umap_rna_atac_fine.pdf"),
+    filename = here(plotDir, "WNN_umap_rna_atac_fine.pdf"),
     plot = rna_atac_plots, 
     width = 12,
     height = 7
 )
-#ggsave(here(plot = rna_atac_plots, "WNN_umap_rna_atac_fine.pdf"), plt2, width = 12, height = 7)
+
 
 ## umap wnn merged
 plt1 <- DimPlot(SeuratOBJ, 
