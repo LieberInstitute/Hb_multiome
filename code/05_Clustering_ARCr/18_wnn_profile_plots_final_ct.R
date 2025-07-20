@@ -13,6 +13,7 @@ library("dynamicTreeCut")
 library("purrr")
 library("ggplot2")
 library("ggtext") # Build names with HTML color tags / DotPlot
+library("colorspace") # make color gradients 
 library("patchwork")
 library("dplyr")
 library("stringr")
@@ -68,18 +69,8 @@ colnames(SeuratOBJ@meta.data)
 
 # check cell-types
 table(SeuratOBJ$seurat_clusters)
-# 1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16 
-# 3906 3371 3271 2911 2771 2667 2610 2537 2430 2344 2212 2187 2036 2026 1625 1607 
-# 17   18   19   20   21   22   23   24   25   26   27   28   29   30   31   32 
-# 1587 1535 1380 1343 1341 1327 1269  825  707  638  587  543  343  213  209  196 
-# 33   34   35   36   37   38   39   40   41 
-# 186  184  165  145  111  105   90   84   76 
 
 table(sort(SeuratOBJ$cluster_ann))
-# C.01.Inhib.Thal        C.02.Oligo   C.03.Excit.Thal   C.04.Excit.Thal 
-# 3906              3371              3271              2911 
-# C.05.LHb.2.7 C.06.ExcitT.LHb.4        C.07.MHb.2        C.08.LHb.4 
-# 2771              2667              2610              2537 
 
 table(SeuratOBJ$merged_cluster)
 # Astrocyte       Endo Excit_Thal Inhib_Thal        LHb        MHb  Microglia 
@@ -96,50 +87,6 @@ levels(SeuratOBJ)
 
 ## =============================================================================
 
-
-message("Processing UMAP plots ...")
-
-## Some visualizations: VPlots, DimPlot, Feature, DotPlot ...
-
-## extract suffix name to give unique name to plots
-seurat_name <- str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
-
-Reductions(SeuratOBJ)
-
-plt1 <- DimPlot(SeuratOBJ, 
-                label = TRUE, 
-                reduction = "wnn.umap",
-                label.size = 3) + 
-    NoLegend() +
-    labs(title = "WNN cell types")
-
-ggsave(here(plotDir, "WNN_umap.pdf"), plt1, width = 7, height = 7)
-
-
-plt1 <- DimPlot(SeuratOBJ, 
-                label = TRUE, 
-                reduction = "wnn.umap",
-                group.by = "seurat_clusters",
-                label.size = 3) + 
-    NoLegend() +
-    labs(title = "WNN cell types")
-
-ggsave(here(plotDir, "WNN_umap_clusterID.pdf"), plt1, width = 7, height = 7)
-
-
-plt2 <- DimPlot(SeuratOBJ, 
-                label = TRUE, 
-                reduction = "umap.lsi.integrated",
-                label.size = 3) + 
-    NoLegend() +
-    labs(title = "WNN cell types in atac")
-
-ggsave(here(plotDir, "WNN_umap_lsi_integrated.pdf"), plt2, width = 7, height = 7)
-
-dim_plots <- (plt1 + plt2)
-ggsave(here(plotDir, "Hb_DimPlot_WNN_ALL_merged_clusters_side_to_side.pdf"), dim_plots, width = 10, height = 5)
-
-
 ## merged clusters, I picked up Hex color codes similar to those used on human pilot
 my_colors <- c(
     LHb = "#1f78b4",
@@ -154,6 +101,86 @@ my_colors <- c(
     Thal = "#4d55b7"
 )
 
+## assign color gradients to fine resolution clusters based on Broad cell-types
+# extract LHb and MHb clusters
+cluster_levels <- levels(SeuratOBJ)
+LHb_clusters <- grep("LHb", cluster_levels, value = TRUE)
+MHb_clusters <- grep("MHb", cluster_levels, value = TRUE)
+# Create tonal gradients for LHb and MHb
+LHb_colors <- sequential_hcl(length(LHb_clusters), h = 210, c = 80, l = c(30, 80))
+MHb_colors <- sequential_hcl(length(MHb_clusters), h = 320, c = 80, l = c(30, 80))
+# Build full cluster color map
+my_colors_fine <- setNames(rep("#bdbdbd", length(cluster_levels)), cluster_levels)
+my_colors_fine[LHb_clusters] <- LHb_colors
+my_colors_fine[MHb_clusters] <- MHb_colors
+# Assign base color for other types from your existing palette
+for (category in c("Oligo", "Astrocyte", "OPC", "Microglia", "Endo", "Inhib.Thal", "Excit.Thal", "Thal")) {
+    matched <- grep(category, cluster_levels, value = TRUE)
+    my_colors_fine[matched] <- my_colors[[gsub("\\.", "_", category)]]
+}
+#scales::show_col(my_colors_fine)
+
+## =============================================================================
+
+
+message("Processing UMAP plots ...")
+
+## Some visualizations: VPlots, DimPlot, Feature, DotPlot ...
+
+## extract suffix name to give unique name to plots
+seurat_name <- str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
+
+Reductions(SeuratOBJ)
+
+## umap wnn
+plt1 <- DimPlot(SeuratOBJ, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                group.by = "seurat_clusters",
+                label.size = 3) + 
+    NoLegend() +
+    labs(title = "WNN cell types (fine)")
+
+ggsave(here(plotDir, "WNN_umap_fine_clusterID.pdf"), plt1, width = 7, height = 7)
+
+## umap rna
+plt1 <- DimPlot(SeuratOBJ, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                label.size = 3,
+                cols = my_colors_fine) + 
+    NoLegend() +
+    labs(title = "WNN cell types (fine)")
+
+ggsave(here(plotDir, "WNN_umap_fine.pdf"), plt1, width = 7, height = 7)
+
+## umap rna+atac
+plt_atac <- DimPlot(SeuratOBJ, 
+                label = TRUE, 
+                reduction = "umap.lsi.integrated",
+                label.size = 3,
+                cols = my_colors_fine) + 
+    NoLegend() +
+    labs(title = "WNN cell types in atac")
+plt_rna <- DimPlot(SeuratOBJ, 
+                label = TRUE, 
+                reduction = "umap.integrated",
+                label.size = 3,
+                cols = my_colors_fine) + 
+    NoLegend() +
+    labs(title = "WNN cell types in rna")
+
+class(plt_rna)
+rna_atac_plots <- plt_rna + plt_atac  + plot_layout(ncol = 2)
+ggsave(
+    filename = here(rna_atac_plots, "WNN_umap_rna_atac_fine.pdf"),
+    plot = rna_atac_plots, 
+    width = 12,
+    height = 7
+)
+#ggsave(here(plot = rna_atac_plots, "WNN_umap_rna_atac_fine.pdf"), plt2, width = 12, height = 7)
+
+## umap wnn merged
 plt1 <- DimPlot(SeuratOBJ, 
                 label = FALSE, 
                 reduction = "wnn.umap",
@@ -163,7 +190,17 @@ plt1 <- DimPlot(SeuratOBJ,
     #NoLegend() +
     labs(title = "WNN Broad cell-types")
 
-ggsave(here(plotDir, "WNN_merged_clusters.pdf"), plt1, width = 8, height = 7)
+plt1 <- DimPlot(SeuratOBJ, 
+                label = FALSE, 
+                reduction = "wnn.umap",
+                group.by = "cluster_ann", 
+                label.size = 3,
+                cols = my_colors_fine) + 
+    #NoLegend() +
+    labs(title = "WNN Fine cell-types")
+
+
+ggsave(here(plotDir, "WNN_merged_clusters.pdf"), plt1, width = 10, height = 7)
 
 ## =============================================================================
 
@@ -172,7 +209,7 @@ message("Processing Violin plots ...")
 
 ## Plot Hb canonical genes for merged_clusters
 
-plot_violin_merged_clusters <- function(seurat_obj, genes, group_col = "merged_cluster", colors = NULL) {
+plot_violin_clusters <- function(seurat_obj, genes, group_col = "merged_cluster", colors = NULL) {
     
     plots <- purrr::map(genes, ~ {
         VlnPlot(
@@ -182,7 +219,7 @@ plot_violin_merged_clusters <- function(seurat_obj, genes, group_col = "merged_c
             features = .x,
             pt.size = 0.2,
             alpha = 0.1,
-            cols = my_colors
+            cols = colors
         ) +
             labs(title = .x) +
             theme(
@@ -201,12 +238,21 @@ plot_violin_merged_clusters <- function(seurat_obj, genes, group_col = "merged_c
     
 }
 
+## make violin plots for merged clusters - with solid color vector 
+
 genes_to_plot <- c("GPR151", "POU4F1", "TAC3")
-my_plots <- plot_violin_merged_clusters(SeuratOBJ, genes_to_plot, colors = my_colors)
 
+my_plots <- plot_violin_clusters(SeuratOBJ, genes_to_plot, colors = my_colors)
 plt1 <- my_plots[["GPR151"]] + my_plots[["POU4F1"]] + my_plots[["TAC3"]] 
+plt1[[2]]
+ggsave(here(plotDir, "WNN_Vplots_Hb_canonical_broad_clusters.pdf"), plt1, width = 6, height = 7)
 
-ggsave(here(plotDir, "WNN_Vplots_Hb_canonical_merged_clusters.pdf"), plt1, width = 6, height = 7)
+## make violin plots for all clusters detail - with gradient tonalities for MHb and LHb, other cell-types solid color
+my_plots <- plot_violin_clusters(SeuratOBJ, group_col = "cluster_ann", genes_to_plot, colors = my_colors_fine)
+plt1 <- my_plots[["GPR151"]] + my_plots[["POU4F1"]] + my_plots[["TAC3"]] 
+plt1[[1]]
+
+ggsave(here(plotDir, "WNN_Vplots_Hb_canonical_fine_clusters.pdf"), plt1, width = 6, height = 7)
 
 message("WNN UMAP done!")
 
