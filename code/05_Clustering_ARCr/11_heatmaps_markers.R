@@ -172,7 +172,7 @@ make_heatmap <- function(mat_scaled, top_anno) {
 
 hm1 <- make_heatmap(mat_scaled, top_anno)
 pdf(here(plotDir, "top3_marker_heatmap.pdf"), width = 14, height = 10)
-print(hm1)
+draw(hm1)
 dev.off()
 
 
@@ -206,6 +206,30 @@ mat_thal <- mat_thal[intersect(thal_markers$gene, rownames(mat_thal)), ]
 # Scale
 mat_thal_scaled <- t(scale(t(as.matrix(mat_thal))))
 
+# create merged_cluster annotation (Thal group only)
+merged_cluster_thal <- sapply(thal_cols, function(cl) {
+    if (grepl("LHb", cl)) {
+        "LHb"
+    } else if (grepl("MHb", cl)) {
+        "MHb"
+    } else if (grepl("Thal", cl)) {
+        "Thal"
+    } else {
+        "Other"
+    }
+})
+
+top_anno_thal <- HeatmapAnnotation(
+    Region = factor(merged_cluster_thal, levels = names(group_colors)),
+    col = list(Region = group_colors),
+    annotation_name_side = "left"
+)
+
+hm_thal <- make_heatmap(mat_thal_scaled, top_anno_thal)
+
+pdf("thal_top3_marker_heatmap.pdf", width = 10, height = 8)
+draw(hm_thal)
+dev.off()
 
 ## =============================================================================
 
