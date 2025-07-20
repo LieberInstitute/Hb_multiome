@@ -17,7 +17,7 @@ library("Matrix")
 library("ComplexHeatmap")
 library("circlize")
 # library("ggplot2")
-# library("bluster")
+library("bluster")
 # library("patchwork")
 library("tidyverse")
 library("stringr")
@@ -107,12 +107,13 @@ head(avg_expr)
 
 # Subset only for top genes
 mat <- avg_expr[unique(top_markers$gene), ]
+head(mat)
 
 # order genes per cluster order
 ordered_genes <- top_markers |>
     arrange(factor(cluster, levels = colnames(mat)), desc(avg_log2FC))
 
-mat_ordered <- mat[ordered_genes, ]
+mat_ordered <- mat[ordered_genes$gene, ]
 
 # Scale across rows (genes)
 mat_scaled <- t(scale(t(as.matrix(mat_ordered))))
@@ -132,6 +133,7 @@ merged_cluster <- sapply(clusters, function(cl) {
         "Other"
     }
 })
+
 # make it a named factor 
 merged_cluster <- factor(merged_cluster, levels = c("LHb", "MHb", "Thal", "Other"))
 names(merged_cluster) <- clusters
