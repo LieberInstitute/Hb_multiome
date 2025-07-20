@@ -132,29 +132,32 @@ seurat_name <- str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
 
 Reductions(SeuratOBJ)
 
-## umap wnn
-plt1 <- DimPlot(SeuratOBJ, 
-                label = TRUE, 
-                reduction = "wnn.umap",
-                group.by = "seurat_clusters",
-                label.size = 3) + 
-    NoLegend() +
-    labs(title = "WNN cell types (fine)")
+## add function to plot umap(s) for  wnn
+plot_one_umap <- function(seurat_obj, group_col = NULL, colors = NULL) {
 
+    plt1 <- DimPlot(SeuratOBJ, 
+                    label = TRUE, 
+                    reduction = "wnn.umap",
+                    group.by = group_col,
+                    label.size = 3,
+                    cols = colors) + 
+        NoLegend() +
+        labs(title = "WNN cell types (fine)")
+    
+    return(plt1)
+    
+}
+
+## umap wnn with clusters IDs (numbers)
+plt1 <- plot_one_umap(SeuratOBJ, "seurat_clusters")
 ggsave(here(plotDir, "WNN_umap_fine_clusterID.pdf"), plt1, width = 7, height = 7)
 
-## umap rna
-plt1 <- DimPlot(SeuratOBJ, 
-                label = TRUE, 
-                reduction = "wnn.umap",
-                label.size = 3,
-                cols = my_colors_fine) + 
-    NoLegend() +
-    labs(title = "WNN cell types (fine)")
-
+## umap wnn with clusters annotated
+plt1 <- plot_one_umap(SeuratOBJ, "cluster_ann", my_colors_fine)
 ggsave(here(plotDir, "WNN_umap_fine.pdf"), plt1, width = 7, height = 7)
 
-## umap rna+atac side to side 
+
+## add function to plot rna and atac umap(s) side to side based on wnn annotations
 plot_umap_side_side <- function(seurat_obj, group_col = NULL, colors = NULL) {
     
     plt_atac <- DimPlot(SeuratOBJ, 
@@ -179,6 +182,7 @@ plot_umap_side_side <- function(seurat_obj, group_col = NULL, colors = NULL) {
     return(plts)
 }
 
+## umap rna+atac side to side fine res
 rna_atac_plots <- plot_umap_side_side(SeuratOBJ, "cluster_ann", my_colors_fine)
 ggsave(
     filename = here(plotDir, "WNN_umap_rna_atac_fine.pdf"),
@@ -187,28 +191,14 @@ ggsave(
     height = 7
 )
 
-
-## umap wnn merged
-plt1 <- DimPlot(SeuratOBJ, 
-                label = FALSE, 
-                reduction = "wnn.umap",
-                group.by = "merged_cluster", 
-                label.size = 3,
-                cols = my_colors) + 
-    #NoLegend() +
-    labs(title = "WNN Broad cell-types")
-
-plt1 <- DimPlot(SeuratOBJ, 
-                label = FALSE, 
-                reduction = "wnn.umap",
-                group.by = "cluster_ann", 
-                label.size = 3,
-                cols = my_colors_fine) + 
-    #NoLegend() +
-    labs(title = "WNN Fine cell-types")
-
-
-ggsave(here(plotDir, "WNN_merged_clusters.pdf"), plt1, width = 10, height = 7)
+## umap rna+atac side to side broad res
+rna_atac_plots <- plot_umap_side_side(SeuratOBJ, "merged_cluster", my_colors)
+ggsave(
+    filename = here(plotDir, "WNN_umap_rna_atac_broad.pdf"),
+    plot = rna_atac_plots, 
+    width = 12,
+    height = 7
+)
 
 ## =============================================================================
 
