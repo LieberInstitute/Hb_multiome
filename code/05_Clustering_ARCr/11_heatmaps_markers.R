@@ -76,6 +76,14 @@ levels(SeuratOBJ)
 # [33] "C.28.Inhib.Thal" "C.29.Endo"       "C.32.Excit.Thal" "C.35.Excit.Thal"
 # [37] "C.37.Thal"       "C.38.Inhib.Thal" "C.39.Inhib.Thal" "C.41.Microglia" 
 
+# Aggregate average expression per cluster
+avg_expr <- AggregateExpression(
+    SeuratOBJ, 
+    group.by = "cluster_ann", 
+    return.seurat = FALSE
+)$RNA
+head(avg_expr)
+
 base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
 
 message("Processing Heatmap for ", base_name)
@@ -93,33 +101,46 @@ head(df_markers_findALLSeurat)
 # 2     0   3.849508 0.900 0.083         0       1      KIT        DD_Inhib.Thal
 # 3     0   3.682782 0.927 0.122         0       1    MEIS2      LB_Thalamus/MDm
 
-# Find top gene per cluster (highest avg_log2FC or pct diff)
-top_markers <- df_markers_findALLSeurat |>
-    group_by(cluster) |>
-    top_n(n = 3, wt = avg_log2FC)
-head(top_markers)
+## function to subset only specific top x genes
+topGenes_mtx <- function(SeuratOBJ, df_markers_findALLSeurat, avg_expr, top_genes = 3) {
+    # Get top gene per cluster (highest avg_log2FC or pct diff)    
+    top_markers <- df_markers_findALLSeurat |>
+        group_by(cluster) |>
+        top_n(n = top_genes, wt = avg_log2FC)
+    head(top_markers)
+    
+    # Keep only genes that exist in avg_expr
+    valid_genes <- intersect(unique(top_markers$gene), rownames(avg_expr))
+    top_markers <- filter(top_markers, gene %in% valid_genes)
+    # Subset matrix
+    mat <- avg_expr[valid_genes, ]
+    head(mat)
+    
+    # order genes per cluster
+    ordered_genes <- top_markers |>
+        arrange(factor(cluster, levels = colnames(mat)), desc(avg_log2FC))
 
-avg_expr <- AggregateExpression(
-    SeuratOBJ, 
-    group.by = "cluster_ann", 
-    return.seurat = FALSE)$RNA
-head(avg_expr)
+    mat_ordered <- mat[ordered_genes$gene, ]
+    
+    # Scale across rows (genes) - (row-wise z-score)
+    mat_scaled <- t(scale(t(as.matrix(mat_ordered))))
+    
+    return(mat_scaled)
+    
+}
 
-# Subset only for top genes
-mat <- avg_expr[unique(top_markers$gene), ]
-head(mat)
+mat_ordered <- topGenes_mtx(SeuratOBJ, df_markers_findALLSeurat, avg_expr, 5) 
 
-# order genes per cluster order
-ordered_genes <- top_markers |>
-    arrange(factor(cluster, levels = colnames(mat)), desc(avg_log2FC))
-
-mat_ordered <- mat[ordered_genes$gene, ]
-
-# Scale across rows (genes)
-mat_scaled <- t(scale(t(as.matrix(mat_ordered))))
+## verification
+str(mat_ordered)
+mat@Dimnames[[1]] # genes
+length(mat@Dimnames[[1]]) # 92
+mat@Dimnames[[2]] # clusters
+length(mat@Dimnames[[2]]) # 40
+as.data.frame(as.matrix(mat[ , "C.37.Thal", drop = FALSE]))
 
 # Define unique cluster names and assign colors based on keywords in cluster names
-clusters <- colnames(mat)
+clusters <- colnames(mat_ordered)
 
 # define group membership
 merged_cluster <- sapply(clusters, function(cl) {
@@ -189,6 +210,11 @@ dev.off()
 # SeuratOBJ_subset <- subset(SeuratOBJ, cells = cells_to_keep)
 # levels(SeuratOBJ_subset)
 # unique(Idents(SeuratOBJ_subset))
+
+top_markers <- df_markers_findALLSeurat |>
+    group_by(cluster) |>
+    top_n(n = 5, wt = avg_log2FC)
+head(top_markers)
 
 ## Filter genes for Thal clusters
 colnames(df_markers_findALLSeurat)
