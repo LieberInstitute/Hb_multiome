@@ -173,7 +173,7 @@ stopifnot(all(df_markers_findALLSeurat_clean$cluster_name %in% colnames(avg_expr
 ## Diagonal heatmap by cluster
 ## function to subset only specific top x genes
 
-topGenes_mtx <- function(SeuratOBJ, dge_annotated_clusters, avg_expr, top_genes = 3) {
+topGenes_mtx <- function(dge_annotated_clusters, avg_expr, top_genes = 3) {
     # dge_annotated_clusters = df_markers_findALLSeurat_clean
     
     # Get top N genes per cluster (highest avg_log2FC or pct diff)    
@@ -208,8 +208,11 @@ topGenes_mtx <- function(SeuratOBJ, dge_annotated_clusters, avg_expr, top_genes 
     # TRUE 
     # 114 
     
-    # Subset matrix and order mtx: rows = genes, columns = clusters
-    mat_ordered <- avg_expr[ordered_gene_cluster$gene, ordered_gene_cluster$cluster_name]
+    # Subset matrix and define column order mtx: rows = genes, columns = clusters
+    # unique cluster order (to avoid repeating columns in heatmap)
+    unique_clusters <- unique(ordered_gene_cluster$cluster_name)
+    mat_ordered <- avg_expr[ordered_gene_cluster$gene, unique_clusters]
+
     #  scale (row-wise z-score)
     mat_scaled <- t(scale(t(as.matrix(mat_ordered))))
     
@@ -222,7 +225,7 @@ topGenes_mtx <- function(SeuratOBJ, dge_annotated_clusters, avg_expr, top_genes 
 
 ## =============================================================================
 
-topGenes_mtx_lst <- topGenes_mtx(SeuratOBJ, df_markers_findALLSeurat_clean, avg_expr, 5) 
+topGenes_mtx_lst <- topGenes_mtx(df_markers_findALLSeurat_clean, avg_expr, 3) 
 names(topGenes_mtx_lst)
 mat_scaled <- topGenes_mtx_lst[["mat_scaled"]]
 
