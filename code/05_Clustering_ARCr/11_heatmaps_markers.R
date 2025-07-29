@@ -190,7 +190,7 @@ dev.off()
 # levels(SeuratOBJ_subset)
 # unique(Idents(SeuratOBJ_subset))
 
-## Filter markers for Thal clusters
+## Filter genes for Thal clusters
 colnames(df_markers_findALLSeurat)
 thal_markers <- df_markers_findALLSeurat |>
     filter(grepl("Thal", cell_type))
@@ -201,7 +201,7 @@ thal_markers <- df_markers_findALLSeurat |>
 thal_cols <- grep("Thal", colnames(mat), value = TRUE)
 mat_thal <- mat[, thal_cols]
 
-# Keep only Thal marker genes
+# Keep only Thal genes
 mat_thal <- mat_thal[intersect(thal_markers$gene, rownames(mat_thal)), ]
 # Scale
 mat_thal_scaled <- t(scale(t(as.matrix(mat_thal))))
@@ -222,7 +222,8 @@ merged_cluster_thal <- sapply(thal_cols, function(cl) {
 top_anno_thal <- HeatmapAnnotation(
     Region = factor(merged_cluster_thal, levels = names(group_colors)),
     col = list(Region = group_colors),
-    annotation_name_side = "left"
+    annotation_name_side = "left",
+    show_legend = FALSE  # this disables only the annotation legend
 )
 
 hm_thal <- make_heatmap(mat_thal_scaled, top_anno_thal)
