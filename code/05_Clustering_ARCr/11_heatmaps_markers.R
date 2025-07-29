@@ -334,6 +334,12 @@ make_heatmap <- function(mat_scaled, top_anno, row_anno) {
         col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
         top_annotation = top_anno,
         left_annotation = row_anno,
+        row_split = row_cluster_group,
+        border = TRUE,  # adds a horizontal line between row groups
+        row_title_gp = gpar(fontsize = 10, fontface = "bold"),  # customize strip label
+        row_title_rot = 0,
+        gap = unit(1, "mm"),  # spacing between row blocks
+        column_names_gp = gpar(fontsize = 10),
         row_names_gp = gpar(fontsize = 7)
     )
 
@@ -343,7 +349,7 @@ make_heatmap <- function(mat_scaled, top_anno, row_anno) {
 hm1 <- make_heatmap(mat_scaled, top_anno, row_anno)
 hm1
 
-pdf(here(plotDir, "top3_marker_heatmap.pdf"), width = 14, height = 10)
+pdf(here(plotDir, "top3_marker_heatmap.pdf"), width = 12, height = 12)
 draw(hm1)
 dev.off()
 
