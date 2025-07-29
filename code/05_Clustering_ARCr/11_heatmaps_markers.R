@@ -250,26 +250,35 @@ clusters <- colnames(mat_scaled)
 
 # define group membership
 merged_cluster <- sapply(clusters, function(cl) {
-    if (grepl("LHb", cl)) {
-        "LHb"
-    } else if (grepl("MHb", cl)) {
-        "MHb"
-    } else if (grepl("Thal", cl)) {
-        "Thal"
-    } else {
-        "Other"
-    }
+    case_when(
+        grepl("LHb", cl) ~ "LHb",
+        grepl("MHb", cl) ~ "MHb",
+        grepl("Thal", cl) ~ "Thal",
+        grepl("Astro", cl) ~ "Astrocyte",
+        grepl("Oligo", cl) ~ "Oligo",
+        grepl("OPC", cl) ~ "OPC",
+        grepl("Microglia", cl) ~ "Microglia",
+        grepl("Endo", cl) ~ "Endo"
+        #TRUE ~ "Other"
+    )
 })
 
 # make it a named factor 
-merged_cluster <- factor(merged_cluster, levels = c("LHb", "MHb", "Thal", "Other"))
+merged_cluster <- factor(merged_cluster, 
+                         levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
 names(merged_cluster) <- clusters
+
 ## define colors for the group
 group_colors <- c(
     LHb = "#1f78b4",
     MHb = "#ad1d8c",
-    Thal = "#4d55b7",
-    Other = "black"
+    Oligo = "#384a08",
+    Astrocyte = "#532222", 
+    OPC = "#829454",
+    Microglia = "#141b02",
+    Endo = "#d95f02",
+    Thal = "#4d55b7"
+    #Other = "black"
 )
 
 top_anno <- HeatmapAnnotation(
@@ -285,29 +294,35 @@ names(row_cluster) <- ordered_gene_cluster$gene
 
 # Group each row (gene) by high-level cluster group (LHb, MHb, Thal, Other)
 row_cluster_group <- sapply(row_cluster, function(cl) {
-    if (grepl("LHb", cl)) {
-        "LHb"
-    } else if (grepl("MHb", cl)) {
-        "MHb"
-    } else if (grepl("Thal", cl)) {
-        "Thal"
-    } else {
-        "Other"
-    }
+    case_when(
+        grepl("LHb", cl) ~ "LHb",
+        grepl("MHb", cl) ~ "MHb",
+        grepl("Thal", cl) ~ "Thal",
+        grepl("Astro", cl) ~ "Astrocyte",
+        grepl("Oligo", cl) ~ "Oligo",
+        grepl("OPC", cl) ~ "OPC",
+        grepl("Microglia", cl) ~ "Microglia",
+        grepl("Endo", cl) ~ "Endo"
+        #TRUE ~ "Other"
+    )
 })
 
-row_cluster_group <- factor(row_cluster_group, levels = c("LHb", "MHb", "Thal", "Other"))
+row_cluster_group <- factor(row_cluster_group, 
+                            levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
 names(row_cluster_group) <- names(row_cluster)  # Ensure names = genes
 
 row_anno <- rowAnnotation(
-    Cluster = row_cluster_group,
-    col = list(Cluster = group_colors),
-    show_annotation_name = FALSE
+    Region = row_cluster_group,
+    col = list(Region = group_colors),
+    show_annotation_name = FALSE,
+    show_legend = FALSE
+    # annotation_name_side = "top",
+    # annotation_name_gp = gpar(fontsize = 10, fontface = "bold")
 )
 
 
 # Heatmap
-make_heatmap <- function(mat_scaled, top_anno) {
+make_heatmap <- function(mat_scaled, top_anno, row_anno) {
     
     hm <- Heatmap(
         mat_scaled,
@@ -319,13 +334,13 @@ make_heatmap <- function(mat_scaled, top_anno) {
         col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
         top_annotation = top_anno,
         left_annotation = row_anno,
-        row_names_gp = gpar(fontsize = 8)
+        row_names_gp = gpar(fontsize = 7)
     )
 
     return(hm)    
 }
 
-hm1 <- make_heatmap(mat_scaled, top_anno)
+hm1 <- make_heatmap(mat_scaled, top_anno, row_anno)
 hm1
 
 pdf(here(plotDir, "top3_marker_heatmap.pdf"), width = 14, height = 10)
