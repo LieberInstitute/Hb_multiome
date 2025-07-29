@@ -16,9 +16,7 @@ library("Signac")
 library("Matrix")
 library("ComplexHeatmap")
 library("circlize")
-# library("ggplot2")
 library("bluster")
-# library("patchwork")
 library("tidyverse")
 library("stringr")
 library("here")
@@ -33,7 +31,6 @@ here()
 inputRDS_Dir <- here(
     "processed-data",
     "05_Clustering_ARCr",
-    #"08_wnn_gene_expression_plts_renamed_idents"
     "17_wnn_clustering_final_ct"
 )
 plotDir <- here(
@@ -89,7 +86,8 @@ base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
 message("Processing Heatmap for ", base_name)
 
 
-## Read DEG file
+## =============================================================================
+## Read DEG file and prepare top genes with current cluster annotation
 
 DEG_file_name <- "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_cellTypes_integrated_top50.csv"
 DEG_file_name <- here(inputCVS_Dir, DEG_file_name)
@@ -105,36 +103,11 @@ table(unique(SeuratOBJ@meta.data$C.leiden_wnn)==unique(SeuratOBJ@meta.data$seura
 # TRUE 
 # 40 
 head(unique(SeuratOBJ@meta.data$cluster_ann))
-# [1] C.25.Excit.Thal C.04.LHb.4      C.09.LHb.4      C.01.Inhib.Thal
-# [5] C.13.LHb.4      C.08.LHb.4     
-# 40 Levels: C.04.LHb.4 C.05.LHb.2.7 C.06.LHb.4 C.07.MHb.2 ... C.41.Microglia
 
 # Replace numeric IDs clusters with annotated cluster names and remove clusters removed (NAs)
 head(df_markers_findALLSeurat)
 table(SeuratOBJ$seurat_clusters)
-# 1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16 
-# 3906 3371 3271 2911 2771 2667 2610 2537 2430 2344 2212 2187 2036 2026 1625 1607 
-# 17   18   19   20   21   22   23   24   25   26   27   28   29   30   31   32 
-# 1587 1535 1380 1343 1341 1327 1269  825  707  638  587  543  343  213  209  196 
-# 33   35   36   37   38   39   40   41 
-# 186  165  145  111  105   90   84   76 
 table(SeuratOBJ$cluster_ann)
-# C.04.LHb.4    C.05.LHb.2.7      C.06.LHb.4      C.07.MHb.2      C.08.LHb.4 
-# 2911            2771            2667            2610            2537 
-# C.09.LHb.4      C.10.MHb.1    C.11.MHb.1.2      C.13.LHb.4      C.14.MHb.1 
-# 2430            2344            2212            2036            2026 
-# C.16.MHb.1.2  C.18.LHb.1.3.4      C.23.LHb.1      C.24.LHb.4      C.30.LHb.7 
-# 1607            1535            1269             825             213 
-# C.31.LHb.4    C.33.LHb.1.3      C.36.MHb.3      C.40.LHb.4 C.01.Inhib.Thal 
-# 209             186             145              84            3906 
-# C.02.Oligo C.03.Excit.Thal C.12.Excit.Thal C.15.Excit.Thal C.17.Excit.Thal 
-# 3371            3271            2187            1625            1587 
-# C.19.Inhib.Thal  C.20.Astrocyte  C.21.Astrocyte      C.22.Oligo C.25.Excit.Thal 
-# 1380            1343            1341            1327             707 
-# C.26.OPC  C.27.Microglia C.28.Inhib.Thal       C.29.Endo C.32.Excit.Thal 
-# 638             587             543             343             196 
-# C.35.Excit.Thal       C.37.Thal C.38.Inhib.Thal C.39.Inhib.Thal  C.41.Microglia 
-# 165             111             105              90              76 
 
 # Build mapping from Seurat - Get numeric annotated name mapping
 cluster_map <- SeuratOBJ@meta.data |>
@@ -160,46 +133,27 @@ head(df_markers_findALLSeurat_clean[c("cluster", "cluster_name")])
 # cluster    cluster_name
 # 1       1 C.01.Inhib.Thal
 # 2       1 C.01.Inhib.Thal
-# 3       1 C.01.Inhib.Thal
-# 4       1 C.01.Inhib.Thal
-# 5       1 C.01.Inhib.Thal
-# 6       1 C.01.Inhib.Thal
+# 3       1 C.01.Inhib.Thal ...
 
 # check cleaned marker table is compatible with your expression matrix
 stopifnot(all(df_markers_findALLSeurat_clean$cluster_name %in% colnames(avg_expr)))
 
-## =============================================================================
 
-## Diagonal heatmap by cluster
-## function to subset only specific top x genes
+## =============================================================================
+# Prepare aggregated and scaled mxt to plot 'Diagonal heatmap' by cluster and broad cell-type
 
 topGenes_mtx <- function(dge_annotated_clusters, avg_expr, top_genes = 3) {
-    # dge_annotated_clusters = df_markers_findALLSeurat_clean
-    
-    # Get top N genes per cluster (highest avg_log2FC or pct diff)    
+
+    # Get top N genes per cluster (highest avg_log2FC)    
     top_markers <- dge_annotated_clusters |>
         group_by(cluster_name) |>
         top_n(n = top_genes, wt = avg_log2FC)
 
-    # global sorting - not diagonal structure
-    # ordered_genes <- top_markers |>
-    #     arrange(factor(cluster, levels = colnames(avg_expr)), desc(avg_log2FC)) |>
-    #     pull(gene)
-    
     # before sub-setting I force diagonal layout
     # order by cluster → avg_log2FC → one gene per row
     ordered_gene_cluster <- top_markers |>
         arrange(factor(cluster_name, levels = colnames(avg_expr)), desc(avg_log2FC)) |>
         distinct(gene, cluster_name)
-    # ordered_gene_cluster
-    # A tibble: 114 × 2
-    # Groups:   cluster_name [39]
-    #   gene     cluster_name
-    #   <chr>    <fct>       
-    # 1 ADGRL2   C.04.LHb.4  
-    # 2 GABRG3   C.04.LHb.4  
-    # 3 ADAMTS19 C.04.LHb.4  
-    # 4 COL25A1  C.05.LHb.2.7
     
     # Keep only genes that exist in avg_expr mtx
     ordered_gene_cluster <- ordered_gene_cluster |>
@@ -225,7 +179,10 @@ topGenes_mtx <- function(dge_annotated_clusters, avg_expr, top_genes = 3) {
 
 ## =============================================================================
 
-topGenes_mtx_lst <- topGenes_mtx(df_markers_findALLSeurat_clean, avg_expr, 3) 
+# call function to get aggregated and scaled mtx by cluster and broad cell-type
+
+top_genes_number = 3
+topGenes_mtx_lst <- topGenes_mtx(df_markers_findALLSeurat_clean, avg_expr, top_genes_number) 
 names(topGenes_mtx_lst)
 mat_scaled <- topGenes_mtx_lst[["mat_scaled"]]
 
@@ -235,20 +192,14 @@ dimnames(mat_scaled)
 length(dimnames(mat_scaled)[[1]]) # 188 genes
 length(dimnames(mat_scaled)[[2]]) # 40 clusters
 head(as.data.frame(as.matrix(mat_scaled[ , "C.37.Thal", drop = FALSE])))
-# C.37.Thal
-# ADGRL2   -0.5412150
-# GABRG3   -0.5346921
-# ADAMTS19 -0.2807590
-# VWC2L    -0.3725524
-# SCN7A    -0.6285511
-# COL25A1  -0.4042935
+
 
 ## =============================================================================
-
 # Define unique cluster names and assign colors based on keywords in cluster names
+
 clusters <- colnames(mat_scaled)
 
-# define group membership
+# define group membership at broad level
 merged_cluster <- sapply(clusters, function(cl) {
     case_when(
         grepl("LHb", cl) ~ "LHb",
@@ -259,7 +210,6 @@ merged_cluster <- sapply(clusters, function(cl) {
         grepl("OPC", cl) ~ "OPC",
         grepl("Microglia", cl) ~ "Microglia",
         grepl("Endo", cl) ~ "Endo"
-        #TRUE ~ "Other"
     )
 })
 
@@ -303,7 +253,6 @@ row_cluster_group <- sapply(row_cluster, function(cl) {
         grepl("OPC", cl) ~ "OPC",
         grepl("Microglia", cl) ~ "Microglia",
         grepl("Endo", cl) ~ "Endo"
-        #TRUE ~ "Other"
     )
 })
 
@@ -316,8 +265,6 @@ row_anno <- rowAnnotation(
     col = list(Region = group_colors),
     show_annotation_name = FALSE,
     show_legend = FALSE
-    # annotation_name_side = "top",
-    # annotation_name_gp = gpar(fontsize = 10, fontface = "bold")
 )
 
 
