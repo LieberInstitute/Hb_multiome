@@ -179,44 +179,9 @@ topGenes_mtx <- function(dge_annotated_clusters, avg_expr, top_genes = 3) {
 
 ## =============================================================================
 
-# call function to get aggregated and scaled mtx by cluster and broad cell-type
+# get and plot heatmap of aggregated and scaled mtx by cluster and broad cell-type
 
-top_genes_number = 3
-topGenes_mtx_lst <- topGenes_mtx(df_markers_findALLSeurat_clean, avg_expr, top_genes_number) 
-names(topGenes_mtx_lst)
-mat_scaled <- topGenes_mtx_lst[["mat_scaled"]]
-
-## verification
-str(mat_scaled)
-dimnames(mat_scaled)
-length(dimnames(mat_scaled)[[1]]) # 188 genes
-length(dimnames(mat_scaled)[[2]]) # 40 clusters
-head(as.data.frame(as.matrix(mat_scaled[ , "C.37.Thal", drop = FALSE])))
-
-
-## =============================================================================
-# Define unique cluster names and assign colors based on keywords in cluster names
-
-clusters <- colnames(mat_scaled)
-
-# define group membership at broad level
-merged_cluster <- sapply(clusters, function(cl) {
-    case_when(
-        grepl("LHb", cl) ~ "LHb",
-        grepl("MHb", cl) ~ "MHb",
-        grepl("Thal", cl) ~ "Thal",
-        grepl("Astro", cl) ~ "Astrocyte",
-        grepl("Oligo", cl) ~ "Oligo",
-        grepl("OPC", cl) ~ "OPC",
-        grepl("Microglia", cl) ~ "Microglia",
-        grepl("Endo", cl) ~ "Endo"
-    )
-})
-
-# make it a named factor 
-merged_cluster <- factor(merged_cluster, 
-                         levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
-names(merged_cluster) <- clusters
+top_genes_number = c(3, 5)
 
 ## define colors for the group
 group_colors <- c(
@@ -231,74 +196,124 @@ group_colors <- c(
     #Other = "black"
 )
 
-top_anno <- HeatmapAnnotation(
-    Region = merged_cluster,  # name shown in legend
-    col = list(Region = group_colors),
-    annotation_name_side = "left"
-)
 
-# Grouped row strips by cluster
-ordered_gene_cluster <- topGenes_mtx_lst[["ordered_genes"]]
-row_cluster <- ordered_gene_cluster$cluster_name
-names(row_cluster) <- ordered_gene_cluster$gene
-
-# Group each row (gene) by high-level cluster group (LHb, MHb, Thal, Other)
-row_cluster_group <- sapply(row_cluster, function(cl) {
-    case_when(
-        grepl("LHb", cl) ~ "LHb",
-        grepl("MHb", cl) ~ "MHb",
-        grepl("Thal", cl) ~ "Thal",
-        grepl("Astro", cl) ~ "Astrocyte",
-        grepl("Oligo", cl) ~ "Oligo",
-        grepl("OPC", cl) ~ "OPC",
-        grepl("Microglia", cl) ~ "Microglia",
-        grepl("Endo", cl) ~ "Endo"
-    )
-})
-
-row_cluster_group <- factor(row_cluster_group, 
-                            levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
-names(row_cluster_group) <- names(row_cluster)  # Ensure names = genes
-
-row_anno <- rowAnnotation(
-    Region = row_cluster_group,
-    col = list(Region = group_colors),
-    show_annotation_name = FALSE,
-    show_legend = FALSE
-)
-
-
-# Heatmap
-make_heatmap <- function(mat_scaled, top_anno, row_anno) {
+for (top in top_genes_number) {
     
-    hm <- Heatmap(
-        mat_scaled,
-        name = "Z-score",
-        cluster_rows = FALSE,
-        cluster_columns = FALSE,
-        show_row_names = TRUE,
-        show_column_names = TRUE,
-        col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
-        top_annotation = top_anno,
-        left_annotation = row_anno,
-        row_split = row_cluster_group,
-        border = TRUE,  # adds a horizontal line between row groups
-        row_title_gp = gpar(fontsize = 10, fontface = "bold"),  # customize strip label
-        row_title_rot = 0,
-        gap = unit(1, "mm"),  # spacing between row blocks
-        column_names_gp = gpar(fontsize = 10),
-        row_names_gp = gpar(fontsize = 7)
+    message("Processing top ", top, " genes by cluster ...")
+    
+    topGenes_mtx_lst <- topGenes_mtx(df_markers_findALLSeurat_clean, avg_expr, top) 
+    names(topGenes_mtx_lst)
+    mat_scaled <- topGenes_mtx_lst[["mat_scaled"]]
+    
+    ## verification
+    #str(mat_scaled)
+    dimnames(mat_scaled)
+    length(dimnames(mat_scaled)[[1]]) # 188 genes
+    length(dimnames(mat_scaled)[[2]]) # 40 clusters
+    #head(as.data.frame(as.matrix(mat_scaled[ , "C.37.Thal", drop = FALSE])))
+    
+    ## =============================================================================
+    # Define unique cluster names and assign colors based on keywords in cluster names
+    
+    clusters <- colnames(mat_scaled)
+    
+    # define group membership at broad level
+    merged_cluster <- sapply(clusters, function(cl) {
+        case_when(
+            grepl("LHb", cl) ~ "LHb",
+            grepl("MHb", cl) ~ "MHb",
+            grepl("Thal", cl) ~ "Thal",
+            grepl("Astro", cl) ~ "Astrocyte",
+            grepl("Oligo", cl) ~ "Oligo",
+            grepl("OPC", cl) ~ "OPC",
+            grepl("Microglia", cl) ~ "Microglia",
+            grepl("Endo", cl) ~ "Endo"
+        )
+    })
+    
+    # make it a named factor 
+    merged_cluster <- factor(merged_cluster, 
+                             levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
+    names(merged_cluster) <- clusters
+    
+    top_anno <- HeatmapAnnotation(
+        Region = merged_cluster,  # name shown in legend
+        col = list(Region = group_colors),
+        annotation_name_side = "left"
     )
+    
+    ## =============================================================================
+    # Grouped row strips by cluster
+    ordered_gene_cluster <- topGenes_mtx_lst[["ordered_genes"]]
+    row_cluster <- ordered_gene_cluster$cluster_name
+    names(row_cluster) <- ordered_gene_cluster$gene
+    
+    # Group each row (gene) by high-level cluster group (LHb, MHb, Thal, Other)
+    row_cluster_group <- sapply(row_cluster, function(cl) {
+        case_when(
+            grepl("LHb", cl) ~ "LHb",
+            grepl("MHb", cl) ~ "MHb",
+            grepl("Thal", cl) ~ "Thal",
+            grepl("Astro", cl) ~ "Astrocyte",
+            grepl("Oligo", cl) ~ "Oligo",
+            grepl("OPC", cl) ~ "OPC",
+            grepl("Microglia", cl) ~ "Microglia",
+            grepl("Endo", cl) ~ "Endo"
+        )
+    })
+    
+    row_cluster_group <- factor(row_cluster_group, 
+                                levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
+    names(row_cluster_group) <- names(row_cluster)  # Ensure names = genes
+    
+    row_anno <- rowAnnotation(
+        Region = row_cluster_group,
+        col = list(Region = group_colors),
+        show_annotation_name = FALSE,
+        show_legend = FALSE
+    )
+    
+    ## =============================================================================
+    
+    message("Preparing plot ...")
 
-    return(hm)    
+    make_heatmap <- function(mat_scaled, top_anno, row_anno) {
+        
+        hm <- Heatmap(
+            mat_scaled,
+            name = "Z-score",
+            cluster_rows = FALSE,
+            cluster_columns = FALSE,
+            show_row_names = TRUE,
+            show_column_names = TRUE,
+            col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
+            top_annotation = top_anno,
+            left_annotation = row_anno,
+            row_split = row_cluster_group,
+            border = TRUE,  # adds a horizontal line between row groups
+            row_title_gp = gpar(fontsize = 10, fontface = "bold"),  # customize strip label
+            row_title_rot = 0,
+            gap = unit(1, "mm"),  # spacing between row blocks
+            column_names_gp = gpar(fontsize = 10),
+            row_names_gp = gpar(fontsize = 7)
+        )
+    
+        return(hm)    
+    }
+    
+    hm1 <- make_heatmap(mat_scaled, top_anno, row_anno)
+    
+    f_name <- paste0("top", top,"_marker_heatmap.pdf")
+    if (top == 3) { height_htm <- 12; 16 }
+    
+    pdf(here(plotDir, f_name), width = 12, height = height_htm)
+    draw(hm1)
+    dev.off()
+    
+    message("Plot done and saved for top ", top, " genes")
+
 }
 
-hm1 <- make_heatmap(mat_scaled, top_anno, row_anno)
-hm1
-
-pdf(here(plotDir, "top3_marker_heatmap.pdf"), width = 12, height = 12)
-draw(hm1)
-dev.off()
 
 
 ## =============================================================================
