@@ -233,7 +233,7 @@ mat_scaled <- topGenes_mtx_lst[["mat_scaled"]]
 str(mat_scaled)
 dimnames(mat_scaled)
 length(dimnames(mat_scaled)[[1]]) # 188 genes
-length(dimnames(mat_scaled)[[2]]) # 188 clusters
+length(dimnames(mat_scaled)[[2]]) # 40 clusters
 head(as.data.frame(as.matrix(mat_scaled[ , "C.37.Thal", drop = FALSE])))
 # C.37.Thal
 # ADGRL2   -0.5412150
@@ -243,6 +243,7 @@ head(as.data.frame(as.matrix(mat_scaled[ , "C.37.Thal", drop = FALSE])))
 # SCN7A    -0.6285511
 # COL25A1  -0.4042935
 
+## =============================================================================
 
 # Define unique cluster names and assign colors based on keywords in cluster names
 clusters <- colnames(mat_scaled)
@@ -277,6 +278,33 @@ top_anno <- HeatmapAnnotation(
     annotation_name_side = "left"
 )
 
+# Grouped row strips by cluster
+ordered_gene_cluster <- topGenes_mtx_lst[["ordered_genes"]]
+row_cluster <- ordered_gene_cluster$cluster_name
+names(row_cluster) <- ordered_gene_cluster$gene
+
+# Group each row (gene) by high-level cluster group (LHb, MHb, Thal, Other)
+row_cluster_group <- sapply(row_cluster, function(cl) {
+    if (grepl("LHb", cl)) {
+        "LHb"
+    } else if (grepl("MHb", cl)) {
+        "MHb"
+    } else if (grepl("Thal", cl)) {
+        "Thal"
+    } else {
+        "Other"
+    }
+})
+
+row_cluster_group <- factor(row_cluster_group, levels = c("LHb", "MHb", "Thal", "Other"))
+names(row_cluster_group) <- names(row_cluster)  # Ensure names = genes
+
+row_anno <- rowAnnotation(
+    Cluster = row_cluster_group,
+    col = list(Cluster = group_colors),
+    show_annotation_name = FALSE
+)
+
 
 # Heatmap
 make_heatmap <- function(mat_scaled, top_anno) {
@@ -290,7 +318,8 @@ make_heatmap <- function(mat_scaled, top_anno) {
         show_column_names = TRUE,
         col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
         top_annotation = top_anno,
-        row_names_gp = gpar(fontsize = 7)
+        left_annotation = row_anno,
+        row_names_gp = gpar(fontsize = 8)
     )
 
     return(hm)    
