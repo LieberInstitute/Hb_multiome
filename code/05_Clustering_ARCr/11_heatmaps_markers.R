@@ -64,7 +64,7 @@ seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
 colnames(SeuratOBJ@meta.data)
 DefaultAssay(SeuratOBJ) <- "RNA"
-levels(SeuratOBJ)
+cluster_levels <- levels(SeuratOBJ)
 # [1] "C.04.LHb.4"      "C.05.LHb.2.7"    "C.06.LHb.4"      "C.07.MHb.2"     
 # [5] "C.08.LHb.4"      "C.09.LHb.4"      "C.10.MHb.1"      "C.11.MHb.1.2"   
 # [9] "C.13.LHb.4"      "C.14.MHb.1"      "C.16.MHb.1.2"    "C.18.LHb.1.3.4" 
@@ -101,46 +101,148 @@ head(df_markers_findALLSeurat)
 # 2     0   3.849508 0.900 0.083         0       1      KIT        DD_Inhib.Thal
 # 3     0   3.682782 0.927 0.122         0       1    MEIS2      LB_Thalamus/MDm
 
-## function to subset only specific top x genes
-topGenes_mtx <- function(SeuratOBJ, df_markers_findALLSeurat, avg_expr, top_genes = 3) {
-    # Get top gene per cluster (highest avg_log2FC or pct diff)    
-    top_markers <- df_markers_findALLSeurat |>
-        group_by(cluster) |>
-        top_n(n = top_genes, wt = avg_log2FC)
-    head(top_markers)
-    
-    # Keep only genes that exist in avg_expr
-    valid_genes <- intersect(unique(top_markers$gene), rownames(avg_expr))
-    top_markers <- filter(top_markers, gene %in% valid_genes)
-    # Subset matrix
-    mat <- avg_expr[valid_genes, ]
-    head(mat)
-    
-    # order genes per cluster
-    ordered_genes <- top_markers |>
-        arrange(factor(cluster, levels = colnames(mat)), desc(avg_log2FC))
+table(unique(SeuratOBJ@meta.data$C.leiden_wnn)==unique(SeuratOBJ@meta.data$seurat_clusters))
+# TRUE 
+# 40 
+head(unique(SeuratOBJ@meta.data$cluster_ann))
+# [1] C.25.Excit.Thal C.04.LHb.4      C.09.LHb.4      C.01.Inhib.Thal
+# [5] C.13.LHb.4      C.08.LHb.4     
+# 40 Levels: C.04.LHb.4 C.05.LHb.2.7 C.06.LHb.4 C.07.MHb.2 ... C.41.Microglia
 
-    mat_ordered <- mat[ordered_genes$gene, ]
+# Replace numeric IDs clusters with annotated cluster names and remove clusters removed (NAs)
+head(df_markers_findALLSeurat)
+table(SeuratOBJ$seurat_clusters)
+# 1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16 
+# 3906 3371 3271 2911 2771 2667 2610 2537 2430 2344 2212 2187 2036 2026 1625 1607 
+# 17   18   19   20   21   22   23   24   25   26   27   28   29   30   31   32 
+# 1587 1535 1380 1343 1341 1327 1269  825  707  638  587  543  343  213  209  196 
+# 33   35   36   37   38   39   40   41 
+# 186  165  145  111  105   90   84   76 
+table(SeuratOBJ$cluster_ann)
+# C.04.LHb.4    C.05.LHb.2.7      C.06.LHb.4      C.07.MHb.2      C.08.LHb.4 
+# 2911            2771            2667            2610            2537 
+# C.09.LHb.4      C.10.MHb.1    C.11.MHb.1.2      C.13.LHb.4      C.14.MHb.1 
+# 2430            2344            2212            2036            2026 
+# C.16.MHb.1.2  C.18.LHb.1.3.4      C.23.LHb.1      C.24.LHb.4      C.30.LHb.7 
+# 1607            1535            1269             825             213 
+# C.31.LHb.4    C.33.LHb.1.3      C.36.MHb.3      C.40.LHb.4 C.01.Inhib.Thal 
+# 209             186             145              84            3906 
+# C.02.Oligo C.03.Excit.Thal C.12.Excit.Thal C.15.Excit.Thal C.17.Excit.Thal 
+# 3371            3271            2187            1625            1587 
+# C.19.Inhib.Thal  C.20.Astrocyte  C.21.Astrocyte      C.22.Oligo C.25.Excit.Thal 
+# 1380            1343            1341            1327             707 
+# C.26.OPC  C.27.Microglia C.28.Inhib.Thal       C.29.Endo C.32.Excit.Thal 
+# 638             587             543             343             196 
+# C.35.Excit.Thal       C.37.Thal C.38.Inhib.Thal C.39.Inhib.Thal  C.41.Microglia 
+# 165             111             105              90              76 
+
+# Build mapping from Seurat - Get numeric annotated name mapping
+cluster_map <- SeuratOBJ@meta.data |>
+    select(seurat_clusters, cluster_ann) |>
+    distinct() |>
+    mutate(seurat_clusters = as.integer(as.character(seurat_clusters)))  # ensures consistent ordering
+cluster_map
+#                       seurat_clusters     cluster_ann
+# S04_AAACATGCAGTAATAG-1               1 C.01.Inhib.Thal
+# S04_AACCTTGCATTATGAC-1               2      C.02.Oligo
+# S04_ATCTTTGGTGATGGCT-1               3 C.03.Excit.Thal
+# S04_AAACAGCCAGCAAGGC-1               4      C.04.LHb.4
+
+# clean DEG table (clusters removed) and join
+df_markers_findALLSeurat_clean <- df_markers_findALLSeurat |>
+    mutate(cluster = as.integer(as.character(cluster))) |>
+    left_join(cluster_map, by = c("cluster" = "seurat_clusters")) |>
+    rename(cluster_name = cluster_ann) |>
+    filter(!is.na(cluster_name))
+
+unique(df_markers_findALLSeurat_clean$cluster_name)
+head(df_markers_findALLSeurat_clean[c("cluster", "cluster_name")])
+# cluster    cluster_name
+# 1       1 C.01.Inhib.Thal
+# 2       1 C.01.Inhib.Thal
+# 3       1 C.01.Inhib.Thal
+# 4       1 C.01.Inhib.Thal
+# 5       1 C.01.Inhib.Thal
+# 6       1 C.01.Inhib.Thal
+
+# check cleaned marker table is compatible with your expression matrix
+stopifnot(all(df_markers_findALLSeurat_clean$cluster_name %in% colnames(avg_expr)))
+
+## =============================================================================
+
+## Diagonal heatmap by cluster
+## function to subset only specific top x genes
+
+topGenes_mtx <- function(SeuratOBJ, dge_annotated_clusters, avg_expr, top_genes = 3) {
+    # dge_annotated_clusters = df_markers_findALLSeurat_clean
     
-    # Scale across rows (genes) - (row-wise z-score)
+    # Get top N genes per cluster (highest avg_log2FC or pct diff)    
+    top_markers <- dge_annotated_clusters |>
+        group_by(cluster_name) |>
+        top_n(n = top_genes, wt = avg_log2FC)
+
+    # global sorting - not diagonal structure
+    # ordered_genes <- top_markers |>
+    #     arrange(factor(cluster, levels = colnames(avg_expr)), desc(avg_log2FC)) |>
+    #     pull(gene)
+    
+    # before sub-setting I force diagonal layout
+    # order by cluster → avg_log2FC → one gene per row
+    ordered_gene_cluster <- top_markers |>
+        arrange(factor(cluster_name, levels = colnames(avg_expr)), desc(avg_log2FC)) |>
+        distinct(gene, cluster_name)
+    # ordered_gene_cluster
+    # A tibble: 114 × 2
+    # Groups:   cluster_name [39]
+    #   gene     cluster_name
+    #   <chr>    <fct>       
+    # 1 ADGRL2   C.04.LHb.4  
+    # 2 GABRG3   C.04.LHb.4  
+    # 3 ADAMTS19 C.04.LHb.4  
+    # 4 COL25A1  C.05.LHb.2.7
+    
+    # Keep only genes that exist in avg_expr mtx
+    ordered_gene_cluster <- ordered_gene_cluster |>
+        filter(gene %in% rownames(avg_expr))
+    table(ordered_gene_cluster$cluster_name %in% colnames(avg_expr))
+    # TRUE 
+    # 114 
+    
+    # Subset matrix and order mtx: rows = genes, columns = clusters
+    mat_ordered <- avg_expr[ordered_gene_cluster$gene, ordered_gene_cluster$cluster_name]
+    #  scale (row-wise z-score)
     mat_scaled <- t(scale(t(as.matrix(mat_ordered))))
     
-    return(mat_scaled)
+    return(list(
+        mat_scaled = mat_scaled,
+        ordered_genes = ordered_gene_cluster
+    ))
     
 }
 
-mat_ordered <- topGenes_mtx(SeuratOBJ, df_markers_findALLSeurat, avg_expr, 5) 
+## =============================================================================
+
+topGenes_mtx_lst <- topGenes_mtx(SeuratOBJ, df_markers_findALLSeurat_clean, avg_expr, 5) 
+names(topGenes_mtx_lst)
+mat_scaled <- topGenes_mtx_lst[["mat_scaled"]]
 
 ## verification
-str(mat_ordered)
-mat@Dimnames[[1]] # genes
-length(mat@Dimnames[[1]]) # 92
-mat@Dimnames[[2]] # clusters
-length(mat@Dimnames[[2]]) # 40
-as.data.frame(as.matrix(mat[ , "C.37.Thal", drop = FALSE]))
+str(mat_scaled)
+dimnames(mat_scaled)
+length(dimnames(mat_scaled)[[1]]) # 188 genes
+length(dimnames(mat_scaled)[[2]]) # 188 clusters
+head(as.data.frame(as.matrix(mat_scaled[ , "C.37.Thal", drop = FALSE])))
+# C.37.Thal
+# ADGRL2   -0.5412150
+# GABRG3   -0.5346921
+# ADAMTS19 -0.2807590
+# VWC2L    -0.3725524
+# SCN7A    -0.6285511
+# COL25A1  -0.4042935
+
 
 # Define unique cluster names and assign colors based on keywords in cluster names
-clusters <- colnames(mat_ordered)
+clusters <- colnames(mat_scaled)
 
 # define group membership
 merged_cluster <- sapply(clusters, function(cl) {
@@ -192,6 +294,8 @@ make_heatmap <- function(mat_scaled, top_anno) {
 }
 
 hm1 <- make_heatmap(mat_scaled, top_anno)
+hm1
+
 pdf(here(plotDir, "top3_marker_heatmap.pdf"), width = 14, height = 10)
 draw(hm1)
 dev.off()
