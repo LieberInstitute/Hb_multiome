@@ -198,7 +198,7 @@ group_colors <- c(
 
 
 for (top in top_genes_number) {
-    
+    # top = 3
     message("Processing top ", top, " genes by cluster ...")
     
     topGenes_mtx_lst <- topGenes_mtx(df_markers_findALLSeurat_clean, avg_expr, top) 
@@ -277,7 +277,7 @@ for (top in top_genes_number) {
     
     message("Preparing plot ...")
 
-    make_heatmap <- function(mat_scaled, top_anno, row_anno) {
+    make_heatmap <- function(mat_scaled, row_cluster_group, top_anno, row_anno) {
         
         hm <- Heatmap(
             mat_scaled,
@@ -301,8 +301,8 @@ for (top in top_genes_number) {
         return(hm)    
     }
     
-    hm1 <- make_heatmap(mat_scaled, top_anno, row_anno)
-    
+    hm1 <- make_heatmap(mat_scaled, row_cluster_group, top_anno, row_anno)
+    hm1
     f_name <- paste0("top", top,"_marker_heatmap.pdf")
     if (top == 3) { height_htm <- 12; 16 }
     
@@ -315,317 +315,383 @@ for (top in top_genes_number) {
 }
 
 
-
 ## =============================================================================
-## Subset Medial, Lateral and Thal CLusters
+# Applied to the same mtx from topGenes_mtx_lst(), this is an alterntive version
+#    to visualize multiple diagonal blocks grouped by brain region (e.g., LHb, MHb, Thal, etc.)
 
-# cluster_levels <- levels(SeuratOBJ)
-# MHb <- grep("MHb", cluster_levels, value = TRUE)
-# LHb <- grep("LHb", cluster_levels, value = TRUE)
-# Thal <- grep("Thal", cluster_levels, value = TRUE)
+for (top in top_genes_number) {
+    
+    message("Processing top ", top, " genes by cluster ...")
+    
+    # Assign each column (cluster) to a region
+    column_cluster_group <- sapply(colnames(mat_scaled), function(cl) {
+        case_when(
+            grepl("LHb", cl) ~ "LHb",
+            grepl("MHb", cl) ~ "MHb",
+            grepl("Thal", cl) ~ "Thal",
+            grepl("Astro", cl) ~ "Astrocyte",
+            grepl("Oligo", cl) ~ "Oligo",
+            grepl("OPC", cl) ~ "OPC",
+            grepl("Microglia", cl) ~ "Microglia",
+            grepl("Endo", cl) ~ "Endo"
+        )
+    })
+    
+    column_cluster_group <- factor(column_cluster_group, 
+                                   levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
+    
+    names(column_cluster_group) <- colnames(mat_scaled)
+
+    make_heatmap <- function(mat_scaled, column_cluster_group, top_anno, row_anno) {
+        Heatmap(
+            mat_scaled,
+            name = "Z-score",
+            cluster_rows = FALSE,
+            cluster_columns = FALSE,
+            show_row_names = TRUE,
+            show_column_names = TRUE,
+            col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
+            top_annotation = top_anno,
+            left_annotation = row_anno,
+            row_split = row_cluster_group,
+            column_split = column_cluster_group,  # adds visual column blocks
+            border = TRUE,  # adds a horizontal line between row groups
+            row_title_gp = gpar(fontsize = 9, fontface = "bold"),  # customize strip label
+            column_title_gp = gpar(fontsize = 9, fontface = "bold"),  # customize strip label
+            row_names_gp = gpar(fontsize = 7),
+            column_names_gp = gpar(fontsize = 8),
+            row_title_rot = 0,
+            column_title_rot = 45,
+            gap = unit(1, "mm")  # spacing between row blocks
+        )
+
+    }
+    
+    hm1 <- make_heatmap(mat_scaled, column_cluster_group, top_anno, row_anno)
+    hm1
+    
+    f_name <- paste0("top", top,"_marker_heatmap_column_block.pdf")
+    if (top == 3) { height_htm <- 12; 18 }
+    
+    pdf(here(plotDir, f_name), width = 12, height = height_htm)
+    draw(hm1)
+    dev.off()
+    
+    message("Plot done and saved for top ", top, " genes")
+
+}
+
+
+# ## =============================================================================
+# ## Subset Medial, Lateral and Thal CLusters
 # 
-# ## get thalamus clusters
-# cells_to_keep <- WhichCells(SeuratOBJ, idents = Thal)
-# SeuratOBJ_subset <- subset(SeuratOBJ, cells = cells_to_keep)
-# levels(SeuratOBJ_subset)
-# unique(Idents(SeuratOBJ_subset))
-
-top_markers <- df_markers_findALLSeurat |>
-    group_by(cluster) |>
-    top_n(n = 5, wt = avg_log2FC)
-head(top_markers)
-
-## Filter genes for Thal clusters
-colnames(df_markers_findALLSeurat)
-thal_markers <- df_markers_findALLSeurat |>
-    filter(grepl("Thal", cell_type))
-
-## Subset the matrix 
-# Keep only Thal columns
-#colnames(mat)
-thal_cols <- grep("Thal", colnames(mat), value = TRUE)
-mat_thal <- mat[, thal_cols]
-
-# Keep only Thal genes
-mat_thal <- mat_thal[intersect(thal_markers$gene, rownames(mat_thal)), ]
-# Scale
-mat_thal_scaled <- t(scale(t(as.matrix(mat_thal))))
-
-# create merged_cluster annotation (Thal group only)
-merged_cluster_thal <- sapply(thal_cols, function(cl) {
-    if (grepl("LHb", cl)) {
-        "LHb"
-    } else if (grepl("MHb", cl)) {
-        "MHb"
-    } else if (grepl("Thal", cl)) {
-        "Thal"
-    } else {
-        "Other"
-    }
-})
-
-top_anno_thal <- HeatmapAnnotation(
-    Region = factor(merged_cluster_thal, levels = names(group_colors)),
-    col = list(Region = group_colors),
-    annotation_name_side = "left",
-    show_legend = FALSE  # this disables only the annotation legend
-)
-
-hm_thal <- make_heatmap(mat_thal_scaled, top_anno_thal)
-
-pdf("thal_top3_marker_heatmap.pdf", width = 10, height = 8)
-draw(hm_thal)
-dev.off()
-
-## =============================================================================
-
-
-
-
-
-
-
-########## Gene markers lists. New function to join LB and DD gene markers lists
-
-## Source gene markers lists 
-
-source(here("code", "04_DiffExpr_Clustering_seurat", "remote_DGE_marker_gene_lists.R"))   
-
-markers.custom <- get_multiple_markers_genes_lst()
-tmp <- names(markers.custom)
-tmp <- paste(tmp, collapse=', ')
-message("Processing ", length(markers.custom), " categories of gene-markers list \n *****(", tmp, ")*****")
-
-
-## merge DD markers for heatmap with 'Data-driven' markers and merge LB markers for heatmap with 'Literature-Based'markers
-
-# prepare DD marker's list
-DD_markers_lst <- append(markers.custom$DD_MHb, markers.custom$DD_LHb) 
-# prepare LB marker's list
-LB_markers_lst <- markers.custom[grep("^LB", names(markers.custom))]
-LB_markers_lst <- as.vector(unlist(LB_markers_lst, recursive = FALSE))
-
-## scale expression once for fair comparison across all clusters
-
-# Keep only genes found in the dataset
-dd_markers <- DD_markers_lst[DD_markers_lst %in% rownames(SeuratOBJ)]
-lb_markers <- LB_markers_lst[LB_markers_lst %in% rownames(SeuratOBJ)]
-
-if (length(dd_markers)==0 || length(lb_markers)==0) {
-    stop()
-} else {
-    combined_named_list <- list(
-        Hb_DD_markers = dd_markers,
-        Hb_LB_markers = lb_markers
-    )
-        
-}
-names(combined_named_list)
-# [1] "Hb_DD_markers" "Hb_LB_markers"
-
-
-## prepare Seurat object
-
-# Set cell type as the identity class for grouping
-colnames(SeuratOBJ@meta.data)
-head(SeuratOBJ@meta.data$cluster_ann)
-unique(SeuratOBJ@meta.data$cluster_ann)
-#Idents(SeuratOBJ) <- "seurat_clusters"
-
-# Multi-cell-type heatmap, scale all relevant genes once, across all cells
-genes_to_scale <- as.vector(unlist(append(combined_named_list[1], combined_named_list[2])))
-SeuratOBJ <- ScaleData(SeuratOBJ, features = genes_to_scale)
-
-
-
-######## Plot 1: plot the 2 gene-markers list (DD, LB) across all clusters in separate heatmaps
-
-heatmap_list <- list()
-
-for (ct in seq_along(combined_named_list)) {
-
-    # ct=2
-    # grab cell type names and label
-    ct_name <- names(combined_named_list[ct])
-    print(paste0("Cell-type: ", ct_name))
-    markers_to_plt <- unlist(combined_named_list[ct])
-    # markers_to_plt=c("PRKCB"      "ADCY6"      "DCHS2"      "GLIS1"      "GREB1L")
-    title_label <- paste0("Cell type class: ", ct_name)
-    message("Preparing heatmap with class: ", ct_name)    
-    
-    # ####### this heatmap plot all Hb medial and lateral markers across all clusters - cluster size aware
-    # heatmap_plot <- DoHeatmap(SeuratOBJ,
-    #                           group.by = "cluster_ann",
-    #                           features = markers_to_plt, size = 2,
-    #                           disp.min = -2.5, disp.max = 2.5,
-    #                           group.bar = TRUE, # Omits color bar by identity class (from group.by)
-    #                           slot = "scale.data") +
-    #     scale_fill_gradientn(colors = c("blue", "white", "red")) +
-    #     ggtitle(title_label) +
-    #     theme(
-    #         plot.title = element_text(hjust = 0.5),
-    #         axis.text.y = element_text(size = 6),
-    #         legend.position = "none"
-    #     )
-    # # disp.min / disp.max = 2.5: gene-expr after scaling can have extreme values. Clipping keeps the heatmap visually interpretable
-    # print(heatmap_plot)
-    
-    
-    ####### this heatmap plot all Hb medial and lateral markers across all clusters - same cluster size
-    
-    # Downsample to equal cell numbers per group
-    # Number of cells per group you want (e.g., 50)
-    n_cells <- 50
-    
-    # Randomly sample equal number of cells from each group to control column size
-    # Add cell IDs as a column first (from rownames)
-    meta_df <- SeuratOBJ@meta.data
-    meta_df$cell_id <- rownames(meta_df)
-    # Sample cells evenly across clusters
-    cells_to_plot <- meta_df |>
-        group_by(cluster_ann) |>
-        sample_n(size = min(n_cells, n()), replace = FALSE) |>
-        arrange(cluster_ann) |>   # This sets a fixed order to remove dendogram manually
-        pull(cell_id)
-    length(cells_to_plot)
-    # Reorder markers if needed
-    # ordered_markers <- markers_to_plt[markers_to_plt %in% rownames(SeuratOBJ)]
-    
-    # Plot with fixed number of cells per group (uniform column width)
-    
-    temp_plot <- DoHeatmap(SeuratOBJ,
-                              features = markers_to_plt,
-                              group.by = "cluster_ann",
-                              cells = cells_to_plot,
-                              group.bar = TRUE,
-                              label = TRUE,
-                              size = 2,
-                              disp.min = -2.5, disp.max = 2.5, 
-                              slot = "scale.data") +
-        scale_fill_gradientn(colors = c("blue", "white", "red")) +
-        #ggtitle(title_label) +
-        theme(
-            plot.title = element_blank(),               # remove internal title
-            #plot.title = element_text(hjust = 0.5, size = 8),
-            plot.margin = margin(t = 20, r = 5, b = 30, l = 5),  # extra bottom space
-            axis.text.y = element_text(size = 5),
-            axis.text.x = element_blank(),        # hide x-axis labels (just in case)
-            axis.ticks.x = element_blank(),       # remove x-axis ticks
-            legend.position = "none"
-        )
-    print(temp_plot)
-    # Optionally add horizontal lines for this specific marker group
-    
-    if (ct_name == "Hb_LB_markers") {
-        # Note: y-axis is reversed — top gene = lowest y value
-        # make a vector with size of gene blocks to add them to heatmpas - seperate cell types by marker class
-        gene_blks <- markers.custom[grep("^LB", names(markers.custom))]
-        gene_blks_lng <- map_int(gene_blks, ~ length(.x) )    
-        gene_block_sizes <- as.vector(gene_blks_lng)
-        cumulative_positions <- cumsum(gene_block_sizes)
-        
-        # Add lines at block boundaries (skip last)
-        for (y_pos in cumulative_positions[-length(cumulative_positions)]) {
-            temp_plot <- temp_plot +
-                geom_hline(yintercept = y_pos + 0.5, color = "black", linetype = "solid", linewidth = 0.3)
-        }
-    }
-    
-    # Store the final plot in the list
-    heatmap_list[[ct]] <- temp_plot
-    
-}
-
-# Combine all heatmaps side by side
-
-length(heatmap_list)
-
-combined_plot <- wrap_plots(heatmap_list, ncol = length(heatmap_list)) +
-    plot_annotation(
-        title = "Habenula Data-Driven and Literature-Based gene markers side to side",
-        theme = theme(
-            plot.title = element_text(size = 10, hjust = 0.5, face = "bold")
-        )
-    )
-
-f_name <- paste0(
-    base_name,
-    "_heatmap_all_reference_markers_width5.pdf"
-)
-pdf(file = here(plotDir, f_name), width = 4 * length(heatmap_list), height = 6)
-print(combined_plot)
-dev.off()
-
-length(heatmap_list)
-#heatmap_list[1]
-f_name <- paste0(
-    base_name,
-    "_heatmap_all_reference_markers_width10.pdf"
-)
-combined_plot <- wrap_plots(heatmap_list, ncol = length(heatmap_list))
-pdf(file = here(plotDir, f_name), width = 10 * length(heatmap_list), height = 6)
-print(combined_plot)
-dev.off()
-
-
-
-######## Plot 2: plot the top-x genes (markers) used to annotate each cluster
-
-# df_markers_findALLSeurat$cluster
-# df_markers_findALLSeurat$gene
-# df_markers_findALLSeurat$cell_type
-
-# Downsample to equal cell numbers per group
-# Number of cells per group you want (e.g., 50)
-n_cells <- 50
-
-# Randomly sample equal number of cells from each group to control column size
-# Add cell IDs as a column first (from rownames)
-meta_df <- SeuratOBJ@meta.data
-meta_df$cell_id <- rownames(meta_df)
-# Sample cells evenly across clusters
-cells_to_plot <- meta_df |>
-    group_by(cluster_ann) |>
-    sample_n(size = min(n_cells, n()), replace = FALSE) |>
-    arrange(cluster_ann) |>   # This sets a fixed order to remove dendrogram manually
-    pull(cell_id)
-
-# extract top 10 genes per cluster
-top_markers <- df_markers_findALLSeurat %>%
-    group_by(cluster) %>%
-    top_n(n = 10, wt = avg_log2FC)
-
-# Unique gene list
-marker_genes <- unique(top_markers$gene)
-marker_genes <- marker_genes[marker_genes %in% rownames(SeuratOBJ)]
-#SeuratOBJ <- ScaleData(SeuratOBJ, features = marker_genes, verbose = FALSE)
-
-#Idents(SeuratOBJ) <- "cluster_ann"
-
-plt <- DoHeatmap(SeuratOBJ,
-          features = marker_genes,
-          group.by = "cluster_ann",
-          cells = cells_to_plot,
-          group.bar = TRUE,
-          size = 3) +
-    scale_fill_gradientn(colors = c("blue", "white", "red")) +
-    #ggtitle("Top Marker Genes per Cluster") +
-    theme(#plot.title = element_text(hjust = 0.5, size = 8),
-          plot.margin = margin(t = 20, r = 5, b = 30, l = 5),  # extra bottom space
-          axis.text.y = element_text(size = 5),
-          axis.text.x = element_blank(),        # hide x-axis labels (just in case)
-          axis.ticks.x = element_blank(),       # remove x-axis ticks
-          legend.position = "none")
-
-f_name <- paste0(
-    base_name,
-    "_heatmap_top10genes.pdf"
-)
-pdf(file = here(plotDir, f_name), width = 5 * length(heatmap_list), height = 6)
-print(plt)
-dev.off()
-
-message("All plots done!")
+# # cluster_levels <- levels(SeuratOBJ)
+# # MHb <- grep("MHb", cluster_levels, value = TRUE)
+# # LHb <- grep("LHb", cluster_levels, value = TRUE)
+# # Thal <- grep("Thal", cluster_levels, value = TRUE)
+# # 
+# # ## get thalamus clusters
+# # cells_to_keep <- WhichCells(SeuratOBJ, idents = Thal)
+# # SeuratOBJ_subset <- subset(SeuratOBJ, cells = cells_to_keep)
+# # levels(SeuratOBJ_subset)
+# # unique(Idents(SeuratOBJ_subset))
+# 
+# top_markers <- df_markers_findALLSeurat |>
+#     group_by(cluster) |>
+#     top_n(n = 5, wt = avg_log2FC)
+# head(top_markers)
+# 
+# ## Filter genes for Thal clusters
+# colnames(df_markers_findALLSeurat)
+# thal_markers <- df_markers_findALLSeurat |>
+#     filter(grepl("Thal", cell_type))
+# 
+# ## Subset the matrix 
+# # Keep only Thal columns
+# #colnames(mat)
+# thal_cols <- grep("Thal", colnames(mat), value = TRUE)
+# mat_thal <- mat[, thal_cols]
+# 
+# # Keep only Thal genes
+# mat_thal <- mat_thal[intersect(thal_markers$gene, rownames(mat_thal)), ]
+# # Scale
+# mat_thal_scaled <- t(scale(t(as.matrix(mat_thal))))
+# 
+# # create merged_cluster annotation (Thal group only)
+# merged_cluster_thal <- sapply(thal_cols, function(cl) {
+#     if (grepl("LHb", cl)) {
+#         "LHb"
+#     } else if (grepl("MHb", cl)) {
+#         "MHb"
+#     } else if (grepl("Thal", cl)) {
+#         "Thal"
+#     } else {
+#         "Other"
+#     }
+# })
+# 
+# top_anno_thal <- HeatmapAnnotation(
+#     Region = factor(merged_cluster_thal, levels = names(group_colors)),
+#     col = list(Region = group_colors),
+#     annotation_name_side = "left",
+#     show_legend = FALSE  # this disables only the annotation legend
+# )
+# 
+# hm_thal <- make_heatmap(mat_thal_scaled, top_anno_thal)
+# 
+# pdf("thal_top3_marker_heatmap.pdf", width = 10, height = 8)
+# draw(hm_thal)
+# dev.off()
+# 
+# ## =============================================================================
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# ########## Gene markers lists. New function to join LB and DD gene markers lists
+# 
+# ## Source gene markers lists 
+# 
+# source(here("code", "04_DiffExpr_Clustering_seurat", "remote_DGE_marker_gene_lists.R"))   
+# 
+# markers.custom <- get_multiple_markers_genes_lst()
+# tmp <- names(markers.custom)
+# tmp <- paste(tmp, collapse=', ')
+# message("Processing ", length(markers.custom), " categories of gene-markers list \n *****(", tmp, ")*****")
+# 
+# 
+# ## merge DD markers for heatmap with 'Data-driven' markers and merge LB markers for heatmap with 'Literature-Based'markers
+# 
+# # prepare DD marker's list
+# DD_markers_lst <- append(markers.custom$DD_MHb, markers.custom$DD_LHb) 
+# # prepare LB marker's list
+# LB_markers_lst <- markers.custom[grep("^LB", names(markers.custom))]
+# LB_markers_lst <- as.vector(unlist(LB_markers_lst, recursive = FALSE))
+# 
+# ## scale expression once for fair comparison across all clusters
+# 
+# # Keep only genes found in the dataset
+# dd_markers <- DD_markers_lst[DD_markers_lst %in% rownames(SeuratOBJ)]
+# lb_markers <- LB_markers_lst[LB_markers_lst %in% rownames(SeuratOBJ)]
+# 
+# if (length(dd_markers)==0 || length(lb_markers)==0) {
+#     stop()
+# } else {
+#     combined_named_list <- list(
+#         Hb_DD_markers = dd_markers,
+#         Hb_LB_markers = lb_markers
+#     )
+#         
+# }
+# names(combined_named_list)
+# # [1] "Hb_DD_markers" "Hb_LB_markers"
+# 
+# 
+# ## prepare Seurat object
+# 
+# # Set cell type as the identity class for grouping
+# colnames(SeuratOBJ@meta.data)
+# head(SeuratOBJ@meta.data$cluster_ann)
+# unique(SeuratOBJ@meta.data$cluster_ann)
+# #Idents(SeuratOBJ) <- "seurat_clusters"
+# 
+# # Multi-cell-type heatmap, scale all relevant genes once, across all cells
+# genes_to_scale <- as.vector(unlist(append(combined_named_list[1], combined_named_list[2])))
+# SeuratOBJ <- ScaleData(SeuratOBJ, features = genes_to_scale)
+# 
+# 
+# 
+# ######## Plot 1: plot the 2 gene-markers list (DD, LB) across all clusters in separate heatmaps
+# 
+# heatmap_list <- list()
+# 
+# for (ct in seq_along(combined_named_list)) {
+# 
+#     # ct=2
+#     # grab cell type names and label
+#     ct_name <- names(combined_named_list[ct])
+#     print(paste0("Cell-type: ", ct_name))
+#     markers_to_plt <- unlist(combined_named_list[ct])
+#     # markers_to_plt=c("PRKCB"      "ADCY6"      "DCHS2"      "GLIS1"      "GREB1L")
+#     title_label <- paste0("Cell type class: ", ct_name)
+#     message("Preparing heatmap with class: ", ct_name)    
+#     
+#     # ####### this heatmap plot all Hb medial and lateral markers across all clusters - cluster size aware
+#     # heatmap_plot <- DoHeatmap(SeuratOBJ,
+#     #                           group.by = "cluster_ann",
+#     #                           features = markers_to_plt, size = 2,
+#     #                           disp.min = -2.5, disp.max = 2.5,
+#     #                           group.bar = TRUE, # Omits color bar by identity class (from group.by)
+#     #                           slot = "scale.data") +
+#     #     scale_fill_gradientn(colors = c("blue", "white", "red")) +
+#     #     ggtitle(title_label) +
+#     #     theme(
+#     #         plot.title = element_text(hjust = 0.5),
+#     #         axis.text.y = element_text(size = 6),
+#     #         legend.position = "none"
+#     #     )
+#     # # disp.min / disp.max = 2.5: gene-expr after scaling can have extreme values. Clipping keeps the heatmap visually interpretable
+#     # print(heatmap_plot)
+#     
+#     
+#     ####### this heatmap plot all Hb medial and lateral markers across all clusters - same cluster size
+#     
+#     # Downsample to equal cell numbers per group
+#     # Number of cells per group you want (e.g., 50)
+#     n_cells <- 50
+#     
+#     # Randomly sample equal number of cells from each group to control column size
+#     # Add cell IDs as a column first (from rownames)
+#     meta_df <- SeuratOBJ@meta.data
+#     meta_df$cell_id <- rownames(meta_df)
+#     # Sample cells evenly across clusters
+#     cells_to_plot <- meta_df |>
+#         group_by(cluster_ann) |>
+#         sample_n(size = min(n_cells, n()), replace = FALSE) |>
+#         arrange(cluster_ann) |>   # This sets a fixed order to remove dendogram manually
+#         pull(cell_id)
+#     length(cells_to_plot)
+#     # Reorder markers if needed
+#     # ordered_markers <- markers_to_plt[markers_to_plt %in% rownames(SeuratOBJ)]
+#     
+#     # Plot with fixed number of cells per group (uniform column width)
+#     
+#     temp_plot <- DoHeatmap(SeuratOBJ,
+#                               features = markers_to_plt,
+#                               group.by = "cluster_ann",
+#                               cells = cells_to_plot,
+#                               group.bar = TRUE,
+#                               label = TRUE,
+#                               size = 2,
+#                               disp.min = -2.5, disp.max = 2.5, 
+#                               slot = "scale.data") +
+#         scale_fill_gradientn(colors = c("blue", "white", "red")) +
+#         #ggtitle(title_label) +
+#         theme(
+#             plot.title = element_blank(),               # remove internal title
+#             #plot.title = element_text(hjust = 0.5, size = 8),
+#             plot.margin = margin(t = 20, r = 5, b = 30, l = 5),  # extra bottom space
+#             axis.text.y = element_text(size = 5),
+#             axis.text.x = element_blank(),        # hide x-axis labels (just in case)
+#             axis.ticks.x = element_blank(),       # remove x-axis ticks
+#             legend.position = "none"
+#         )
+#     print(temp_plot)
+#     # Optionally add horizontal lines for this specific marker group
+#     
+#     if (ct_name == "Hb_LB_markers") {
+#         # Note: y-axis is reversed — top gene = lowest y value
+#         # make a vector with size of gene blocks to add them to heatmpas - seperate cell types by marker class
+#         gene_blks <- markers.custom[grep("^LB", names(markers.custom))]
+#         gene_blks_lng <- map_int(gene_blks, ~ length(.x) )    
+#         gene_block_sizes <- as.vector(gene_blks_lng)
+#         cumulative_positions <- cumsum(gene_block_sizes)
+#         
+#         # Add lines at block boundaries (skip last)
+#         for (y_pos in cumulative_positions[-length(cumulative_positions)]) {
+#             temp_plot <- temp_plot +
+#                 geom_hline(yintercept = y_pos + 0.5, color = "black", linetype = "solid", linewidth = 0.3)
+#         }
+#     }
+#     
+#     # Store the final plot in the list
+#     heatmap_list[[ct]] <- temp_plot
+#     
+# }
+# 
+# # Combine all heatmaps side by side
+# 
+# length(heatmap_list)
+# 
+# combined_plot <- wrap_plots(heatmap_list, ncol = length(heatmap_list)) +
+#     plot_annotation(
+#         title = "Habenula Data-Driven and Literature-Based gene markers side to side",
+#         theme = theme(
+#             plot.title = element_text(size = 10, hjust = 0.5, face = "bold")
+#         )
+#     )
+# 
+# f_name <- paste0(
+#     base_name,
+#     "_heatmap_all_reference_markers_width5.pdf"
+# )
+# pdf(file = here(plotDir, f_name), width = 4 * length(heatmap_list), height = 6)
+# print(combined_plot)
+# dev.off()
+# 
+# length(heatmap_list)
+# #heatmap_list[1]
+# f_name <- paste0(
+#     base_name,
+#     "_heatmap_all_reference_markers_width10.pdf"
+# )
+# combined_plot <- wrap_plots(heatmap_list, ncol = length(heatmap_list))
+# pdf(file = here(plotDir, f_name), width = 10 * length(heatmap_list), height = 6)
+# print(combined_plot)
+# dev.off()
+# 
+# 
+# 
+# ######## Plot 2: plot the top-x genes (markers) used to annotate each cluster
+# 
+# # df_markers_findALLSeurat$cluster
+# # df_markers_findALLSeurat$gene
+# # df_markers_findALLSeurat$cell_type
+# 
+# # Downsample to equal cell numbers per group
+# # Number of cells per group you want (e.g., 50)
+# n_cells <- 50
+# 
+# # Randomly sample equal number of cells from each group to control column size
+# # Add cell IDs as a column first (from rownames)
+# meta_df <- SeuratOBJ@meta.data
+# meta_df$cell_id <- rownames(meta_df)
+# # Sample cells evenly across clusters
+# cells_to_plot <- meta_df |>
+#     group_by(cluster_ann) |>
+#     sample_n(size = min(n_cells, n()), replace = FALSE) |>
+#     arrange(cluster_ann) |>   # This sets a fixed order to remove dendrogram manually
+#     pull(cell_id)
+# 
+# # extract top 10 genes per cluster
+# top_markers <- df_markers_findALLSeurat %>%
+#     group_by(cluster) %>%
+#     top_n(n = 10, wt = avg_log2FC)
+# 
+# # Unique gene list
+# marker_genes <- unique(top_markers$gene)
+# marker_genes <- marker_genes[marker_genes %in% rownames(SeuratOBJ)]
+# #SeuratOBJ <- ScaleData(SeuratOBJ, features = marker_genes, verbose = FALSE)
+# 
+# #Idents(SeuratOBJ) <- "cluster_ann"
+# 
+# plt <- DoHeatmap(SeuratOBJ,
+#           features = marker_genes,
+#           group.by = "cluster_ann",
+#           cells = cells_to_plot,
+#           group.bar = TRUE,
+#           size = 3) +
+#     scale_fill_gradientn(colors = c("blue", "white", "red")) +
+#     #ggtitle("Top Marker Genes per Cluster") +
+#     theme(#plot.title = element_text(hjust = 0.5, size = 8),
+#           plot.margin = margin(t = 20, r = 5, b = 30, l = 5),  # extra bottom space
+#           axis.text.y = element_text(size = 5),
+#           axis.text.x = element_blank(),        # hide x-axis labels (just in case)
+#           axis.ticks.x = element_blank(),       # remove x-axis ticks
+#           legend.position = "none")
+# 
+# f_name <- paste0(
+#     base_name,
+#     "_heatmap_top10genes.pdf"
+# )
+# pdf(file = here(plotDir, f_name), width = 5 * length(heatmap_list), height = 6)
+# print(plt)
+# dev.off()
+# 
+# message("All plots done!")
 
 
 # library("slurmjobs")
