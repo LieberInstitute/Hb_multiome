@@ -394,7 +394,7 @@ for (top in top_genes_number) {
 
 
 ## =============================================================================
-## Subsettig data for Medial and Lateral Hb 
+## Sub-settig data for Medial and Lateral Hb 
 
 # define genes to plot by cluster
 top_subset <- 10
@@ -422,6 +422,13 @@ ordered_gene_cluster <- topGenes_mtx_lst[["ordered_genes"]] |>
 ordered_gene_cluster_sub <- topGenes_mtx_lst[["ordered_genes"]] |>
     filter(grepl("LHb|MHb", cluster_name), gene %in% rownames(mat_LHb_MHb)) |>
     distinct(gene, .keep_all = TRUE)  # remove duplicated genes
+
+# cluster order from ordered_gene_cluster_sub
+ordered_clusters <- unique(ordered_gene_cluster_sub$cluster_name)
+ordered_clusters <- ordered_clusters[ordered_clusters %in% colnames(mat_LHb_MHb)]
+
+# Reorder columns
+mat_LHb_MHb <- mat_LHb_MHb[, ordered_clusters]
 
 # Build gene-to-cluster mapping
 row_cluster <- ordered_gene_cluster_sub$cluster_name
@@ -452,6 +459,16 @@ row_split_sub <- row_cluster_group[common_genes]
 # Re-check the sanity
 stopifnot(all(rownames(mat_LHb_MHb) == names(row_split_sub)))
 
+# Order genes by their cluster (as in the original topGenes_mtx())
+gene_order <- ordered_gene_cluster_sub |>
+    arrange(match(cluster_name, ordered_clusters)) |>
+    pull(gene)
+
+gene_order <- gene_order[gene_order %in% rownames(mat_LHb_MHb)]  # safety
+# Reorder rows
+mat_LHb_MHb <- mat_LHb_MHb[gene_order, , drop = FALSE]
+row_split_sub <- row_split_sub[gene_order]
+
 # Build row annotation
 row_anno_sub <- rowAnnotation(
     Region = row_split_sub,
@@ -475,14 +492,15 @@ hm_LHb_MHb <- Heatmap(
     top_annotation = top_anno_sub,
     left_annotation = row_anno_sub,
     row_split = row_split_sub,
-    row_names_gp = gpar(fontsize = 7),
-    column_names_gp = gpar(fontsize = 7)
+    column_split = merged_Hb_clusters,
+    row_names_gp = gpar(fontsize = 9),
+    column_names_gp = gpar(fontsize = 14)
 )
 hm_LHb_MHb
 
 f_name <- paste0("heatmap_subset_MHb_LHb_top", top_subset, "_genes-column_grouped-Broad_res.pdf")
 
-pdf(here(plotDir, f_name), width = 12, height = 14)
+pdf(here(plotDir, f_name), width = 12, height = 18)
 draw(hm_LHb_MHb)
 dev.off()
 
