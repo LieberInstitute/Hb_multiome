@@ -464,7 +464,27 @@ row_anno_sub <- rowAnnotation(
 # Ensure column names match top_annotation
 stopifnot(all(colnames(mat_LHb_MHb) %in% names(merged_Hb_clusters)))
 
+hm_LHb_MHb <- Heatmap(
+    mat_LHb_MHb,
+    name = "Z-score",
+    cluster_rows = FALSE,
+    cluster_columns = FALSE,
+    show_row_names = TRUE,
+    show_column_names = TRUE,
+    col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
+    top_annotation = top_anno_sub,
+    left_annotation = row_anno_sub,
+    row_split = row_split_sub,
+    row_names_gp = gpar(fontsize = 7),
+    column_names_gp = gpar(fontsize = 7)
+)
+hm_LHb_MHb
 
+f_name <- paste0("heatmap_subset_MHb_LHb_top", top_subset, "_genes-column_grouped-Broad_res.pdf")
+
+pdf(here(plotDir, f_name), width = 12, height = 14)
+draw(hm_LHb_MHb)
+dev.off()
 
 
 
