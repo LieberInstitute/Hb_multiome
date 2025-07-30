@@ -399,26 +399,72 @@ for (top in top_genes_number) {
 # define genes to plot by cluster
 top_subset <- 10
 
+## define colors for the group
+group_colors_subset <- c(
+    LHb = "#1f78b4",
+    MHb = "#ad1d8c"
+)
+
 # build mtx
 topGenes_mtx_lst <- topGenes_mtx(df_markers_findALLSeurat_clean, avg_expr, top_subset) 
 names(topGenes_mtx_lst)
 mat_scaled <- topGenes_mtx_lst[["mat_scaled"]]
 
-# Subset Medial and Lateral Hb
+# Subset clusters from scaled matrix
 sel_clusters <- grep("MHb|LHb", colnames(mat_scaled), value = TRUE)
-
-# Subset the matrix
 mat_LHb_MHb <- mat_scaled[, sel_clusters]
-
-# Subset the row annotation: keep only genes expressed in selected LHb/MHb clusters
 genes_LHb_MHb <- rownames(mat_LHb_MHb)
-row_anno_sub <- row_anno[genes_LHb_MHb, , drop = FALSE]
-top_anno_sub <- top_anno[, sel_clusters, drop = FALSE]
-# Subset the top annotation too
-top_anno_sub <- top_anno[, sel_clusters, drop = FALSE]
 
-# reassing row splits
-row_split_sub <- row_cluster_group[genes_LHb_MHb]
+# Subset ordered gene-cluster mapping
+ordered_gene_cluster <- topGenes_mtx_lst[["ordered_genes"]] |>
+    filter(as.character(cluster_name) %in% sel_clusters)
+# Filter to relevant clusters and genes
+ordered_gene_cluster_sub <- topGenes_mtx_lst[["ordered_genes"]] |>
+    filter(grepl("LHb|MHb", cluster_name), gene %in% rownames(mat_LHb_MHb)) |>
+    distinct(gene, .keep_all = TRUE)  # remove duplicated genes
+
+# Build gene-to-cluster mapping
+row_cluster <- ordered_gene_cluster_sub$cluster_name
+names(row_cluster) <- ordered_gene_cluster_sub$gene
+
+# Group assignment (LHb/MHb)
+row_cluster_group <- sapply(row_cluster, function(cl) {
+    case_when(
+        grepl("LHb", cl) ~ "LHb",
+        grepl("MHb", cl) ~ "MHb",
+        TRUE ~ "Other"  # just in case
+    )
+})
+
+row_cluster_group <- factor(row_cluster_group, levels = c("LHb", "MHb"))
+names(row_cluster_group) <- names(row_cluster)
+
+# # row split 
+# row_split_sub <- row_cluster_group[rownames(mat_LHb_MHb)]
+# # check
+# stopifnot(all(rownames(mat_LHb_MHb) == names(row_split_sub)))
+# # Error: all(rownames(mat_LHb_MHb) == names(row_split_sub)) is not TRUE
+# Ensure consistent gene list between matrix and cluster group
+common_genes <- intersect(rownames(mat_LHb_MHb), names(row_cluster_group))
+# Subset both to keep common genes only
+mat_LHb_MHb <- mat_LHb_MHb[common_genes, , drop = FALSE]
+row_split_sub <- row_cluster_group[common_genes]
+# Re-check the sanity
+stopifnot(all(rownames(mat_LHb_MHb) == names(row_split_sub)))
+
+# Build row annotation
+row_anno_sub <- rowAnnotation(
+    Region = row_split_sub,
+    col = list(Region = group_colors_subset),
+    show_annotation_name = FALSE,
+    show_legend = FALSE
+)
+
+
+# Ensure column names match top_annotation
+stopifnot(all(colnames(mat_LHb_MHb) %in% names(merged_Hb_clusters)))
+
+
 
 
 
