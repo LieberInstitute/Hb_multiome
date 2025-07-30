@@ -276,6 +276,18 @@ for (top in top_genes_number) {
     
     if (top == 3) { row_names_font_size <- 7.5; 6.8 }
     if (top == 3) { height_htm <- 12; 20 }
+    
+    # Add bottom annotation with text to describe basic stats to process the heatmap
+    bottom_anno <- HeatmapAnnotation(
+        annotation_label = anno_text(
+            "Top 3 DEG (FDR < 5%) - Wilcoxon test (Seurat)",
+            gp = gpar(fontsize = 9, fontface = "italic"),
+            just = "center"
+        ),
+        annotation_name_side = "bottom",
+        annotation_height = unit(1.2, "cm"),
+        show_annotation_name = FALSE
+    )
 
     make_heatmap <- function(mat_scaled, row_cluster_group, top_anno, row_anno) {
         
@@ -295,7 +307,8 @@ for (top in top_genes_number) {
             row_title_rot = 0,
             gap = unit(1, "mm"),  # spacing between row blocks
             column_names_gp = gpar(fontsize = 10),
-            row_names_gp = gpar(fontsize = row_names_font_size)
+            row_names_gp = gpar(fontsize = row_names_font_size),
+            bottom_annotation = bottom_anno
         )
     
         return(hm)    
@@ -359,7 +372,8 @@ for (top in top_genes_number) {
             column_names_gp = gpar(fontsize = 8),
             row_title_rot = 0,
             column_title_rot = 45,
-            gap = unit(1, "mm")  # spacing between row blocks
+            gap = unit(1, "mm"),  # spacing between row blocks
+            bottom_annotation = bottom_anno
         )
         
     }
