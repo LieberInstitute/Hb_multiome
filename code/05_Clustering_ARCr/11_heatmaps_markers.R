@@ -393,14 +393,35 @@ for (top in top_genes_number) {
 
 
 
-# ## =============================================================================
-# ## Subset Medial, Lateral and Thal CLusters
-# 
-# # cluster_levels <- levels(SeuratOBJ)
-# # MHb <- grep("MHb", cluster_levels, value = TRUE)
-# # LHb <- grep("LHb", cluster_levels, value = TRUE)
-# # Thal <- grep("Thal", cluster_levels, value = TRUE)
-# # 
+## =============================================================================
+## Subsettig data for Medial and Lateral Hb 
+
+# define genes to plot by cluster
+top_subset <- 10
+
+# build mtx
+topGenes_mtx_lst <- topGenes_mtx(df_markers_findALLSeurat_clean, avg_expr, top_subset) 
+names(topGenes_mtx_lst)
+mat_scaled <- topGenes_mtx_lst[["mat_scaled"]]
+
+# Subset Medial and Lateral Hb
+sel_clusters <- grep("MHb|LHb", colnames(mat_scaled), value = TRUE)
+
+# Subset the matrix
+mat_LHb_MHb <- mat_scaled[, sel_clusters]
+
+# Subset the row annotation: keep only genes expressed in selected LHb/MHb clusters
+genes_LHb_MHb <- rownames(mat_LHb_MHb)
+row_anno_sub <- row_anno[genes_LHb_MHb, , drop = FALSE]
+top_anno_sub <- top_anno[, sel_clusters, drop = FALSE]
+# Subset the top annotation too
+top_anno_sub <- top_anno[, sel_clusters, drop = FALSE]
+
+# reassing row splits
+row_split_sub <- row_cluster_group[genes_LHb_MHb]
+
+
+
 # # ## get thalamus clusters
 # # cells_to_keep <- WhichCells(SeuratOBJ, idents = Thal)
 # # SeuratOBJ_subset <- subset(SeuratOBJ, cells = cells_to_keep)
