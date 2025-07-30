@@ -1,14 +1,11 @@
 ########################################################################
 ## Plot Heatmaps of GEX on WNN clustering
-## - Downsample to equal cell numbers per group (n=50)
-## - Plot top50 DEG match cell-types by LB or DD marker genes 
+## - Top3 and 5 DEG (FDR<5%) on aggregated cell-types normalized at z-scores
+##
 ## Authors. CSC
 ## Date. May 08, 2024
 ## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
 ## Note. Seurat objects were created with module load conda_R/4.3.x
-
-## Note. this pipeline requires module load conda_R/4.3.x to keep the integrity of the seurat object
-
 ########################################################################
 
 library("Seurat")
@@ -213,7 +210,7 @@ for (top in top_genes_number) {
     #head(as.data.frame(as.matrix(mat_scaled[ , "C.37.Thal", drop = FALSE])))
     
     ## =============================================================================
-    # Define unique cluster names and assign colors based on keywords in cluster names
+    # Define unique cluster names and assign colors based on broad cell types in cluster names
     
     clusters <- colnames(mat_scaled)
     
@@ -275,7 +272,10 @@ for (top in top_genes_number) {
     
     ## =============================================================================
     
-    message("Preparing plot ...")
+    message("Preparing row cluster-group heatmap ...")
+    
+    if (top == 3) { row_names_font_size <- 7.5; 6.8 }
+    if (top == 3) { height_htm <- 12; 20 }
 
     make_heatmap <- function(mat_scaled, row_cluster_group, top_anno, row_anno) {
         
@@ -295,7 +295,7 @@ for (top in top_genes_number) {
             row_title_rot = 0,
             gap = unit(1, "mm"),  # spacing between row blocks
             column_names_gp = gpar(fontsize = 10),
-            row_names_gp = gpar(fontsize = 7)
+            row_names_gp = gpar(fontsize = row_names_font_size)
         )
     
         return(hm)    
@@ -303,23 +303,18 @@ for (top in top_genes_number) {
     
     hm1 <- make_heatmap(mat_scaled, row_cluster_group, top_anno, row_anno)
     hm1
-    f_name <- paste0("top", top,"_marker_heatmap.pdf")
-    if (top == 3) { height_htm <- 12; 16 }
+    f_name <- paste0("heatmap_top", top,"_genes-row_grouped-Broad_res.pdf")
     
     pdf(here(plotDir, f_name), width = 12, height = height_htm)
     draw(hm1)
     dev.off()
     
-    message("Plot done and saved for top ", top, " genes")
-
-}
-
-
-## =============================================================================
-# Applied to the same mtx from topGenes_mtx_lst(), this is an alterntive version
-#    to visualize multiple diagonal blocks grouped by brain region (e.g., LHb, MHb, Thal, etc.)
-
-for (top in top_genes_number) {
+    message("Heatmap with row cluster-group done and saved for top ", top, " genes")
+    
+    
+    ## =============================================================================
+    # Applied to the same mtx from topGenes_mtx_lst(), this is an alternative version
+    #    to visualize multiple diagonal blocks grouped by brain region (e.g., LHb, MHb, Thal, etc.)
     
     message("Processing top ", top, " genes by cluster ...")
     
@@ -337,11 +332,13 @@ for (top in top_genes_number) {
         )
     })
     
+    message("Preparing column cluster-group heatmap ...")
+    
     column_cluster_group <- factor(column_cluster_group, 
                                    levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
     
     names(column_cluster_group) <- colnames(mat_scaled)
-
+    
     make_heatmap <- function(mat_scaled, column_cluster_group, top_anno, row_anno) {
         Heatmap(
             mat_scaled,
@@ -358,28 +355,28 @@ for (top in top_genes_number) {
             border = TRUE,  # adds a horizontal line between row groups
             row_title_gp = gpar(fontsize = 9, fontface = "bold"),  # customize strip label
             column_title_gp = gpar(fontsize = 9, fontface = "bold"),  # customize strip label
-            row_names_gp = gpar(fontsize = 7),
+            row_names_gp = gpar(fontsize = row_names_font_size),
             column_names_gp = gpar(fontsize = 8),
             row_title_rot = 0,
             column_title_rot = 45,
             gap = unit(1, "mm")  # spacing between row blocks
         )
-
+        
     }
     
     hm1 <- make_heatmap(mat_scaled, column_cluster_group, top_anno, row_anno)
-    hm1
     
-    f_name <- paste0("top", top,"_marker_heatmap_column_block.pdf")
-    if (top == 3) { height_htm <- 12; 18 }
+    f_name <- paste0("heatmap_top", top,"_genes-column_grouped-Broad_res.pdf")
     
     pdf(here(plotDir, f_name), width = 12, height = height_htm)
     draw(hm1)
     dev.off()
     
     message("Plot done and saved for top ", top, " genes")
+    
 
 }
+
 
 
 # ## =============================================================================
