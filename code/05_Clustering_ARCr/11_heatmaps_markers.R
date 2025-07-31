@@ -432,6 +432,7 @@ ordered_clusters <- unique(ordered_gene_cluster_sub$cluster_name)
 ordered_clusters <- ordered_clusters[ordered_clusters %in% colnames(mat_LHb_MHb)]
 
 # Reorder columns
+ordered_clusters <- as.character(ordered_clusters)
 mat_LHb_MHb <- mat_LHb_MHb[, ordered_clusters]
 
 # Build gene-to-cluster mapping
@@ -450,9 +451,6 @@ row_cluster_group <- sapply(row_cluster, function(cl) {
 row_cluster_group <- factor(row_cluster_group, levels = c("LHb", "MHb"))
 names(row_cluster_group) <- names(row_cluster)
 
-# # row split 
-# row_split_sub <- row_cluster_group[rownames(mat_LHb_MHb)]
-# # check
 # stopifnot(all(rownames(mat_LHb_MHb) == names(row_split_sub)))
 # # Error: all(rownames(mat_LHb_MHb) == names(row_split_sub)) is not TRUE
 # Ensure consistent gene list between matrix and cluster group
@@ -460,7 +458,7 @@ common_genes <- intersect(rownames(mat_LHb_MHb), names(row_cluster_group))
 # Subset both to keep common genes only
 mat_LHb_MHb <- mat_LHb_MHb[common_genes, , drop = FALSE]
 row_split_sub <- row_cluster_group[common_genes]
-# Re-check the sanity
+# Re-check
 stopifnot(all(rownames(mat_LHb_MHb) == names(row_split_sub)))
 
 # Order genes by their cluster (as in the original topGenes_mtx())
@@ -481,7 +479,23 @@ row_anno_sub <- rowAnnotation(
     show_legend = FALSE
 )
 
+# Broad group assignment for column clusters
+merged_Hb_clusters <- sapply(colnames(mat_LHb_MHb), function(cl) {
+    case_when(
+        grepl("LHb", cl) ~ "LHb",
+        grepl("MHb", cl) ~ "MHb",
+        TRUE ~ "Other"
+    )
+}) |> factor(levels = c("LHb", "MHb"))
 
+# Set names to match columns of matrix
+names(merged_Hb_clusters) <- colnames(mat_LHb_MHb)
+# build the annotation
+top_anno_sub <- HeatmapAnnotation(
+    Region = merged_Hb_clusters,
+    col = list(Region = group_colors_subset),
+    annotation_name_side = "left"
+)
 # Ensure column names match top_annotation
 stopifnot(all(colnames(mat_LHb_MHb) %in% names(merged_Hb_clusters)))
 
