@@ -58,7 +58,7 @@ seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
 colnames(SeuratOBJ@meta.data)
 DefaultAssay(SeuratOBJ) <- "RNA"
-cluster_levels <- levels(SeuratOBJ)
+#levels(SeuratOBJ)
 # [1] "C.04.LHb.4"      "C.05.LHb.2.7"    "C.06.LHb.4"      "C.07.MHb.2"     
 # [5] "C.08.LHb.4"      "C.09.LHb.4"      "C.10.MHb.1"      "C.11.MHb.1.2"   
 # [9] "C.13.LHb.4"      "C.14.MHb.1"      "C.16.MHb.1.2"    "C.18.LHb.1.3.4" 
@@ -189,7 +189,9 @@ group_colors <- c(
     OPC = "#829454",
     Microglia = "#141b02",
     Endo = "#d95f02",
-    Thal = "#4d55b7"
+    Thal = "#4d55b7",
+    Excit.Thal = "#6855A3",
+    Inhib.Thal = "#805EE6"
     #Other = "black"
 )
 
@@ -219,18 +221,22 @@ for (top in top_genes_number) {
         case_when(
             grepl("LHb", cl) ~ "LHb",
             grepl("MHb", cl) ~ "MHb",
+            grepl("Excit\\.Thal", cl) ~ "Excit.Thal",
+            grepl("Inhib\\.Thal", cl) ~ "Inhib.Thal",
             grepl("Thal", cl) ~ "Thal",
             grepl("Astro", cl) ~ "Astrocyte",
             grepl("Oligo", cl) ~ "Oligo",
             grepl("OPC", cl) ~ "OPC",
             grepl("Microglia", cl) ~ "Microglia",
-            grepl("Endo", cl) ~ "Endo"
+            grepl("Endo", cl) ~ "Endo",
+            TRUE ~ "Other"
         )
     })
     
     # make it a named factor 
     merged_cluster <- factor(merged_cluster, 
-                             levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
+                             levels = names(group_colors))
+                             #levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
     names(merged_cluster) <- clusters
     
     top_anno <- HeatmapAnnotation(
@@ -251,16 +257,20 @@ for (top in top_genes_number) {
             grepl("LHb", cl) ~ "LHb",
             grepl("MHb", cl) ~ "MHb",
             grepl("Thal", cl) ~ "Thal",
+            grepl("Excit\\.Thal", cl) ~ "Excit.Thal",
+            grepl("Inhib\\.Thal", cl) ~ "Inhib.Thal",
             grepl("Astro", cl) ~ "Astrocyte",
             grepl("Oligo", cl) ~ "Oligo",
             grepl("OPC", cl) ~ "OPC",
             grepl("Microglia", cl) ~ "Microglia",
-            grepl("Endo", cl) ~ "Endo"
+            grepl("Endo", cl) ~ "Endo",
+            TRUE ~ "Other"
         )
     })
     
     row_cluster_group <- factor(row_cluster_group, 
-                                levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
+                                levels = names(group_colors))
+                                #levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
     names(row_cluster_group) <- names(row_cluster)  # Ensure names = genes
     
     row_anno <- rowAnnotation(
@@ -284,9 +294,9 @@ for (top in top_genes_number) {
             gp = gpar(fontsize = 9, fontface = "italic"),
             just = "center"
         ),
-        annotation_name_side = "bottom",
+        show_annotation_name = FALSE,
         annotation_height = unit(1.2, "cm"),
-        show_annotation_name = FALSE
+        which = "column" 
     )
 
     make_heatmap <- function(mat_scaled, row_cluster_group, top_anno, row_anno) {
@@ -336,6 +346,8 @@ for (top in top_genes_number) {
         case_when(
             grepl("LHb", cl) ~ "LHb",
             grepl("MHb", cl) ~ "MHb",
+            grepl("Excit\\.Thal", cl) ~ "Excit.Thal",
+            grepl("Inhib\\.Thal", cl) ~ "Inhib.Thal",
             grepl("Thal", cl) ~ "Thal",
             grepl("Astro", cl) ~ "Astrocyte",
             grepl("Oligo", cl) ~ "Oligo",
@@ -348,7 +360,8 @@ for (top in top_genes_number) {
     message("Preparing column cluster-group heatmap ...")
     
     column_cluster_group <- factor(column_cluster_group, 
-                                   levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
+                                   levels = names(group_colors))
+                                   #levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
     
     names(column_cluster_group) <- colnames(mat_scaled)
     
@@ -372,8 +385,7 @@ for (top in top_genes_number) {
             column_names_gp = gpar(fontsize = 8),
             row_title_rot = 0,
             column_title_rot = 45,
-            gap = unit(1, "mm"),  # spacing between row blocks
-            bottom_annotation = bottom_anno
+            gap = unit(1, "mm")  # spacing between row blocks
         )
         
     }
