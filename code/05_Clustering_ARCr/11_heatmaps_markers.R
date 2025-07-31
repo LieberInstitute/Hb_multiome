@@ -286,18 +286,6 @@ for (top in top_genes_number) {
     
     if (top == 3) { row_names_font_size <- 7.5; 6.8 }
     if (top == 3) { height_htm <- 12; 20 }
-    
-    # Add bottom annotation with text to describe basic stats to process the heatmap
-    bottom_anno <- HeatmapAnnotation(
-        annotation_label = anno_text(
-            "Top 3 DEG (FDR < 5%) - Wilcoxon test (Seurat)",
-            gp = gpar(fontsize = 9, fontface = "italic"),
-            just = "center"
-        ),
-        show_annotation_name = FALSE,
-        annotation_height = unit(1.2, "cm"),
-        which = "column" 
-    )
 
     make_heatmap <- function(mat_scaled, row_cluster_group, top_anno, row_anno) {
         
@@ -317,8 +305,7 @@ for (top in top_genes_number) {
             row_title_rot = 0,
             gap = unit(1, "mm"),  # spacing between row blocks
             column_names_gp = gpar(fontsize = 10),
-            row_names_gp = gpar(fontsize = row_names_font_size),
-            bottom_annotation = bottom_anno
+            row_names_gp = gpar(fontsize = row_names_font_size)
         )
     
         return(hm)    
@@ -396,6 +383,11 @@ for (top in top_genes_number) {
     
     pdf(here(plotDir, f_name), width = 12, height = height_htm)
     draw(hm1)
+    grid::grid.text(
+        "Top 3 DEG (FDR < 5%) - Wilcoxon test (Seurat)",
+        y = unit(0.02, "npc"),  
+        gp = gpar(fontsize = 9, fontface = "italic")
+    )
     dev.off()
     
     message("Plot done and saved for top ", top, " genes")
@@ -514,6 +506,11 @@ f_name <- paste0("heatmap_subset_MHb_LHb_top", top_subset, "_genes-column_groupe
 
 pdf(here(plotDir, f_name), width = 12, height = 18)
 draw(hm_LHb_MHb)
+grid::grid.text(
+    "Top 3 DEG (FDR < 5%) - Wilcoxon test (Seurat)",
+    y = unit(0.02, "npc"),  # distance from bottom
+    gp = gpar(fontsize = 9, fontface = "italic")
+)
 dev.off()
 
 
