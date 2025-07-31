@@ -384,7 +384,7 @@ for (top in top_genes_number) {
     pdf(here(plotDir, f_name), width = 12, height = height_htm)
     draw(hm1)
     grid::grid.text(
-        "Top 3 DEG (FDR < 5%) - Wilcoxon test (Seurat)",
+        paste0("Top ", top, " DEG (FDR < 5%) - Wilcoxon test (Seurat)"),
         y = unit(0.02, "npc"),  
         gp = gpar(fontsize = 9, fontface = "italic")
     )
@@ -514,14 +514,13 @@ hm_LHb_MHb <- Heatmap(
     row_names_gp = gpar(fontsize = 9),
     column_names_gp = gpar(fontsize = 14)
 )
-hm_LHb_MHb
 
 f_name <- paste0("heatmap_subset_MHb_LHb_top", top_subset, "_genes-column_grouped-Broad_res.pdf")
 
 pdf(here(plotDir, f_name), width = 12, height = 18)
 draw(hm_LHb_MHb)
 grid::grid.text(
-    "Top 3 DEG (FDR < 5%) - Wilcoxon test (Seurat)",
+    paste0("Top ", top_subset," DEG (FDR < 5%) - Wilcoxon test (Seurat)"),
     y = unit(0.02, "npc"),  # distance from bottom
     gp = gpar(fontsize = 9, fontface = "italic")
 )
