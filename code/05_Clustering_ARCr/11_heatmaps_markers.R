@@ -1,6 +1,6 @@
 ########################################################################
 ## Plot Heatmaps of GEX on WNN clustering
-## - Top3 and 5 DEG (FDR<5%) on aggregated cell-types normalized at z-scores
+## - Top X DEG (FDR<5%) on aggregated cell-types normalized at z-scores
 ##
 ## Authors. CSC
 ## Date. May 08, 2024
@@ -12,15 +12,15 @@ library("Seurat")
 library("Signac")
 library("Matrix")
 library("ComplexHeatmap")
-library("circlize")
-library("bluster")
+library("circlize") # colorRamp2
+#library("bluster")
 library("tidyverse")
-library("stringr")
+#library("stringr")
 library("here")
 
 ## input directories
 
-here()
+#here()
 
 # Check/create directories
 
@@ -49,9 +49,10 @@ if (!dir.exists(plotDir)) {
 
 ## Load Seurat with WNN
 
+message("Loading Seurat ....")
+
 # clusters renamed for sharing with Visium project(s)
 Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
-# old: "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds"
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 
 # Load Seurat
@@ -80,11 +81,11 @@ head(avg_expr)
 
 base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
 
-message("Processing Heatmap for ", base_name)
-
 
 ## =============================================================================
 ## Read DEG file and prepare top genes with current cluster annotation
+
+message("Reading and preparing DEG (Wilcox test - Seurat) ....")
 
 DEG_file_name <- "WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_cellTypes_integrated_top50.csv"
 DEG_file_name <- here(inputCVS_Dir, DEG_file_name)
@@ -111,7 +112,7 @@ cluster_map <- SeuratOBJ@meta.data |>
     select(seurat_clusters, cluster_ann) |>
     distinct() |>
     mutate(seurat_clusters = as.integer(as.character(seurat_clusters)))  # ensures consistent ordering
-cluster_map
+#cluster_map
 #                       seurat_clusters     cluster_ann
 # S04_AAACATGCAGTAATAG-1               1 C.01.Inhib.Thal
 # S04_AACCTTGCATTATGAC-1               2      C.02.Oligo
@@ -137,7 +138,9 @@ stopifnot(all(df_markers_findALLSeurat_clean$cluster_name %in% colnames(avg_expr
 
 
 ## =============================================================================
-# Prepare aggregated and scaled mxt to plot 'Diagonal heatmap' by cluster and broad cell-type
+# function to aggregate and scaled mxt to plot 'Diagonal heatmap' by cluster and broad cell-type
+
+message("Loading functions ....")
 
 topGenes_mtx <- function(dge_annotated_clusters, avg_expr, top_genes = 3) {
 
@@ -155,10 +158,8 @@ topGenes_mtx <- function(dge_annotated_clusters, avg_expr, top_genes = 3) {
     # Keep only genes that exist in avg_expr mtx
     ordered_gene_cluster <- ordered_gene_cluster |>
         filter(gene %in% rownames(avg_expr))
-    table(ordered_gene_cluster$cluster_name %in% colnames(avg_expr))
-    # TRUE 
-    # 114 
-    
+    #table(ordered_gene_cluster$cluster_name %in% colnames(avg_expr))
+
     # Subset matrix and define column order mtx: rows = genes, columns = clusters
     # unique cluster order (to avoid repeating columns in heatmap)
     unique_clusters <- unique(ordered_gene_cluster$cluster_name)
@@ -174,9 +175,72 @@ topGenes_mtx <- function(dge_annotated_clusters, avg_expr, top_genes = 3) {
     
 }
 
-## =============================================================================
+make_heatmap_row_group <- function(mat_scaled, row_cluster_group, top_anno, row_anno, 
+                                   row_names_font_size, f_name, grid_ann, height_htm) {
+    
+    hm <- Heatmap(
+        mat_scaled,
+        name = "Z-score",
+        cluster_rows = FALSE,
+        cluster_columns = FALSE,
+        show_row_names = TRUE,
+        show_column_names = TRUE,
+        col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
+        top_annotation = top_anno,
+        left_annotation = row_anno,
+        row_split = row_cluster_group,
+        border = TRUE,  # adds a horizontal line between row groups
+        row_title_gp = gpar(fontsize = 10, fontface = "bold"),  # customize strip label
+        row_title_rot = 0,
+        gap = unit(1, "mm"),  # spacing between row blocks
+        column_names_gp = gpar(fontsize = 10),
+        row_names_gp = gpar(fontsize = row_names_font_size)
+    )
+    pdf(f_name, width = 12, height = height_htm)
+    draw(hm1)
+    grid::grid.text(
+        grid_ann,
+        x = unit(.9, "npc"),    # right-aligned
+        y = unit(0.02, "npc"),  # distance from bottom
+        gp = gpar(fontsize = 9, fontface = "italic")
+    )
+    dev.off()
+    
+    return(hm)    
+}
 
-# get and plot heatmap of aggregated and scaled mtx by cluster and broad cell-type
+make_heatmap_column_group <- function(mat_scaled, row_cluster_group, column_cluster_group, top_anno, row_anno, 
+                                      row_names_font_size, f_name, grid_ann, height_htm) {
+    Heatmap(
+        mat_scaled,
+        name = "Z-score",
+        cluster_rows = FALSE,
+        cluster_columns = FALSE,
+        show_row_names = TRUE,
+        show_column_names = TRUE,
+        col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
+        top_annotation = top_anno,
+        left_annotation = row_anno,
+        row_split = row_cluster_group,
+        column_split = column_cluster_group,  # adds visual column blocks
+        border = TRUE,  # adds a horizontal line between row groups
+        row_title_gp = gpar(fontsize = 9, fontface = "bold"),  # customize strip label
+        column_title_gp = gpar(fontsize = 9, fontface = "bold"),  # customize strip label
+        row_names_gp = gpar(fontsize = row_names_font_size),
+        column_names_gp = gpar(fontsize = 8),
+        row_title_rot = 0,
+        column_title_rot = 45,
+        gap = unit(1, "mm")  # spacing between row blocks
+    )
+    
+}
+
+## =============================================================================
+# process data and make heatmap of aggregated and scaled mtx by WNN clusterID
+
+message("Start processing ...")
+
+set.seed(7312025)
 
 top_genes_number = c(3, 5)
 
@@ -236,7 +300,7 @@ for (top in top_genes_number) {
     # make it a named factor 
     merged_cluster <- factor(merged_cluster, 
                              levels = names(group_colors))
-                             #levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
+                             
     names(merged_cluster) <- clusters
     
     top_anno <- HeatmapAnnotation(
@@ -270,7 +334,7 @@ for (top in top_genes_number) {
     
     row_cluster_group <- factor(row_cluster_group, 
                                 levels = names(group_colors))
-                                #levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
+                                
     names(row_cluster_group) <- names(row_cluster)  # Ensure names = genes
     
     row_anno <- rowAnnotation(
@@ -286,45 +350,18 @@ for (top in top_genes_number) {
     
     if (top == 3) { row_names_font_size <- 7.5; 6.8 }
     if (top == 3) { height_htm <- 12; 20 }
-
-    make_heatmap <- function(mat_scaled, row_cluster_group, top_anno, row_anno) {
-        
-        hm <- Heatmap(
-            mat_scaled,
-            name = "Z-score",
-            cluster_rows = FALSE,
-            cluster_columns = FALSE,
-            show_row_names = TRUE,
-            show_column_names = TRUE,
-            col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
-            top_annotation = top_anno,
-            left_annotation = row_anno,
-            row_split = row_cluster_group,
-            border = TRUE,  # adds a horizontal line between row groups
-            row_title_gp = gpar(fontsize = 10, fontface = "bold"),  # customize strip label
-            row_title_rot = 0,
-            gap = unit(1, "mm"),  # spacing between row blocks
-            column_names_gp = gpar(fontsize = 10),
-            row_names_gp = gpar(fontsize = row_names_font_size)
-        )
     
-        return(hm)    
-    }
-    
-    hm1 <- make_heatmap(mat_scaled, row_cluster_group, top_anno, row_anno)
-    hm1
+    # make ands save heatmap
     f_name <- paste0("heatmap_top", top,"_genes-row_grouped-Broad_res.pdf")
+    grid_ann <- paste0("Top ", top," DEG (FDR < 5%)\nWilcoxon test (Seurat)")
     
-    pdf(here(plotDir, f_name), width = 12, height = height_htm)
-    draw(hm1)
-    dev.off()
+    hm1 <- make_heatmap_row_group(mat_scaled, row_cluster_group, top_anno, row_anno, 
+                                  row_names_font_size, f_name, grid_ann, height_htm) # file name and bottom ann
     
     message("Heatmap with row cluster-group done and saved for top ", top, " genes")
     
-    
     ## =============================================================================
-    # Applied to the same mtx from topGenes_mtx_lst(), this is an alternative version
-    #    to visualize multiple diagonal blocks grouped by brain region (e.g., LHb, MHb, Thal, etc.)
+    # Alternative version: blocks column-grouped by brain region (e.g., LHb, MHb, Thal, etc.)
     
     message("Processing top ", top, " genes by cluster ...")
     
@@ -348,47 +385,13 @@ for (top in top_genes_number) {
     
     column_cluster_group <- factor(column_cluster_group, 
                                    levels = names(group_colors))
-                                   #levels = c("LHb", "MHb", "Thal", "Astrocyte", "Oligo","OPC", "Microglia", "Endo"))
     
     names(column_cluster_group) <- colnames(mat_scaled)
     
-    make_heatmap <- function(mat_scaled, column_cluster_group, top_anno, row_anno) {
-        Heatmap(
-            mat_scaled,
-            name = "Z-score",
-            cluster_rows = FALSE,
-            cluster_columns = FALSE,
-            show_row_names = TRUE,
-            show_column_names = TRUE,
-            col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
-            top_annotation = top_anno,
-            left_annotation = row_anno,
-            row_split = row_cluster_group,
-            column_split = column_cluster_group,  # adds visual column blocks
-            border = TRUE,  # adds a horizontal line between row groups
-            row_title_gp = gpar(fontsize = 9, fontface = "bold"),  # customize strip label
-            column_title_gp = gpar(fontsize = 9, fontface = "bold"),  # customize strip label
-            row_names_gp = gpar(fontsize = row_names_font_size),
-            column_names_gp = gpar(fontsize = 8),
-            row_title_rot = 0,
-            column_title_rot = 45,
-            gap = unit(1, "mm")  # spacing between row blocks
-        )
-        
-    }
-    
-    hm1 <- make_heatmap(mat_scaled, column_cluster_group, top_anno, row_anno)
-    
     f_name <- paste0("heatmap_top", top,"_genes-column_grouped-Broad_res.pdf")
     
-    pdf(here(plotDir, f_name), width = 12, height = height_htm)
-    draw(hm1)
-    grid::grid.text(
-        paste0("Top ", top, " DEG (FDR < 5%) - Wilcoxon test (Seurat)"),
-        y = unit(0.02, "npc"),  
-        gp = gpar(fontsize = 9, fontface = "italic")
-    )
-    dev.off()
+    hm1 <- make_heatmap_column_group(mat_scaled, row_cluster_group, column_cluster_group, top_anno, row_anno, 
+                                     row_names_font_size, f_name, grid_ann, height_htm) # file name and bottom ann
     
     message("Plot done and saved for top ", top, " genes")
     
@@ -398,7 +401,7 @@ for (top in top_genes_number) {
 
 
 ## =============================================================================
-## Sub-settig data for Medial and Lateral Hb 
+## Sub-setting data for Medial and Lateral Hb 
 
 # define genes to plot by cluster
 top_subset <- 10
@@ -451,10 +454,9 @@ row_cluster_group <- sapply(row_cluster, function(cl) {
 row_cluster_group <- factor(row_cluster_group, levels = c("LHb", "MHb"))
 names(row_cluster_group) <- names(row_cluster)
 
-# stopifnot(all(rownames(mat_LHb_MHb) == names(row_split_sub)))
-# # Error: all(rownames(mat_LHb_MHb) == names(row_split_sub)) is not TRUE
 # Ensure consistent gene list between matrix and cluster group
 common_genes <- intersect(rownames(mat_LHb_MHb), names(row_cluster_group))
+
 # Subset both to keep common genes only
 mat_LHb_MHb <- mat_LHb_MHb[common_genes, , drop = FALSE]
 row_split_sub <- row_cluster_group[common_genes]
@@ -499,33 +501,13 @@ top_anno_sub <- HeatmapAnnotation(
 # Ensure column names match top_annotation
 stopifnot(all(colnames(mat_LHb_MHb) %in% names(merged_Hb_clusters)))
 
-hm_LHb_MHb <- Heatmap(
-    mat_LHb_MHb,
-    name = "Z-score",
-    cluster_rows = FALSE,
-    cluster_columns = FALSE,
-    show_row_names = TRUE,
-    show_column_names = TRUE,
-    col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
-    top_annotation = top_anno_sub,
-    left_annotation = row_anno_sub,
-    row_split = row_split_sub,
-    column_split = merged_Hb_clusters,
-    row_names_gp = gpar(fontsize = 9),
-    column_names_gp = gpar(fontsize = 14)
-)
-
 f_name <- paste0("heatmap_subset_MHb_LHb_top", top_subset, "_genes-column_grouped-Broad_res.pdf")
+grid_ann <- paste0("Top ", top_subset," DEG (FDR < 5%)\nWilcoxon test (Seurat)")
 
-pdf(here(plotDir, f_name), width = 12, height = 18)
-draw(hm_LHb_MHb)
-grid::grid.text(
-    paste0("Top ", top_subset," DEG (FDR < 5%) - Wilcoxon test (Seurat)"),
-    y = unit(0.02, "npc"),  # distance from bottom
-    gp = gpar(fontsize = 9, fontface = "italic")
-)
-dev.off()
+hm_LHb_MHb <- make_heatmap_column_group(mat_LHb_MHb, row_split_sub, merged_Hb_clusters, top_anno_sub, row_anno_sub, 
+                                        row_names_font_size, f_name, grid_ann, 18) # file name and bottom ann
 
+message("All done!!!")
 
 
 # # ## get thalamus clusters
