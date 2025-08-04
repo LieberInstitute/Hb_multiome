@@ -356,7 +356,7 @@ for (top in top_genes_number) {
     if (top == 3) { height_htm <- 12; 22 }
     
     # make ands save heatmap
-    f_name <- paste0("heatmap_top", top,"_genes-row_grouped-Broad_res.pdf")
+    f_name <- here(plotDir, paste0("heatmap_top", top,"_genes-row_grouped-Broad_res.pdf"))
     grid_ann <- paste0("Top ", top," DEG (FDR < 5%)\nWilcoxon test (Seurat)")
     
     hm1 <- make_heatmap_row_group(mat_scaled, row_cluster_group, top_anno, row_anno, 
@@ -392,7 +392,7 @@ for (top in top_genes_number) {
     
     names(column_cluster_group) <- colnames(mat_scaled)
     
-    f_name <- paste0("heatmap_top", top,"_genes-column_grouped-Broad_res.pdf")
+    f_name <- here(plotDir, paste0("heatmap_top", top,"_genes-column_grouped-Broad_res.pdf"))
     
     hm1 <- make_heatmap_column_group(mat_scaled, row_cluster_group, column_cluster_group, top_anno, row_anno, 
                                      row_names_font_size, f_name, grid_ann, height_htm) # file name and bottom ann
@@ -505,7 +505,7 @@ top_anno_sub <- HeatmapAnnotation(
 # Ensure column names match top_annotation
 stopifnot(all(colnames(mat_LHb_MHb) %in% names(merged_Hb_clusters)))
 
-f_name <- paste0("heatmap_subset_MHb_LHb_top", top_subset, "_genes-column_grouped-Broad_res.pdf")
+f_name <- here(plotDir, paste0("heatmap_subset_MHb_LHb_top", top_subset, "_genes-column_grouped-Broad_res.pdf"))
 grid_ann <- paste0("Top ", top_subset," DEG (FDR < 5%)\nWilcoxon test (Seurat)")
 
 hm_LHb_MHb <- make_heatmap_column_group(mat_LHb_MHb, row_split_sub, merged_Hb_clusters, top_anno_sub, row_anno_sub, 
