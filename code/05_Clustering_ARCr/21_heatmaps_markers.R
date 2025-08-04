@@ -27,7 +27,7 @@ inputRDS_Dir <- here(
 plotDir <- here(
     "plots",
     "05_Clustering_ARCr",
-    "11_heatmaps_markers"
+    "21_heatmaps_markers"
 )
 inputCVS_Dir <- here(
     "processed-data",
@@ -35,11 +35,11 @@ inputCVS_Dir <- here(
     "02_Hb_celltypes_from_seurat_reanalyze_v3",
     "cvs_files_markers"
 )
-input_meanRatio_Dir <- here(
-    "processed-data",
-    "05_Clustering_ARCr",
-    "13_wnn_geneExp_plt_mean_ratio_annotated"
-)
+# input_meanRatio_Dir <- here(
+#     "processed-data",
+#     "05_Clustering_ARCr",
+#     "13_wnn_geneExp_plt_mean_ratio_annotated"
+# )
 
 
 ## Check directories
@@ -516,7 +516,7 @@ message("All done!!!")
 
 # library("slurmjobs")
 # job_single(
-#     "11_heatmaps_markers",
+#     "21_heatmaps_markers",
 #     cores = 2,
 #     partition = "katun",
 #     memory = "80G",

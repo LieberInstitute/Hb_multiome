@@ -1,14 +1,14 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=80G
-#SBATCH --job-name=11_heatmaps_markers
+#SBATCH --job-name=21_heatmaps_markers
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
 
-log_path=logs/11_heatmaps_markers.txt
+log_path=logs/21_heatmaps_markers.txt
 
 {
 set -e
@@ -30,7 +30,7 @@ module load conda_R/4.3.x
 module list
 
 ## Edit with your job command
-Rscript 11_heatmaps_markers.R
+Rscript 21_heatmaps_markers.R
 res=?
 
 echo "**** Job ends ****"
