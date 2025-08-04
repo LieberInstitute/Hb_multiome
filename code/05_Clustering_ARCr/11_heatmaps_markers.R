@@ -1,5 +1,5 @@
 ########################################################################
-## Plot Heatmaps of GEX on WNN clustering
+## Plot Heatmaps of WNN clustering
 ## - Top X DEG (FDR<5%) on aggregated cell-types normalized at z-scores
 ##
 ## Authors. CSC
@@ -35,6 +35,12 @@ inputCVS_Dir <- here(
     "02_Hb_celltypes_from_seurat_reanalyze_v3",
     "cvs_files_markers"
 )
+input_meanRatio_Dir <- here(
+    "processed-data",
+    "05_Clustering_ARCr",
+    "13_wnn_geneExp_plt_mean_ratio_annotated"
+)
+
 
 ## Check directories
 if (!dir.exists(plotDir)) {
@@ -165,7 +171,7 @@ topGenes_mtx <- function(dge_annotated_clusters, avg_expr, top_genes = 3) {
 make_heatmap_row_group <- function(mat_scaled, row_cluster_group, top_anno, row_anno, 
                                    row_names_font_size, f_name, grid_ann, height_htm) {
     
-    hm <- Heatmap(
+    hm1 <- Heatmap(
         mat_scaled,
         name = "Z-score",
         cluster_rows = FALSE,
@@ -193,12 +199,12 @@ make_heatmap_row_group <- function(mat_scaled, row_cluster_group, top_anno, row_
     )
     dev.off()
     
-    return(hm)    
+    return(hm1)    
 }
 
 make_heatmap_column_group <- function(mat_scaled, row_cluster_group, column_cluster_group, top_anno, row_anno, 
                                       row_names_font_size, f_name, grid_ann, height_htm) {
-    Heatmap(
+    hm1 <- Heatmap(
         mat_scaled,
         name = "Z-score",
         cluster_rows = FALSE,
@@ -219,6 +225,17 @@ make_heatmap_column_group <- function(mat_scaled, row_cluster_group, column_clus
         column_title_rot = 45,
         gap = unit(1, "mm")  # spacing between row blocks
     )
+    pdf(f_name, width = 12, height = height_htm)
+    draw(hm1)
+    grid::grid.text(
+        grid_ann,
+        x = unit(.9, "npc"),    # right-aligned
+        y = unit(0.02, "npc"),  # distance from bottom
+        gp = gpar(fontsize = 9, fontface = "italic")
+    )
+    dev.off()
+    
+    return(hm1)  
     
 }
 
@@ -231,7 +248,7 @@ set.seed(7312025)
 
 top_genes_number = c(3, 5)
 
-## define colors for the group
+## define colors for the group (columns)
 group_colors <- c(
     LHb = "#1f78b4",
     MHb = "#ad1d8c",
@@ -258,8 +275,8 @@ for (top in top_genes_number) {
     ## verification
     #str(mat_scaled)
     dimnames(mat_scaled)
-    length(dimnames(mat_scaled)[[1]]) # 188 genes
-    length(dimnames(mat_scaled)[[2]]) # 40 clusters
+    length(dimnames(mat_scaled)[[1]]) # ge. For top3 = 114 genes
+    length(dimnames(mat_scaled)[[2]]) # ge. For top3 = 39 clusters
     #head(as.data.frame(as.matrix(mat_scaled[ , "C.37.Thal", drop = FALSE])))
     
     ## =============================================================================
@@ -287,7 +304,7 @@ for (top in top_genes_number) {
     # make it a named factor 
     merged_cluster <- factor(merged_cluster, 
                              levels = names(group_colors))
-                             
+    unique(merged_cluster)                         
     names(merged_cluster) <- clusters
     
     top_anno <- HeatmapAnnotation(
@@ -307,9 +324,9 @@ for (top in top_genes_number) {
         case_when(
             grepl("LHb", cl) ~ "LHb",
             grepl("MHb", cl) ~ "MHb",
-            grepl("Thal", cl) ~ "Thal",
             grepl("Excit\\.Thal", cl) ~ "Excit.Thal",
             grepl("Inhib\\.Thal", cl) ~ "Inhib.Thal",
+            grepl("Thal", cl) ~ "Thal",
             grepl("Astro", cl) ~ "Astrocyte",
             grepl("Oligo", cl) ~ "Oligo",
             grepl("OPC", cl) ~ "OPC",
@@ -321,7 +338,7 @@ for (top in top_genes_number) {
     
     row_cluster_group <- factor(row_cluster_group, 
                                 levels = names(group_colors))
-                                
+    unique(row_cluster_group)                            
     names(row_cluster_group) <- names(row_cluster)  # Ensure names = genes
     
     row_anno <- rowAnnotation(
@@ -336,7 +353,7 @@ for (top in top_genes_number) {
     message("Preparing row cluster-group heatmap ...")
     
     if (top == 3) { row_names_font_size <- 7.5; 6.8 }
-    if (top == 3) { height_htm <- 12; 20 }
+    if (top == 3) { height_htm <- 12; 22 }
     
     # make ands save heatmap
     f_name <- paste0("heatmap_top", top,"_genes-row_grouped-Broad_res.pdf")
