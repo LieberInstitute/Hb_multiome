@@ -73,6 +73,8 @@ modeling_res_enrichment[1:3,]
 ##  Compute correlation for FINE cluster annotations
 ################################################################################
 
+message("Compute correlations ...")
+
 if (designF == "vertical") {
   # designF="vertical"
 
@@ -144,15 +146,20 @@ if (designF == "vertical") {
   head(modeling_res_enrichment)
 }
 
+message("Correlations done!")
+
+
 ## save t-stats rData and Plots
 
 f_name <- paste0("cor_multiome_vs_snRNA-seq_top100_", designF, ".Rdata")
 save(cor_fine, file = file.path(dir_rdata, f_name))
 
+
 ##   Make heatmaps fine clusters snRNAseq vs Multiome snRNAseq
 
-plt_name <- paste0("cor_top100_registration_snMultiome_snRNAseq_v2_", designF, ".pdf")
-# cor_top100_registration_snMultiome_snRNAseq_v2_vertical.pdf
+message("Making heatmpas ...")
+
+plt_name <- paste0("cor_top100_registration_snMultiome_snRNAseq_", designF, ".pdf")
 pdf(here(dir_plot, plt_name))
 
 layer_stat_cor_plot(
@@ -174,8 +181,9 @@ message("Spatial Registration for FINE cluster annotations done!")
 ##  Subset HB cell-types of interest
 ################################################################################
 
+message("Subset Habenula cell-types ...")
+
 # Prepare matrix 
-# subset columns that contain "LHb", "MHb", or "Thal"? in the matrix 
 colnames(cor_fine)
 rownames(cor_fine)
 cor_fine_subset <- cor_fine[, grep("LHb|MHb", colnames(cor_fine))]
@@ -238,7 +246,13 @@ annotated_clusters_fine_subset <- annotated_clusters_fine_subset[
 ]
 annotated_clusters_fine_subset$cluster
 
+message("Subset Habenula done!")
+
+
 ## plot heatmap
+
+message("Making Heatmaps ...")
+
 plt_name <- "cor_top100_registration_snMultiome_snRNAseq_Habenula_clusters.pdf"
 pdf(here(dir_plot, plt_name), width = 10, height = 10)
 
@@ -255,12 +269,9 @@ layer_stat_cor_plot(
 #     column_title = "Spatial-Registration: LHb, MHb, and Thal",
 #     column_title_gp = gpar(fontsize = 16, fontface = "bold"))
 
-
 dev.off()
 
-
-
-
+message("Heatmaps done!")
 
 
 # library("slurmjobs")
