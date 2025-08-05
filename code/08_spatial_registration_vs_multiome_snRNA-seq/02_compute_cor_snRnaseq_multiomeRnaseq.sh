@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=60G
-#SBATCH --job-name=01_compute_cor_snRnaseq_multiomeRnaseq
+#SBATCH --job-name=02_compute_cor_snRnaseq_multiomeRnaseq
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
@@ -15,7 +15,7 @@ design_format=("vertical" "horizontal")
 design=${design_format[$(( $SLURM_ARRAY_TASK_ID / 1 % 2 ))]}
 
 ## Explicitly pipe script output to a log
-log_path=logs/01_compute_cor_snRnaseq_multiomeRnaseq_${design}_${SLURM_ARRAY_TASK_ID}.txt
+log_path=logs/02_compute_cor_snRnaseq_multiomeRnaseq_${design}.txt
 
 {
 set -e
@@ -39,7 +39,7 @@ module load conda_R/4.4.x
 module list
 
 ## Edit with your job command
-Rscript 01_compute_cor_snRnaseq_multiomeRnaseq.R --design ${design}
+Rscript 02_compute_cor_snRnaseq_multiomeRnaseq.R --design ${design}
 
 echo "**** Job ends ****"
 date
