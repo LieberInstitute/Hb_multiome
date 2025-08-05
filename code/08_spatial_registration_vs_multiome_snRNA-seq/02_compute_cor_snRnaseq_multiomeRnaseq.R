@@ -199,15 +199,18 @@ rownames(cor_fine_subset)
 rows <- rownames(cor_fine_subset)
 is_mhb <- grepl("MHb", rows)
 get_num <- function(x) as.numeric(sub("C\\.(\\d+)\\..*", "\\1", x))
-cor_fine_subset <- cor_fine_subset[sorted_rows, ]
+
 # extract each Hb group
 mhb_rows <- rows[is_mhb]
 lhb_rows <- rows[!is_mhb]
+
 # apply numeric sort
 mhb_sorted <- mhb_rows[order(get_num(mhb_rows))]
 lhb_sorted <- lhb_rows[order(get_num(lhb_rows))]
+
 # combine the final order
 sorted_rows <- c(mhb_sorted, lhb_sorted)
+
 # apply to the matrix
 cor_fine_subset <- cor_fine_subset[sorted_rows, ]
 colnames(cor_fine_subset)
