@@ -77,7 +77,6 @@ get_coveragePlot <- function(
         downstream = 500,
         seurat_name
 ){
-    features <- top5_cluster$gene[.x]
     plt1 <- CoveragePlot(
         object = SeuratOBJ, # Seurat_subset
         region = features,
@@ -112,7 +111,7 @@ walk(hb_cannonical_genes, function(gene) {
     )
     
     # save the plot
-    f_name <- paste0(Seurat_base_name, "_coverage_", upstream, "bp_", gene, ".png")
+    f_name <- paste0(Seurat_base_name, "_coverage_", upstream, "bp_", gene, ".pdf")
     pdf(file = here(plotDir, f_name))
     print(p1)
     dev.off()
