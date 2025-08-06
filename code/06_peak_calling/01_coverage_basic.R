@@ -23,7 +23,7 @@ library("here")
 inputRDS_Dir <- here(
   "processed-data",
   "05_Clustering_ARCr",
-  "05_rename_idents"
+  "17_wnn_clustering_final_ct"
 )
 inputCVS_Dir <- here(
   "processed-data",
@@ -43,7 +43,7 @@ if (!dir.exists(plotDir)) {
 
 ## Load Seurat
 # Use Seurat with clusters renamed for Spatial-Registration on Visium project
-Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds"
+Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
 levels(SeuratOBJ)
