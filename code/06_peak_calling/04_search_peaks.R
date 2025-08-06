@@ -20,7 +20,7 @@ library("here")
 inputRDS_Dir <- here(
     "processed-data",
     "05_Clustering_ARCr",
-    "05_rename_idents"
+    "17_wnn_clustering_final_ct"
 )
 plotDir <- here(
     "plots",
@@ -37,10 +37,8 @@ if (!dir.exists(outputCSV_Dir)) {
 }
 
 ## Load Seurat
-# Use Seurat with clusters renamed, also used for Spatial-Registration on Visium project
-
-Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium.rds"
-#Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2.rds"
+# Use Seurat with final ct-annotations
+Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
 levels(SeuratOBJ)
@@ -59,6 +57,10 @@ SeuratOBJ[["ATAC"]]
 length(Cells(SeuratOBJ))
 colnames(SeuratOBJ@meta.data)
 
+
+message("Processing Peaks for WNN clusters ... ")
+
+
 all_clusters_df <- data.frame(
     cluster_ann = unique(SeuratOBJ@meta.data[c("cluster_ann")]),
     seurat_cluster = unique(SeuratOBJ@meta.data[c("seurat_clusters")]),
@@ -66,18 +68,11 @@ all_clusters_df <- data.frame(
 )
 all_clusters_df <- head(all_clusters_df)
 print(all_clusters_df, row.names = FALSE)
-# cluster_ann           seurat_clusters
-# C.25.undetermined              25
-# C.04.undetermined               4
-# C.09.undetermined               9
-# C.01.undetermined               1
-# C.13.no-match                   13
-# C.08.undetermined               8
 
 
 ##==============================================================================
 # call peaks on a single-cell ATAC-seq dataset using MACS2
-# I am using pseudo-annotated clusters
+# peaks will be called independently on each group of cells and then combined
 
 message("Calling peaks grouped by wnn cluster ... ")
 
