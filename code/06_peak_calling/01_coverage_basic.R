@@ -1,7 +1,9 @@
 ########################################################################
-## Basic peaks coverrage Plot for Hb cannonical genes and top5 Hb DGE genes by cluster
+## Baseline reference for region-specific accessibility
+## Use pseudobulk-style visualization at ±500 bp
+##     for Hb cannonical genes and top5 Hb DGE genes by cluster
 ##
-## Output: coverage plots from WNN ATAC modality - rna.clusters
+## Output: coverage plots from WNN
 ##
 ## Authors. CSC
 ## Date. March 24, 2025
@@ -33,7 +35,8 @@ inputCVS_Dir <- here(
 )
 plotDir <- here(
   "plots",
-  "06_peak_calling"
+  "06_peak_calling",
+  "01_coverage_basic"
 )
 
 ## Check directories
@@ -119,10 +122,6 @@ DEG_file_name <- here(inputCVS_Dir, DEG_file_name)
 df_cluster_names <- read.csv(DEG_file_name)
 df_cluster_names <- df_cluster_names |> drop_na(cell_type)
 head(df_cluster_names)
-# p_val avg_log2FC pct.1 pct.2 p_val_adj cluster     gene            cell_type
-# 1     0   4.336764 0.938 0.100         0       1 OTX2-AS1        DD_Inhib.Thal
-# 2     0   3.849508 0.900 0.083         0       1      KIT        DD_Inhib.Thal
-# 3     0   3.682782 0.927 0.122         0       1    MEIS2      LB_Thalamus/MDm
 
 ## Identified and subset clusters annotated for `habenula`.
 
@@ -133,24 +132,8 @@ Seurat_subset <- subset(SeuratOBJ, idents = grep("MHb|LHb", Idents(SeuratOBJ), v
 hb_clusters <- levels(Seurat_subset)
 hb_cluster_numbers <- as.numeric(sub("^C\\.(\\d+)\\..*$", "\\1", hb_clusters))
 hb_clusters
-# ## Filter top 5 habenula clusters only from DGE df
-# no_hb_clust = list()
-# for (idx in seq_along(hb_clusters)) {
-#   if (nchar(hb_clusters[idx]) <= 4) {
-#     no_hb_clust <- append(no_hb_clust, hb_clusters[idx])
-#   }
-# }
-# no_hb_clust <- c(unlist(no_hb_clust))
-# hb_clusters <- hb_clusters[!hb_clusters %in% c(no_hb_clust)]
-#as.vector(hb_clusters)
 
-# [1] "C.05 DD_LHb" "C.07 DD_MHb" "C.10 DD_MHb" "C.11 DD_MHb" "C.14 DD_MHb"
-# [6] "C.16 DD_MHb" "C.18 DD_LHb" "C.23 DD_LHb" "C.24 DD_LHb" "C.30 DD_LHb"
-# [11] "C.33 DD_LHb" "C.36 DD_MHb" "C.40 DD_LHb"
-# length(hb_clusters)
-
-##  Use length of clustersto extract clusters IDs
-#hb_clusters <- as.integer(substr(hb_clusters, 3, 4))
+##  Use length of clusters to extract clusters IDs
 hb_cluster_numbers
 # [1]  5  7 10 11 14 16 18 23 24 30 33 36 40
 
