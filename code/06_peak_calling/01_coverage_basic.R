@@ -60,25 +60,34 @@ Seurat_base_name
 # C.leiden_lsi_r2
 
 ## =============================================================================
-## Coverage plots with Habenula canonical genes
+## Coverage plots with Habenula canonical genes and top5 DEG
 
 message("Processing coverage plots for `POU4F1`, `GPR151` ... ")
 
-get_Hb_cannonial_coveragePlot <- function(
+## setup Extend Region
+# based on distance for promoter or small gene
+upstream = 1000
+downstream = 1000
+
+## make plot
+get_coveragePlot <- function(
         SeuratOBJ,
-        features,
-        title_plt
+        features, 
+        upstream = 500, 
+        downstream = 500,
+        seurat_name
 ){
+    features <- top5_cluster$gene[.x]
     plt1 <- CoveragePlot(
-        object = SeuratOBJ,
+        object = SeuratOBJ, # Seurat_subset
         region = features,
         features = features,
-        extend.upstream = 500,
-        extend.downstream = 500,
+        extend.upstream = upstream,
+        extend.downstream = downstream,
         peaks = TRUE,
         links = TRUE
-    )  +
-        labs(title = title_plt) +
+    ) +
+        labs(title = paste0("Clusters from WNN: ", seurat_name)) +
         theme(
             text = element_text(size = 8),
             axis.text.x = element_text(size = 7),
@@ -92,23 +101,22 @@ get_Hb_cannonial_coveragePlot <- function(
 hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
 
 walk(hb_cannonical_genes, function(gene) {
+    
     message("Plotting gene: ", gene)
     
     # Generate the plot
-    plt <- get_Hb_cannonial_coveragePlot(
+    p1 <- get_coveragePlot(
         SeuratOBJ,
-        gene,
+        gene, upstream, downstream,
         paste0("Clusters from WNN: ", Seurat_base_name)
     )
     
     # save the plot
-    f_name <- paste0(Seurat_base_name, "_coverage_", gene, ".png")
-    ggsave(
-        filename = here(plotDir, f_name),
-        plot = plt,
-        height = 12,
-        width = 6
-    )
+    f_name <- paste0(Seurat_base_name, "_coverage_", upstream, "bp_", gene, ".png")
+    pdf(file = here(plotDir, f_name))
+    print(p1)
+    dev.off()
+    
 })
 
 
@@ -123,79 +131,64 @@ df_cluster_names <- read.csv(DEG_file_name)
 df_cluster_names <- df_cluster_names |> drop_na(cell_type)
 head(df_cluster_names)
 
-## Identified and subset clusters annotated for `habenula`.
+## Subset clusters annotated for `habenula`.
 
 message("Cluster-IDs from `WNN`")
 
-#hb_clusters <- levels(SeuratOBJ)
-Seurat_subset <- subset(SeuratOBJ, idents = grep("MHb|LHb", Idents(SeuratOBJ), value = TRUE))
-hb_clusters <- levels(Seurat_subset)
-hb_cluster_numbers <- as.numeric(sub("^C\\.(\\d+)\\..*$", "\\1", hb_clusters))
-hb_clusters
+## set TRUE if you wish to plot only Hb clusters
+hb_clusters_only = FALSE
+
+if (hb_clusters_only) {
+    Seurat_subset <- subset(SeuratOBJ, idents = grep("MHb|LHb", Idents(SeuratOBJ), value = TRUE))
+    hb_clusters <- levels(Seurat_subset)
+    hb_clusters
+    cluster_numbers <- as.numeric(sub("^C\\.(\\d+)\\..*$", "\\1", hb_clusters))
+} else {
+    all_clusters <- levels(SeuratOBJ)
+    all_clusters
+    cluster_numbers <- as.numeric(sub("^C\\.(\\d+)\\..*$", "\\1", all_clusters))   
+}
+    
 
 ##  Use length of clusters to extract clusters IDs
-hb_cluster_numbers
-# [1]  5  7 10 11 14 16 18 23 24 30 33 36 40
+cluster_numbers
 
 ## filter the top 5
 #unique(df_cluster_names$cluster)
+
 top5 <- df_cluster_names |>
-  filter(cluster %in% hb_cluster_numbers) |>
+  filter(cluster %in% cluster_numbers) |>
   group_by(cluster) |>
   top_n(n = 5, wt = avg_log2FC)
 head(top5)
-#     p_val avg_log2FC pct.1 pct.2 p_val_adj cluster gene    cell_type
-# <dbl>      <dbl> <dbl> <dbl>     <dbl>   <int> <chr>   <chr>
-# 1     0       3.04 0.768 0.145         0       5 RFTN1   DD_LHb
-# 2     0       3.03 0.798 0.194         0       5 CBLN2   DD_LHb
-# 3     0       3.37 0.73  0.129         0       5 GALR1   DD_LHb
-# 4     0       3.15 0.669 0.124         0       5 HTR4    DD_LHb
-# 5     0       3.38 0.956 0.457         0       5 COL25A1 DD_LHb
 
-## Prepare and save coverage plot from top 5 genes by Hb cluster
+
+##==============================================================================
+
+## plot top5 DEG on WNN
 
 for (clus in unique(top5$cluster)) {
   # testing: clus = 5
-  PDF_name <- paste0(
-    Seurat_base_name,
-    "_coverage_hb_cluster_",
-    clus,
-    ".pdf"
-  )
-
-  message("Processing habenula cluster: ", clus, "; Saved as: ", PDF_name)
+  
+  PDF_name <- paste0(Seurat_base_name, "_coverage", upstream, "bp_", clus, ".pdf") #"_coverage_hb_cluster_",
+  pdf(file = here(plotDir, PDF_name))
+  
+  message("Processing cluster: ", clus, "; Save as: ", PDF_name)
 
   top5_cluster <- top5 |>
     filter(cluster == clus)
-
-  pdf(file = here(plotDir, PDF_name))
 
   walk(
     seq_along(top5_cluster$gene),
     ~ {
       tryCatch(
         {
-          message(paste0("Processing gene ", top5_cluster$gene[.x]))
-
-          features <- top5_cluster$gene[.x]
-          plt1 <- CoveragePlot(
-            object = Seurat_subset,
-            region = features,
-            features = features,
-            extend.upstream = 500,
-            extend.downstream = 500,
-            peaks = TRUE,
-            links = TRUE
-          )
-          plt1 <- plt1 +
-            labs(title = paste0("Clusters from WNN: ", seurat_name)) +
-            theme(
-              text = element_text(size = 8),
-              axis.text.x = element_text(size = 7),
-              axis.text.y = element_text(size = 7),
-              plot.title = element_text(hjust = 0.5)
-            )
-          print(plt1)
+        message(paste0("Processing gene ", top5_cluster$gene[.x]))
+        ## make plot gene .x
+        p1 <- make_coveragePlot(SeuratOBJ,
+                                top5_cluster$gene[.x], upstream, downstream,
+                                "")
+        print(p1)
         },
         error = function(e) {
           message(paste0(
@@ -210,11 +203,14 @@ for (clus in unique(top5$cluster)) {
   )
 
   dev.off()
+  
 }
+
+
 # Error occurred while processing gene AC109466.1: Gene not found
 # Error occurred while processing gene LINC02143: Gene not found
 
-message("Coverage plots for top 5 Hb genes completed")
+message("Coverage plots for top 5 genes completed!")
 
 # library("slurmjobs")
 # job_single(
