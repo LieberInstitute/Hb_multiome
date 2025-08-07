@@ -193,8 +193,9 @@ g1 <- ggplot(link_df, aes(x = distance / 1000, y = score)) +
         x = "Distance from TSS (kb)",
         y = "Correlation Score",
         title = "Peak-Gene Correlation vs. Distance"
-    ) +
+    ) + geom_smooth(method = "loess", se = FALSE, color = "darkred") +
     theme_minimal()
+    
 
 f_name <- here(plotDir, "distribution_scores_pearson_1000bp.pdf")
 print(g1)
