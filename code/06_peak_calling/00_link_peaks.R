@@ -228,7 +228,7 @@ message("TSS Correlation scores completed!")
 
 # library("slurmjobs")
 # job_single(
-#   "01_coverage_basic",
+#   "00_link_peaks",
 #   create_shell = TRUE,
 #   partition = "katun",
 #   memory = "30G",
