@@ -143,9 +143,12 @@ write.csv(
 ## compute the distance between each peak and its linked gene's TSS and add it to the link_df
 # Get TSS per gene
 gene_coords <- genes(EnsDb.Hsapiens.v86)
-head(gene_coords)
+#head(gene_coords)
 tss_coords <- resize(gene_coords, width = 1, fix = "start")
 tss_coords <- keepStandardChromosomes(tss_coords, pruning.mode = "coarse")
+#head(tss_coords)
+# ensure chromosome names in TSS match UCSC-style peaks (chr1, chr2, etc.)
+seqlevelsStyle(tss_coords) <- "UCSC"
 head(tss_coords)
 
 ## Match genes in link_df to their TSS
@@ -153,25 +156,49 @@ head(tss_coords)
 link_df$gene <- as.character(link_df$gene)
 tss_df <- as.data.frame(tss_coords)
 tss_df <- tss_df[, c("seqnames", "start", "gene_id", "gene_name")]
-# seqnames    start         gene_id         gene_name
-# ENSG00000223972        1    11869 ENSG00000223972           DDX11L1
-# ENSG00000227232        1    29570 ENSG00000227232            WASH7P
-# ENSG00000278267        1    17436 ENSG00000278267         MIR6859-1
-# ENSG00000243485        1    29554 ENSG00000243485         MIR1302-2
+head(tss_df)
+#                   seqnames start         gene_id gene_name
+# ENSG00000223972     chr1 11869 ENSG00000223972   DDX11L1
+# ENSG00000227232     chr1 29570 ENSG00000227232    WASH7P
+# ENSG00000278267     chr1 17436 ENSG00000278267 MIR6859-1
+
 # Join link_df with TSS info by gene name
 link_df <- left_join(link_df, tss_df, by = c("gene" = "gene_name"))
-head(link_df, n=3)
-# seqnames.x   start.x       end width strand      score   gene
-# 1       chr5 146497025 146516190 19166      * 0.05152079 GPR151
-# 2       chr5 146516043 146516190   148      * 0.09796039 GPR151
-# 3      chr13  78596294  78603560  7267      * 0.05696197 POU4F1
-# peak   zscore       pvalue seqnames.y   start.y
-# 1 chr5-146496517-146497533 2.798199 2.569423e-03          5 146516190
-# 2 chr5-146515546-146516540 5.304582 5.646581e-08          5 146516190
-# 3  chr13-78595767-78596821 4.112369 1.958100e-05         13  78603560
-# gene_id
-# 1 ENSG00000173250
-# 2 ENSG00000173250
+head(link_df, n = 3)
+# remove rows where chromosomes don’t match
+link_df <- link_df[as.character(link_df$seqnames.x) == as.character(link_df$seqnames.y), ]
+
+## Compute the distance to TSS
+# Compute center of each peak
+link_df$peak_center <- (link_df$start.x + link_df$end) / 2
+
+# Compute absolute distance to TSS
+link_df$distance <- abs(link_df$peak_center - link_df$start.y)  # `start.y` is the TSS
+# gives directionality (upstream = negative, downstream = positive).
+link_df$signed_distance <- link_df$peak_center - link_df$start.y
+
+h1 <- hist(link_df$distance / 1000, breaks = 100,
+     main = "Distance from Peaks to TSS",
+     xlab = "Distance (kb)",
+     col = "lightblue")
+
+f_name <- "histogram_scores_pearson_1000bp.pdf"
+print(h1)
+dev.off()
+    
+g1 <- ggplot(link_df, aes(x = distance / 1000, y = score)) +
+    geom_point(alpha = 0.3, color = "steelblue") +
+    geom_hline(yintercept = 0.3, linetype = "dashed", color = "red") +
+    labs(
+        x = "Distance from TSS (kb)",
+        y = "Correlation Score",
+        title = "Peak-Gene Correlation vs. Distance"
+    ) +
+    theme_minimal()
+
+f_name <- here(plotDir, "distribution_scores_pearson_1000bp.pdf")
+print(g1)
+dev.off()
 
 
 
