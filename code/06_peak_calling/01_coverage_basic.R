@@ -89,6 +89,17 @@ tryCatch(
     })
 
 
+## find peaks that are correlated with the expression of nearby genes
+atac <- LinkPeaks(
+    object = SeuratOBJ,
+    peak.assay = "ATAC",
+    expression.assay = "RNA",
+    # genes.use = top5_genes_habenula,      # supply vector of gene names
+    method = "pearson",        # Default settings
+    distance = 1e5             # Only consider peaks within ±100 kb of gene TSS (cis-window)
+)
+
+
 ## =============================================================================
 ## Coverage plots with Habenula canonical genes and top5 DEG
 
