@@ -14,8 +14,12 @@
 library("Seurat")
 library("Signac")
 library("ggplot2")
-library("BSgenome.Hsapiens.UCSC.hg38")
+## I use BSgenome.Hsapiens.UCSC.hg38 for extracting DNA motifs, k-mers, sequence-based features and compute Tn5 bias correction
+library("BSgenome.Hsapiens.UCSC.hg38")  # full reference genome sequence / actual DNA bases (A/T/C/G) for each chromosome
+## I use EnsDb.Hsapiens.v86 for extracting gene names, positions, TSSs, chr locations, etc.
+library("EnsDb.Hsapiens.v86")           # Gene annotation (GTF-style)
 library("tidyverse")
+library("dplyr")
 library("purrr")
 library("here")
 
@@ -64,6 +68,8 @@ Seurat_base_name
 
 ## Identifies cis-regulatory elements by linking chromatin-accessible peaks to gene expression using correlation (and optionally accounting for covariates).
 
+## preprocessed peaks
+
 ## GC content correction
 genome <- BSgenome.Hsapiens.UCSC.hg38
 
@@ -89,15 +95,84 @@ tryCatch(
     })
 
 
+## set a subset of genes to test
+hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
+
 ## find peaks that are correlated with the expression of nearby genes
 atac <- LinkPeaks(
     object = SeuratOBJ,
     peak.assay = "ATAC",
     expression.assay = "RNA",
+    genes.use = hb_cannonical_genes,
     # genes.use = top5_genes_habenula,      # supply vector of gene names
     method = "pearson",        # Default settings
     distance = 1e5             # Only consider peaks within ±100 kb of gene TSS (cis-window)
 )
+
+
+##==============================================================================
+## explore and filter strong peak-gene links
+
+## inspect data
+head(Links(atac))
+# GRanges object with 5 ranges and 5 metadata columns:
+#     seqnames              ranges strand |     score        gene
+# <Rle>           <IRanges>  <Rle> | <numeric> <character>
+# [1]     chr5 146497025-146516190      * | 0.0515208      GPR151
+# [2]     chr5 146516043-146516190      * | 0.0979604      GPR151
+# [3]    chr13   78596294-78603560      * | 0.0569620      POU4F1
+# [4]    chr13   78597457-78603560      * | 0.0579676      POU4F1
+# [5]    chr13   78603450-78603560      * | 0.0594102      POU4F1
+# peak    zscore      pvalue
+# <character> <numeric>   <numeric>
+#     [1] chr5-146496517-14649..   2.71746 3.28927e-03
+# [2] chr5-146515546-14651..   5.29336 6.00436e-08
+# [3] chr13-78595767-78596..   4.35176 6.75248e-06
+# [4] chr13-78597000-78597..   4.33686 7.22667e-06
+# [5] chr13-78602870-78604..   5.15894 1.24175e-07
+
+link_df <- as.data.frame(Links(atac))
+summary(link_df$score)
+
+write.csv(
+    link_df,
+    file = here(plotDir, "all_peak_gene_links.csv"),
+    row.names = FALSE
+)
+
+## compute the distance between each peak and its linked gene's TSS and add it to the link_df
+# Get TSS per gene
+gene_coords <- genes(EnsDb.Hsapiens.v86)
+head(gene_coords)
+tss_coords <- resize(gene_coords, width = 1, fix = "start")
+tss_coords <- keepStandardChromosomes(tss_coords, pruning.mode = "coarse")
+head(tss_coords)
+
+## Match genes in link_df to their TSS
+# Make sure gene names match
+link_df$gene <- as.character(link_df$gene)
+tss_df <- as.data.frame(tss_coords)
+tss_df <- tss_df[, c("seqnames", "start", "gene_id", "gene_name")]
+# seqnames    start         gene_id         gene_name
+# ENSG00000223972        1    11869 ENSG00000223972           DDX11L1
+# ENSG00000227232        1    29570 ENSG00000227232            WASH7P
+# ENSG00000278267        1    17436 ENSG00000278267         MIR6859-1
+# ENSG00000243485        1    29554 ENSG00000243485         MIR1302-2
+# Join link_df with TSS info by gene name
+link_df <- left_join(link_df, tss_df, by = c("gene" = "gene_name"))
+head(link_df, n=3)
+# seqnames.x   start.x       end width strand      score   gene
+# 1       chr5 146497025 146516190 19166      * 0.05152079 GPR151
+# 2       chr5 146516043 146516190   148      * 0.09796039 GPR151
+# 3      chr13  78596294  78603560  7267      * 0.05696197 POU4F1
+# peak   zscore       pvalue seqnames.y   start.y
+# 1 chr5-146496517-146497533 2.798199 2.569423e-03          5 146516190
+# 2 chr5-146515546-146516540 5.304582 5.646581e-08          5 146516190
+# 3  chr13-78595767-78596821 4.112369 1.958100e-05         13  78603560
+# gene_id
+# 1 ENSG00000173250
+# 2 ENSG00000173250
+
 
 
 ## =============================================================================
@@ -137,8 +212,6 @@ get_coveragePlot <- function(
     return(plt1)
 }
 
-
-hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
 
 walk(hb_cannonical_genes, function(gene) {
     
