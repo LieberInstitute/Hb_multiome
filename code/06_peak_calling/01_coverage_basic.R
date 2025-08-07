@@ -13,11 +13,11 @@
 
 library("Seurat")
 library("Signac")
-library("ggplot2")
-## I use BSgenome.Hsapiens.UCSC.hg38 for extracting DNA motifs, k-mers, sequence-based features and compute Tn5 bias correction
-library("BSgenome.Hsapiens.UCSC.hg38")  # full reference genome sequence / actual DNA bases (A/T/C/G) for each chromosome
-## I use EnsDb.Hsapiens.v86 for extracting gene names, positions, TSSs, chr locations, etc.
-library("EnsDb.Hsapiens.v86")           # Gene annotation (GTF-style)
+# library("ggplot2")
+# ## I use BSgenome.Hsapiens.UCSC.hg38 for extracting DNA motifs, k-mers, sequence-based features and compute Tn5 bias correction
+# library("BSgenome.Hsapiens.UCSC.hg38")  # full reference genome sequence / actual DNA bases (A/T/C/G) for each chromosome
+# ## I use EnsDb.Hsapiens.v86 for extracting gene names, positions, TSSs, chr locations, etc.
+# library("EnsDb.Hsapiens.v86")           # Gene annotation (GTF-style)
 library("tidyverse")
 library("dplyr")
 library("purrr")
@@ -66,70 +66,10 @@ Seurat_base_name
 
 ##==============================================================================
 
-## Identifies cis-regulatory elements by linking chromatin-accessible peaks to gene expression using correlation (and optionally accounting for covariates).
-
-## preprocessed peaks
-
-## GC content correction
-genome <- BSgenome.Hsapiens.UCSC.hg38
-
-SeuratOBJ <- RegionStats(
-    object = SeuratOBJ,
-    genome = genome,
-    assay = "ATAC"  
-)
-
-## see all chromosomes
-table(seqnames(granges(SeuratOBJ)))
-## see what are considered standard chromosomes
-standardChromosomes(granges(SeuratOBJ))
-
-## Even though this filtering doesn’t change anything in this dataset, it ensures reproducibility
-## remove the features that correspond to chromosome scaffolds or other sequences instead of the (22+2) standard chromosomes
-peaks.keep <- seqnames(granges(SeuratOBJ)) %in% standardChromosomes(granges(SeuratOBJ))
-tryCatch(
-    {
-        SeuratOBJ <- SeuratOBJ[as.vector(peaks.keep), ]
-    }, error = function(e) {
-        message(e)
-    })
-
+## One identified peaks ... 
 
 ## set a subset of genes to test
 hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
-
-## find peaks that are correlated with the expression of nearby genes
-atac <- LinkPeaks(
-    object = SeuratOBJ,
-    peak.assay = "ATAC",
-    expression.assay = "RNA",
-    # genes.use = hb_cannonical_genes,
-    # genes.use = top5_genes_habenula,      # supply vector of gene names
-    method = "pearson",        # Default settings
-    distance = 1e5             # Only consider peaks within ±100 kb of gene TSS (cis-window)
-)
-
-
-##==============================================================================
-## explore and filter strong peak-gene links
-
-## inspect data
-head(Links(atac))
-# GRanges object with 5 ranges and 5 metadata columns:
-#     seqnames              ranges strand |     score        gene
-# <Rle>           <IRanges>  <Rle> | <numeric> <character>
-# [1]     chr5 146497025-146516190      * | 0.0515208      GPR151
-# [2]     chr5 146516043-146516190      * | 0.0979604      GPR151
-# [3]    chr13   78596294-78603560      * | 0.0569620      POU4F1
-# [4]    chr13   78597457-78603560      * | 0.0579676      POU4F1
-# [5]    chr13   78603450-78603560      * | 0.0594102      POU4F1
-# peak    zscore      pvalue
-# <character> <numeric>   <numeric>
-#     [1] chr5-146496517-14649..   2.71746 3.28927e-03
-# [2] chr5-146515546-14651..   5.29336 6.00436e-08
-# [3] chr13-78595767-78596..   4.35176 6.75248e-06
-# [4] chr13-78597000-78597..   4.33686 7.22667e-06
-# [5] chr13-78602870-78604..   5.15894 1.24175e-07
 
 link_df <- as.data.frame(Links(atac))
 summary(link_df$score)
@@ -139,84 +79,6 @@ write.csv(
     file = here(plotDir, "all_peak_gene_links.csv"),
     row.names = FALSE
 )
-
-## compute the distance between each peak and its linked gene's TSS and add it to the link_df
-# Get TSS per gene
-gene_coords <- genes(EnsDb.Hsapiens.v86)
-#head(gene_coords)
-tss_coords <- resize(gene_coords, width = 1, fix = "start")
-tss_coords <- keepStandardChromosomes(tss_coords, pruning.mode = "coarse")
-#head(tss_coords)
-# ensure chromosome names in TSS match UCSC-style peaks (chr1, chr2, etc.)
-seqlevelsStyle(tss_coords) <- "UCSC"
-head(tss_coords)
-
-## Match genes in link_df to their TSS
-# Make sure gene names match
-link_df$gene <- as.character(link_df$gene)
-tss_df <- as.data.frame(tss_coords)
-tss_df <- tss_df[, c("seqnames", "start", "gene_id", "gene_name")]
-head(tss_df)
-#                   seqnames start         gene_id gene_name
-# ENSG00000223972     chr1 11869 ENSG00000223972   DDX11L1
-# ENSG00000227232     chr1 29570 ENSG00000227232    WASH7P
-# ENSG00000278267     chr1 17436 ENSG00000278267 MIR6859-1
-
-# Join link_df with TSS info by gene name
-link_df <- left_join(link_df, tss_df, by = c("gene" = "gene_name"))
-head(link_df, n = 3)
-# remove rows where chromosomes don’t match
-link_df <- link_df[as.character(link_df$seqnames.x) == as.character(link_df$seqnames.y), ]
-
-## Compute the distance to TSS
-# Compute center of each peak
-link_df$peak_center <- (link_df$start.x + link_df$end) / 2
-
-# Compute absolute distance to TSS
-link_df$distance <- abs(link_df$peak_center - link_df$start.y)  # `start.y` is the TSS
-# gives directionality (upstream = negative, downstream = positive).
-link_df$signed_distance <- link_df$peak_center - link_df$start.y
-
-## Histogram TSS Scores
-pdf(file = here(plotDir, "histogram_scores_pearson_1000bp.pdf"), width = 7, height = 5)
-hist(link_df$distance / 1000, breaks = 100,
-     main = "Distance from Peaks to TSS",
-     xlab = "Distance (kb)",
-     col = "lightblue")
-dev.off()
-
-## Correlation vs Distance with smoothing
-g1 <- ggplot(link_df, aes(x = distance / 1000, y = score)) +
-    geom_point(alpha = 0.3, color = "steelblue") +
-    geom_hline(yintercept = 0.3, linetype = "dashed", color = "red") +
-    labs(
-        x = "Distance from TSS (kb)",
-        y = "Correlation Score",
-        title = "Peak-Gene Correlation vs. Distance"
-    ) + geom_smooth(method = "loess", se = FALSE, color = "darkred") +
-    theme_minimal()
-    
-ggsave(here(plotDir, "distribution_scores_pearson_1000bp.pdf"), 
-            g1, width = 8, height = 5)
-
-## Highlighting high-confidence links
-g2 <- ggplot(link_df, aes(x = distance / 1000, y = score, color = score > 0.3)) +
-    geom_point(alpha = 0.4) +
-    scale_color_manual(
-        values = c("FALSE" = "steelblue", "TRUE" = "firebrick"),
-        labels = c("FALSE" = "Score ≤ 0.3", "TRUE" = "Score > 0.3"),
-        name = "Correlation Threshold"
-    ) +
-    labs(
-        x = "Distance from TSS (kb)",
-        y = "Correlation Score",
-        title = "Peak-Gene Correlation vs. Distance",
-        subtitle = "Red points indicate high-confidence peak-gene links (score > 0.3)"
-    ) +
-    theme_minimal()
-
-ggsave(here(plotDir, "distribution_scores_pearson_1000bp_high_confidence.pdf"),
-       g2, width = 8, height = 5)
 
 ## filtered peaks
 write.csv(link_df, 
