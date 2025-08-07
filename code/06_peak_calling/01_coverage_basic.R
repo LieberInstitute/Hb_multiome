@@ -14,6 +14,7 @@
 library("Seurat")
 library("Signac")
 library("ggplot2")
+library("BSgenome.Hsapiens.UCSC.hg38")
 library("tidyverse")
 library("purrr")
 library("here")
@@ -58,6 +59,35 @@ Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
 Seurat_base_name <- sub("_renamed_visium$", "", Seurat_base_name)
 Seurat_base_name
 # C.leiden_lsi_r2
+
+##==============================================================================
+
+## Identifies cis-regulatory elements by linking chromatin-accessible peaks to gene expression using correlation (and optionally accounting for covariates).
+
+## GC content correction
+genome <- BSgenome.Hsapiens.UCSC.hg38
+
+SeuratOBJ <- RegionStats(
+    object = SeuratOBJ,
+    genome = genome,
+    assay = "ATAC"  
+)
+
+## see all chromosomes
+table(seqnames(granges(SeuratOBJ)))
+## see what are considered standard chromosomes
+standardChromosomes(granges(SeuratOBJ))
+
+## Even though this filtering doesn’t change anything in this dataset, it ensures reproducibility
+## remove the features that correspond to chromosome scaffolds or other sequences instead of the (22+2) standard chromosomes
+peaks.keep <- seqnames(granges(SeuratOBJ)) %in% standardChromosomes(granges(SeuratOBJ))
+tryCatch(
+    {
+        SeuratOBJ <- SeuratOBJ[as.vector(peaks.keep), ]
+    }, error = function(e) {
+        message(e)
+    })
+
 
 ## =============================================================================
 ## Coverage plots with Habenula canonical genes and top5 DEG
@@ -210,6 +240,10 @@ for (clus in unique(top5$cluster)) {
 # Error occurred while processing gene LINC02143: Gene not found
 
 message("Coverage plots for top 5 genes completed!")
+
+
+
+
 
 # library("slurmjobs")
 # job_single(
