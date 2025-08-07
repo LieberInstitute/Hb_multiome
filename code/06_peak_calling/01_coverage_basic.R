@@ -177,15 +177,15 @@ link_df$distance <- abs(link_df$peak_center - link_df$start.y)  # `start.y` is t
 # gives directionality (upstream = negative, downstream = positive).
 link_df$signed_distance <- link_df$peak_center - link_df$start.y
 
-h1 <- hist(link_df$distance / 1000, breaks = 100,
+## Histogram TSS Scores
+pdf(file = here(plotDir, "histogram_scores_pearson_1000bp.pdf"), width = 7, height = 5)
+hist(link_df$distance / 1000, breaks = 100,
      main = "Distance from Peaks to TSS",
      xlab = "Distance (kb)",
      col = "lightblue")
-
-f_name <- "histogram_scores_pearson_1000bp.pdf"
-print(h1)
 dev.off()
-    
+
+## Correlation vs Distance with smoothing
 g1 <- ggplot(link_df, aes(x = distance / 1000, y = score)) +
     geom_point(alpha = 0.3, color = "steelblue") +
     geom_hline(yintercept = 0.3, linetype = "dashed", color = "red") +
@@ -196,10 +196,32 @@ g1 <- ggplot(link_df, aes(x = distance / 1000, y = score)) +
     ) + geom_smooth(method = "loess", se = FALSE, color = "darkred") +
     theme_minimal()
     
+ggsave(here(plotDir, "distribution_scores_pearson_1000bp.pdf"), 
+            g1, width = 8, height = 5)
 
-f_name <- here(plotDir, "distribution_scores_pearson_1000bp.pdf")
-print(g1)
-dev.off()
+## Highlighting high-confidence links
+g2 <- ggplot(link_df, aes(x = distance / 1000, y = score, color = score > 0.3)) +
+    geom_point(alpha = 0.4) +
+    scale_color_manual(
+        values = c("FALSE" = "steelblue", "TRUE" = "firebrick"),
+        labels = c("FALSE" = "Score ≤ 0.3", "TRUE" = "Score > 0.3"),
+        name = "Correlation Threshold"
+    ) +
+    labs(
+        x = "Distance from TSS (kb)",
+        y = "Correlation Score",
+        title = "Peak-Gene Correlation vs. Distance",
+        subtitle = "Red points indicate high-confidence peak-gene links (score > 0.3)"
+    ) +
+    theme_minimal()
+
+ggsave(here(plotDir, "distribution_scores_pearson_1000bp_high_confidence.pdf"),
+       g2, width = 8, height = 5)
+
+## filtered peaks
+write.csv(link_df, 
+          file = here(plotDir, "filtered_peak_gene_links_with_distance.csv"), 
+          row.names = FALSE)
 
 
 
