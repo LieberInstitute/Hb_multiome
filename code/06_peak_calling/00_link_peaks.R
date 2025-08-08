@@ -46,7 +46,7 @@ if (length(p_met) && length(w_size)) {
         "\nWindow-size\n",
         w_size
     )
-    f_sufix <- paste0(".", p_met, ".", w_size)
+    f_sufix <- paste0(".", p_met, ".", w_size, ".cells_filtered_3p")
 } else {
     message("Input arguments missed")
     stop()
@@ -92,6 +92,13 @@ Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_ls
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
 levels(SeuratOBJ)
+
+## filter genes to those expressed in 3% of cells
+DefaultAssay(SeuratOBJ) <- "RNA"
+rna_counts <- GetAssayData(SeuratOBJ, assay="RNA", slot="data")
+length(rownames(rna_counts)) # [1] 36601
+keep_genes <- rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.03 * ncol(rna_counts)]
+length(keep_genes) # in count: [1] 14526
 
 ## Set atac
 DefaultAssay(SeuratOBJ) <- "ATAC"
@@ -142,8 +149,7 @@ atac <- LinkPeaks(
     object = SeuratOBJ,
     peak.assay = "ATAC",
     expression.assay = "RNA",
-    # genes.use = hb_cannonical_genes,
-    # genes.use = top5_genes_habenula,
+    genes.use = keep_genes,
     method = p_met,
     distance = as.numeric(w_size)             # Only consider peaks within ±100 kb of gene TSS (cis-window)
 )
@@ -190,7 +196,7 @@ link_df <- link_df |>
     )
 head(link_df)
 
-## Build TSS ( (strand-aware)) GRanges table and 
+## Build TSS (strand-aware) GRanges table and 
 #  compute the distance between each peak and its linked gene's TSS
 gene_coords <- genes(EnsDb.Hsapiens.v86)
 # tss_coords <- resize(gene_coords, width = 1, fix = "start")
