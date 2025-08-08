@@ -22,6 +22,28 @@ library("purrr")
 library("here")
 
 
+## read input arguments
+args = commandArgs(trailingOnly = TRUE)
+p_met <- args[2]
+w_size <- args[4]
+
+## p_met:
+# pearson -> peak-scores<0.2: likely due scATAC counts are ultra‑sparse; scRNA is zero‑inflated. Pearson r’s of 0.05–0.2 are common even for real links
+# spearman -> as enhancer → gene relationships aren’t strictly linear; Pearson seems to underestimates. I will try spearman, more robust to nonlinearity/zeros
+
+if (length(p_met) && length(w_size)) {
+    message(
+        "Processing job for peak-method:\n",
+        p_met,
+        "\nWindow-size\n",
+        w_size
+    )
+} else {
+    message("Input arguments missed")
+    stop()
+}
+
+
 # Check/create directories
 
 ## clusters renamed for Spatial-Registration on Visium project
@@ -74,7 +96,7 @@ genome <- BSgenome.Hsapiens.UCSC.hg38
 SeuratOBJ <- RegionStats(
     object = SeuratOBJ,
     genome = genome,
-    assay = "ATAC"  
+    assay = "ATAC"
 )
 
 ## see all chromosomes
@@ -193,8 +215,8 @@ g1 <- ggplot(link_df, aes(x = distance / 1000, y = score)) +
         title = "Peak-Gene Correlation vs. Distance"
     ) + geom_smooth(method = "loess", se = FALSE, color = "darkred") +
     theme_minimal()
-    
-ggsave(here(plotDir, "distribution_scores_pearson_1000bp.pdf"), 
+
+ggsave(here(plotDir, "distribution_scores_pearson_1000bp.pdf"),
             g1, width = 8, height = 5)
 
 ## Highlighting high-confidence links
@@ -217,8 +239,8 @@ ggsave(here(plotDir, "distribution_scores_pearson_1000bp_high_confidence.pdf"),
        g2, width = 8, height = 5)
 
 ## filtered peaks
-write.csv(link_df, 
-          file = here(plotDir, "filtered_peak_gene_links_with_distance.csv"), 
+write.csv(link_df,
+          file = here(plotDir, "filtered_peak_gene_links_with_distance.csv"),
           row.names = FALSE)
 
 message("TSS Correlation scores completed!")
