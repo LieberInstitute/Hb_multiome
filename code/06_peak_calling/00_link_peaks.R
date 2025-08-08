@@ -183,34 +183,41 @@ write.csv(
     row.names = FALSE
 )
 # # testing
-# link_df <- read.csv(file = here(cvsDir, "all_peak_gene_links.spearman.1e5.csv"))
-# head(link_df)
+link_df <- read.csv(file = here(cvsDir, "all_peak_gene_links.spearman.1e5.csv"))
+link_df$gene <- trimws(as.character(link_df$gene))
+head(link_df)
+colnames(link_df)
 
-## compute the distance between each peak and its linked gene's TSS and add it to the link_df
+## Build TSS GRanges and compute the distance between each peak and its linked gene's TSS
 # Get TSS per gene
 gene_coords <- genes(EnsDb.Hsapiens.v86)
 #head(gene_coords)
 tss_coords <- resize(gene_coords, width = 1, fix = "start")
 tss_coords <- keepStandardChromosomes(tss_coords, pruning.mode = "coarse")
-#head(tss_coords)
-# ensure chromosome names in TSS match UCSC-style peaks (chr1, chr2, etc.)
-seqlevelsStyle(tss_coords) <- "UCSC"
 head(tss_coords)
+# match UCSC-style peaks (chr1, chr2, etc.)
+seqlevelsStyle(tss_coords) <- "UCSC"
 
-## Match genes in link_df to their TSS
-# Make sure gene names match
-link_df$gene <- as.character(link_df$gene)
-tss_df <- as.data.frame(tss_coords)
-tss_df <- tss_df[, c("seqnames", "start", "gene_id", "gene_name")]
-head(tss_df)
-#                   seqnames start         gene_id gene_name
-# ENSG00000223972     chr1 11869 ENSG00000223972   DDX11L1
-# ENSG00000227232     chr1 29570 ENSG00000227232    WASH7P
-# ENSG00000278267     chr1 17436 ENSG00000278267 MIR6859-1
+tss_raw <- as.data.frame(tss_coords)
+has_biotype <- "gene_biotype" %in% colnames(tss_raw)
 
-# Join link_df with TSS info by gene name
-link_df <- left_join(link_df, tss_df, by = c("gene" = "gene_name"))
+# Prefer protein_coding, then take first per (gene_name, chr) - this avoid 1:many associations
+tss_df <- tss_raw %>%
+    mutate(gene_biotype = if (has_biotype) gene_biotype else NA_character_) %>%
+    arrange(desc(gene_biotype == "protein_coding")) %>%
+    group_by(gene_name, seqnames) %>%
+    slice_head(n = 1) %>%
+    ungroup() %>%
+    select(seqnames, start, gene_id, gene_name)
+
+# should be unique per (gene_name, chr)
+stopifnot(!any(duplicated(tss_df[,c("gene_name","seqnames")])))
+
+# Join by gene + chromosome to avoid many-to-many 
+link_df <- link_df %>%
+    left_join(tss_df, by = c("gene" = "gene_name", "seqnames" = "seqnames"))
 head(link_df, n = 3)
+
 # remove rows where chromosomes don’t match
 link_df <- link_df[as.character(link_df$seqnames.x) == as.character(link_df$seqnames.y), ]
 
