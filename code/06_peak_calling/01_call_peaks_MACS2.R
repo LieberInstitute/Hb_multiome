@@ -24,9 +24,14 @@ inputRDS_Dir <- here(
 )
 plotDir <- here(
     "plots",
-    "06_peak_calling"
+    "06_peak_calling",
+    "01_call_peaks_MACS2"
 )
-outputCSV_Dir <- here("processed-data", "06_peak_calling")
+outputCSV_Dir <- here(
+    "processed-data", 
+    "06_peak_calling",
+    "01_call_peaks_MACS2"
+)
 
 ## Check directories
 if (!dir.exists(plotDir)) {
@@ -89,8 +94,45 @@ head(peaks)
 # Convert GRanges to data frame and save for further analysis
 df_peaks <- as.data.frame(peaks)
 head(df_peaks)
-write.csv(df_peaks, here(outputCSV_Dir, "all_peaks_by_cluster.csv"), row.names = FALSE)
+write.csv(
+    df_peaks, 
+    here(outputCSV_Dir, "all_peaks_by_cluster.csv"), 
+    row.names = FALSE
+)
 
+# Cell Ranger peaks
+DefaultAssay(SeuratOBJ) <- "ATAC"
+p1 <- CoveragePlot(
+    object = SeuratOBJ,
+    region = gene,
+    features = gene,
+    extend.upstream = up,
+    extend.downstream = down,
+    peaks = TRUE,
+    links = FALSE,
+    annotation = TRUE
+) + ggtitle("Cell Ranger peaks")
+
+# MACS2 peaks
+DefaultAssay(SeuratOBJ) <- "ATAC_MACS2"
+p2 <- CoveragePlot(
+    object = SeuratOBJ,
+    region = gene,
+    features = gene,
+    extend.upstream = up,
+    extend.downstream = down,
+    peaks = TRUE,
+    links = FALSE,
+    annotation = TRUE
+) + ggtitle("MACS2 peaks (pseudobulk)")
+
+# Combine
+p_combined <- p1 / p2
+
+# ggsave(
+#     filename = file.path(plotDir, paste0("coverage_before_after_MACS2_", gene, ".pdf")),
+#     plot = p_combined, width = 10, height = 6
+# )
 
 # library("slurmjobs")
 # job_single(
