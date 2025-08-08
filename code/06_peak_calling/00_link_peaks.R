@@ -26,6 +26,14 @@ library("here")
 args = commandArgs(trailingOnly = TRUE)
 p_met <- args[2]
 w_size <- args[4]
+# 0: pearson, 1e5
+# 1: pearson, 5e4
+# 2: spearman, 1e5
+# 3: spearman, 5e4
+
+# for testing
+p_met = "spearman"
+w_size = 5e4
 
 ## p_met:
 # pearson -> peak-scores<0.2: likely due scATAC counts are ultra‑sparse; scRNA is zero‑inflated. Pearson r’s of 0.05–0.2 are common even for real links
@@ -62,12 +70,20 @@ inputCVS_Dir <- here(
 plotDir <- here(
   "plots",
   "06_peak_calling",
-  "01_coverage_basic"
+  "00_link_peaks"
+)
+cvsDir <- here(
+    "processed-data",
+    "06_peak_calling",
+    "00_link_peaks"
 )
 
 ## Check directories
 if (!dir.exists(plotDir)) {
   dir.create(plotDir)
+}
+if (!dir.exists(cvsDir)) {
+    dir.create(cvsDir)
 }
 
 ## Load Seurat
@@ -77,6 +93,12 @@ seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
 levels(SeuratOBJ)
 
+# ## Filter genes to those expressed in enough cells
+# rna_counts <- GetAssayData(SeuratOBJ, assay="RNA", slot="counts")
+# keep_genes <- rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.05 * ncol(rna_counts)]
+# atac <- LinkPeaks(SeuratOBJ, genes.use = keep_genes, distance=5e4)
+
+## Set atac
 DefaultAssay(SeuratOBJ) <- "ATAC"
 class(SeuratOBJ[["ATAC"]])
 # make a readable base-name for plots
@@ -127,7 +149,7 @@ atac <- LinkPeaks(
     # genes.use = hb_cannonical_genes,
     # genes.use = top5_genes_habenula,
     method = p_met,
-    distance = w_size             # Only consider peaks within ±100 kb of gene TSS (cis-window)
+    distance = as.numeric(w_size)             # Only consider peaks within ±100 kb of gene TSS (cis-window)
 )
 
 
@@ -138,7 +160,7 @@ atac <- LinkPeaks(
 head(Links(atac))
 # GRanges object with 5 ranges and 5 metadata columns:
 #     seqnames              ranges strand |     score        gene
-# <Rle>           <IRanges>  <Rle> | <numeric> <character>
+#        <Rle>           <IRanges>  <Rle> | <numeric> <character>
 # [1]     chr5 146497025-146516190      * | 0.0515208      GPR151
 # [2]     chr5 146516043-146516190      * | 0.0979604      GPR151
 # [3]    chr13   78596294-78603560      * | 0.0569620      POU4F1
@@ -146,7 +168,7 @@ head(Links(atac))
 # [5]    chr13   78603450-78603560      * | 0.0594102      POU4F1
 # peak    zscore      pvalue
 # <character> <numeric>   <numeric>
-#     [1] chr5-146496517-14649..   2.71746 3.28927e-03
+# [1] chr5-146496517-14649..   2.71746 3.28927e-03
 # [2] chr5-146515546-14651..   5.29336 6.00436e-08
 # [3] chr13-78595767-78596..   4.35176 6.75248e-06
 # [4] chr13-78597000-78597..   4.33686 7.22667e-06
@@ -160,6 +182,9 @@ write.csv(
     file = here(plotDir, paste0("all_peak_gene_links", f_sufix, ".csv")),
     row.names = FALSE
 )
+# # testing
+# link_df <- read.csv(file = here(cvsDir, "all_peak_gene_links.spearman.1e5.csv"))
+# head(link_df)
 
 ## compute the distance between each peak and its linked gene's TSS and add it to the link_df
 # Get TSS per gene
