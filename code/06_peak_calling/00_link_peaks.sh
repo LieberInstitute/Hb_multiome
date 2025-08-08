@@ -7,7 +7,7 @@
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
-#SBATCH --array=0-6%6
+#SBATCH --array=0-5%6   # 2 methods * 3 windows = 6 tasks
 
 # 0: pearson, 1e5
 # 1: pearson, 5e4
@@ -16,15 +16,26 @@
 
 set -eo pipefail
 
-peak_methods=(pearson spearman)         # n_methods=2
-window_size=(1e5 5e4 2.5e4)             # add 2.5e4 for testing promoters
+peak_methods=(pearson spearman)   # m=2
+window_size=(1e5 5e4 2.5e4)       # n=3 (added 2.5e4)
 
 i=${SLURM_ARRAY_TASK_ID}
-p_met="${peak_methods[$(( i / 2 ))]}"  
-w_size="${window_size[$(( i % 3 ))]}"   
+m=${#peak_methods[@]}
+n=${#window_size[@]}
+total=$(( m * n ))
 
-mkdir -p logs
-log_path="logs/link_peaks_method_${p_met}_window_${w_size}_task_${i}.log"
+if (( i < 0 || i >= total )); then
+  echo "Invalid task index: $i (total=$total)"; exit 1
+fi
+
+method_idx=$(( i / n ))
+win_idx=$(( i % n ))
+
+p_met="${peak_methods[$method_idx]}"
+w_size="${window_size[$win_idx]}"
+
+#mkdir -p logs
+log_path="logs/00_link_peaks_method_${p_met}_window_${w_size}_task_${i}.log"
 
 {
 
