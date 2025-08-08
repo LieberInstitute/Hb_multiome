@@ -7,12 +7,26 @@
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
+#SBATCH --array=0-3%4
 
-## Explicitly pipe script output to a log
-log_path=logs/00_link_peaks.txt
+# 0: pearson, 1e5
+# 1: pearson, 5e4
+# 2: spearman, 1e5
+# 3: spearman, 5e4
+
+set -eo pipefail
+
+peak_methods=(pearson spearman)   # n_methods=2
+window_size=(1e5 5e4)             # n_windows=2
+
+i=${SLURM_ARRAY_TASK_ID}
+p_met="${peak_methods[$(( i / 2 ))]}"   # 0,0,1,1
+w_size="${window_size[$(( i % 2 ))]}"   # 0,1,0,1
+
+mkdir -p logs
+log_path="logs/link_peaks_method_${p_met}_window_${w_size}_task_${i}.log"
 
 {
-set -e
 
 echo "**** Job starts ****"
 date
@@ -31,7 +45,7 @@ module load conda_R/4.3.x
 module list
 
 ## Edit with your job command
-Rscript 00_link_peaks.R
+Rscript 00_link_peaks.R --p_met "${p_met}" --w_size "${w_size}"
 
 echo "**** Job ends ****"
 date
