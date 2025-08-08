@@ -32,8 +32,8 @@ w_size <- args[4]
 # 3: spearman, 5e4
 
 # for testing
-p_met = "spearman"
-w_size = 5e4
+# p_met = "spearman"
+# w_size = 5e4
 
 ## p_met:
 # pearson -> peak-scores<0.2: likely due scATAC counts are ultra‑sparse; scRNA is zero‑inflated. Pearson r’s of 0.05–0.2 are common even for real links
@@ -93,11 +93,6 @@ seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
 levels(SeuratOBJ)
 
-# ## Filter genes to those expressed in enough cells
-# rna_counts <- GetAssayData(SeuratOBJ, assay="RNA", slot="counts")
-# keep_genes <- rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.05 * ncol(rna_counts)]
-# atac <- LinkPeaks(SeuratOBJ, genes.use = keep_genes, distance=5e4)
-
 ## Set atac
 DefaultAssay(SeuratOBJ) <- "ATAC"
 class(SeuratOBJ[["ATAC"]])
@@ -121,6 +116,7 @@ SeuratOBJ <- RegionStats(
     genome = genome,
     assay = "ATAC"
 )
+SeuratOBJ
 
 ## see all chromosomes
 table(seqnames(granges(SeuratOBJ)))
@@ -182,19 +178,29 @@ write.csv(
     file = here(plotDir, paste0("all_peak_gene_links", f_sufix, ".csv")),
     row.names = FALSE
 )
-# # testing
+## for testing:
 link_df <- read.csv(file = here(cvsDir, "all_peak_gene_links.spearman.1e5.csv"))
-link_df$gene <- trimws(as.character(link_df$gene))
-head(link_df)
 colnames(link_df)
+link_df <- link_df |> 
+    mutate(
+        gene     = trimws(as.character(gene)),
+        seqnames = as.character(seqnames),
+        start    = as.numeric(start),
+        end      = as.numeric(end)
+    )
+head(link_df)
 
-## Build TSS GRanges and compute the distance between each peak and its linked gene's TSS
-# Get TSS per gene
+## Build TSS ( (strand-aware)) GRanges table and 
+#  compute the distance between each peak and its linked gene's TSS
 gene_coords <- genes(EnsDb.Hsapiens.v86)
-#head(gene_coords)
-tss_coords <- resize(gene_coords, width = 1, fix = "start")
-tss_coords <- keepStandardChromosomes(tss_coords, pruning.mode = "coarse")
-head(tss_coords)
+# tss_coords <- resize(gene_coords, width = 1, fix = "start")
+# tss_coords <- keepStandardChromosomes(tss_coords, pruning.mode = "coarse")
+# head(tss_coords)
+
+# Build TSS table (strand-aware)
+tss_coords  <- promoters(gene_coords, upstream = 0, downstream = 1) %>%   # 1bp TSS, respects strand
+    keepStandardChromosomes(pruning.mode = "coarse")
+
 # match UCSC-style peaks (chr1, chr2, etc.)
 seqlevelsStyle(tss_coords) <- "UCSC"
 
@@ -204,45 +210,92 @@ has_biotype <- "gene_biotype" %in% colnames(tss_raw)
 # Prefer protein_coding, then take first per (gene_name, chr) - this avoid 1:many associations
 tss_df <- tss_raw %>%
     mutate(gene_biotype = if (has_biotype) gene_biotype else NA_character_) %>%
-    arrange(desc(gene_biotype == "protein_coding")) %>%
+    arrange(desc(gene_biotype == "protein_coding")) %>%  # prefer protein-coding where available
     group_by(gene_name, seqnames) %>%
     slice_head(n = 1) %>%
     ungroup() %>%
-    select(seqnames, start, gene_id, gene_name)
+    transmute(
+        gene_name,
+        seqnames = as.character(seqnames),
+        tss      = as.numeric(start),   # rename for clarity
+        gene_strand = as.character(strand),
+        gene_id
+    )
+
+head(tss_df)
+#     gene_name seqnames       tss gene_strand gene_id        
+#     <chr>     <chr>        <dbl> <chr>       <chr>          
+# 1 5S_rRNA   chr1     143439605 +           ENSG00000252830
+# 2 5S_rRNA   chr11    102057854 +           ENSG00000274097
+# 3 5S_rRNA   chr17     37940790 -           ENSG00000277488
+nrow(tss_df)
+# [1] 56747
 
 # should be unique per (gene_name, chr)
 stopifnot(!any(duplicated(tss_df[,c("gene_name","seqnames")])))
 
 # Join by gene + chromosome to avoid many-to-many 
-link_df <- link_df %>%
+colnames(link_df)
+colnames(tss_df)
+link_df2 <- link_df %>%
     left_join(tss_df, by = c("gene" = "gene_name", "seqnames" = "seqnames"))
-head(link_df, n = 3)
+head(link_df2, n = 3)
+#     seqnames  start     end width strand      score  gene               peak
+# 1     chr1 921198 1001138 79941      * 0.06070581 ISG15 chr1-920766-921629
+# 2     chr1 960688 1000172 39485      * 0.07694616  HES4 chr1-960318-961058
+# 3     chr1 960688 1001138 40451      * 0.06605429 ISG15 chr1-960318-961058
+#     zscore     pvalue     tss gene_strand         gene_id
+# 1 2.052715 0.02005013 1001138           + ENSG00000187608
+# 2 1.758599 0.03932286 1000172           - ENSG00000188290
+# 3 2.016967 0.02184947 1001138           + ENSG00000187608
 
-# remove rows where chromosomes don’t match
-link_df <- link_df[as.character(link_df$seqnames.x) == as.character(link_df$seqnames.y), ]
+# drop rows with no TSS match
+n_before <- nrow(link_df2)
+link_df2 <- link_df2 %>% filter(!is.na(tss))
+message("Dropped ", n_before - nrow(link_df2), " rows with no TSS match.")
+# Dropped 0 rows with no TSS match.
+nrow(link_df2)
+# [1] 5500
 
-## Compute the distance to TSS
-# Compute center of each peak
-link_df$peak_center <- (link_df$start.x + link_df$end) / 2
-
-# Compute absolute distance to TSS
-link_df$distance <- abs(link_df$peak_center - link_df$start.y)  # `start.y` is the TSS
-# gives directionality (upstream = negative, downstream = positive).
-link_df$signed_distance <- link_df$peak_center - link_df$start.y
+## Compute Peak center and distance to TSS
+link_df2 <- link_df2 %>%
+    mutate(
+        peak_center       = (start + end) / 2,
+        distance          = abs(peak_center - tss),
+        signed_distance   = peak_center - tss,                       # genomic sign
+        signed_by_strand  = ifelse(gene_strand == "-", -signed_distance, signed_distance),
+        distance_kb       = distance / 1000
+    )
+head(link_df2, n=2)
+# seqnames  start     end width strand      score  gene               peak
+# 1     chr1 921198 1001138 79941      * 0.06070581 ISG15 chr1-920766-921629
+# 2     chr1 960688 1000172 39485      * 0.07694616  HES4 chr1-960318-961058
+#   zscore     pvalue     tss gene_strand         gene_id peak_center distance
+# 1 2.052715 0.02005013 1001138           + ENSG00000187608      961168    39970
+# 2 1.758599 0.03932286 1000172           - ENSG00000188290      980430    19742
+# signed_distance signed_by_strand distance_kb
+# 1          -39970           -39970      39.970
+# 2          -19742            19742      19.742
+message("Link gene-peak scores with TSS:")
+summary(link_df2)
+#sum(link_df2$distance > 1e5)  # should be ~0 if you used LinkPeaks(..., distance=1e5)
+table(link_df2$gene_strand, useNA = "ifany")
+    # -    + 
+    # 2714 2786 
 
 ## Histogram TSS Scores
 pdf(file = here(plotDir, 
                 paste0("histogram_scores", f_sufix, ".pdf")), 
     width = 7, height = 5)
 
-hist(link_df$distance / 1000, breaks = 100,
+hist(link_df2$distance / 1000, breaks = 100,
      main = "Distance from Peaks to TSS",
      xlab = "Distance (kb)",
      col = "lightblue")
 dev.off()
 
 ## Correlation vs Distance with smoothing
-g1 <- ggplot(link_df, aes(x = distance / 1000, y = score)) +
+g1 <- ggplot(link_df2, aes(distance_kb, score)) +
     geom_point(alpha = 0.3, color = "steelblue") +
     geom_hline(yintercept = 0.3, linetype = "dashed", color = "red") +
     labs(
@@ -257,7 +310,7 @@ ggsave(here(plotDir,
             g1, width = 8, height = 5)
 
 ## Highlighting high-confidence links
-g2 <- ggplot(link_df, aes(x = distance / 1000, y = score, color = score > 0.3)) +
+g2 <- ggplot(link_df2, aes(distance_kb, score, color = score > 0.3)) +
     geom_point(alpha = 0.4) +
     scale_color_manual(
         values = c("FALSE" = "steelblue", "TRUE" = "firebrick"),
@@ -278,7 +331,7 @@ ggsave(here(plotDir,
 
 ## filtered peaks
 write.csv(link_df,
-          file = here(plotDir, paste0("filtered_peak_gene_links_with_distance", f_sufix, ".csv")),
+          file = here(cvsDir, paste0("filtered_peak_gene_links_with_distance", f_sufix, ".csv")),
           row.names = FALSE)
 
 message("TSS Correlation scores completed!")
