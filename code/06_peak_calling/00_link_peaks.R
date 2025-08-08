@@ -38,6 +38,7 @@ if (length(p_met) && length(w_size)) {
         "\nWindow-size\n",
         w_size
     )
+    f_sufix <- paste0(".", p_met, ".", w_size)
 } else {
     message("Input arguments missed")
     stop()
@@ -116,7 +117,7 @@ tryCatch(
 
 
 ## set a subset of genes to test
-hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
+#hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
 
 ## find peaks that are correlated with the expression of nearby genes
 atac <- LinkPeaks(
@@ -124,9 +125,9 @@ atac <- LinkPeaks(
     peak.assay = "ATAC",
     expression.assay = "RNA",
     # genes.use = hb_cannonical_genes,
-    # genes.use = top5_genes_habenula,      # supply vector of gene names
-    method = "pearson",        # Default settings
-    distance = 1e5             # Only consider peaks within ±100 kb of gene TSS (cis-window)
+    # genes.use = top5_genes_habenula,
+    method = p_met,
+    distance = w_size             # Only consider peaks within ±100 kb of gene TSS (cis-window)
 )
 
 
@@ -156,7 +157,7 @@ summary(link_df$score)
 
 write.csv(
     link_df,
-    file = here(plotDir, "all_peak_gene_links.csv"),
+    file = here(plotDir, paste0("all_peak_gene_links", f_sufix, ".csv")),
     row.names = FALSE
 )
 
@@ -198,7 +199,10 @@ link_df$distance <- abs(link_df$peak_center - link_df$start.y)  # `start.y` is t
 link_df$signed_distance <- link_df$peak_center - link_df$start.y
 
 ## Histogram TSS Scores
-pdf(file = here(plotDir, "histogram_scores_pearson_1000bp.pdf"), width = 7, height = 5)
+pdf(file = here(plotDir, 
+                paste0("histogram_scores", f_sufix, ".pdf")), 
+    width = 7, height = 5)
+
 hist(link_df$distance / 1000, breaks = 100,
      main = "Distance from Peaks to TSS",
      xlab = "Distance (kb)",
@@ -216,7 +220,8 @@ g1 <- ggplot(link_df, aes(x = distance / 1000, y = score)) +
     ) + geom_smooth(method = "loess", se = FALSE, color = "darkred") +
     theme_minimal()
 
-ggsave(here(plotDir, "distribution_scores_pearson_1000bp.pdf"),
+ggsave(here(plotDir, 
+            paste0("distribution_scores", f_sufix, ".pdf")),
             g1, width = 8, height = 5)
 
 ## Highlighting high-confidence links
@@ -235,12 +240,13 @@ g2 <- ggplot(link_df, aes(x = distance / 1000, y = score, color = score > 0.3)) 
     ) +
     theme_minimal()
 
-ggsave(here(plotDir, "distribution_scores_pearson_1000bp_high_confidence.pdf"),
+ggsave(here(plotDir, 
+            paste0("distribution_scores_high_confidence", f_sufix, ".pdf")),
        g2, width = 8, height = 5)
 
 ## filtered peaks
 write.csv(link_df,
-          file = here(plotDir, "filtered_peak_gene_links_with_distance.csv"),
+          file = here(plotDir, paste0("filtered_peak_gene_links_with_distance", f_sufix, ".csv")),
           row.names = FALSE)
 
 message("TSS Correlation scores completed!")
