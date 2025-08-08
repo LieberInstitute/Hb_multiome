@@ -7,7 +7,7 @@
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
-#SBATCH --array=0-3%4
+#SBATCH --array=0-6%6
 
 # 0: pearson, 1e5
 # 1: pearson, 5e4
@@ -16,12 +16,12 @@
 
 set -eo pipefail
 
-peak_methods=(pearson spearman)   # n_methods=2
-window_size=(1e5 5e4)             # n_windows=2
+peak_methods=(pearson spearman)         # n_methods=2
+window_size=(1e5 5e4 2.5e4)             # add 2.5e4 for testing promoters
 
 i=${SLURM_ARRAY_TASK_ID}
-p_met="${peak_methods[$(( i / 2 ))]}"   # 0,0,1,1
-w_size="${window_size[$(( i % 2 ))]}"   # 0,1,0,1
+p_met="${peak_methods[$(( i / 2 ))]}"  
+w_size="${window_size[$(( i % 3 ))]}"   
 
 mkdir -p logs
 log_path="logs/link_peaks_method_${p_met}_window_${w_size}_task_${i}.log"
