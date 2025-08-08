@@ -95,7 +95,7 @@ levels(SeuratOBJ)
 
 ## filter genes to those expressed in 3% of cells
 DefaultAssay(SeuratOBJ) <- "RNA"
-rna_counts <- GetAssayData(SeuratOBJ, assay="RNA", slot="data")
+rna_counts <- GetAssayData(SeuratOBJ, assay="RNA", layer="data")
 length(rownames(rna_counts)) # [1] 36601
 keep_genes <- rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.03 * ncol(rna_counts)]
 length(keep_genes) # in count: [1] 14526
@@ -144,6 +144,8 @@ tryCatch(
 ## set a subset of genes to test
 #hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
 
+message("Computing link-peaks correlations ...")
+
 ## find peaks that are correlated with the expression of nearby genes
 atac <- LinkPeaks(
     object = SeuratOBJ,
@@ -154,6 +156,7 @@ atac <- LinkPeaks(
     distance = as.numeric(w_size)             # Only consider peaks within ±100 kb of gene TSS (cis-window)
 )
 
+message("Computing link-peaks correlations completed!")
 
 ##==============================================================================
 ## explore and filter strong peak-gene links
@@ -184,17 +187,20 @@ write.csv(
     file = here(plotDir, paste0("all_peak_gene_links", f_sufix, ".csv")),
     row.names = FALSE
 )
-## for testing:
-link_df <- read.csv(file = here(cvsDir, "all_peak_gene_links.spearman.1e5.csv"))
-colnames(link_df)
-link_df <- link_df |> 
-    mutate(
-        gene     = trimws(as.character(gene)),
-        seqnames = as.character(seqnames),
-        start    = as.numeric(start),
-        end      = as.numeric(end)
-    )
-head(link_df)
+## for testing: ================================================================
+# link_df <- read.csv(file = here(cvsDir, "all_peak_gene_links.spearman.1e5.csv"))
+# colnames(link_df)
+# link_df <- link_df |> 
+#     mutate(
+#         gene     = trimws(as.character(gene)),
+#         seqnames = as.character(seqnames),
+#         start    = as.numeric(start),
+#         end      = as.numeric(end)
+#     )
+# head(link_df)
+## for testing: ================================================================
+
+message("Computing distance between peaks and TSS ...")
 
 ## Build TSS (strand-aware) GRanges table and 
 #  compute the distance between each peak and its linked gene's TSS
@@ -263,7 +269,10 @@ message("Dropped ", n_before - nrow(link_df2), " rows with no TSS match.")
 nrow(link_df2)
 # [1] 5500
 
-## Compute Peak center and distance to TSS
+message("Distance between peaks and TSS completed!")
+
+message("Computing Peak center and distance to TSS ...")
+
 link_df2 <- link_df2 %>%
     mutate(
         peak_center       = (start + end) / 2,
@@ -289,6 +298,10 @@ table(link_df2$gene_strand, useNA = "ifany")
     # -    + 
     # 2714 2786 
 
+message("Peak center and distance to TSS completed!")
+
+message("Building plots ...")
+
 ## Histogram TSS Scores
 pdf(file = here(plotDir, 
                 paste0("histogram_scores", f_sufix, ".pdf")), 
@@ -306,7 +319,7 @@ g1 <- ggplot(link_df2, aes(distance_kb, score)) +
     geom_hline(yintercept = 0.3, linetype = "dashed", color = "red") +
     labs(
         x = "Distance from TSS (kb)",
-        y = "Correlation Score",
+        y = paste("Correlation Score", p_met),
         title = "Peak-Gene Correlation vs. Distance"
     ) + geom_smooth(method = "loess", se = FALSE, color = "darkred") +
     theme_minimal()
@@ -315,19 +328,43 @@ ggsave(here(plotDir,
             paste0("distribution_scores", f_sufix, ".pdf")),
             g1, width = 8, height = 5)
 
+
+# define high-confidence
+head(link_df2)
+link_df2 <- link_df2 %>%
+    mutate(high_conf = score > 0.3) %>%
+    filter(!is.na(distance_kb), !is.na(score))
+
 ## Highlighting high-confidence links
-g2 <- ggplot(link_df2, aes(distance_kb, score, color = score > 0.3)) +
-    geom_point(alpha = 0.4) +
-    scale_color_manual(
-        values = c("FALSE" = "steelblue", "TRUE" = "firebrick"),
-        labels = c("FALSE" = "Score ≤ 0.3", "TRUE" = "Score > 0.3"),
-        name = "Correlation Threshold"
-    ) +
+# Calculate fraction & percentage
+n_total <- nrow(link_df2)
+n_high  <- sum(link_df2$high_conf)
+frac_str <- paste0(n_high, "/", n_total)
+perc_str <- sprintf("%.1f%%", 100 * n_high / n_total)
+
+g2 <- ggplot() +
+    geom_point(
+    data = link_df2,
+    aes(x = distance_kb, y = score),
+    color = "grey70", alpha = 0.25, size = 0.8) +
+    # trend over ALL tested links
+    geom_smooth(
+        data = link_df2,
+        aes(x = distance_kb, y = score),
+        method = "loess", se = FALSE, span = 0.8, color = "black", linewidth = 0.9) +
+    # highlight high-confidence on top
+    geom_point(
+        data = dplyr::filter(link_df2, high_conf),
+        aes(x = distance_kb, y = score, color = "High-confidence (score > 0.3)"),
+        alpha = 0.7, size = 1.2) +
+    geom_hline(yintercept = 0.3, linetype = "dashed", color = "firebrick") +
+    scale_color_manual(values = c("High-confidence (score > 0.3)" = "firebrick")) +
     labs(
         x = "Distance from TSS (kb)",
-        y = "Correlation Score",
-        title = "Peak-Gene Correlation vs. Distance",
-        subtitle = "Red points indicate high-confidence peak-gene links (score > 0.3)"
+        y = paste0("Correlation Score (", p_met, ")"),
+        title = "Peak–Gene Correlation vs. Distance",
+        subtitle = "High-confidence (score > 0.3)",
+        caption = paste("High-confidence fraction:", frac_str, "| Percentage:", perc_str)
     ) +
     theme_minimal()
 
@@ -342,7 +379,7 @@ write.csv(link_df,
 
 message("TSS Correlation scores completed!")
 
-
+message("Plots done!!!")
 
 
 # library("slurmjobs")
