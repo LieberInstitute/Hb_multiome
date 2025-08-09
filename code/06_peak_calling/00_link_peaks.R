@@ -115,6 +115,8 @@ Seurat_base_name
 
 ## preprocessed peaks
 
+message("Starting GC content correction ... ")
+
 ## GC content correction
 genome <- BSgenome.Hsapiens.UCSC.hg38
 
@@ -124,6 +126,10 @@ SeuratOBJ <- RegionStats(
     assay = "ATAC"
 )
 SeuratOBJ
+
+message("GC content correction done!")
+
+message("Searching LinkPeaks ... ")
 
 ## see all chromosomes
 table(seqnames(granges(SeuratOBJ)))
@@ -188,9 +194,9 @@ write.csv(
     row.names = FALSE
 )
 ## for testing: ================================================================
-# link_df <- read.csv(file = here(cvsDir, "all_peak_gene_links.spearman.1e5.csv"))
+# link_df <- read.csv(file = here(cvsDir, "all_peak_gene_links.spearman.5e4.csv"))
 # colnames(link_df)
-# link_df <- link_df |> 
+# link_df <- link_df |>
 #     mutate(
 #         gene     = trimws(as.character(gene)),
 #         seqnames = as.character(seqnames),
@@ -243,10 +249,16 @@ head(tss_df)
 nrow(tss_df)
 # [1] 56747
 
-# should be unique per (gene_name, chr)
-stopifnot(!any(duplicated(tss_df[,c("gene_name","seqnames")])))
+dup_pairs <- tss_df %>%
+    count(gene_name, seqnames, name = "n") %>%
+    filter(n > 1)
 
-# Join by gene + chromosome to avoid many-to-many 
+if (nrow(dup_pairs) > 0) {
+    print(head(dup_pairs, 10))
+    stop("Non-unique (gene_name, seqnames) in tss_df: ", nrow(dup_pairs), " duplicates.")
+}
+
+# Join by gene + chromosome tsao avoid many-to-many 
 colnames(link_df)
 colnames(tss_df)
 link_df2 <- link_df %>%
@@ -267,7 +279,6 @@ link_df2 <- link_df2 %>% filter(!is.na(tss))
 message("Dropped ", n_before - nrow(link_df2), " rows with no TSS match.")
 # Dropped 0 rows with no TSS match.
 nrow(link_df2)
-# [1] 5500
 
 message("Distance between peaks and TSS completed!")
 
@@ -316,7 +327,7 @@ dev.off()
 ## Correlation vs Distance with smoothing
 g1 <- ggplot(link_df2, aes(distance_kb, score)) +
     geom_point(alpha = 0.3, color = "steelblue") +
-    geom_hline(yintercept = 0.3, linetype = "dashed", color = "red") +
+    geom_hline(yintercept = 0.2, linetype = "dashed", color = "red") +
     labs(
         x = "Distance from TSS (kb)",
         y = paste("Correlation Score", p_met),
@@ -332,7 +343,7 @@ ggsave(here(plotDir,
 # define high-confidence
 head(link_df2)
 link_df2 <- link_df2 %>%
-    mutate(high_conf = score > 0.3) %>%
+    mutate(high_conf = score > 0.2) %>%
     filter(!is.na(distance_kb), !is.na(score))
 
 ## Highlighting high-confidence links
@@ -355,15 +366,15 @@ g2 <- ggplot() +
     # highlight high-confidence on top
     geom_point(
         data = dplyr::filter(link_df2, high_conf),
-        aes(x = distance_kb, y = score, color = "High-confidence (score > 0.3)"),
+        aes(x = distance_kb, y = score, color = "High-confidence (score > 0.2)"),
         alpha = 0.7, size = 1.2) +
-    geom_hline(yintercept = 0.3, linetype = "dashed", color = "firebrick") +
+    geom_hline(yintercept = 0.2, linetype = "dashed", color = "firebrick") +
     scale_color_manual(values = c("High-confidence (score > 0.3)" = "firebrick")) +
     labs(
         x = "Distance from TSS (kb)",
         y = paste0("Correlation Score (", p_met, ")"),
         title = "Peak–Gene Correlation vs. Distance",
-        subtitle = "High-confidence (score > 0.3)",
+        subtitle = "High-confidence (score > 0.2)",
         caption = paste("High-confidence fraction:", frac_str, "| Percentage:", perc_str)
     ) +
     theme_minimal()
@@ -378,6 +389,45 @@ write.csv(link_df,
           row.names = FALSE)
 
 message("TSS Correlation scores completed!")
+
+## Check number of linked peaks per gene and viceverse
+# Number of linked peaks per gene
+peaks_per_gene <- link_df %>%
+    count(gene, name = "n_peaks") %>%
+    arrange(desc(n_peaks))
+
+p1 <- ggplot(peaks_per_gene, aes(x = n_peaks)) +
+    geom_histogram(binwidth = 1, fill = "steelblue", color = "white") +
+    scale_x_continuous(breaks = scales::pretty_breaks()) +
+    labs(
+        title = "Peaks per gene",
+        x = "Number of linked peaks per gene",
+        y = "Number of genes"
+    ) +
+    theme_minimal()
+
+# Number of linked genes per peak
+genes_per_peak <- link_df %>%
+    count(peak, name = "n_genes") %>%
+    arrange(desc(n_genes))
+
+p2 <- ggplot(genes_per_peak, aes(x = n_genes)) +
+    geom_histogram(binwidth = 1, fill = "firebrick", color = "white") +
+    scale_x_continuous(breaks = scales::pretty_breaks()) +
+    labs(
+        title = "Genes per peak",
+        x = "Number of linked genes per peak",
+        y = "Number of peaks"
+    ) +
+    theme_minimal()
+
+combined_plot <- p1 + p2
+combined_plot
+
+ggsave(here(plotDir, 
+            paste0("distributions_abs_peak_genes", f_sufix, ".pdf")),
+       combined_plot, width = 8, height = 5)
+
 
 message("Plots done!!!")
 
