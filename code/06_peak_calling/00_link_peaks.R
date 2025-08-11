@@ -404,7 +404,8 @@ g1 <- ggplot(df_plot, aes(x = distance/1000, y = score, color = tier)) +
         x = "Distance from TSS (kb)",
         y = "Correlation score",
         title = "Peak–gene links by tier",
-        subtitle = "Dashed lines show thresholds"
+        subtitle = paste(p_met, 
+                         format(w_size, scientific = TRUE), "filtered genes < 2%")
     ) +
     theme_minimal() +
     theme(legend.position = "bottom")
@@ -415,6 +416,10 @@ ggsave(here(plotDir,
 
 #===============================================================================
 
+link_df2 <- link_df2 %>%
+    mutate(high_conf = score > 0.2) %>%
+    filter(!is.na(distance_kb), !is.na(score))
+head(link_df2)
 
 ## Highlighting high-confidence links
 # Calculate fraction & percentage
