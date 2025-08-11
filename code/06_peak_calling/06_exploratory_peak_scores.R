@@ -61,12 +61,21 @@ plotDir <- here(
   "06_peak_calling",
   "06_exploratory_peak_scores"
 )
+csvDir <- here(
+    "processed-data",
+    "06_peak_calling",
+    "06_exploratory_peak_scores"
+)
 
 
 ## Check directories
 if (!dir.exists(plotDir)) {
   dir.create(plotDir)
 }
+if (!dir.exists(csvDir)) {
+    dir.create(csvDir)
+}
+
 
 ## for testing: ================================================================
 link_df <- read.csv(file = here(input_cvsDir, "all_peak_gene_links.spearman.5e4_test.csv"))
@@ -225,12 +234,10 @@ ggsave(here(plotDir,
 # Moderate: 0.20 ≤ score < 0.30 & FDR < 0.10
 # Exploratory: 0.10 ≤ score < 0.20 & FDR < 0.10 (treat as hypotheses)
 
-head(link_df2)
+colnames(link_df2)
+## add adjusted p-value using the Benjamini–Hochberg correction
 link_df2 <- link_df2 %>%
     mutate(FDR = p.adjust(pvalue, method = "BH"))
-    # mutate(high_conf = score > 0.2) %>%
-    # filter(!is.na(distance_kb), !is.na(score))
-#head(link_df2)
 
 # set tiers due we have high confidente peaks < 0.2 
 link_df2 <- link_df2 %>%
@@ -240,6 +247,8 @@ link_df2 <- link_df2 %>%
         score >= 0.10 & FDR < 0.10 ~ "Exploratory (0.10–0.20, FDR<0.10)",
         TRUE ~ "Discarded"
     ))
+# use plain ASCII hyphens
+link_df$tier <- gsub("\u2013", "-", link_df2$tier)
 head(link_df2)
 table(link_df2$tier)
 
@@ -254,6 +263,11 @@ count_below_03 <- sum((df_plot$score < 0.3 & df_plot$score > 0.2), na.rm = TRUE)
 
 g1 <- ggplot(df_plot, aes(x = distance/1000, y = score, color = tier)) +
     geom_point(alpha = 0.5, size = 0.8) +
+    # trend over ALL tested links
+    geom_smooth(
+        data = df_plot,
+        aes(x = distance_kb, y = score),
+        method = "loess", se = FALSE, span = 0.8, color = "black", linewidth = 0.9) +
     # Threshold lines
     geom_hline(yintercept = 0.3, linetype = "dashed", color = "red") +
     geom_hline(yintercept = 0.2, linetype = "dashed", color = "orange") +
@@ -287,61 +301,15 @@ g1 <- ggplot(df_plot, aes(x = distance/1000, y = score, color = tier)) +
 
 ggsave(here(plotDir, 
             paste0("exploratory_scores_high_confidence", f_sufix, ".pdf")),
-       g1, width = 8, height = 5)
+       g1, width = 8, height = 5,
+       device = cairo_pdf)
 
 #===============================================================================
 
-link_df2 <- link_df2 %>%
-    mutate(high_conf = score > 0.2) %>%
-    filter(!is.na(distance_kb), !is.na(score))
-head(link_df2)
-
-## Highlighting high-confidence links
-# Calculate fraction & percentage
-n_total <- nrow(link_df2)
-n_high  <- sum(link_df2$high_conf)
-frac_str <- paste0(n_high, "/", n_total)
-perc_str <- sprintf("%.1f%%", 100 * n_high / n_total)
-
-g2 <- ggplot() +
-    geom_point(
-    data = link_df2,
-    aes(x = distance_kb, y = score),
-    color = "grey70", alpha = 0.25, size = 0.8) +
-    # trend over ALL tested links
-    geom_smooth(
-        data = link_df2,
-        aes(x = distance_kb, y = score),
-        method = "loess", se = FALSE, span = 0.8, color = "black", linewidth = 0.9) +
-    # highlight high-confidence on top
-    geom_point(
-        data = dplyr::filter(link_df2, high_conf),
-        aes(x = distance_kb, y = score, color = "High-confidence (score > 0.2)"),
-        alpha = 0.7, size = 1.2) +
-    geom_hline(yintercept = 0.2, linetype = "dashed", color = "firebrick") +
-    scale_color_manual(values = c("High-confidence (score > 0.3)" = "firebrick")) +
-    labs(
-        x = "Distance from TSS (kb)",
-        y = paste0("Correlation Score (", p_met, ")"),
-        title = "Peak–Gene Correlation vs. Distance",
-        subtitle = "High-confidence (score > 0.2)",
-        caption = paste("High-confidence fraction:", frac_str, "| Percentage:", perc_str)
-    ) +
-    theme_minimal()
-
-ggsave(here(plotDir, 
-            paste0("distribution_scores_high_confidence", f_sufix, ".pdf")),
-       g2, width = 8, height = 5)
-
-## filtered peaks
-write.csv(link_df,
-          file = here(cvsDir, paste0("filtered_peak_gene_links_with_distance", f_sufix, ".csv")),
-          row.names = FALSE)
-
-message("TSS Correlation scores completed!")
 
 
 
+#===============================================================================
 
 ## Check number of linked peaks per gene and viceverce
 # Number of linked peaks per gene
