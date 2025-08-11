@@ -12,6 +12,7 @@
 ## I use EnsDb.Hsapiens.v86 for extracting gene names, positions, TSSs, chr locations, etc.
 library("EnsDb.Hsapiens.v86")           # Gene annotation (GTF-style)
 library("ggplot2")
+library("patchwork")
 library("tidyverse")
 library("dplyr")
 library("here")
@@ -27,8 +28,8 @@ w_size <- args[4]
 # 3: spearman, 2.5e4
 
 # for testing
-# p_met = "pearson"
-# w_size = 1e5
+# p_met = "spearman"
+# w_size = 2.5e4
 
 ## p_met:
 # pearson -> peak-scores<0.2: likely due scATAC counts are ultra‑sparse; scRNA is zero‑inflated. Pearson r’s of 0.05–0.2 are common even for real links
@@ -41,11 +42,12 @@ if (length(p_met) && length(w_size)) {
         "\nWindow-size\n",
         w_size
     )
-    w_size <- case_when(
-        w_size==25000 || w_size==2.5e+04 ~ "2.5e4",
-        w_size==50000 || w_size==5e+04 ~ "5e4",
-        w_size==100000 || w_size==1e+05 ~ "1e5",
-        TRUE ~ "00" 
+    ## Use numeric comparison first, then assign string labels
+    w_size_label <- case_when(
+        isTRUE(all.equal(w_size, 25000))  ~ "2.5e4",
+        isTRUE(all.equal(w_size, 50000))  ~ "5e4",
+        isTRUE(all.equal(w_size, 100000)) ~ "1e5",
+        TRUE                              ~ "00"
     )
     f_sufix <- paste0(".", p_met, ".", format(w_size, scientific = TRUE), ".cells_filtered_2perc")
     message("Processing: ", f_sufix)
@@ -86,7 +88,8 @@ if (!dir.exists(csvDir)) {
 # load link peak-gene csv
 gene_peaks_csv <- here(input_cvsDir, paste0("all_peak_gene_links", f_sufix, ".csv"))
 if (file.exists(gene_peaks_csv)) {
-    link_df <- read.csv(file = gene_peaks_csv)
+    link_df <- read.csv(gene_peaks_csv)
+    message("File loaded!")
 } else {
     stop(paste("File not found:", gene_peaks_csv))
 }
