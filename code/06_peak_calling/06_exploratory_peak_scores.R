@@ -1,21 +1,16 @@
 ########################################################################
-## EDA: Compute LinkPeaks() and filter High-Confident Peaks 
-##
-## plots and tables to asses links at different thresholds 
+## explore and filter strong peak-gene links for evaluation 
+## - Make several visualization to evaluate Peak scores
 ##
 ## Authors. CSC
-## Date. March 24, 2025
-## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
-## Note. Seurat objects were created with module load conda_R/4.3.x
+## Date. Aug 11, 2025
+## Recommended resources on interactive mode: srun --pty --mem=30GB --x11 bash
+## Note. Seurat objects were created with module load conda_R/4.4.x
 ########################################################################
 
-library("Seurat")
-library("Signac")
-library("ggplot2")
-## I use BSgenome.Hsapiens.UCSC.hg38 for extracting DNA motifs, k-mers, sequence-based features and compute Tn5 bias correction
-library("BSgenome.Hsapiens.UCSC.hg38")  # full reference genome sequence / actual DNA bases (A/T/C/G) for each chromosome
 ## I use EnsDb.Hsapiens.v86 for extracting gene names, positions, TSSs, chr locations, etc.
 library("EnsDb.Hsapiens.v86")           # Gene annotation (GTF-style)
+library("ggplot2")
 library("tidyverse")
 library("dplyr")
 library("purrr")
@@ -56,156 +51,34 @@ if (length(p_met) && length(w_size)) {
 # Check/create directories
 
 ## clusters renamed for Spatial-Registration on Visium project
-inputRDS_Dir <- here(
-  "processed-data",
-  "05_Clustering_ARCr",
-  "17_wnn_clustering_final_ct"
-)
-inputCVS_Dir <- here(
-  "processed-data",
-  "05_Clustering_ARCr",
-  "02_Hb_celltypes_from_seurat_reanalyze_v3",
-  "cvs_files_markers"
-)
-plotDir <- here(
-  "plots",
-  "06_peak_calling",
-  "00_link_peaks"
-)
-cvsDir <- here(
+input_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
     "00_link_peaks"
 )
+plotDir <- here(
+  "plots",
+  "06_peak_calling",
+  "06_exploratory_peak_scores"
+)
+
 
 ## Check directories
 if (!dir.exists(plotDir)) {
   dir.create(plotDir)
 }
-if (!dir.exists(cvsDir)) {
-    dir.create(cvsDir)
-}
 
-## Load Seurat
-# Use Seurat with clusters renamed for Spatial-Registration on Visium project
-Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
-seurat_name <- here(inputRDS_Dir, Seurat_base_name)
-SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
-levels(SeuratOBJ)
-
-## filter genes to those expressed in 3% of cells
-DefaultAssay(SeuratOBJ) <- "RNA"
-rna_counts <- GetAssayData(SeuratOBJ, assay="RNA", layer="data")
-length(rownames(rna_counts)) # [1] 36601
-#length(rownames(rna_counts)[Matrix::rowSums(rna_counts > 0)]) # 34738
-#length(rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.02]) # 34738
-keep_genes <- rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.02 * ncol(rna_counts)]
-length(keep_genes) # in count: [1] 14526
-
-## Set atac
-DefaultAssay(SeuratOBJ) <- "ATAC"
-class(SeuratOBJ[["ATAC"]])
-# make a readable base-name for plots
-Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
-Seurat_base_name <- sub("_renamed_visium$", "", Seurat_base_name)
-Seurat_base_name
-# C.leiden_lsi_r2
-
-##==============================================================================
-
-## Identifies cis-regulatory elements by linking chromatin-accessible peaks to gene expression using correlation (and optionally accounting for covariates).
-
-## preprocessed peaks
-
-message("Starting GC content correction ... ")
-
-## GC content correction
-genome <- BSgenome.Hsapiens.UCSC.hg38
-
-SeuratOBJ <- RegionStats(
-    object = SeuratOBJ,
-    genome = genome,
-    assay = "ATAC"
-)
-SeuratOBJ
-
-message("GC content correction done!")
-
-message("Searching LinkPeaks ... ")
-
-## see all chromosomes
-table(seqnames(granges(SeuratOBJ)))
-## see what are considered standard chromosomes
-standardChromosomes(granges(SeuratOBJ))
-
-## Even though this filtering doesn’t change anything in this dataset, it ensures reproducibility
-## remove the features that correspond to chromosome scaffolds or other sequences instead of the (22+2) standard chromosomes
-peaks.keep <- seqnames(granges(SeuratOBJ)) %in% standardChromosomes(granges(SeuratOBJ))
-tryCatch(
-    {
-        SeuratOBJ <- SeuratOBJ[as.vector(peaks.keep), ]
-    }, error = function(e) {
-        message(e)
-    })
-
-
-## set a subset of genes to test
-#hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
-
-message("Computing link-peaks correlations ...")
-
-## find peaks that are correlated with the expression of nearby genes
-atac <- LinkPeaks(
-    object = SeuratOBJ,
-    peak.assay = "ATAC",
-    expression.assay = "RNA",
-    genes.use = keep_genes,
-    method = p_met,
-    distance = as.numeric(w_size)             # Only consider peaks within ±100 kb of gene TSS (cis-window)
-)
-
-message("Computing link-peaks correlations completed!")
-
-##==============================================================================
-## explore and filter strong peak-gene links
-
-## inspect data
-head(Links(atac))
-# GRanges object with 5 ranges and 5 metadata columns:
-#     seqnames              ranges strand |     score        gene
-#        <Rle>           <IRanges>  <Rle> | <numeric> <character>
-# [1]     chr5 146497025-146516190      * | 0.0515208      GPR151
-# [2]     chr5 146516043-146516190      * | 0.0979604      GPR151
-# [3]    chr13   78596294-78603560      * | 0.0569620      POU4F1
-# [4]    chr13   78597457-78603560      * | 0.0579676      POU4F1
-# [5]    chr13   78603450-78603560      * | 0.0594102      POU4F1
-# peak    zscore      pvalue
-# <character> <numeric>   <numeric>
-# [1] chr5-146496517-14649..   2.71746 3.28927e-03
-# [2] chr5-146515546-14651..   5.29336 6.00436e-08
-# [3] chr13-78595767-78596..   4.35176 6.75248e-06
-# [4] chr13-78597000-78597..   4.33686 7.22667e-06
-# [5] chr13-78602870-78604..   5.15894 1.24175e-07
-
-link_df <- as.data.frame(Links(atac))
-summary(link_df$score)
-
-write.csv(
-    link_df,
-    file = here(plotDir, paste0("all_peak_gene_links", f_sufix, ".csv")),
-    row.names = FALSE
-)
 ## for testing: ================================================================
-# link_df <- read.csv(file = here(cvsDir, "all_peak_gene_links.spearman.5e4.csv"))
-# colnames(link_df)
-# link_df <- link_df |>
-#     mutate(
-#         gene     = trimws(as.character(gene)),
-#         seqnames = as.character(seqnames),
-#         start    = as.numeric(start),
-#         end      = as.numeric(end)
-#     )
-# head(link_df)
+link_df <- read.csv(file = here(input_cvsDir, "all_peak_gene_links.spearman.5e4_test.csv"))
+colnames(link_df)
+link_df <- link_df |>
+    mutate(
+        gene     = trimws(as.character(gene)),
+        seqnames = as.character(seqnames),
+        start    = as.numeric(start),
+        end      = as.numeric(end)
+    )
+head(link_df)
 ## for testing: ================================================================
 
 message("Computing distance between peaks and TSS ...")
@@ -241,7 +114,6 @@ tss_df <- tss_raw %>%
         gene_strand = as.character(strand),
         gene_id
     )
-
 head(tss_df)
 #     gene_name seqnames       tss gene_strand gene_id        
 #     <chr>     <chr>        <dbl> <chr>       <chr>          
@@ -261,7 +133,7 @@ if (nrow(dup_pairs) > 0) {
     stop("Non-unique (gene_name, seqnames) in tss_df: ", nrow(dup_pairs), " duplicates.")
 }
 
-# Join by gene + chromosome tsao avoid many-to-many 
+# Join by gene + chromosome to avoid many-to-many 
 colnames(link_df)
 colnames(tss_df)
 link_df2 <- link_df %>%
@@ -313,6 +185,9 @@ table(link_df2$gene_strand, useNA = "ifany")
     # 2714 2786 
 
 message("Peak center and distance to TSS completed!")
+
+
+#===============================================================================
 
 message("Building plots ...")
 
