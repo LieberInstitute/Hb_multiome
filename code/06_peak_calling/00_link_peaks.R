@@ -368,7 +368,40 @@ link_df2 <- link_df2 %>%
 head(link_df2)
 table(link_df2$tier)
 
+# quick view by distance (kb)
+# Keep all data, no filtering of "Discarded" on the plot for visualization purposes
+df_plot <- link_df2  
 
+# Count total peaks and how many are below 0.1 to plot on discarted zone
+count_below_01 <- sum(df_plot$score < 0.1, na.rm = TRUE)
+count_below_02 <- sum((df_plot$score < 0.2 & df_plot$score > 0.1), na.rm = TRUE)
+count_below_03 <- sum((df_plot$score < 0.3 & df_plot$score > 0.2), na.rm = TRUE)
+
+g1 <- ggplot(df_plot, aes(x = distance/1000, y = score, color = tier)) +
+    geom_point(alpha = 0.5, size = 0.8) +
+    # Threshold lines
+    geom_hline(yintercept = 0.3, linetype = "dashed", color = "red") +
+    geom_hline(yintercept = 0.2, linetype = "dashed", color = "orange") +
+    geom_hline(yintercept = 0.1, linetype = "dashed", color = "grey50") +
+    # Labels for thresholds
+    annotate("text", x = max(df_plot$distance/1000)*1.02, y = 0.3, 
+             label = paste("0.3 (", count_below_03, " peaks)"), hjust = 0.8, vjust = -0.5, color = "red") +
+    annotate("text", x = max(df_plot$distance/1000)*1.02, y = 0.2, 
+             label = paste("0.2 (", count_below_02, " peaks)"), hjust = 0.8, vjust = -0.5, color = "orange") +
+    annotate("text", x = max(df_plot$distance/1000)*1.02, y = 0.1, 
+             label = paste("0.1 (", count_below_01, " peaks)"), hjust = 0.8, vjust = -0.5, color = "grey50") +
+    # Custom legend with count
+    scale_color_manual(
+        values = c(
+            "High (>=0.30, FDR<0.05)"          = "#b2182b",
+            "Moderate (0.20–0.30, FDR<0.10)"   = "#ef8a62",
+            "Exploratory (0.10–0.20, FDR<0.10)" = "#67a9cf",
+            "Discarded"                        = "grey80"
+        ),
+        name = paste0("Tier (Count < 0.1: ", count_below_01, ")")
+    ) 
+
+#===============================================================================
 
 
 ## Highlighting high-confidence links
