@@ -24,11 +24,11 @@ w_size <- args[4]
 # 0: pearson, 1e5
 # 1: pearson, 5e4
 # 2: spearman, 1e5
-# 3: spearman, 5e4
+# 3: spearman, 2.5e4
 
 # for testing
-# p_met = "spearman"
-# w_size = 5e4
+# p_met = "pearson"
+# w_size = 1e5
 
 ## p_met:
 # pearson -> peak-scores<0.2: likely due scATAC counts are ultra‑sparse; scRNA is zero‑inflated. Pearson r’s of 0.05–0.2 are common even for real links
@@ -41,7 +41,14 @@ if (length(p_met) && length(w_size)) {
         "\nWindow-size\n",
         w_size
     )
-    f_sufix <- paste0(".", p_met, ".", w_size, ".cells_filtered_2perc")
+    w_size <- case_when(
+        w_size==25000 || w_size==2.5e+04 ~ "2.5e4",
+        w_size==50000 || w_size==5e+04 ~ "5e4",
+        w_size==100000 || w_size==1e+05 ~ "1e5",
+        TRUE ~ "00" 
+    )
+    f_sufix <- paste0(".", p_met, ".", format(w_size, scientific = TRUE), ".cells_filtered_2perc")
+    message("Processing: ", f_sufix)
 } else {
     message("Input arguments missed")
     stop()
@@ -76,9 +83,18 @@ if (!dir.exists(csvDir)) {
     dir.create(csvDir)
 }
 
+# load link peak-gene csv
+gene_peaks_csv <- here(input_cvsDir, paste0("all_peak_gene_links", f_sufix, ".csv"))
+if (file.exists(gene_peaks_csv)) {
+    link_df <- read.csv(file = gene_peaks_csv)
+} else {
+    stop(paste("File not found:", gene_peaks_csv))
+}
 
 ## for testing: ================================================================
-link_df <- read.csv(file = here(input_cvsDir, "all_peak_gene_links.spearman.5e4_test.csv"))
+#link_df <- read.csv(file = here(input_cvsDir, "all_peak_gene_links.spearman.5e4_test.csv"))
+## for testing: ================================================================
+
 colnames(link_df)
 link_df <- link_df |>
     mutate(
@@ -88,7 +104,6 @@ link_df <- link_df |>
         end      = as.numeric(end)
     )
 head(link_df)
-## for testing: ================================================================
 
 message("Computing distance between peaks and TSS ...")
 
