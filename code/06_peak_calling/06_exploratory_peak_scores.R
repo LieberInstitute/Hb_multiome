@@ -312,7 +312,7 @@ write.csv(link_df2,
           file = here(csvDir, paste0("peak_gene_links_with_TSS_and_CC", f_sufix, ".csv")),
           row.names = FALSE)
 
-message("TSS Correlation scores completed!")
+message("Link Gene-Peak table with TSS distances and CC scores saved!")
 
 
 #===============================================================================
@@ -673,13 +673,13 @@ message("Plots done!!!")
 
 # library("slurmjobs")
 # job_single(
-#   "00_link_peaks",
+#   "06_exploratory_peak_scores",
 #   create_shell = TRUE,
 #   partition = "katun",
 #   memory = "30G",
 #   cores = 2,
 #   logdir = "logs",
-#   command = "Rscript -e \"options(width = 120); sessioninfo::session_info()\"",
+#   command = "Rscript 06_exploratory_peak_scores.R",
 #   create_logdir = TRUE
 # )
 
