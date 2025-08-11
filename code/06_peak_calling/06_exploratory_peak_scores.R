@@ -1,6 +1,7 @@
 ########################################################################
 ## explore and filter strong peak-gene links for evaluation 
 ## - Make several visualization to evaluate Peak scores
+## - Make table with several confidence Peak scores
 ##
 ## Authors. CSC
 ## Date. Aug 11, 2025
@@ -11,10 +12,8 @@
 ## I use EnsDb.Hsapiens.v86 for extracting gene names, positions, TSSs, chr locations, etc.
 library("EnsDb.Hsapiens.v86")           # Gene annotation (GTF-style)
 library("ggplot2")
-library("patchwork")
 library("tidyverse")
 library("dplyr")
-library("purrr")
 library("here")
 
 
@@ -359,287 +358,315 @@ ggsave(here(plotDir,
 
 
 
-## Make complex Heatmap
-
-## Prep: assign each peak to a cluster (by accessibility)
-## average peaks × clusters
-avg_atac <- AggregateExpression(
-    SeuratOBJ, 
-    assays = "ATAC", 
-    group.by = "cluster_ann", 
-    layers = "counts"
-)$ATAC  # matrix: peaks x clusters
-
-# for each peak, which cluster has highest average accessibility
-peak_cluster <- data.frame(
-    peak = rownames(avg_atac),
-    cluster_ann = colnames(avg_atac)[max.col(avg_atac, ties.method = "first")]
-)
-
-# keep only links whose peaks are known in the assay
-links_cl <- link_df %>%
-    inner_join(peak_cluster, by = "peak") %>%
-    filter(!is.na(cluster_ann))
-
-## filter links of desired
-## links_cl <- links_cl %>% filter(score > 0.3, pvalue < 0.05)
-
-# bin definition (adjust if you like)
-bin_breaks <- c(0,1,2,3,5,10,Inf)
-bin_labels <- c("1","2","3","4–5","6–10",">10")
-
-## Distribution of number of linked peaks per gene, by cluster
-# Count linked peaks per (gene, cluster)
-peaks_per_gene <- links_cl %>%
-    group_by(cluster_ann, gene) %>%
-    summarise(n_peaks = n_distinct(peak), .groups = "drop") %>%
-    mutate(bin = cut(
-        n_peaks, breaks = bin_breaks,
-        labels = bin_labels, right = TRUE
-    ))
-
-# Make a cluster × bin table
-dist_pg <- peaks_per_gene %>%
-    count(cluster_ann, bin, name = "n_genes") %>%
-    complete(cluster_ann, bin, fill = list(n_genes = 0)) %>%
-    group_by(cluster_ann) %>%
-    mutate(freq = n_genes / sum(n_genes)) %>%   # optional normalize by row
-    ungroup()
-
-g_dp <- ggplot(dist_pg, aes(x = bin, y = cluster_ann, fill = freq)) +
-    geom_tile(color = "grey85") +
-    scale_fill_viridis_c(name = "Fraction of genes", option = "C") +
-    labs(
-        title = "Distribution of linked peaks per gene",
-        x = "Peaks per gene (bins)", y = "cluster_ann"
-    ) +
-    theme_minimal()
-
-## Distribution of number of linked genes per peak, by cluster
-# Count linked genes per (peak, cluster)
-genes_per_peak <- links_cl %>%
-    group_by(cluster_ann, peak) %>%
-    summarise(n_genes = n_distinct(gene), .groups = "drop") %>%
-    mutate(bin = cut(
-        n_genes, breaks = c(0,1,2,3,5,10,Inf),
-        labels = c("1","2","3","4-5","6-10",">10"), right = TRUE
-    ))
-
-dist_gp <- genes_per_peak %>%
-    count(cluster_ann, bin, name = "n_peaks") %>%
-    complete(cluster_ann, bin, fill = list(n_peaks = 0)) %>%
-    group_by(cluster_ann) %>%
-    mutate(freq = n_peaks / sum(n_peaks)) %>%
-    ungroup()
-
-g_dg <- ggplot(dist_gp, aes(x = bin, y = cluster_ann, fill = freq)) +
-    geom_tile(color = "grey85") +
-    scale_fill_viridis_c(name = "Fraction of peaks", option = "C") +
-    labs(
-        title = "Distribution of linked genes per peak",
-        x = "Genes per peak (bins)", y = "cluster_ann"
-    ) +
-    theme_minimal()
-
-combined_plot <- g_dp + g_dg
-combined_plot
-
-ggsave(here(plotDir, 
-            paste0("heatmaps_link_peak_genes_peaks", f_sufix, ".pdf")),
-       combined_plot, width = 12, height = 5)
-
-
-
-##  Top genes by total linked peaks, across clusters
-# Pick top N genes by total linked peaks (across all clusters)
-
-N <- 50
-
-top_genes <- links_cl %>%
-    group_by(gene) %>%
-    summarise(total_peaks = n_distinct(peak), .groups = "drop") %>%
-    slice_max(total_peaks, n = N) %>%
-    pull(gene)
-
-mat_pg <- links_cl %>%
-    filter(gene %in% top_genes) %>%
-    group_by(cluster_ann, gene) %>%
-    summarise(n_peaks = n_distinct(peak), .groups = "drop") %>%
-    mutate(gene = factor(gene, levels = top_genes)) %>%
-    complete(cluster_ann, gene, fill = list(n_peaks = 0))
-
-# Heatmap: genes (rows) × clusters (cols)
-g1 <- ggplot(mat_pg, aes(x = cluster_ann, y = gene, fill = n_peaks)) +
-    geom_tile() +
-    scale_fill_viridis_c(name = "# linked peaks") +
-    labs(
-        title = paste("Top", N, "genes: linked peaks per gene by cluster"),
-        x = "WNN cluster", y = "Gene"
-    ) +
-    theme_minimal() +
-    theme(axis.text.y = element_text(size = 7))
-
-ggsave(here(plotDir, 
-            paste0("heatmap_Top50_genes_peaks", f_sufix, ".pdf")),
-       g1, width = 8, height = 5)
-
-
-
-## ====
-
-library(ComplexHeatmap)
-library(circlize)
-
-bin_breaks  <- c(0,1,2,3,5,10,Inf)
-bin_labels  <- c("1","2","3","4-5","6-10",">10")   # <-- ASCII hyphen
-
-#1) Heatmap: Distribution of peaks per gene (binned), by cluster
-#Counts how many distinct peaks are linked to each gene within each cluster, bins those counts, and shows the fraction per cluster.
-
-peaks_per_gene <- links_cl %>%
-    group_by(cluster_ann, gene) %>%
-    summarise(n_peaks = n_distinct(peak), .groups = "drop") %>%
-    mutate(bin = cut(n_peaks, breaks = bin_breaks, labels = bin_labels, right = TRUE))
-
-dist_pg <- peaks_per_gene %>%
-    count(cluster_ann, bin, name = "n_genes") %>%
-    complete(cluster_ann, bin = factor(bin_labels, levels = bin_labels), fill = list(n_genes = 0)) %>%
-    group_by(cluster_ann) %>%
-    mutate(freq = n_genes / sum(n_genes)) %>%
-    ungroup()
-
-# matrix: rows = clusters, cols = bins
-mat_pg <- dist_pg %>%
-    select(cluster_ann, bin, freq) %>%
-    pivot_wider(names_from = bin, values_from = freq) %>%
-    as.data.frame()
-
-rownames(mat_pg) <- mat_pg$cluster_ann
-mat_pg$cluster_ann <- NULL
-mat_pg <- as.matrix(mat_pg)  # numeric matrix
-
-# color scale
-col_fun_pg <- circlize::colorRamp2(c(0, max(mat_pg, na.rm = TRUE)), c("#F7FBFF", "#08306B"))
-
-ht_pg <- Heatmap(
-    mat_pg,
-    name = "Frac genes",
-    col = col_fun_pg,
-    cluster_rows = TRUE,
-    cluster_columns = FALSE,
-    row_title = "WNN clusters",
-    column_title = "Peaks per gene (binned)",
-    heatmap_legend_param = list(direction = "horizontal"),
-    column_names_rot = 0
-)
-
-# Save as PDF
-pdf(here(plotDir, "heatmap_frac_genes", f_sufix, ".pdf"),
-    width = 8, height = 6)
-draw(ht_pg)
-dev.off()
-
-
-##2) Heatmap: Distribution of genes per peak (binned), by cluster
-##Counts how many distinct genes each peak links to within each cluster, bins those counts, shows the fraction per cluster.
-
-genes_per_peak <- links_cl %>%
-    group_by(cluster_ann, peak) %>%
-    summarise(n_genes = n_distinct(gene), .groups = "drop") %>%
-    mutate(bin = cut(n_genes, breaks = bin_breaks, labels = bin_labels, right = TRUE))
-
-dist_gp <- genes_per_peak %>%
-    count(cluster_ann, bin, name = "n_peaks") %>%
-    complete(cluster_ann, bin = factor(bin_labels, levels = bin_labels), fill = list(n_peaks = 0)) %>%
-    group_by(cluster_ann) %>%
-    mutate(freq = n_peaks / sum(n_peaks)) %>%
-    ungroup()
-
-mat_gp <- dist_gp %>%
-    select(cluster_ann, bin, freq) %>%
-    pivot_wider(names_from = bin, values_from = freq) %>%
-    as.data.frame()
-
-rownames(mat_gp) <- mat_gp$cluster_ann
-mat_gp$cluster_ann <- NULL
-mat_gp <- as.matrix(mat_gp)
-
-col_fun_gp <- circlize::colorRamp2(c(0, max(mat_gp, na.rm = TRUE)), c("#FFF5F0", "#7F0000"))
-
-ht_gp <- Heatmap(
-    mat_gp,
-    name = "Frac peaks",
-    col = col_fun_gp,
-    cluster_rows = TRUE,
-    cluster_columns = FALSE,
-    row_title = "WNN clusters",
-    column_title = "Genes per peak (binned)",
-    heatmap_legend_param = list(direction = "horizontal"),
-    column_names_rot = 0
-)
-
-# Save as PDF
-pdf(here(plotDir, "heatmap_frac_peaks", f_sufix, ".pdf"),
-    width = 8, height = 6)
-draw(ht_gp)
-dev.off()
-
-#3) Heatmap: Top N genes by linked peaks across clusters
-#Rows = genes (top N by total linked peaks), columns = clusters, values = # linked peaks.
-
-top_genes <- links_cl %>%
-    group_by(gene) %>%
-    summarise(total_peaks = n_distinct(peak), .groups = "drop") %>%
-    slice_max(total_peaks, n = N) %>%
-    pull(gene)
-
-mat_top <- links_cl %>%
-    filter(gene %in% top_genes) %>%
-    group_by(cluster_ann, gene) %>%
-    summarise(n_peaks = n_distinct(peak), .groups = "drop") %>%
-    complete(cluster_ann, gene, fill = list(n_peaks = 0)) %>%
-    pivot_wider(names_from = cluster_ann, values_from = n_peaks) %>%
-    as.data.frame()
-
-rownames(mat_top) <- mat_top$gene
-mat_top$gene <- NULL
-mat_top <- as.matrix(mat_top)
-
-# Optional: row-wise z-score to show relative enrichment per gene
-mat_top_z <- t(scale(t(mat_top)))  # center/scale per gene
-
-col_fun_top <- circlize::colorRamp2(c(-2, 0, 2), c("#2166AC", "white", "#B2182B"))
-
-## rows = the top N genes (most variable or most linked, depending on your earlier filtering)
-ht_top <- Heatmap(
-    mat_top_z,
-    name = "Z (gene)",
-    col = col_fun_top,
-    cluster_rows = TRUE,
-    cluster_columns = TRUE,
-    show_row_dend = TRUE,
-    show_column_dend = TRUE,
-    column_title = "Cluster annotation",           # X-axis label
-    column_title_side = "bottom",                  # put at bottom if desired
-    row_title = paste0("Top ", N, " genes"),       # Y-axis label
-    show_row_names = TRUE,
-    row_names_gp = grid::gpar(fontsize = 7)
-)
-
-ht_distributions <- ht_pg %v% ht_gp
-ht_distributions
-
-# draw in one page
-pdf(file.path(plotDir, paste0("heatmaps_distributions_complexheatmap", f_sufix, ".pdf")),
-              width = 8, height = 10)
-draw(ht_distributions, heatmap_legend_side = "right", merge_legend = TRUE)
-dev.off()
-
-# top-genes heatmap on its own
-pdf(file.path(plotDir, paste0("heatmap_top_genes_complexheatmap", f_sufix, ".pdf")),
-    width = 8, height = 10)
-draw(ht_top, heatmap_legend_side = "right")
-dev.off()
+# #===============================================================================
+# ## Prepare Seurat for Heatmap
+# 
+# # Use Seurat with clusters renamed for Spatial-Registration on Visium project
+# Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
+# seurat_name <- here(inputRDS_Dir, Seurat_base_name)
+# SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
+# levels(SeuratOBJ)
+# 
+# ## filter genes to those expressed in 3% of cells
+# DefaultAssay(SeuratOBJ) <- "RNA"
+# rna_counts <- GetAssayData(SeuratOBJ, assay="RNA", layer="data")
+# length(rownames(rna_counts)) # [1] 36601
+# #length(rownames(rna_counts)[Matrix::rowSums(rna_counts > 0)]) # 34738
+# #length(rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.02]) # 34738
+# keep_genes <- rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.02 * ncol(rna_counts)]
+# length(keep_genes) # in count: [1] 14526
+# 
+# ## Set atac
+# DefaultAssay(SeuratOBJ) <- "ATAC"
+# class(SeuratOBJ[["ATAC"]])
+# # make a readable base-name for plots
+# Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
+# Seurat_base_name <- sub("_renamed_visium$", "", Seurat_base_name)
+# Seurat_base_name
+# # C.leiden_lsi_r2
+# 
+# ##==============================================================================
+# ## Make complex Heatmap
+# 
+# ## Prep: assign each peak to a cluster (by accessibility)
+# ## average peaks × clusters
+# avg_atac <- AggregateExpression(
+#     SeuratOBJ, 
+#     assays = "ATAC", 
+#     group.by = "cluster_ann", 
+#     layers = "counts"
+# )$ATAC  # matrix: peaks x clusters
+# 
+# # for each peak, which cluster has highest average accessibility
+# peak_cluster <- data.frame(
+#     peak = rownames(avg_atac),
+#     cluster_ann = colnames(avg_atac)[max.col(avg_atac, ties.method = "first")]
+# )
+# 
+# # keep only links whose peaks are known in the assay
+# links_cl <- link_df %>%
+#     inner_join(peak_cluster, by = "peak") %>%
+#     filter(!is.na(cluster_ann))
+# 
+# ## filter links of desired
+# ## links_cl <- links_cl %>% filter(score > 0.3, pvalue < 0.05)
+# 
+# # bin definition (adjust if you like)
+# bin_breaks <- c(0,1,2,3,5,10,Inf)
+# bin_labels <- c("1","2","3","4–5","6–10",">10")
+# 
+# ## Distribution of number of linked peaks per gene, by cluster
+# # Count linked peaks per (gene, cluster)
+# peaks_per_gene <- links_cl %>%
+#     group_by(cluster_ann, gene) %>%
+#     summarise(n_peaks = n_distinct(peak), .groups = "drop") %>%
+#     mutate(bin = cut(
+#         n_peaks, breaks = bin_breaks,
+#         labels = bin_labels, right = TRUE
+#     ))
+# 
+# # Make a cluster × bin table
+# dist_pg <- peaks_per_gene %>%
+#     count(cluster_ann, bin, name = "n_genes") %>%
+#     complete(cluster_ann, bin, fill = list(n_genes = 0)) %>%
+#     group_by(cluster_ann) %>%
+#     mutate(freq = n_genes / sum(n_genes)) %>%   # optional normalize by row
+#     ungroup()
+# 
+# g_dp <- ggplot(dist_pg, aes(x = bin, y = cluster_ann, fill = freq)) +
+#     geom_tile(color = "grey85") +
+#     scale_fill_viridis_c(name = "Fraction of genes", option = "C") +
+#     labs(
+#         title = "Distribution of linked peaks per gene",
+#         x = "Peaks per gene (bins)", y = "cluster_ann"
+#     ) +
+#     theme_minimal()
+# 
+# ## Distribution of number of linked genes per peak, by cluster
+# # Count linked genes per (peak, cluster)
+# genes_per_peak <- links_cl %>%
+#     group_by(cluster_ann, peak) %>%
+#     summarise(n_genes = n_distinct(gene), .groups = "drop") %>%
+#     mutate(bin = cut(
+#         n_genes, breaks = c(0,1,2,3,5,10,Inf),
+#         labels = c("1","2","3","4-5","6-10",">10"), right = TRUE
+#     ))
+# 
+# dist_gp <- genes_per_peak %>%
+#     count(cluster_ann, bin, name = "n_peaks") %>%
+#     complete(cluster_ann, bin, fill = list(n_peaks = 0)) %>%
+#     group_by(cluster_ann) %>%
+#     mutate(freq = n_peaks / sum(n_peaks)) %>%
+#     ungroup()
+# 
+# g_dg <- ggplot(dist_gp, aes(x = bin, y = cluster_ann, fill = freq)) +
+#     geom_tile(color = "grey85") +
+#     scale_fill_viridis_c(name = "Fraction of peaks", option = "C") +
+#     labs(
+#         title = "Distribution of linked genes per peak",
+#         x = "Genes per peak (bins)", y = "cluster_ann"
+#     ) +
+#     theme_minimal()
+# 
+# combined_plot <- g_dp + g_dg
+# combined_plot
+# 
+# ggsave(here(plotDir, 
+#             paste0("heatmaps_link_peak_genes_peaks", f_sufix, ".pdf")),
+#        combined_plot, width = 12, height = 5)
+# 
+# 
+# 
+# ##  Top genes by total linked peaks, across clusters
+# # Pick top N genes by total linked peaks (across all clusters)
+# 
+# N <- 50
+# 
+# top_genes <- links_cl %>%
+#     group_by(gene) %>%
+#     summarise(total_peaks = n_distinct(peak), .groups = "drop") %>%
+#     slice_max(total_peaks, n = N) %>%
+#     pull(gene)
+# 
+# mat_pg <- links_cl %>%
+#     filter(gene %in% top_genes) %>%
+#     group_by(cluster_ann, gene) %>%
+#     summarise(n_peaks = n_distinct(peak), .groups = "drop") %>%
+#     mutate(gene = factor(gene, levels = top_genes)) %>%
+#     complete(cluster_ann, gene, fill = list(n_peaks = 0))
+# 
+# # Heatmap: genes (rows) × clusters (cols)
+# g1 <- ggplot(mat_pg, aes(x = cluster_ann, y = gene, fill = n_peaks)) +
+#     geom_tile() +
+#     scale_fill_viridis_c(name = "# linked peaks") +
+#     labs(
+#         title = paste("Top", N, "genes: linked peaks per gene by cluster"),
+#         x = "WNN cluster", y = "Gene"
+#     ) +
+#     theme_minimal() +
+#     theme(axis.text.y = element_text(size = 7))
+# 
+# ggsave(here(plotDir, 
+#             paste0("heatmap_Top50_genes_peaks", f_sufix, ".pdf")),
+#        g1, width = 8, height = 5)
+# 
+# 
+# 
+# ## ====
+# 
+# library(ComplexHeatmap)
+# library(circlize)
+# 
+# bin_breaks  <- c(0,1,2,3,5,10,Inf)
+# bin_labels  <- c("1","2","3","4-5","6-10",">10")   # <-- ASCII hyphen
+# 
+# #1) Heatmap: Distribution of peaks per gene (binned), by cluster
+# #Counts how many distinct peaks are linked to each gene within each cluster, bins those counts, and shows the fraction per cluster.
+# 
+# peaks_per_gene <- links_cl %>%
+#     group_by(cluster_ann, gene) %>%
+#     summarise(n_peaks = n_distinct(peak), .groups = "drop") %>%
+#     mutate(bin = cut(n_peaks, breaks = bin_breaks, labels = bin_labels, right = TRUE))
+# 
+# dist_pg <- peaks_per_gene %>%
+#     count(cluster_ann, bin, name = "n_genes") %>%
+#     complete(cluster_ann, bin = factor(bin_labels, levels = bin_labels), fill = list(n_genes = 0)) %>%
+#     group_by(cluster_ann) %>%
+#     mutate(freq = n_genes / sum(n_genes)) %>%
+#     ungroup()
+# 
+# # matrix: rows = clusters, cols = bins
+# mat_pg <- dist_pg %>%
+#     select(cluster_ann, bin, freq) %>%
+#     pivot_wider(names_from = bin, values_from = freq) %>%
+#     as.data.frame()
+# 
+# rownames(mat_pg) <- mat_pg$cluster_ann
+# mat_pg$cluster_ann <- NULL
+# mat_pg <- as.matrix(mat_pg)  # numeric matrix
+# 
+# # color scale
+# col_fun_pg <- circlize::colorRamp2(c(0, max(mat_pg, na.rm = TRUE)), c("#F7FBFF", "#08306B"))
+# 
+# ht_pg <- Heatmap(
+#     mat_pg,
+#     name = "Frac genes",
+#     col = col_fun_pg,
+#     cluster_rows = TRUE,
+#     cluster_columns = FALSE,
+#     row_title = "WNN clusters",
+#     column_title = "Peaks per gene (binned)",
+#     heatmap_legend_param = list(direction = "horizontal"),
+#     column_names_rot = 0
+# )
+# 
+# # Save as PDF
+# pdf(here(plotDir, "heatmap_frac_genes", f_sufix, ".pdf"),
+#     width = 8, height = 6)
+# draw(ht_pg)
+# dev.off()
+# 
+# 
+# ##2) Heatmap: Distribution of genes per peak (binned), by cluster
+# ##Counts how many distinct genes each peak links to within each cluster, bins those counts, shows the fraction per cluster.
+# 
+# genes_per_peak <- links_cl %>%
+#     group_by(cluster_ann, peak) %>%
+#     summarise(n_genes = n_distinct(gene), .groups = "drop") %>%
+#     mutate(bin = cut(n_genes, breaks = bin_breaks, labels = bin_labels, right = TRUE))
+# 
+# dist_gp <- genes_per_peak %>%
+#     count(cluster_ann, bin, name = "n_peaks") %>%
+#     complete(cluster_ann, bin = factor(bin_labels, levels = bin_labels), fill = list(n_peaks = 0)) %>%
+#     group_by(cluster_ann) %>%
+#     mutate(freq = n_peaks / sum(n_peaks)) %>%
+#     ungroup()
+# 
+# mat_gp <- dist_gp %>%
+#     select(cluster_ann, bin, freq) %>%
+#     pivot_wider(names_from = bin, values_from = freq) %>%
+#     as.data.frame()
+# 
+# rownames(mat_gp) <- mat_gp$cluster_ann
+# mat_gp$cluster_ann <- NULL
+# mat_gp <- as.matrix(mat_gp)
+# 
+# col_fun_gp <- circlize::colorRamp2(c(0, max(mat_gp, na.rm = TRUE)), c("#FFF5F0", "#7F0000"))
+# 
+# ht_gp <- Heatmap(
+#     mat_gp,
+#     name = "Frac peaks",
+#     col = col_fun_gp,
+#     cluster_rows = TRUE,
+#     cluster_columns = FALSE,
+#     row_title = "WNN clusters",
+#     column_title = "Genes per peak (binned)",
+#     heatmap_legend_param = list(direction = "horizontal"),
+#     column_names_rot = 0
+# )
+# 
+# # Save as PDF
+# pdf(here(plotDir, "heatmap_frac_peaks", f_sufix, ".pdf"),
+#     width = 8, height = 6)
+# draw(ht_gp)
+# dev.off()
+# 
+# #3) Heatmap: Top N genes by linked peaks across clusters
+# #Rows = genes (top N by total linked peaks), columns = clusters, values = # linked peaks.
+# 
+# top_genes <- links_cl %>%
+#     group_by(gene) %>%
+#     summarise(total_peaks = n_distinct(peak), .groups = "drop") %>%
+#     slice_max(total_peaks, n = N) %>%
+#     pull(gene)
+# 
+# mat_top <- links_cl %>%
+#     filter(gene %in% top_genes) %>%
+#     group_by(cluster_ann, gene) %>%
+#     summarise(n_peaks = n_distinct(peak), .groups = "drop") %>%
+#     complete(cluster_ann, gene, fill = list(n_peaks = 0)) %>%
+#     pivot_wider(names_from = cluster_ann, values_from = n_peaks) %>%
+#     as.data.frame()
+# 
+# rownames(mat_top) <- mat_top$gene
+# mat_top$gene <- NULL
+# mat_top <- as.matrix(mat_top)
+# 
+# # Optional: row-wise z-score to show relative enrichment per gene
+# mat_top_z <- t(scale(t(mat_top)))  # center/scale per gene
+# 
+# col_fun_top <- circlize::colorRamp2(c(-2, 0, 2), c("#2166AC", "white", "#B2182B"))
+# 
+# ## rows = the top N genes (most variable or most linked, depending on your earlier filtering)
+# ht_top <- Heatmap(
+#     mat_top_z,
+#     name = "Z (gene)",
+#     col = col_fun_top,
+#     cluster_rows = TRUE,
+#     cluster_columns = TRUE,
+#     show_row_dend = TRUE,
+#     show_column_dend = TRUE,
+#     column_title = "Cluster annotation",           # X-axis label
+#     column_title_side = "bottom",                  # put at bottom if desired
+#     row_title = paste0("Top ", N, " genes"),       # Y-axis label
+#     show_row_names = TRUE,
+#     row_names_gp = grid::gpar(fontsize = 7)
+# )
+# 
+# ht_distributions <- ht_pg %v% ht_gp
+# ht_distributions
+# 
+# # draw in one page
+# pdf(file.path(plotDir, paste0("heatmaps_distributions_complexheatmap", f_sufix, ".pdf")),
+#               width = 8, height = 10)
+# draw(ht_distributions, heatmap_legend_side = "right", merge_legend = TRUE)
+# dev.off()
+# 
+# # top-genes heatmap on its own
+# pdf(file.path(plotDir, paste0("heatmap_top_genes_complexheatmap", f_sufix, ".pdf")),
+#     width = 8, height = 10)
+# draw(ht_top, heatmap_legend_side = "right")
+# dev.off()
 
 message("Plots done!!!")
 
