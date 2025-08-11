@@ -399,7 +399,19 @@ g1 <- ggplot(df_plot, aes(x = distance/1000, y = score, color = tier)) +
             "Discarded"                        = "grey80"
         ),
         name = paste0("Tier (Count < 0.1: ", count_below_01, ")")
-    ) 
+    )  +
+    labs(
+        x = "Distance from TSS (kb)",
+        y = "Correlation score",
+        title = "Peak–gene links by tier",
+        subtitle = "Dashed lines show thresholds"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+ggsave(here(plotDir, 
+            paste0("exploratory_scores_high_confidence", f_sufix, ".pdf")),
+       g1, width = 8, height = 5)
 
 #===============================================================================
 
