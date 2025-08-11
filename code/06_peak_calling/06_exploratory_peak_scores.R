@@ -11,6 +11,7 @@
 ## I use EnsDb.Hsapiens.v86 for extracting gene names, positions, TSSs, chr locations, etc.
 library("EnsDb.Hsapiens.v86")           # Gene annotation (GTF-style)
 library("ggplot2")
+library("patchwork")
 library("tidyverse")
 library("dplyr")
 library("purrr")
@@ -307,13 +308,19 @@ ggsave(here(plotDir,
 #===============================================================================
 
 
+## filtered peaks
+write.csv(link_df2,
+          file = here(csvDir, paste0("peak_gene_links_with_TSS_and_CC", f_sufix, ".csv")),
+          row.names = FALSE)
+
+message("TSS Correlation scores completed!")
 
 
 #===============================================================================
 
 ## Check number of linked peaks per gene and viceverce
 # Number of linked peaks per gene
-peaks_per_gene <- link_df %>%
+peaks_per_gene <- link_df2 %>%
     count(gene, name = "n_peaks") %>%
     arrange(desc(n_peaks))
 
@@ -321,14 +328,15 @@ g1 <- ggplot(peaks_per_gene, aes(x = n_peaks)) +
     geom_histogram(binwidth = 1, fill = "steelblue", color = "white") +
     scale_x_continuous(breaks = scales::pretty_breaks()) +
     labs(
-        title = "Peaks per gene",
+        title = paste(p_met, format(w_size, scientific = TRUE), "filtered genes < 2%"),
+        subtitle = "Peaks per gene",
         x = "Number of linked peaks per gene",
         y = "Number of genes"
     ) +
     theme_minimal()
 
 # Number of linked genes per peak
-genes_per_peak <- link_df %>%
+genes_per_peak <- link_df2 %>%
     count(peak, name = "n_genes") %>%
     arrange(desc(n_genes))
 
@@ -336,13 +344,13 @@ g2 <- ggplot(genes_per_peak, aes(x = n_genes)) +
     geom_histogram(binwidth = 1, fill = "firebrick", color = "white") +
     scale_x_continuous(breaks = scales::pretty_breaks()) +
     labs(
-        title = "Genes per peak",
+        subtitle = "Genes per peak",
         x = "Number of linked genes per peak",
         y = "Number of peaks"
     ) +
     theme_minimal()
 
-combined_plot <- p1 + p2
+combined_plot <- g1 + g2
 combined_plot
 
 ggsave(here(plotDir, 
