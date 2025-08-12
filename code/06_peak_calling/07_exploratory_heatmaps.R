@@ -75,6 +75,13 @@ csvDir <- here(
     "06_peak_calling",
     "07_exploratory_heatmaps"
 )
+## Seurat with wnn final ct
+inputRDS_Dir <- here(
+    "processed-data",
+    "05_Clustering_ARCr",
+    "17_wnn_clustering_final_ct"
+)
+Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
 
 
 ## Check directories
@@ -114,52 +121,44 @@ table(link_df2$gene_strand, useNA = "ifany")
 message("Building plots ...")
 
 #===============================================================================
+
+
 ## Prepare Seurat for Heatmap
-
-
-
-## clusters renamed for Spatial-Registration on Visium project
-inputRDS_Dir <- here(
-    "processed-data",
-    "05_Clustering_ARCr",
-    "17_wnn_clustering_final_ct"
-)
-
 # Use Seurat with clusters renamed for Spatial-Registration on Visium project
-Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
+
+message("WNN clusters:")
 levels(SeuratOBJ)
 
-# ## filter genes to those expressed in 2% of cells
+## filter genes to those expressed in 2% of cells
 DefaultAssay(SeuratOBJ) <- "RNA"
 rna_counts <- GetAssayData(SeuratOBJ, assay="RNA", layer="data")
 length(rownames(rna_counts)) # [1] 36601
-#length(rownames(rna_counts)[Matrix::rowSums(rna_counts > 0)]) # 34738
-#length(rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.02]) # 34738
 keep_genes <- rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.02 * ncol(rna_counts)]
+
+message("Genes kept after filtering those expressed in 2% of cells ")
 length(keep_genes) # in count: [1] 14526
 
-## Set atac
+## Set atac as defaul assay
 DefaultAssay(SeuratOBJ) <- "ATAC"
 class(SeuratOBJ[["ATAC"]])
-# make a readable base-name for plots
-Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
-Seurat_base_name <- sub("_renamed_visium$", "", Seurat_base_name)
-Seurat_base_name
-# C.leiden_lsi_r2
 
-##==============================================================================
-## Make complex Heatmap
+set.seed(12082025)
 
-## Prep: assign each peak to a cluster (by accessibility)
+## assign each peak to a cluster (by accessibility)
 ## average peaks × clusters
 avg_atac <- AggregateExpression(
     SeuratOBJ,
     assays = "ATAC",
     group.by = "cluster_ann",
-    layers = "counts"
+    layers = "counts" # fragment counts per peak per cell
 )$ATAC  # matrix: peaks x clusters
+
+head(avg_atac)
+
+##==============================================================================
+## Make complex Heatmap
 
 # for each peak, which cluster has highest average accessibility
 peak_cluster <- data.frame(
