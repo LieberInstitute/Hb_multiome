@@ -12,6 +12,7 @@
 library("Seurat")
 library("Signac")
 library("Matrix")
+library("ComplexHeatmap")
 ## I use BSgenome.Hsapiens.UCSC.hg38 for extracting DNA motifs, k-mers, sequence-based features and compute Tn5 bias correction
 # library("BSgenome.Hsapiens.UCSC.hg38")  # full reference genome sequence / actual DNA bases (A/T/C/G) for each chromosome
 library("stringr")
@@ -52,7 +53,7 @@ if (length(p_met) && length(w_size)) {
         isTRUE(all.equal(w_size, 100000)) ~ "1e5",
         TRUE                              ~ "00"
     )
-    f_sufix <- paste0(".", p_met, ".", format(w_size, scientific = TRUE), ".cells_filtered_2perc")
+    f_sufix <- paste0(".", p_met, ".", w_size_label, ".cells_filtered_2perc")
     message("Processing: ", f_sufix)
 } else {
     message("Input arguments missed")
@@ -71,7 +72,8 @@ inputRDS_Dir <- here(
 input_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
-    "00_link_peaks"
+    #"00_link_peaks"
+    "06_exploratory_peak_scores"
 )
 plotDir <- here(
     "plots",
@@ -99,13 +101,31 @@ seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
 levels(SeuratOBJ)
 
-message("Extract ATAC counts ....")
+message("Seurat loaded ...")
+
+## filter genes to those expressed in 2% of cells
+DefaultAssay(SeuratOBJ) <- "RNA"
+rna_counts <- GetAssayData(SeuratOBJ, assay="RNA", layer="data")
+length(rownames(rna_counts)) # [1] 36601
+#length(rownames(rna_counts)[Matrix::rowSums(rna_counts > 0)]) # 34738
+#length(rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.02]) # 34738
+keep_genes <- rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.02 * ncol(rna_counts)]
+length(keep_genes) # in count: [1] 14526
+
+message("filter genes to those expressed in 2% of cells ...")
+
+message("Extracting ATAC counts for pseudobulk ...")
+
+DefaultAssay(SeuratOBJ) <- "ATAC"
 
 atac_counts <- GetAssayData(SeuratOBJ, assay = "ATAC", layer = "counts")
 head(atac_counts)
 # get cell grouping info to pseudobulk by cluster
 groups <- SeuratOBJ$cluster_ann
 # Split cells by group and sum counts within each group
+
+set.seed(11082025)
+
 pseudobulk_counts <- map(unique(groups), function(g) {
     cells_in_group <- WhichCells(SeuratOBJ, idents = g)
     if (length(cells_in_group) == 1) {
@@ -116,6 +136,8 @@ pseudobulk_counts <- map(unique(groups), function(g) {
 }) |> 
     set_names(unique(groups)) |> 
     reduce(cbind)  # purrr's way to combine into a matrix
+
+message("Pseudobulk completed!")
 
 class(pseudobulk_counts)
 # name columns by cluster
@@ -130,15 +152,48 @@ pseudobulk_counts[1:5, 1:5]
 message("pseudobulk done!!")
 
 
+message("Explore score distribution from LinkPeaks cvs file ...")
 
-## filter genes to those expressed in 2% of cells
-DefaultAssay(SeuratOBJ) <- "RNA"
-rna_counts <- GetAssayData(SeuratOBJ, assay="RNA", layer="data")
-length(rownames(rna_counts)) # [1] 36601
-#length(rownames(rna_counts)[Matrix::rowSums(rna_counts > 0)]) # 34738
-#length(rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.02]) # 34738
-keep_genes <- rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.02 * ncol(rna_counts)]
-length(keep_genes) # in count: [1] 14526
+# load previous link peak-gene csv
+#gene_peaks_csv <- here(input_cvsDir, paste0("all_peak_gene_links", f_sufix, ".csv"))
+# peak_gene_links_with_TSS_and_CC.pearson.2.5e4.cells_filtered_2perc.csv
+gene_peaks_csv <- here(input_cvsDir, paste0("peak_gene_links_with_TSS_and_CC", f_sufix, ".csv"))
+
+if (file.exists(gene_peaks_csv)) {
+    link_df <- read.csv(gene_peaks_csv)
+    message("File loaded!")
+} else {
+    stop(paste("File not found:", gene_peaks_csv))
+}
+colnames(link_df)
+head(link_df)
+
+ggplot(link_df, aes(x = score)) +
+    geom_histogram(binwidth = 0.02, fill = "steelblue", color = "white") +
+    labs(
+        title = "Distribution of Peak–Gene Correlation Scores",
+        x = "Correlation score",
+        y = "Count"
+    ) +
+    theme_minimal()
+
+# Find top correlated peaks
+high_conf <- link_df %>% filter(score > 0.2, FDR < 0.1)
+
+# Subset pseudobulk counts to these peaks
+high_conf_counts <- pseudobulk_counts[rownames(pseudobulk_counts) %in% high_conf$peak, ]
+
+# Heatmap of these peaks across clusters
+Heatmap(
+    high_conf_counts,
+    name = "Counts",
+    cluster_rows = TRUE,
+    cluster_columns = TRUE
+)
+
+
+
+
 
 ## Set atac
 DefaultAssay(SeuratOBJ) <- "ATAC"
