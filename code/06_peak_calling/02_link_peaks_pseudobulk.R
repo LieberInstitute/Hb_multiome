@@ -1,7 +1,7 @@
 ########################################################################
-## EDA: Compute LinkPeaks() and filter High-Confident Peaks 
+## Pseudobulk ATAC peaks from your SeuratOBJ and then explore LinkPeaks() correlation scores
 ##
-## plots and tables to asses links at different thresholds 
+## Tables to asses links at different thresholds 
 ##
 ## Authors. CSC
 ## Date. March 24, 2025
@@ -11,12 +11,13 @@
 
 library("Seurat")
 library("Signac")
+library("Matrix")
 ## I use BSgenome.Hsapiens.UCSC.hg38 for extracting DNA motifs, k-mers, sequence-based features and compute Tn5 bias correction
-library("BSgenome.Hsapiens.UCSC.hg38")  # full reference genome sequence / actual DNA bases (A/T/C/G) for each chromosome
+# library("BSgenome.Hsapiens.UCSC.hg38")  # full reference genome sequence / actual DNA bases (A/T/C/G) for each chromosome
 library("stringr")
-# library("tidyverse")
-# library("dplyr")
-# library("purrr")
+library("tidyverse")
+library("dplyr")
+library("purrr")
 library("here")
 
 
@@ -44,7 +45,15 @@ if (length(p_met) && length(w_size)) {
         "\nWindow-size\n",
         w_size
     )
-    f_sufix <- paste0(".", p_met, ".", w_size, ".cells_filtered_2perc")
+    ## Use numeric comparison first, then assign string labels
+    w_size_label <- case_when(
+        isTRUE(all.equal(w_size, 25000))  ~ "2.5e4",
+        isTRUE(all.equal(w_size, 50000))  ~ "5e4",
+        isTRUE(all.equal(w_size, 100000)) ~ "1e5",
+        TRUE                              ~ "00"
+    )
+    f_sufix <- paste0(".", p_met, ".", format(w_size, scientific = TRUE), ".cells_filtered_2perc")
+    message("Processing: ", f_sufix)
 } else {
     message("Input arguments missed")
     stop()
@@ -55,19 +64,33 @@ if (length(p_met) && length(w_size)) {
 
 ## clusters renamed for Spatial-Registration on Visium project
 inputRDS_Dir <- here(
-  "processed-data",
-  "05_Clustering_ARCr",
-  "17_wnn_clustering_final_ct"
+    "processed-data",
+    "05_Clustering_ARCr",
+    "17_wnn_clustering_final_ct"
 )
-cvsDir <- here(
+input_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
     "00_link_peaks"
 )
+plotDir <- here(
+    "plots",
+    "06_peak_calling",
+    "02_link_peaks_pseudobulk"
+)
+cvsDir <- here(
+    "processed-data",
+    "06_peak_calling",
+    "02_link_peaks_pseudobulk"
+)
 
+if (!dir.exists(plotDir)) {
+    dir.create(plotDir)
+}
 if (!dir.exists(cvsDir)) {
     dir.create(cvsDir)
 }
+
 
 ## Load Seurat
 # Use Seurat with clusters renamed for Spatial-Registration on Visium project
@@ -76,7 +99,39 @@ seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
 levels(SeuratOBJ)
 
-## filter genes to those expressed in 3% of cells
+message("Extract ATAC counts ....")
+
+atac_counts <- GetAssayData(SeuratOBJ, assay = "ATAC", layer = "counts")
+head(atac_counts)
+# get cell grouping info to pseudobulk by cluster
+groups <- SeuratOBJ$cluster_ann
+# Split cells by group and sum counts within each group
+pseudobulk_counts <- map(unique(groups), function(g) {
+    cells_in_group <- WhichCells(SeuratOBJ, idents = g)
+    if (length(cells_in_group) == 1) {
+        atac_counts[, cells_in_group]
+    } else {
+        Matrix::rowSums(atac_counts[, cells_in_group, drop = FALSE])
+    }
+}) |> 
+    set_names(unique(groups)) |> 
+    reduce(cbind)  # purrr's way to combine into a matrix
+
+class(pseudobulk_counts)
+# name columns by cluster
+pseudobulk_counts <- as.matrix(pseudobulk_counts)
+colnames(pseudobulk_counts) <- unique(groups)
+message("Dimension on atac pseudobulk mtx is:")
+dim(pseudobulk_counts)
+
+# one column per cluster, representing aggregated ATAC peak counts
+pseudobulk_counts[1:5, 1:5]
+
+message("pseudobulk done!!")
+
+
+
+## filter genes to those expressed in 2% of cells
 DefaultAssay(SeuratOBJ) <- "RNA"
 rna_counts <- GetAssayData(SeuratOBJ, assay="RNA", layer="data")
 length(rownames(rna_counts)) # [1] 36601
