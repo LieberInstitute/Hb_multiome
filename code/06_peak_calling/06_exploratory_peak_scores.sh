@@ -9,11 +9,6 @@
 # SBATCH --mail-type=ALL
 #SBATCH --array=0-5%6   # 2 methods * 3 windows = 6 tasks
 
-# 0: pearson, 1e5
-# 1: pearson, 5e4
-# 2: spearman, 1e5
-# 3: spearman, 5e4
-
 set -eo pipefail
 
 peak_methods=(pearson spearman)   # m=2
