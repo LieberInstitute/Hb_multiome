@@ -165,19 +165,30 @@ peak_cluster <- data.frame(
     peak = rownames(avg_atac),
     cluster_ann = colnames(avg_atac)[max.col(avg_atac, ties.method = "first")]
 )
+head(peak_cluster)
+nrow(peak_cluster) # [1] 262951
 
 # keep only links whose peaks are known in the assay
 links_cl <- link_df %>%
     inner_join(peak_cluster, by = "peak") %>%
     filter(!is.na(cluster_ann))
 
-## filter links of desired
-## links_cl <- links_cl %>% filter(score > 0.3, pvalue < 0.05)
+head(links_cl)
+nrow(links_cl)
+table(links_cl$tier)
 
-# bin definition (adjust if you like)
+## filter links of desired
+links_cl <- links_cl %>% filter(tier=="Exploratory (0.10–0.20, FDR<0.10)")
+nrow(links_cl) # ge. 468
+table(links_cl$tier)
+#links_cl <- links_cl %>% filter(score > 0.3, pvalue < 0.05)
+
+# bin definition
 bin_breaks <- c(0,1,2,3,5,10,Inf)
 bin_labels <- c("1","2","3","4–5","6–10",">10")
 
+
+##==============================================================================
 ## Distribution of number of linked peaks per gene, by cluster
 # Count linked peaks per (gene, cluster)
 peaks_per_gene <- links_cl %>%
@@ -187,23 +198,47 @@ peaks_per_gene <- links_cl %>%
         n_peaks, breaks = bin_breaks,
         labels = bin_labels, right = TRUE
     ))
+# plot summarize how many peaks each gene has in each cluster
+raw_links <- nrow(links_cl)
+
+## verification
+peaks_per_gene[peaks_per_gene$cluster_ann=="C.19.Inhib.Thal", ]
+# cluster_ann     gene      n_peaks bin  
+# <chr>           <chr>       <int> <fct>
+# 1 C.19.Inhib.Thal GAD1            1 1    
+# 2 C.19.Inhib.Thal GAD2            1 1    
+# 3 C.19.Inhib.Thal KIT             1 1    
+# 4 C.19.Inhib.Thal LINC01210       1 1    
+# 5 C.19.Inhib.Thal MEIS2           2 2    
+# 6 C.19.Inhib.Thal OTX2-AS1        1 1    
+# 7 C.19.Inhib.Thal SOX14           1 1   
+nrow(peaks_per_gene[peaks_per_gene$cluster_ann=="C.19.Inhib.Thal", ])
+
 
 # Make a cluster × bin table
 dist_pg <- peaks_per_gene %>%
     count(cluster_ann, bin, name = "n_genes") %>%
     complete(cluster_ann, bin, fill = list(n_genes = 0)) %>%
     group_by(cluster_ann) %>%
-    mutate(freq = n_genes / sum(n_genes)) %>%   # optional normalize by row
+    mutate(freq = n_genes / sum(n_genes)) %>%   # normalize by row
     ungroup()
+head(dist_pg)
 
+x_label <- paste0("Peaks per gene (bins)\n raw-links(", nrow(links_cl), ")")
+
+# Make heatmap
 g_dp <- ggplot(dist_pg, aes(x = bin, y = cluster_ann, fill = freq)) +
     geom_tile(color = "grey85") +
     scale_fill_viridis_c(name = "Fraction of genes", option = "C") +
     labs(
         title = "Distribution of linked peaks per gene",
-        x = "Peaks per gene (bins)", y = "cluster_ann"
+        subtitle = "Exploratory (0.10–0.20, FDR<0.10)",
+        x = x_label, y = "cluster_ann"
     ) +
     theme_minimal()
+
+
+##==============================================================================
 
 ## Distribution of number of linked genes per peak, by cluster
 # Count linked genes per (peak, cluster)
@@ -222,12 +257,15 @@ dist_gp <- genes_per_peak %>%
     mutate(freq = n_peaks / sum(n_peaks)) %>%
     ungroup()
 
+x_label <- paste0("Genes per peak (bins)\n raw-links(", nrow(links_cl), ")")
+
 g_dg <- ggplot(dist_gp, aes(x = bin, y = cluster_ann, fill = freq)) +
     geom_tile(color = "grey85") +
     scale_fill_viridis_c(name = "Fraction of peaks", option = "C") +
     labs(
         title = "Distribution of linked genes per peak",
-        x = "Genes per peak (bins)", y = "cluster_ann"
+        subtitle = "Exploratory (0.10–0.20, FDR<0.10)",
+        x = x_label, y = "cluster_ann"
     ) +
     theme_minimal()
 
