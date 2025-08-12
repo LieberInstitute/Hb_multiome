@@ -18,6 +18,12 @@ set -eo pipefail
 
 peak_methods=(pearson spearman)   # m=2
 window_size=(1e5 5e4 2.5e4)       # n=3 (added 2.5e4)
+# 0: pearson   1e5
+# 1: pearson   5e4
+# 2: pearson   2.5e4
+# 3: spearman  1e5
+# 4: spearman  5e4
+# 5: spearman  2.5e4
 
 i=${SLURM_ARRAY_TASK_ID}
 m=${#peak_methods[@]}
