@@ -231,7 +231,7 @@ g_dp <- ggplot(dist_pg, aes(x = bin, y = cluster_ann, fill = freq)) +
     geom_tile(color = "grey85") +
     scale_fill_viridis_c(name = "Fraction of genes", option = "C") +
     labs(
-        title = "Distribution of linked peaks per gene",
+        title = "Peaks per gene",
         subtitle = "Exploratory (0.10–0.20, FDR<0.10)",
         x = x_label, y = "cluster_ann"
     ) +
@@ -263,20 +263,29 @@ g_dg <- ggplot(dist_gp, aes(x = bin, y = cluster_ann, fill = freq)) +
     geom_tile(color = "grey85") +
     scale_fill_viridis_c(name = "Fraction of peaks", option = "C") +
     labs(
-        title = "Distribution of linked genes per peak",
+        title = "Genes per peak",
         subtitle = "Exploratory (0.10–0.20, FDR<0.10)",
         x = x_label, y = "cluster_ann"
     ) +
     theme_minimal()
 
-combined_plot <- g_dp + g_dg
-combined_plot
+# both plots set to use same color mapping & labels
+g_dp <- g_dp + labs(color = "Tier") + theme(legend.position = "bottom")
+g_dg <- g_dg + labs(color = "Tier") + theme(legend.position = "bottom")
 
-ggsave(here(plotDir,
-            paste0("heatmaps_link_peak_genes_peaks", f_sufix, ".pdf")),
-       combined_plot, width = 12, height = 5)
+combined_plot <- g_dp + g_dg + plot_layout(guides = "collect") &
+    theme(legend.position = "bottom")
 
+pdf(here(plotDir, paste0("heatmaps_link_peak_genes_peaks", f_sufix, ".pdf")), width = 10, height = 6)
+combined_plot +
+    plot_annotation(
+        title = "Peak-Gene Link Distributions",
+        theme = theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 12)),
+        caption = f_sufix
+    ) 
+dev.off()
 
+##==============================================================================
 
 ##  Top genes by total linked peaks, across clusters
 # Pick top N genes by total linked peaks (across all clusters)
@@ -306,6 +315,7 @@ g1 <- ggplot(mat_pg, aes(x = cluster_ann, y = gene, fill = n_peaks)) +
     ) +
     theme_minimal() +
     theme(axis.text.y = element_text(size = 7))
+g1
 
 ggsave(here(plotDir,
             paste0("heatmap_Top50_genes_peaks", f_sufix, ".pdf")),
