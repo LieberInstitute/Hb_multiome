@@ -42,14 +42,15 @@ if (length(p_met) && length(w_size)) {
         "\nWindow-size\n",
         w_size
     )
-    ## Use numeric comparison first, then assign string labels
-    w_size_label <- case_when(
-        isTRUE(all.equal(w_size, 25000))  ~ "2.5e4",
-        isTRUE(all.equal(w_size, 50000))  ~ "5e4",
-        isTRUE(all.equal(w_size, 100000)) ~ "1e5",
-        TRUE                              ~ "00"
-    )
-    f_sufix <- paste0(".", p_met, ".", format(w_size_label, scientific = TRUE), ".cells_filtered_2perc")
+    # ## Use numeric comparison first, then assign string labels
+    # w_size_label <- case_when(
+    #     isTRUE(all.equal(w_size, 25000))  ~ "2.5e4",
+    #     isTRUE(all.equal(w_size, 50000))  ~ "5e4",
+    #     isTRUE(all.equal(w_size, 100000)) ~ "1e5",
+    #     TRUE                              ~ "00"
+    # )
+    # f_sufix <- paste0(".", p_met, ".", format(w_size_label, scientific = TRUE), ".cells_filtered_2perc")
+    f_sufix <- paste0(".", p_met, ".", as.character(w_size), ".cells_filtered_2perc")
     message("Processing: ", f_sufix)
 } else {
     message("Input arguments missed")
@@ -169,7 +170,7 @@ head(peak_cluster)
 nrow(peak_cluster) # [1] 262951
 
 # keep only links whose peaks are known in the assay
-links_cl <- link_df %>%
+links_cl <- link_df2 %>%
     inner_join(peak_cluster, by = "peak") %>%
     filter(!is.na(cluster_ann))
 
@@ -183,10 +184,10 @@ nrow(links_cl) # ge. 468
 table(links_cl$tier)
 #links_cl <- links_cl %>% filter(score > 0.3, pvalue < 0.05)
 
-# bin definition
+# bin definition (ASCII hyphens; fixed order)
 bin_breaks <- c(0,1,2,3,5,10,Inf)
 bin_labels <- c("1","2","3","4–5","6–10",">10")
-
+links_cl$tier <- gsub("\u2013", "-", links_cl$tier)
 
 ##==============================================================================
 ## Distribution of number of linked peaks per gene, by cluster
@@ -233,7 +234,7 @@ g_dp <- ggplot(dist_pg, aes(x = bin, y = cluster_ann, fill = freq)) +
     labs(
         title = "Peaks per gene",
         subtitle = "Exploratory (0.10–0.20, FDR<0.10)",
-        x = x_label, y = "cluster_ann"
+        x = x_label, y = "wnn clusters"
     ) +
     theme_minimal()
 
@@ -265,25 +266,23 @@ g_dg <- ggplot(dist_gp, aes(x = bin, y = cluster_ann, fill = freq)) +
     labs(
         title = "Genes per peak",
         subtitle = "Exploratory (0.10–0.20, FDR<0.10)",
-        x = x_label, y = "cluster_ann"
+        x = x_label, y = "wnn clusters"
     ) +
     theme_minimal()
 
 # both plots set to use same color mapping & labels
-g_dp <- g_dp + labs(color = "Tier") + theme(legend.position = "bottom")
-g_dg <- g_dg + labs(color = "Tier") + theme(legend.position = "bottom")
-
-combined_plot <- g_dp + g_dg + plot_layout(guides = "collect") &
+combined_plot <- g_dp + g_dg + plot_layout(guides = "collect") & 
     theme(legend.position = "bottom")
 
-pdf(here(plotDir, paste0("heatmaps_link_peak_genes_peaks", f_sufix, ".pdf")), width = 10, height = 6)
-combined_plot +
-    plot_annotation(
+ggsave(
+    here(plotDir, paste0("heatmaps_link_peak_genes_peaks", f_sufix, ".pdf")),
+    plot = combined_plot + plot_annotation(
         title = "Peak-Gene Link Distributions",
-        theme = theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 12)),
-        caption = f_sufix
-    ) 
-dev.off()
+        caption = f_sufix,
+        theme = theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 12))
+    ),
+    width = 10, height = 6
+)
 
 ##==============================================================================
 
@@ -314,13 +313,22 @@ g1 <- ggplot(mat_pg, aes(x = cluster_ann, y = gene, fill = n_peaks)) +
         x = "WNN cluster", y = "Gene"
     ) +
     theme_minimal() +
-    theme(axis.text.y = element_text(size = 7))
+    theme(
+        axis.text.y = element_text(size = 6),
+        axis.text.x = element_text(angle = 45, hjust = 1)
+    )
 g1
 
-ggsave(here(plotDir,
-            paste0("heatmap_Top50_genes_peaks", f_sufix, ".pdf")),
-       g1, width = 8, height = 5)
 
+ggsave(
+    here(plotDir, paste0("heatmap_Top50_genes_peaks", f_sufix, ".pdf")),
+    plot = g1 + plot_annotation(
+        title = "Peak-Gene Link Distributions",
+        caption = f_sufix,
+        theme = theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 12),)
+    ),
+    width = 8, height = 12
+)
 
 
 # ## ====
