@@ -29,7 +29,7 @@ w_size <- args[4]
 
 # for testing
 # p_met = "spearman"
-# w_size = 2.5e4
+# w_size = "2.5e4"
 
 ## p_met:
 # pearson -> peak-scores<0.2: likely due scATAC counts are ultra‑sparse; scRNA is zero‑inflated. Pearson r’s of 0.05–0.2 are common even for real links
@@ -179,7 +179,8 @@ nrow(links_cl)
 table(links_cl$tier)
 
 ## filter links of desired
-links_cl <- links_cl %>% filter(tier=="Exploratory (0.10–0.20, FDR<0.10)")
+# links_cl <- links_cl %>% filter(tier=="Exploratory (0.10–0.20, FDR<0.10)")
+links_cl <- links_cl %>% filter(!tier=="Discarded")
 nrow(links_cl) # ge. 468
 table(links_cl$tier)
 #links_cl <- links_cl %>% filter(score > 0.3, pvalue < 0.05)
@@ -230,10 +231,11 @@ x_label <- paste0("Peaks per gene (bins)\n raw-links(", nrow(links_cl), ")")
 # Make heatmap
 g_dp <- ggplot(dist_pg, aes(x = bin, y = cluster_ann, fill = freq)) +
     geom_tile(color = "grey85") +
+    geom_text(aes(label = n_genes), size = 3, color = "black") +  # counts overlay
     scale_fill_viridis_c(name = "Fraction of genes", option = "C") +
     labs(
         title = "Peaks per gene",
-        subtitle = "Exploratory (0.10–0.20, FDR<0.10)",
+        subtitle = "Exploratory (>0.10, FDR<0.10)",
         x = x_label, y = "wnn clusters"
     ) +
     theme_minimal()
@@ -246,26 +248,31 @@ g_dp <- ggplot(dist_pg, aes(x = bin, y = cluster_ann, fill = freq)) +
 genes_per_peak <- links_cl %>%
     group_by(cluster_ann, peak) %>%
     summarise(n_genes = n_distinct(gene), .groups = "drop") %>%
-    mutate(bin = cut(
-        n_genes, breaks = c(0,1,2,3,5,10,Inf),
-        labels = c("1","2","3","4-5","6-10",">10"), right = TRUE
-    ))
+    mutate(bin = cut(n_genes, breaks = bin_breaks, labels = bin_labels, right = TRUE),
+           bin = factor(bin, levels = bin_labels))
+    # mutate(bin = cut(
+    #     n_genes, breaks = c(0,1,2,3,5,10,Inf),
+    #     labels = c("1","2","3","4-5","6-10",">10"), right = TRUE
+    # ))
 
 dist_gp <- genes_per_peak %>%
     count(cluster_ann, bin, name = "n_peaks") %>%
-    complete(cluster_ann, bin, fill = list(n_peaks = 0)) %>%
+    complete(cluster_ann, bin = factor(bin_labels, levels = bin_labels), fill = list(n_peaks = 0)) %>%
+    #complete(cluster_ann, bin, fill = list(n_peaks = 0)) %>%
     group_by(cluster_ann) %>%
     mutate(freq = n_peaks / sum(n_peaks)) %>%
-    ungroup()
+    ungroup() %>%
+    mutate(label_peak = ifelse(n_peaks == 0, "", as.character(n_peaks)))
 
 x_label <- paste0("Genes per peak (bins)\n raw-links(", nrow(links_cl), ")")
 
 g_dg <- ggplot(dist_gp, aes(x = bin, y = cluster_ann, fill = freq)) +
     geom_tile(color = "grey85") +
+    geom_text(aes(label = label_peak), size = 3, color = "black") +  # counts overlay
     scale_fill_viridis_c(name = "Fraction of peaks", option = "C") +
     labs(
         title = "Genes per peak",
-        subtitle = "Exploratory (0.10–0.20, FDR<0.10)",
+        subtitle = "Exploratory (>0.10, FDR<0.10)",
         x = x_label, y = "wnn clusters"
     ) +
     theme_minimal()
@@ -285,6 +292,9 @@ ggsave(
 )
 
 ##==============================================================================
+
+
+
 
 ##  Top genes by total linked peaks, across clusters
 # Pick top N genes by total linked peaks (across all clusters)
