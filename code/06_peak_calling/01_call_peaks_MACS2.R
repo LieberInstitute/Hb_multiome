@@ -43,8 +43,8 @@ if (length(resolution_level)) {
 inputRDS_Dir <- here(
     "processed-data",
     "05_Clustering_ARCr",
-    "17_wnn_clustering_final_ct"
-    #"22_add_mid_level_clustering"
+    #"17_wnn_clustering_final_ct"
+    "22_add_mid_level_clustering"
 )
 plotDir <- here(
     "plots",
@@ -85,17 +85,14 @@ msg <- switch(resolution_level,
 message(msg)
 message("Processing ", length(Cells(SeuratOBJ)), " cells")
 
-# levels(SeuratOBJ)           # new levels
-# head(Idents(SeuratOBJ))     # per-cell identities
-# table(Idents(SeuratOBJ))    # counts by new identities
-
 ## set col name / should exists as meta-data
 ## testing:
-## resolution_level="Broad"
+# resolution_level="Broad"
+# resolution_level="Fine"
 meta_col <- case_when(
     resolution_level=="Fine" ~ "cluster_ann",
     resolution_level=="Broad" ~ "merged_cluster",
-    resolution_level=="Mid" ~ "mid_cluste"
+    resolution_level=="Mid" ~ "mid_cluster"
 )
 
 
@@ -163,18 +160,17 @@ SeuratOBJ[["ATAC"]]
 message("Calling peaks at FINE level ... ")
 
 ##==============================================================================
-# testing with small cluster: Subset Seurat object where cluster name = C.41.Microglia
-unique(Idents(SeuratOBJ))
-Seurat_subset <- subset(SeuratOBJ, idents = "C.41.Microglia")
+# # testing with small cluster: Subset Seurat object where cluster name = C.41.Microglia
+# unique(Idents(SeuratOBJ))
+# Seurat_subset <- subset(SeuratOBJ, idents = "C.41.Microglia")
+# length(Cells(Seurat_subset))
 ##==============================================================================
 
-length(Cells(Seurat_subset))
-#Seurat_subset <- subset(SeuratOBJ, idents = grep("MHb|LHb", Idents(SeuratOBJ), value = TRUE))
-
+## call macs
 peaks <- CallPeaks(
-    #object = SeuratOBJ,
-    object = Seurat_subset,
-    group.by = "cluster_ann",
+    object = SeuratOBJ,
+    #object = Seurat_subset,
+    group.by = meta_col,
     macs2.path = "/users/csoto/.conda/envs/macs2_conda3_env/bin/macs2",
     verbose = TRUE
 )
@@ -186,57 +182,62 @@ head(peaks)
 # Convert GRanges to data frame and save for further analysis
 df_peaks <- as.data.frame(peaks)
 head(df_peaks)
+
+f_name <- paste0("macs_peaks_", resolution_level, "_resolution.csv")
 write.csv(
     df_peaks, 
-    here(outputCSV_Dir, "all_peaks_by_cluster.csv"), 
+    here(outputCSV_Dir, f_name), 
     row.names = FALSE
 )
 
+message("Peaks file saved!")
 
-##==============================================================================
+message("All done!!!")
 
-# Get current cluster identities
-current_idents <- as.character(Idents(seurat_obj))
-
-# Replace LHb cluster names with 'LHb_merged'
-merged_idents <- ifelse(current_idents %in% LHb_clusters_to_merge, 
-                        "LHb_merged", 
-                        current_idents)
-
-# Assign new identities to the Seurat object
-Idents(seurat_obj) <- merged_idents
-
-##==============================================================================
-
-
-# Cell Ranger peaks
-DefaultAssay(SeuratOBJ) <- "ATAC"
-p1 <- CoveragePlot(
-    object = SeuratOBJ,
-    region = gene,
-    features = gene,
-    extend.upstream = up,
-    extend.downstream = down,
-    peaks = TRUE,
-    links = FALSE,
-    annotation = TRUE
-) + ggtitle("Cell Ranger peaks")
-
-# MACS2 peaks
-DefaultAssay(SeuratOBJ) <- "ATAC_MACS2"
-p2 <- CoveragePlot(
-    object = SeuratOBJ,
-    region = gene,
-    features = gene,
-    extend.upstream = up,
-    extend.downstream = down,
-    peaks = TRUE,
-    links = FALSE,
-    annotation = TRUE
-) + ggtitle("MACS2 peaks (pseudobulk)")
-
-# Combine
-p_combined <- p1 / p2
+# ##==============================================================================
+# 
+# # Get current cluster identities
+# current_idents <- as.character(Idents(seurat_obj))
+# 
+# # Replace LHb cluster names with 'LHb_merged'
+# merged_idents <- ifelse(current_idents %in% LHb_clusters_to_merge, 
+#                         "LHb_merged", 
+#                         current_idents)
+# 
+# # Assign new identities to the Seurat object
+# Idents(seurat_obj) <- merged_idents
+# 
+# ##==============================================================================
+# 
+# 
+# # Cell Ranger peaks
+# DefaultAssay(SeuratOBJ) <- "ATAC"
+# p1 <- CoveragePlot(
+#     object = SeuratOBJ,
+#     region = gene,
+#     features = gene,
+#     extend.upstream = up,
+#     extend.downstream = down,
+#     peaks = TRUE,
+#     links = FALSE,
+#     annotation = TRUE
+# ) + ggtitle("Cell Ranger peaks")
+# 
+# # MACS2 peaks
+# DefaultAssay(SeuratOBJ) <- "ATAC_MACS2"
+# p2 <- CoveragePlot(
+#     object = SeuratOBJ,
+#     region = gene,
+#     features = gene,
+#     extend.upstream = up,
+#     extend.downstream = down,
+#     peaks = TRUE,
+#     links = FALSE,
+#     annotation = TRUE
+# ) + ggtitle("MACS2 peaks (pseudobulk)")
+# 
+# # Combine
+# p_combined <- p1 / p2
 
 # ggsave(
 #     filename = file.path(plotDir, paste0("coverage_before_after_MACS2_", gene, ".pdf")),
