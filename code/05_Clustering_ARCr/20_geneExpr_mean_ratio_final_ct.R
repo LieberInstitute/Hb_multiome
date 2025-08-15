@@ -1,12 +1,12 @@
 ########################################################################
-## Get abd Plot violin plots for top 10 genes by cell-type
+## Get and Plot violin plots for top 10 mean-ratio genes by cell-type
 ## Use Mean-Ratio
 ##
 ## Authors. CSC
 ## Date. Jul 31, 2025
 ## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
 ##
-# All Seurat objects were created using module load conda_R/4.3.x to preserve chromatin integrity.
+## module load conda_R/4.4.x to load DeconvoBuddies 1.1+ (fixed function)
 ########################################################################
 
 library("SingleCellExperiment")
@@ -20,8 +20,6 @@ library("here")
 ## directories
 
 ## clusters renamed for Spatial-Registration on Visium project
-
-#inputSCE_Dir <- "~/Habenula_Visium/processed-data/05_snRNA-seq_model_stats/"
 inputSCE_Dir <- here(
     "processed-data", 
     "08_spatial_registration_vs_multiome_snRNA-seq"
@@ -29,12 +27,12 @@ inputSCE_Dir <- here(
 processedDir <- here(
     "processed-data",
     "05_Clustering_ARCr",
-    "13_wnn_geneExp_plt_mean_ratio_annotated"
+    "20_geneExpr_mean_ratio_final_ct"
 )
 plotDir <- here(
     "plots",
     "05_Clustering_ARCr",
-    "13_wnn_geneExp_plt_mean_ratio_annotated"
+    "20_geneExpr_mean_ratio_final_ct"
 )
 
 ## Check directories
@@ -44,9 +42,6 @@ if (!dir.exists(plotDir)) {
 if (!dir.exists(processedDir)) {
     dir.create(processedDir)
 }
-
-# no longer required - fixed on recent deconvobuddies release 1.1.1
-#source(here("code", "05_Clustering_ARCr", "get_mean_ratio_sparse.R"))
 
 #===============================================================================
 
@@ -59,14 +54,13 @@ title_name
 
 # Load Seurat
 sce <- readRDS(sce_name)
-## verification
 sce
 
 head(rownames(sce))
 colnames(colData(sce))
 ## briefly check cell types and counts
 cluster_counts_df <- as.data.frame(table(sce$cluster_ann))
-head(cluster_counts_df)
+unique(cluster_counts_df$Var)
 #                   Var1 Freq
 # 1 C.01.undeterminated 3906
 # 2       C.02.DD_Oligo 3371
@@ -81,7 +75,6 @@ head(rowData(sce)$gene_id)
 
 #===============================================================================
 ##  remove cell types with fewer than 10 cells
-## Louise might be interested into add this filter into her get_mean_ratio() 
 celltypes <- colData(sce)$cluster_ann
 celltype_counts <- table(celltypes)
 low_ct <- names(celltype_counts[celltype_counts <= 10])
@@ -93,7 +86,7 @@ if (length(low_ct)==TRUE) {
     valid_types <- names(celltype_counts[celltype_counts > 10])
     sce <- sce[, colData(sce)$cluster_ann %in% valid_types]
 }
-#Removing cell types with less<10 cells: C.42.no-match
+
 
 ## =============================================================================
 ## Function to compute mean-ratio across several sizes of datasets
@@ -168,8 +161,7 @@ get_marker_ranks <- function(sce,
 ## set some settings
 genes_of_interest
 all_genes
-sizes <- c(2000, 4000, 6000, 8000, 10000, 12000, all_genes)
-## for speeding the process, I will only tests
+#sizes <- c(2000, 4000, 6000, 8000, 10000, 12000, all_genes)
 sizes <- c(all_genes)
 
 message("Subset sizes: ")
