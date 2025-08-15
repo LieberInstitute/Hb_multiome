@@ -12,6 +12,7 @@
 library("Seurat")
 library("Signac")
 library("ggplot2")
+library("tidyverse")
 library("dbplyr")
 library("here")
 
@@ -70,68 +71,69 @@ Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_ls
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
 
-##==============================================================================
-## Adding mid level clustering resolution
-
-# Define mid-level
-clusters_to_merge <- c(levels(SeuratOBJ))
-
-# Create a vector mapping old cluster names to MID-LEVEL clusters
-cluster_map <- sapply(clusters_to_merge, function(x) {
-    if (grepl("LHb.4", x)) { return("LHb.4")
-    } else if (grepl("LHb.2.7", x)) { return("LHb.2.7")
-    } else if (grepl("LHb.1$", x)) { return("LHb.1")
-    } else if (grepl("LHb.1.3$", x)) { return("LHb.1.3")
-    } else if (grepl("LHb.1.3.4", x)) { return("LHb.1.3.4")
-    } else if (grepl("LHb.7", x)) { return("LHb.7")
-    } else if (grepl("MHb.1$", x)) { return("MHb.1")
-    } else if (grepl("MHb.1.2", x)) { return("MHb.1.2")
-    } else if (grepl("MHb.2", x)) { return("MHb.2")
-    } else if (grepl("MHb.3", x)) { return("MHb.3")
-    } else if (grepl("Inhib.Thal", x)) { return("Inhib.Thal")
-    } else if (grepl("Excit.Thal", x)) { return("Excit.Thal")
-    } else if (grepl("Astrocyte", x)) { return("Astrocyte")
-    } else if (grepl("OPC", x)) { return("OPC")
-    } else if (grepl("Oligo", x)) { return("Oligo")
-    } else if (grepl("Microglia", x)) { return("Microglia")
-    } else if (grepl("Thal", x)) { return("Thal")
-    } else if (grepl("Endo", x)) { return("Endo")
-    } else { return(NA_character_)  # unmatched case
-    }
-})
-
-names(cluster_map) <- clusters_to_merge
-# map current identities to LHb/MHb
-mid_idents <- plyr::revalue(as.character(Idents(SeuratOBJ)), cluster_map)
-# assign new identities
-Idents(SeuratOBJ) <- mid_idents
-## add as meta=data
-SeuratOBJ$mid_cluster <- mid_idents
-# verify mid-levels
-
-if (length(unique(SeuratOBJ$cluster_ann[is.na(SeuratOBJ$mid_cluster)])) > 0) {
-    stop(
-        "All clusters should be assigned to a mid-level resolution\n",
-        "Levels not assigned\n",
-        paste(unique(SeuratOBJ$cluster_ann[is.na(SeuratOBJ$mid_cluster)]), collapse = "\n")
-    )
-}
-
+# ##==============================================================================
+# ## Adding mid level clustering resolution
+# 
+# # Define mid-level
+# clusters_to_merge <- c(SeuratOBJ$cluster_ann)
+# 
+# # Create a vector mapping old cluster names to MID-LEVEL clusters
+# cluster_map <- sapply(clusters_to_merge, function(x) {
+#     if (grepl("LHb.4", x)) { return("LHb.4")
+#     } else if (grepl("LHb.2.7", x)) { return("LHb.2.7")
+#     } else if (grepl("LHb.1$", x)) { return("LHb.1")
+#     } else if (grepl("LHb.1.3$", x)) { return("LHb.1.3")
+#     } else if (grepl("LHb.1.3.4", x)) { return("LHb.1.3.4")
+#     } else if (grepl("LHb.7", x)) { return("LHb.7")
+#     } else if (grepl("MHb.1$", x)) { return("MHb.1")
+#     } else if (grepl("MHb.1.2", x)) { return("MHb.1.2")
+#     } else if (grepl("MHb.2", x)) { return("MHb.2")
+#     } else if (grepl("MHb.3", x)) { return("MHb.3")
+#     } else if (grepl("Inhib.Thal", x)) { return("Inhib.Thal")
+#     } else if (grepl("Excit.Thal", x)) { return("Excit.Thal")
+#     } else if (grepl("Astrocyte", x)) { return("Astrocyte")
+#     } else if (grepl("OPC", x)) { return("OPC")
+#     } else if (grepl("Oligo", x)) { return("Oligo")
+#     } else if (grepl("Microglia", x)) { return("Microglia")
+#     } else if (grepl("Thal", x)) { return("Thal")
+#     } else if (grepl("Endo", x)) { return("Endo")
+#     } else { return(NA_character_)  # unmatched case
+#     }
+# })
+# 
+# names(cluster_map) <- clusters_to_merge
+# # map current identities to LHb/MHb
+# mid_idents <- plyr::revalue(as.character(Idents(SeuratOBJ)), cluster_map)
+# # assign new identities
+# Idents(SeuratOBJ) <- mid_idents
+# ## add as meta=data
+# SeuratOBJ$mid_cluster <- mid_idents
+# # verify mid-levels
+# 
+# if (length(unique(SeuratOBJ$cluster_ann[is.na(SeuratOBJ$mid_cluster)])) > 0) {
+#     stop(
+#         "All clusters should be assigned to a mid-level resolution\n",
+#         "Levels not assigned\n",
+#         paste(unique(SeuratOBJ$cluster_ann[is.na(SeuratOBJ$mid_cluster)]), collapse = "\n")
+#     )
+# } else {
+#     message("Mid-level added!")
+#     data.frame(mid_cluster = sort(unique(SeuratOBJ$mid_cluster)))
+#     nrow(data.frame(mid_cluster = sort(unique(SeuratOBJ$mid_cluster))))
+# }
 
 ##==============================================================================
 ## Verification
 
 # colnames(SeuratOBJ@meta.data)
-message("Procession ", length(Cells(SeuratOBJ)), " cells")
-
-case_when(
-    resolution_level == "Fine" ~ message(paste("Fine-level Cell-Types: ", unique(SeuratOBJ@meta.data$cluster_ann))),
-    resolution_level == "Broad" ~ message(paste("Broad-level Cell-Types:", unique(SeuratOBJ@meta.data$merged_cluster))),
-    resolution_level == "Mid" ~ message(paste("Mid-level Cell-Types:", unique(SeuratOBJ@meta.data$mid_cluster)))
+msg <- switch(resolution_level,
+        "Fine" = paste0("Fine-level Cell-Types:\n ", paste(sort(unique(SeuratOBJ$cluster_ann)), collapse = "\n")),
+        "Broad" = paste0("Broad-level Cell-Types:\n", paste(sort(unique(SeuratOBJ$merged_cluster)), collapse = "\n")),
+        "Mid" = paste0("Mid-level Cell-Types:\n", paste(sort(unique(SeuratOBJ$mid_cluster)), collapse = "\n"))
 )
 
-message("Clusters:")
-levels(SeuratOBJ)
+message(msg)
+message("Processing ", length(Cells(SeuratOBJ)), " cells")
 
 ##==============================================================================
 
@@ -154,8 +156,12 @@ SeuratOBJ[["ATAC"]]
 
 message("Calling peaks at FINE level ... ")
 
+##==============================================================================
 # testing with small cluster: Subset Seurat object where cluster name = C.41.Microglia
+unique(Idents(SeuratOBJ))
 Seurat_subset <- subset(SeuratOBJ, idents = "C.41.Microglia")
+##==============================================================================
+
 length(Cells(Seurat_subset))
 #Seurat_subset <- subset(SeuratOBJ, idents = grep("MHb|LHb", Idents(SeuratOBJ), value = TRUE))
 
