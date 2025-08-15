@@ -22,15 +22,20 @@ inputRDS_Dir <- here(
     "05_Clustering_ARCr",
     "17_wnn_clustering_final_ct"
 )
+outputRDS_Dir <- here(
+    "processed-data",
+    "05_Clustering_ARCr",
+    "22_add_mid_level_clustering"
+)
 plotDir <- here(
     "plots",
-    "06_peak_calling",
-    "01_call_peaks_MACS2"
+    "05_Clustering_ARCr",
+    "22_add_mid_level_clustering"
 )
 outputCSV_Dir <- here(
     "processed-data", 
-    "06_peak_calling",
-    "01_call_peaks_MACS2"
+    "05_Clustering_ARCr",
+    "22_add_mid_level_clustering"
 )
 
 ## Check directories
@@ -47,6 +52,7 @@ message("Loading Seurat ... ")
 Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
+SeuratOBJ
 
 ##==============================================================================
 ## Adding mid level clustering resolution
@@ -85,8 +91,8 @@ mid_idents <- plyr::revalue(as.character(Idents(SeuratOBJ)), cluster_map)
 Idents(SeuratOBJ) <- mid_idents
 ## add as meta=data
 SeuratOBJ$mid_cluster <- mid_idents
-# verify mid-levels
 
+# verify mid-levels
 if (length(unique(SeuratOBJ$cluster_ann[is.na(SeuratOBJ$mid_cluster)])) > 0) {
     stop(
         "All clusters should be assigned to a mid-level resolution\n",
@@ -94,9 +100,24 @@ if (length(unique(SeuratOBJ$cluster_ann[is.na(SeuratOBJ$mid_cluster)])) > 0) {
         paste(unique(SeuratOBJ$cluster_ann[is.na(SeuratOBJ$mid_cluster)]), collapse = "\n")
     )
 } else {
-    message("Mid-level added!")
+    message("Mid-level clusters added:")
     data.frame(mid_cluster = sort(unique(SeuratOBJ$mid_cluster)))
     nrow(data.frame(mid_cluster = sort(unique(SeuratOBJ$mid_cluster))))
 }
+
+# colnames(SeuratOBJ@meta.data)
+msg <- paste0("Mid-level Cell-Types:\n", paste(sort(unique(SeuratOBJ$mid_cluster)), collapse = "\n"))
+message(msg)
+
+## =============================================================================
+
+## save RDS
+rds_file_name <- here(outputRDS_Dir, Seurat_base_name)
+saveRDS(SeuratOBJ, rds_file_name)
+
+message("Seurat with mid-level clusters meta-data saved!")
+
+
+
 
 
