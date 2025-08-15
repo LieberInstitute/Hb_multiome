@@ -12,7 +12,29 @@
 library("Seurat")
 library("Signac")
 library("ggplot2")
+library("dbplyr")
 library("here")
+
+
+## read input arguments
+args = commandArgs(trailingOnly = TRUE)
+resolution_level <- args[2]
+# resolution_level = "Fine" # 42 clusters
+# resolution_level = "Broad"  # 8 cell-types
+# resolution_level = "Mid" # 8 cell-types
+
+if (length(resolution_level)) {
+    message(
+        "Processing peaks for resolution:\n",
+        resolution_level
+    )
+    f_sufix <- paste0(".resolution.", resolution_level)
+    f_sufix
+} else {
+    message("Input arguments missed")
+    stop()
+}
+
 
 # Check/create directories
 ## clusters renamed for Spatial-Registration on Visium project
@@ -41,12 +63,31 @@ if (!dir.exists(outputCSV_Dir)) {
     dir.create(outputCSV_Dir)
 }
 
-## Load Seurat
+message("Loading Seurat ... ")
+
 # Use Seurat with final ct-annotations
 Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
+
+##==============================================================================
+## Verification
+
+# colnames(SeuratOBJ@meta.data)
+message("Procession ", length(Cells(SeuratOBJ)), " cells")
+
+case_when(
+    resolution_level == "Fine" ~ message(paste("Fine-level Cell-Types: ", unique(SeuratOBJ@meta.data$clusters_ann))),
+    resolution_level == "Broad" ~ message(paste("Broad-level Cell-Types:", unique(SeuratOBJ@meta.data$merged_cluster))),
+    resolution_level == "Mid" ~ message(paste("Mid-level Cell-Types:", unique(SeuratOBJ@meta.data$mid_cluster)))
+)
+
+message("Clusters:")
 levels(SeuratOBJ)
+
+##==============================================================================
+
+message("Preparing for CallPeaks ...")
 
 DefaultAssay(SeuratOBJ) <- "ATAC"
 class(SeuratOBJ[["ATAC"]])
@@ -58,33 +99,24 @@ SeuratOBJ[["ATAC"]]
 # Motifs present: FALSE 
 # Fragment files: 10 
 
-# verification
-length(Cells(SeuratOBJ))
-colnames(SeuratOBJ@meta.data)
-
-
-message("Processing Peaks for WNN clusters ... ")
-
-
-all_clusters_df <- data.frame(
-    cluster_ann = unique(SeuratOBJ@meta.data[c("cluster_ann")]),
-    seurat_cluster = unique(SeuratOBJ@meta.data[c("seurat_clusters")]),
-    stringsAsFactors = FALSE  
-)
-all_clusters_df <- head(all_clusters_df)
-print(all_clusters_df, row.names = FALSE)
-
 
 ##==============================================================================
 # call peaks on a single-cell ATAC-seq dataset using MACS2
 # peaks will be called independently on each group of cells and then combined
 
-message("Calling peaks grouped by wnn cluster ... ")
+message("Calling peaks at FINE level ... ")
+
+# testing with small cluster: Subset Seurat object where cluster name = C.41.Microglia
+Seurat_subset <- subset(SeuratOBJ, idents = "C.41.Microglia")
+length(Cells(Seurat_subset))
+#Seurat_subset <- subset(SeuratOBJ, idents = grep("MHb|LHb", Idents(SeuratOBJ), value = TRUE))
 
 peaks <- CallPeaks(
-    object = SeuratOBJ,
+    #object = SeuratOBJ,
+    object = Seurat_subset,
     group.by = "cluster_ann",
-    macs2.path = "/users/csoto/.conda/envs/macs2_conda3_env/bin/macs2"
+    macs2.path = "/users/csoto/.conda/envs/macs2_conda3_env/bin/macs2",
+    verbose = TRUE
 )
 
 message("Calling peaks done!")
@@ -99,6 +131,23 @@ write.csv(
     here(outputCSV_Dir, "all_peaks_by_cluster.csv"), 
     row.names = FALSE
 )
+
+
+##==============================================================================
+
+# Get current cluster identities
+current_idents <- as.character(Idents(seurat_obj))
+
+# Replace LHb cluster names with 'LHb_merged'
+merged_idents <- ifelse(current_idents %in% LHb_clusters_to_merge, 
+                        "LHb_merged", 
+                        current_idents)
+
+# Assign new identities to the Seurat object
+Idents(seurat_obj) <- merged_idents
+
+##==============================================================================
+
 
 # Cell Ranger peaks
 DefaultAssay(SeuratOBJ) <- "ATAC"
