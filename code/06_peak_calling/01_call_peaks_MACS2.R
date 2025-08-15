@@ -44,6 +44,7 @@ inputRDS_Dir <- here(
     "processed-data",
     "05_Clustering_ARCr",
     "17_wnn_clustering_final_ct"
+    #"22_add_mid_level_clustering"
 )
 plotDir <- here(
     "plots",
@@ -71,57 +72,6 @@ Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_ls
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
 
-# ##==============================================================================
-# ## Adding mid level clustering resolution
-# 
-# # Define mid-level
-# clusters_to_merge <- c(SeuratOBJ$cluster_ann)
-# 
-# # Create a vector mapping old cluster names to MID-LEVEL clusters
-# cluster_map <- sapply(clusters_to_merge, function(x) {
-#     if (grepl("LHb.4", x)) { return("LHb.4")
-#     } else if (grepl("LHb.2.7", x)) { return("LHb.2.7")
-#     } else if (grepl("LHb.1$", x)) { return("LHb.1")
-#     } else if (grepl("LHb.1.3$", x)) { return("LHb.1.3")
-#     } else if (grepl("LHb.1.3.4", x)) { return("LHb.1.3.4")
-#     } else if (grepl("LHb.7", x)) { return("LHb.7")
-#     } else if (grepl("MHb.1$", x)) { return("MHb.1")
-#     } else if (grepl("MHb.1.2", x)) { return("MHb.1.2")
-#     } else if (grepl("MHb.2", x)) { return("MHb.2")
-#     } else if (grepl("MHb.3", x)) { return("MHb.3")
-#     } else if (grepl("Inhib.Thal", x)) { return("Inhib.Thal")
-#     } else if (grepl("Excit.Thal", x)) { return("Excit.Thal")
-#     } else if (grepl("Astrocyte", x)) { return("Astrocyte")
-#     } else if (grepl("OPC", x)) { return("OPC")
-#     } else if (grepl("Oligo", x)) { return("Oligo")
-#     } else if (grepl("Microglia", x)) { return("Microglia")
-#     } else if (grepl("Thal", x)) { return("Thal")
-#     } else if (grepl("Endo", x)) { return("Endo")
-#     } else { return(NA_character_)  # unmatched case
-#     }
-# })
-# 
-# names(cluster_map) <- clusters_to_merge
-# # map current identities to LHb/MHb
-# mid_idents <- plyr::revalue(as.character(Idents(SeuratOBJ)), cluster_map)
-# # assign new identities
-# Idents(SeuratOBJ) <- mid_idents
-# ## add as meta=data
-# SeuratOBJ$mid_cluster <- mid_idents
-# # verify mid-levels
-# 
-# if (length(unique(SeuratOBJ$cluster_ann[is.na(SeuratOBJ$mid_cluster)])) > 0) {
-#     stop(
-#         "All clusters should be assigned to a mid-level resolution\n",
-#         "Levels not assigned\n",
-#         paste(unique(SeuratOBJ$cluster_ann[is.na(SeuratOBJ$mid_cluster)]), collapse = "\n")
-#     )
-# } else {
-#     message("Mid-level added!")
-#     data.frame(mid_cluster = sort(unique(SeuratOBJ$mid_cluster)))
-#     nrow(data.frame(mid_cluster = sort(unique(SeuratOBJ$mid_cluster))))
-# }
-
 ##==============================================================================
 ## Verification
 
@@ -134,6 +84,62 @@ msg <- switch(resolution_level,
 
 message(msg)
 message("Processing ", length(Cells(SeuratOBJ)), " cells")
+
+# levels(SeuratOBJ)           # new levels
+# head(Idents(SeuratOBJ))     # per-cell identities
+# table(Idents(SeuratOBJ))    # counts by new identities
+
+## set col name / should exists as meta-data
+## testing:
+## resolution_level="Broad"
+meta_col <- case_when(
+    resolution_level=="Fine" ~ "cluster_ann",
+    resolution_level=="Broad" ~ "merged_cluster",
+    resolution_level=="Mid" ~ "mid_cluste"
+)
+
+
+##==============================================================================
+## Set desired meta-data as current level
+
+# Set Seurat identities from a metadata column
+set_idents_from_meta <- function(seurat_obj, meta_col, level_order = NULL, na_fill = "Unknown") {
+    ## double check level exist on meta-data
+    if (!meta_col %in% colnames(seurat_obj@meta.data)) {
+        stop("Meta column '", meta_col, "' not found in SeuratOBJ@meta.data")
+    }
+    # extract target vector
+    target_vec <- as.character(seurat_obj[[meta_col]][, 1])
+    
+    # decide levels and keep appearance order
+    if (is.null(level_order)) {
+        level_order <- sort(unique(target_vec))
+    }
+    
+    # only update if different from current Idents
+    current_idents <- as.character(Idents(seurat_obj))
+    if (!identical(current_idents, target_vec)) {
+        seurat_obj <- SetIdent(seurat_obj, value = factor(target_vec, levels = level_order))
+        message("Idents set from meta column '", meta_col, "'.")
+    } else {
+        message("Idents already match '", meta_col, "', nothing to do.")
+    }
+    
+    return(seurat_obj)
+}
+
+SeuratOBJ <- set_idents_from_meta(SeuratOBJ, meta_col = meta_col)
+
+# specific order:
+# desired_levels <- c("LHb.1","LHb.1.3","LHb.1.3.4","LHb.2.7","LHb.4","LHb.7",
+#                     "MHb.1","MHb.1.2","MHb.2","MHb.3",
+#                     "Excit.Thal","Inhib.Thal","Astrocyte","Oligo","OPC","Microglia","Endo","Thal")
+# SeuratOBJ <- set_idents_from_meta(SeuratOBJ, "mid_cluster", level_order = desired_levels)
+
+## sanity check
+levels(SeuratOBJ)           # new levels
+table(Idents(SeuratOBJ))    # counts by new identities
+
 
 ##==============================================================================
 
