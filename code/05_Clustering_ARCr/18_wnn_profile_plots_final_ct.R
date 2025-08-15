@@ -1,18 +1,15 @@
 ########################################################################
-## Plot WNN with final cell types 
+## Script on process .... Plot Violin for 1vsALL and mean-ratio
 ##
 ## Authors. CSC
-## Date. Jun 30, 2025
+## Date. Jul 20, 2025
 ##
 ## Recommended resources on interactive mode: srun --pty --mem=80GB --x11 bash
 ########################################################################
 
 library("Seurat")
-library("dendextend")
-library("dynamicTreeCut")
 library("purrr")
 library("ggplot2")
-library("ggtext") # Build names with HTML color tags / DotPlot
 library("colorspace") # make color gradients 
 library("patchwork")
 library("dplyr")
@@ -27,12 +24,6 @@ inputSeuratRDS <- here(
     "05_Clustering_ARCr", 
     "17_wnn_clustering_final_ct", 
     Seurat_base_name)
-
-# input_ct_summary_CSV <- here(
-#     "processed-data",
-#     "05_Clustering_ARCr",
-#     "16_rename_idents_post_mean_ratio_HClust",
-#     "WNN_full_annotation_meta_data.csv")
 
 processedDir <- here(
     "processed-data",
@@ -123,86 +114,6 @@ for (category in c("Oligo", "Astrocyte", "OPC", "Microglia", "Endo", "Inhib.Thal
 ## =============================================================================
 
 
-message("Processing UMAP plots ...")
-
-## Some visualizations: VPlots, DimPlot, Feature, DotPlot ...
-
-## extract suffix name to give unique name to plots
-seurat_name <- str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
-
-Reductions(SeuratOBJ)
-
-## add function to plot umap(s) for  wnn
-plot_one_umap <- function(seurat_obj, group_col = NULL, colors = NULL) {
-
-    plt1 <- DimPlot(SeuratOBJ, 
-                    label = TRUE, 
-                    reduction = "wnn.umap",
-                    group.by = group_col,
-                    label.size = 3,
-                    cols = colors) + 
-        NoLegend() +
-        labs(title = "WNN cell types (fine)")
-    
-    return(plt1)
-    
-}
-
-## umap wnn with clusters IDs (numbers)
-plt1 <- plot_one_umap(SeuratOBJ, "seurat_clusters")
-ggsave(here(plotDir, "WNN_umap_fine_clusterID.pdf"), plt1, width = 7, height = 7)
-
-## umap wnn with clusters annotated
-plt1 <- plot_one_umap(SeuratOBJ, "cluster_ann", my_colors_fine)
-ggsave(here(plotDir, "WNN_umap_fine.pdf"), plt1, width = 7, height = 7)
-
-
-## add function to plot rna and atac umap(s) side to side based on wnn annotations
-plot_umap_side_side <- function(seurat_obj, group_col = NULL, colors = NULL) {
-    
-    plt_atac <- DimPlot(SeuratOBJ, 
-                    label = TRUE, 
-                    reduction = "umap.lsi.integrated",
-                    group.by = group_col,
-                    label.size = 3,
-                    cols = colors) + 
-        NoLegend() +
-        labs(title = "WNN cell types in atac")
-    plt_rna <- DimPlot(SeuratOBJ, 
-                    label = TRUE, 
-                    reduction = "umap.integrated",
-                    group.by = group_col,
-                    label.size = 3,
-                    cols = colors) + 
-        NoLegend() +
-        labs(title = "WNN cell types in rna")
-    
-    plts <- plt_rna + plt_atac  + plot_layout(ncol = 2)
-    
-    return(plts)
-}
-
-## umap rna+atac side to side fine res
-rna_atac_plots <- plot_umap_side_side(SeuratOBJ, "cluster_ann", my_colors_fine)
-ggsave(
-    filename = here(plotDir, "WNN_umap_rna_atac_fine.pdf"),
-    plot = rna_atac_plots, 
-    width = 12,
-    height = 7
-)
-
-## umap rna+atac side to side broad res
-rna_atac_plots <- plot_umap_side_side(SeuratOBJ, "merged_cluster", my_colors)
-ggsave(
-    filename = here(plotDir, "WNN_umap_rna_atac_broad.pdf"),
-    plot = rna_atac_plots, 
-    width = 12,
-    height = 7
-)
-
-## =============================================================================
-
-
 message("Processing Violin plots ...")
 
 ## Plot Hb canonical genes for merged_clusters
@@ -252,158 +163,9 @@ plt1[[1]]
 
 ggsave(here(plotDir, "WNN_Vplots_Hb_canonical_fine_clusters.pdf"), plt1, width = 6, height = 7)
 
-message("WNN UMAP done!")
+message("Violin plots done!")
 
 ## =============================================================================
-
-
-message("Processing GeneExpression Dot plots ...")
-
-# Build color mapping: LHb and MHb get colors, others default to black
-
-## for fine res
-cluster_levels <- levels(SeuratOBJ)
-label_colors <- ifelse(grepl("LHb", cluster_levels), "#1f78b4", 
-                       ifelse(grepl("MHb", cluster_levels), "#ad1d8c",
-                              "black"))
-# Build names with HTML color tags
-clusters_colored <- paste0("<span style='color:", label_colors, "'>", cluster_levels, "</span>")
-names(clusters_colored) <- cluster_levels  # keep mapping
-
-## function to make dotPlot for fine and broad clusters
-plot_dot_clusters <- name <- function(SeuratOBJ, genes_to_plot,  group_col = NULL, clusters_colored = NULL) {
-
-    plt1 <- DotPlot(SeuratOBJ, 
-                    features = genes_to_plot,
-                    group.by = group_col) +
-        theme(
-            text = element_text(size = 12),
-            axis.text.x = element_text(size = 9),
-            axis.text.y = element_markdown(size = 9),  # ggtext to parse html
-            plot.title = element_text(hjust = 0.5),
-            axis.title.x = element_blank(),
-            axis.title.y = element_blank()
-        )  +
-        scale_y_discrete(labels = clusters_colored)
-    
-    return(plt1)
-}
-
-## plot all clusters at fine
-plt1 <- plot_dot_clusters(SeuratOBJ, genes_to_plot, "cluster_ann", clusters_colored)
-ggsave(here(plotDir, "WNN_DotPlot_Hb_canonical_all_clusters.pdf"), plt1, width = 5, height = 7)
-
-## plot merged clusters
-plt1 <- plot_dot_clusters(SeuratOBJ, genes_to_plot, "merged_cluster", clusters_colored)
-ggsave(here(plotDir, "WNN_DotPlot_Hb_canonical_merged_clusters.pdf"), plt1, width = 5, height = 7)
-
-
-## =============================================================================
-
-message("Processing HClust plots ...")
-
-## Compute Hierarchical Clustering on PC. ----- FASTER VERSION
-## - means only ~10–30 dimensions, making it fast.
-## - generate the average profiles per cluster
-## - even randomly sample cells for a quick dendrogram
-
-## Pull PCA embeddings: cells x PCs
-## Get cluster identities
-clusters <- Idents(SeuratOBJ)
-table(clusters)
-head(clusters)
-head(SeuratOBJ$cluster_ann)
-pca_mat <- Embeddings(SeuratOBJ, reduction = "pca")
-head(pca_mat)
-# rm("SeuratOBJ")
-
-## Compute cluster centroids in PCA space
-cluster_means <- as.data.frame(pca_mat) |>
-    mutate(cluster = clusters) |>
-    group_by(cluster) |>
-    summarize(across(starts_with("PC"), mean), .groups = "drop")
-head(cluster_means)
- 
-## Convert back to matrix (clusters x PCs)
-cluster_mat <- as.matrix(cluster_means[,-1])
-rownames(cluster_mat) <- cluster_means$cluster
-head(rownames(cluster_mat))
-
-dend_cluster <- dist(cluster_mat) |>
-    hclust(method = "ward.D2") |>
-    as.dendrogram(hang = 0.2)
-
-#str(dend_cluster)
-# main branch: 'dendrogram' with 2 branches and 41 members total, at height 73.22106
- 
-## Method: "ward.D2"
-# - improved method, mathematically consistent version of Ward’s hierarchical clustering
-# - minimizes the total within-cluster variance (the sum of squared deviations from cluster means)
-# - tells hclust to explicitly compute merges using squared Euclidean distances
- 
-## Save data & plot
-message(Sys.time(), " - Save")
-#save(dend_cluster, file = here(processedDir, "wnn_hierarchical_cluster_wnn-pca.Rdata"))
-
-# Create categories to color branches based on 
-head(cluster_means$cluster)
-
-## merged clusters, I picked up Hex color codes similar to those used on human pilot
-cluster_means <- cluster_means |>
-    mutate(category = case_when(
-        grepl("LHb", cluster) ~ "LHb",
-        grepl("MHb", cluster) ~ "MHb",
-        grepl("Oligo", cluster) ~ "Oligo",
-        grepl("Astrocyte", cluster) ~ "Astrocyte",
-        grepl("OPC", cluster) ~ "OPC",
-        grepl("Microglia", cluster) ~ "Microglia",
-        grepl("Endo", cluster) ~ "Endo",
-        grepl("Inhib", cluster) ~ "Inhib_Thal",
-        grepl("Excit", cluster) ~ "Excit_Thal",
-        grepl("Thal", cluster) ~ "Thal",
-        TRUE ~ "Other"
-    ))
-
-
-# Named vector mapping each cluster to its category
-cluster_categories <- cluster_means$category
-names(cluster_categories) <- cluster_means$cluster
-
-# Map labels on the dendrogram to categories, then to hex colors
-label_categories <- cluster_categories[labels(dend_cluster)]
-label_colors <- my_colors[label_categories]
-
-message(Sys.time(), " - Plot Dendrogram - Cluster centroids in PCA")
-
-pdf(file = here(plotDir, "dendrogram_cluster_centroid_on_pca.pdf"), width = 10, height = 4)
- 
-# Set settings and color vector
-dend_with_heights <- dend_cluster |>
-    set("labels_cex", 0.8) |>
-    set("labels_col", label_colors) |>
-    set("nodes_pch", 19) |>
-    set("nodes_cex", 0.7) # |>
-    # set("nodes_col", "blue") |>
-    # set("leaves_col", "darkred")
-
-# Rotate the tree to change orientation
-dend_flipped <- rotate(dend_with_heights, order = rev(labels(dend_with_heights)))
-
-plot(
-    dend_with_heights,
-    #dend_flipped,
-    #horiz = TRUE,
-    #main = "WNN Hierarchical clustering",
-    ylab = "squared PCA distances (ward.D2)",
-    lwd = 1.5
-) +
-    theme(plot.margin = margin(10, 10, 30, 10))  # t, r, b, l
-
-
-dev.off()
-
-message(Sys.time(), "Dendrograms Done!")
-
 
 
 # library("slurmjobs")
