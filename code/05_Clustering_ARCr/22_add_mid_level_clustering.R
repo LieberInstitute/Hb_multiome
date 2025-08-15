@@ -12,6 +12,7 @@ library("Signac")
 library("ggplot2")
 library("tidyverse")
 library("dbplyr")
+library("colorspace") # make color gradients 
 library("here")
 
 # Check/create directories
@@ -116,6 +117,98 @@ rds_file_name <- here(outputRDS_Dir, Seurat_base_name)
 saveRDS(SeuratOBJ, rds_file_name)
 
 message("Seurat with mid-level clusters meta-data saved!")
+
+
+## =============================================================================
+## Picked up Hex-color codes similar across cell-type
+
+my_colors <- c(
+    LHb = "#1f78b4",
+    MHb = "#ad1d8c",
+    Oligo = "#384a08",
+    Astrocyte = "#532222", 
+    OPC = "#829454",
+    Microglia = "#141b02",
+    Endo = "#d95f02",
+    Inhib_Thal = "#9a9fe7",
+    Excit_Thal = "#42467b",
+    Thal = "#4d55b7"
+)
+
+## assign color gradients to mid resolution clusters based on Broad cell-types
+
+# extract LHb and MHb clusters
+cluster_levels <- levels(SeuratOBJ)
+cluster_levels
+# [1] "Excit.Thal" "LHb.4"      "Inhib.Thal" "Astrocyte"  "MHb.1.2"   
+# [6] "LHb.1"      "OPC"        "Oligo"      "Microglia"  "LHb.2.7"   
+# [11] "Endo"       "LHb.1.3.4"  "MHb.1"      "MHb.2"      "MHb.3"     
+# [16] "Thal"       "LHb.1.3"    "LHb.7" 
+LHb_clusters <- grep("LHb", cluster_levels, value = TRUE)
+MHb_clusters <- grep("MHb", cluster_levels, value = TRUE)
+
+# Create tonal gradients for LHb and MHb
+LHb_colors <- sequential_hcl(length(LHb_clusters), h = 210, c = 80, l = c(30, 80))
+MHb_colors <- sequential_hcl(length(MHb_clusters), h = 320, c = 80, l = c(30, 80))
+
+# Build full cluster color map
+my_colors_mid <- setNames(rep("#bdbdbd", length(cluster_levels)), cluster_levels)
+# Excit.Thal      LHb.4 Inhib.Thal  Astrocyte    MHb.1.2      LHb.1        OPC 
+# "#bdbdbd"  "#bdbdbd"  "#bdbdbd"  "#bdbdbd"  "#bdbdbd"  "#bdbdbd"  "#bdbdbd" 
+# Oligo  Microglia    LHb.2.7       Endo  LHb.1.3.4      MHb.1      MHb.2 
+# "#bdbdbd"  "#bdbdbd"  "#bdbdbd"  "#bdbdbd"  "#bdbdbd"  "#bdbdbd"  "#bdbdbd" 
+# MHb.3       Thal    LHb.1.3      LHb.7 
+# "#bdbdbd"  "#bdbdbd"  "#bdbdbd"  "#bdbdbd" 
+
+my_colors_mid[LHb_clusters] <- LHb_colors
+my_colors_mid[MHb_clusters] <- MHb_colors
+
+# assign base color for other types from your existing palette
+for (category in c("Oligo", "Astrocyte", "OPC", "Microglia", "Endo", "Inhib.Thal", "Excit.Thal", "Thal")) {
+    matched <- grep(category, cluster_levels, value = TRUE)
+    my_colors_mid[matched] <- my_colors[[gsub("\\.", "_", category)]]
+}
+#scales::show_col(my_colors_fine)
+
+## =============================================================================
+
+message("Processing UMAP ...")
+
+## extract suffix name to give unique name to plots
+seurat_name <- str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
+
+Reductions(SeuratOBJ)
+
+plt1 <- DimPlot(SeuratOBJ, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                group.by = "mid_cluster",
+                label.size = 3,
+                cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "WNN cell types (Mid-resolution)")
+
+ggsave(here(plotDir, "WNN_umap_mid.pdf"), plt1, width = 7, height = 7)
+
+# library("slurmjobs")
+# job_single(
+#     "22_add_mid_level_clustering",
+#     cores = 2,
+#     partition = "katun",
+#     memory = "80G",
+#     create_shell = TRUE
+#     )
+
+## Reproducibility information
+library("sessioninfo")
+print("Reproducibility information:")
+Sys.time()
+proc.time()
+options(width = 120)
+session_info()
+
+
+
 
 
 
