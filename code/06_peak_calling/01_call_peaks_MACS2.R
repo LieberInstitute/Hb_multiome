@@ -194,6 +194,30 @@ message("Peaks file saved!")
 
 message("All done!!!")
 
+
+# library("slurmjobs")
+# job_single(
+#   "01_call_peaks_MACS2",
+#   create_shell = TRUE,
+#   partition = "katun",
+#   memory = "80G",
+#   cores = 2,
+#   logdir = "logs",
+#   command = "Rscript -e \"options(width = 120); sessioninfo::session_info()\"",
+#   create_logdir = TRUE
+# )
+
+## Reproducibility information
+library("sessioninfo")
+print("Reproducibility information:")
+Sys.time()
+proc.time()
+options(width = 120)
+session_info()
+
+
+
+
 # ##==============================================================================
 # 
 # # Get current cluster identities
@@ -244,16 +268,5 @@ message("All done!!!")
 #     plot = p_combined, width = 10, height = 6
 # )
 
-# library("slurmjobs")
-# job_single(
-#   "04_search_peaks",
-#   create_shell = TRUE,
-#   partition = "katun",
-#   memory = "80G",
-#   cores = 2,
-#   logdir = "logs",
-#   command = "Rscript -e \"options(width = 120); sessioninfo::session_info()\"",
-#   create_logdir = TRUE
-# )
 
 
