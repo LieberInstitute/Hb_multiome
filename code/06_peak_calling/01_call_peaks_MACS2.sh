@@ -1,17 +1,32 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=80G
-#SBATCH --job-name=04_search_peaks
+#SBATCH --job-name=01_call_peaks_MACS2
 #SBATCH -c 2
-#SBATCH -t 1-00:00:00
+#SBATCH -t 3-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
+#SBATCH --array=0-2%3   # 3 wnn resolution levels
 
-log_path=logs/04_search_peaks.txt
+set -eo pipefail
+
+wnn_resolution=(Fine Broad Mid)
+
+i=${SLURM_ARRAY_TASK_ID}
+m=${#wnn_resolution[@]}
+
+# guard
+if (( i < 0 || i >= m )); then
+  echo "Invalid SLURM_ARRAY_TASK_ID=$i (must be 0..$((m-1)))"
+  exit 1
+fi
+
+res="${wnn_resolution[$i]}"
+
+log_path=logs/01_call_peaks_MACS2_${res}_task_${i}.txt
 
 {
-set -e
 
 echo "**** Job starts ****"
 date
@@ -47,10 +62,10 @@ module load conda_R/4.3.x
 module list
 
 which /users/csoto/.conda/envs/macs2_conda3_env/bin/macs2
-ls /users/csoto/.conda/envs/macs2_conda3_env/bin/macs2
+#ls /users/csoto/.conda/envs/macs2_conda3_env/bin/macs2
 
 ## Your main script
-Rscript 04_search_peaks.R
+Rscript 01_call_peaks_MACS2.R --wnn_resolution "${res}"
 
 # Capture return code and exit safely
 ret=$?
