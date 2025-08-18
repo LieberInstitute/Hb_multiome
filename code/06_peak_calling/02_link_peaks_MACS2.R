@@ -3,8 +3,7 @@
 ## INPUT: Peaks generated with CallPeaks() - MACS2
 ##
 ## CVS tables with links peaks "global" and "local" with
-## - Pearson and Spearman
-## - 3 different open-windows sized (check below details) 
+## - Spearman at 5e5 open-windows sized (check below details) 
 ##
 ## Authors. CSC
 ## Date. August 18, 2025
@@ -31,14 +30,11 @@ library("here")
 args = commandArgs(trailingOnly = TRUE)
 p_met <- args[2]
 w_size <- args[4]
-# 0: pearson, 1e5
-# 1: pearson, 5e4
-# 2: spearman, 1e5
-# 3: spearman, 5e4
+# 1: spearman, 5e5
 
 ## for testing:
 # p_met = "spearman"
-# w_size = "5e4"
+# w_size = "5e5"
 # resolution_level = "Mid" 
 
 ## p_met:
@@ -65,13 +61,11 @@ if (length(p_met) && length(w_size)) {
 inputRDS_Dir <- here(
   "processed-data",
   "05_Clustering_ARCr",
-  #"17_wnn_clustering_final_ct"
   "22_add_mid_level_clustering" # recent version with final wnn cell-types
 )
 cvsDir <- here(
     "processed-data",
     "06_peak_calling",
-    #"00_link_peaks"
     "01_call_peaks_MACS2"
 )
 
