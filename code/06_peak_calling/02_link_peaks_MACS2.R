@@ -1,10 +1,13 @@
 ########################################################################
 ## EDA: Compute LinkPeaks() and filter High-Confident Peaks 
+## INPUT: Peaks generated with CallPeaks() - MACS2
 ##
-## plots and tables to asses links at different thresholds 
+## CVS tables with links peaks "global" and "local" with
+## - Pearson and Spearman
+## - 3 different open-windows sized (check below details) 
 ##
 ## Authors. CSC
-## Date. March 24, 2025
+## Date. August 18, 2025
 ## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
 ## Note. Seurat objects were created with module load conda_R/4.3.x
 ########################################################################
