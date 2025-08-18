@@ -21,36 +21,29 @@ library("stringr")
 library("here")
 
 #===============================================================================
-# resolution_level = "Fine"     # 42 clusters
+# resolution_level = "Fine"     # 42 clusters (small clusters - not run)
 # resolution_level = "Broad"    # 8 cell-types
 # resolution_level = "Mid"      # 18 cell-types
 #===============================================================================
 
+p_met = "spearman"
+w_size = "5e5"
+
 ## read input arguments
 args = commandArgs(trailingOnly = TRUE)
-p_met <- args[2]
-w_size <- args[4]
-# 1: spearman, 5e5
+resolution_level <- args[2]
 
 ## for testing:
-# p_met = "spearman"
-# w_size = "5e5"
 # resolution_level = "Mid" 
 
-## p_met:
-# pearson -> peak-scores<0.2: likely due scATAC counts are ultra‑sparse; scRNA is zero‑inflated. Pearson r’s of 0.05–0.2 are common even for real links
-# spearman -> as enhancer → gene relationships aren’t strictly linear; Pearson seems to underestimates. I will try spearman, more robust to nonlinearity/zeros
-
-if (length(p_met) && length(w_size)) {
+if (length(resolution_level)) {
     message(
-        "Processing job for peak-method:\n",
-        p_met,
-        "\nWindow-size\n",
-        w_size
+        "Processing job for resolution_level:\n",
+        resolution_level
     )
-    f_sufix <- paste0(".", p_met, ".", w_size, ".cells_filtered_2perc")
+    f_sufix <- paste0(resolution_level, ".", p_met, ".", w_size, ".cells_filtered_2perc")
 } else {
-    message("Input arguments missed")
+    message("Input argument missed")
     stop()
 }
 
