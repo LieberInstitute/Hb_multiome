@@ -75,7 +75,7 @@ if (!dir.exists(cvsDir)) {
    
 
 ##==============================================================================
-## Set desired meta-data as current level
+## Set desired meta-data as current level: Mid or Broad
 
 # Set Seurat identities from a metadata column
 set_idents_from_meta <- function(seurat_obj, meta_col, level_order = NULL, na_fill = "Unknown") {
@@ -275,7 +275,7 @@ for (seurat_cluster in names(seurat_subsets)) {
         expression.assay = "RNA",
         genes.use = keep_genes,
         method = p_met,
-        distance = as.numeric(w_size)             # Only consider peaks within ±100 kb of gene TSS (cis-window)
+        distance = as.numeric(w_size)             # Only consider peaks within x kb of gene TSS
     )
     
     message("Local link-peaks correlations completed!")
