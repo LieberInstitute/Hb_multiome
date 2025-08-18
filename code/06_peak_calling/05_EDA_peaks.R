@@ -22,7 +22,7 @@ resolution_level = c("Fine", "Broad", "Mid")
 # resolution_level = "Broad"  # 8 cell-types
 # resolution_level = "Mid" # 8 cell-types
 
-inputRDS_Dir <- here(
+inputCSV_Dir <- here(
     "processed-data",
     "06_peak_calling",
     "01_call_peaks_MACS2"
@@ -41,58 +41,94 @@ if (!dir.exists(outputCSV_Dir)) { dir.create(outputCSV_Dir) }
 if (!dir.exists(plot_Dir)) { dir.create(plot_Dir) }
 
 
-message("Loading all peaks found")
 
-f_name <- here(inputRDS_Dir, "macs_peaks_Mid_resolution.csv") 
-peaks_df <- read.csv(f_name, header = TRUE)
+for (clust_level in resolution_level) {
 
-message("Number of peaks found: ", nrow(peaks_df))
+    message("Processing peaks for resolution:\n", clust_level)
+    # suffix to save plots and csv
+    f_sufix <- paste0(".resolution.", clust_level)
+    f_sufix
 
-message("Define target clusters: Habenula")
+    message("Loading all peaks found")
+    
+    f_name <- paste0("macs_peaks_", clust_level, "_resolution.csv")
+    f_name <- here(inputCSV_Dir, f_name) 
+    peaks_df <- read.csv(f_name, header = TRUE)
+    
+    message("Number of peaks found: ", nrow(peaks_df))
+    
+    message("Define target clusters: Habenula")
+    
+    # extract all unique cluster labels listed in the peak_called_in column of peaks_df
+    all_clusters <- unlist(strsplit(peaks_df$peak_called_in, ","))
+    unique_clusters <- sort(unique(trimws(all_clusters)))  # trimws removes any leading/trailing spaces
+    unique_clusters
+    
+    message("Processing ", length(unique_clusters), " total clusters")
+    
+    target_clusters <- unique_clusters[grepl("MHb|LHb", unique_clusters)]
+    
+    message("Hb total: ", length(target_clusters))
+    
+    target_clusters
+    # [1] "C.05.DD_LHb" "C.07.DD_MHb" "C.10.DD_MHb" "C.11.DD_MHb" "C.14.DD_MHb"
+    # [6] "C.16.DD_MHb" "C.18.DD_LHb" "C.23.DD_LHb" "C.24.DD_LHb" "C.30.DD_LHb"
+    # [11] "C.33.DD_LHb" "C.36.DD_MHb" "C.40.DD_LHb"
+     
+    # Match any target cluster in the peak_called_in field
+    matches <- sapply(target_clusters, function(cl) {
+        # use \\b (word boundary) to avoid partial matches, as the column contains ","
+        grepl(paste0("\\b", cl, "\\b"), peaks_df$peak_called_in)
+    })
+    # counts how many clusters matched per peak to keep only peaks where at least one target cluster appears
+    matched_rows <- rowSums(matches) > 0
+    # Retains peak called in that cluster (TRUE)
+    # Subset matched rows
+    peaks_hb_subset <- peaks_df[matched_rows, ]
+     
+    message("Number of peaks in Hb clusters: ", nrow(peaks_hb_subset))
+    # Number of peaks in Hb clusters: 100975
+     
+    head(peaks_hb_subset)[1:4]
+    macs_peaks_Broad_resolution.csv
+    f_name <- paste0("habenula_macs_peaks_", clust_level ,"_resolution.csv")
+    write.csv(peaks_hb_subset, here(outputCSV_Dir, f_name), row.names = FALSE)
+    
+    message("Saved subsetted peaks for habenula clusters")
+    
+}
 
-# extract all unique cluster labels listed in the peak_called_in column of peaks_df
-all_clusters <- unlist(strsplit(peaks_df$peak_called_in, ","))
-unique_clusters <- sort(unique(trimws(all_clusters)))  # trimws removes any leading/trailing spaces
-unique_clusters
-length(unique_clusters)
+# # extract all unique cluster labels listed in the peak_called_in column of peaks_df
+# all_clusters <- unlist(strsplit(peaks_df$peak_called_in, ","))
+# unique_clusters <- sort(unique(trimws(all_clusters)))  # trimws removes any leading/trailing spaces
+# unique_clusters
+# length(unique_clusters)
+# 
+# target_clusters <- unique_clusters[grepl("MHb|LHb", unique_clusters)]
+# target_clusters
+# # [1] "C.05.DD_LHb" "C.07.DD_MHb" "C.10.DD_MHb" "C.11.DD_MHb" "C.14.DD_MHb"
+# # [6] "C.16.DD_MHb" "C.18.DD_LHb" "C.23.DD_LHb" "C.24.DD_LHb" "C.30.DD_LHb"
+# # [11] "C.33.DD_LHb" "C.36.DD_MHb" "C.40.DD_LHb"
+# 
+# # Match any target cluster in the peak_called_in field
+# matches <- sapply(target_clusters, function(cl) {
+#     # use \\b (word boundary) to avoid partial matches, as the column contains ","
+#     grepl(paste0("\\b", cl, "\\b"), peaks_df$peak_called_in)
+# })
+# # counts how many clusters matched per peak to keep only peaks where at least one target cluster appears
+# matched_rows <- rowSums(matches) > 0
+# # Retains peak called in that cluster (TRUE)
+# 
+# # Subset matched rows
+# peaks_hb_subset <- peaks_df[matched_rows, ]
+# 
+# message("Number of peaks in Hb clusters: ", nrow(peaks_hb_subset))
+# # Number of peaks in Hb clusters: 100975
+# 
+# head(peaks_hb_subset)[1:4]
 
-target_clusters <- unique_clusters[grepl("MHb|LHb", unique_clusters)]
-target_clusters
-# [1] "C.05.DD_LHb" "C.07.DD_MHb" "C.10.DD_MHb" "C.11.DD_MHb" "C.14.DD_MHb"
-# [6] "C.16.DD_MHb" "C.18.DD_LHb" "C.23.DD_LHb" "C.24.DD_LHb" "C.30.DD_LHb"
-# [11] "C.33.DD_LHb" "C.36.DD_MHb" "C.40.DD_LHb"
-
-# Match any target cluster in the peak_called_in field
-matches <- sapply(target_clusters, function(cl) {
-    # use \\b (word boundary) to avoid partial matches, as the column contains ","
-    grepl(paste0("\\b", cl, "\\b"), peaks_df$peak_called_in)
-})
-# counts how many clusters matched per peak to keep only peaks where at least one target cluster appears
-matched_rows <- rowSums(matches) > 0
-# Retains peak called in that cluster (TRUE)
-
-# Subset matched rows
-peaks_hb_subset <- peaks_df[matched_rows, ]
-
-message("Number of peaks in Hb clusters: ", nrow(peaks_hb_subset))
-# Number of peaks in Hb clusters: 100975
-
-head(peaks_hb_subset)
-# seqnames  start    end width strand
-#     1      chr1 191217 191620   404      *
-#     3      chr1 629810 630397   588      *
-#     5      chr1 633694 634120   427      *
-#     6      chr1 778314 779306   993      *
-#     9      chr1 819789 820144   356      *
-#     10     chr1 827078 827686   609      *
-#     peak_called_in
-# 1                                                                                                                                                                                                C.26.DD_OPC,C.25.undetermined,C.19.DD_Inhib.Thal,C.02.DD_Oligo,C.16.DD_MHb,C.24.DD_LHb,C.13.no-match,C.09.undetermined,C.07.DD_MHb,C.30.DD_LHb,C.01.undetermined,C.05.DD_LHb,C.03.undetermined,C.38.DD_Inhib.Thal,C.22.undetermined,C.08.undetermined,C.20.DD_Astrocyte,C.06.DD_Excit.Thal,C.18.DD_LHb,C.28.DD_Inhib.Thal,C.12.undetermined,C.23.DD_LHb,C.04.undetermined,C.17.DD_Excit.Thal,C.10.DD_MHb,C.41.DD_Microglia,C.14.DD_MHb,C.21.DD_Astrocyte,C.34.DD_Oligo
-# 3                                                                                              C.20.DD_Astrocyte,C.30.DD_LHb,C.16.DD_MHb,C.08.undetermined,C.15.DD_Excit.Thal,C.02.DD_Oligo,C.01.undetermined,C.23.DD_LHb,C.06.DD_Excit.Thal,C.19.DD_Inhib.Thal,C.32.undetermined,C.10.DD_MHb,C.18.DD_LHb,C.33.DD_LHb,C.21.DD_Astrocyte,C.14.DD_MHb,C.12.undetermined,C.13.no-match,C.04.undetermined,C.26.DD_OPC,C.05.DD_LHb,C.40.DD_LHb,C.17.DD_Excit.Thal,C.25.undetermined,C.39.DD_Inhib.Thal,C.07.DD_MHb,C.11.DD_MHb,C.36.DD_MHb,C.37.undetermined,C.28.DD_Inhib.Thal,C.22.undetermined,C.24.DD_LHb,C.29.DD_Endo,C.34.DD_Oligo,C.09.undetermined,C.27.DD_Microglia
-# 5  C.21.DD_Astrocyte,C.29.DD_Endo,C.13.no-match,C.06.DD_Excit.Thal,C.41.DD_Microglia,C.20.DD_Astrocyte,C.11.DD_MHb,C.37.undetermined,C.02.DD_Oligo,C.30.DD_LHb,C.25.undetermined,C.28.DD_Inhib.Thal,C.01.undetermined,C.05.DD_LHb,C.32.undetermined,C.33.DD_LHb,C.36.DD_MHb,C.14.DD_MHb,C.26.DD_OPC,C.27.DD_Microglia,C.34.DD_Oligo,C.15.DD_Excit.Thal,C.23.DD_LHb,C.17.DD_Excit.Thal,C.19.DD_Inhib.Thal,C.08.undetermined,C.18.DD_LHb,C.09.undetermined,C.16.DD_MHb,C.24.DD_LHb,C.10.DD_MHb,C.12.undetermined,C.22.undetermined,C.07.DD_MHb,C.40.DD_LHb,C.31.DD_Excit.Thal,C.38.DD_Inhib.Thal,C.35.undetermined,C.39.DD_Inhib.Thal,C.04.undetermined,C.03.undetermined
-# 6                                                                                                                               C.26.DD_OPC,C.24.DD_LHb,C.19.DD_Inhib.Thal,C.07.DD_MHb,C.15.DD_Excit.Thal,C.08.undetermined,C.05.DD_LHb,C.02.DD_Oligo,C.09.undetermined,C.20.DD_Astrocyte,C.04.undetermined,C.01.undetermined,C.03.undetermined,C.06.DD_Excit.Thal,C.21.DD_Astrocyte,C.28.DD_Inhib.Thal,C.17.DD_Excit.Thal,C.16.DD_MHb,C.12.undetermined,C.13.no-match,C.37.undetermined,C.25.undetermined,C.18.DD_LHb,C.22.undetermined,C.23.DD_LHb,C.30.DD_LHb,C.10.DD_MHb,C.14.DD_MHb,C.27.DD_Microglia,C.11.DD_MHb,C.31.DD_Excit.Thal,C.33.DD_LHb,C.41.DD_Microglia
-
-write.csv(peaks_hb_subset, here(outputCSV_Dir, "hb_peaks.csv"), row.names = FALSE)
-message("Saved subsetted peaks for target clusters")
+# write.csv(peaks_hb_subset, here(outputCSV_Dir, "hb_peaks.csv"), row.names = FALSE)
+# message("Saved subsetted peaks for target clusters")
 
         
 ##==============================================================================
