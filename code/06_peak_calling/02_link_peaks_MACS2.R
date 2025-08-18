@@ -13,6 +13,8 @@ library("Seurat")
 library("Signac")
 ## I use BSgenome.Hsapiens.UCSC.hg38 for extracting DNA motifs, k-mers, sequence-based features and compute Tn5 bias correction
 library("BSgenome.Hsapiens.UCSC.hg38")  # full reference genome sequence / actual DNA bases (A/T/C/G) for each chromosome
+library("tidyverse")
+library("tidyr")
 library("stringr")
 library("here")
 
@@ -31,7 +33,7 @@ w_size <- args[4]
 # 2: spearman, 1e5
 # 3: spearman, 5e4
 
-# for testing
+## for testing:
 # p_met = "spearman"
 # w_size = "5e4"
 # resolution_level = "Mid" 
@@ -60,7 +62,8 @@ if (length(p_met) && length(w_size)) {
 inputRDS_Dir <- here(
   "processed-data",
   "05_Clustering_ARCr",
-  "17_wnn_clustering_final_ct"
+  #"17_wnn_clustering_final_ct"
+  "22_add_mid_level_clustering" # recent version with final wnn cell-types
 )
 cvsDir <- here(
     "processed-data",
@@ -70,11 +73,9 @@ cvsDir <- here(
 )
 
 if (!dir.exists(cvsDir)) {
-    dir.create(cvsDir)
-} else {
     stop("Peaks file should exist!")
 }
-    
+   
 
 ##==============================================================================
 ## Set desired meta-data as current level
@@ -105,22 +106,45 @@ set_idents_from_meta <- function(seurat_obj, meta_col, level_order = NULL, na_fi
     return(seurat_obj)
 }
 
+
 ##==============================================================================
 
-## Load Seurat
+## Load Seurat and make verification
+
 # Use Seurat with clusters renamed for Spatial-Registration on Visium project
 Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
+DefaultAssay(SeuratOBJ) <- "RNA"
 
-message("Seurat loaded!")
+# colnames(SeuratOBJ@meta.data)
+msg <- switch(resolution_level,
+    "Fine" = paste0("Fine-level Cell-Types:\n ", paste(sort(unique(SeuratOBJ$cluster_ann)), collapse = "\n")),
+    "Broad" = paste0("Broad-level Cell-Types:\n", paste(sort(unique(SeuratOBJ$merged_cluster)), collapse = "\n")),
+    "Mid" = paste0("Mid-level Cell-Types:\n", paste(sort(unique(SeuratOBJ$mid_cluster)), collapse = "\n"))
+)
 
+message(msg)
+message("Processing ", length(Cells(SeuratOBJ)), " cells")
+
+## set resolution_level
+meta_col <- case_when(
+    resolution_level=="Fine" ~ "cluster_ann",
+    resolution_level=="Broad" ~ "merged_cluster",
+    resolution_level=="Mid" ~ "mid_cluster"
+)
+
+## set desired idents as current level
 SeuratOBJ <- set_idents_from_meta(SeuratOBJ, meta_col = meta_col)
 levels(SeuratOBJ)
 
+message("Seurat loaded and ready!")
+
+
+##==============================================================================
 ## filter genes to those expressed in 3% of cells
-DefaultAssay(SeuratOBJ) <- "RNA"
+
 rna_counts <- GetAssayData(SeuratOBJ, assay="RNA", layer="data")
 length(rownames(rna_counts)) # [1] 36601
 #length(rownames(rna_counts)[Matrix::rowSums(rna_counts > 0)]) # 34738
@@ -130,14 +154,9 @@ length(rownames(rna_counts)) # [1] 36601
 keep_genes <- rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.02 * ncol(rna_counts)]
 length(keep_genes) # in count: [1] 14526
 
-## Set atac
+## Set ATAC assay 
 DefaultAssay(SeuratOBJ) <- "ATAC"
 class(SeuratOBJ[["ATAC"]])
-# make a readable base-name for plots
-Seurat_base_name <- str_extract(seurat_name, regex("C\\.\\w+"))
-Seurat_base_name <- sub("_renamed_visium$", "", Seurat_base_name)
-Seurat_base_name
-# C.leiden_lsi_r2
 
 message("Chromatin loaded!")
 
@@ -146,7 +165,7 @@ message("Chromatin loaded!")
 
 ## Identifies cis-regulatory elements by linking chromatin-accessible peaks to gene expression using correlation (and optionally accounting for covariates).
 
-## preprocessed peaks
+## pre-processed peaks / QC
 
 message("Starting GC content correction ... ")
 
@@ -183,11 +202,13 @@ tryCatch(
 ## set a subset of genes to test
 #hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
 
-message("Computing link-peaks correlations ...")
+message("Pre-processing ready ...")
 
 
 ##==============================================================================
 ## Process "global" Link peak-genes
+
+message("Computing global link-peaks correlations ...")
 
 ## find peaks that are correlated with the expression of nearby genes 
 atac <- LinkPeaks(
@@ -199,25 +220,13 @@ atac <- LinkPeaks(
     distance = as.numeric(w_size)             # Only consider peaks within ±100 kb of gene TSS (cis-window)
 )
 
-message("Computing global link-peaks correlations completed!")
+message("Global link-peaks correlations completed!")
 
 ## inspect data
-head(Links(atac))
+head(Links(atac), n=3)
 # GRanges object with 5 ranges and 5 metadata columns:
 #     seqnames              ranges strand |     score        gene
 #        <Rle>           <IRanges>  <Rle> | <numeric> <character>
-# [1]     chr5 146497025-146516190      * | 0.0515208      GPR151
-# [2]     chr5 146516043-146516190      * | 0.0979604      GPR151
-# [3]    chr13   78596294-78603560      * | 0.0569620      POU4F1
-# [4]    chr13   78597457-78603560      * | 0.0579676      POU4F1
-# [5]    chr13   78603450-78603560      * | 0.0594102      POU4F1
-# peak    zscore      pvalue
-# <character> <numeric>   <numeric>
-# [1] chr5-146496517-14649..   2.71746 3.28927e-03
-# [2] chr5-146515546-14651..   5.29336 6.00436e-08
-# [3] chr13-78595767-78596..   4.35176 6.75248e-06
-# [4] chr13-78597000-78597..   4.33686 7.22667e-06
-# [5] chr13-78602870-78604..   5.15894 1.24175e-07
 
 link_df <- as.data.frame(Links(atac))
 summary(link_df$score)
@@ -228,45 +237,69 @@ write.csv(
     row.names = FALSE
 )
 
-message("All peaks saved!")
+message("Global peaks saved!")
 
 
 
 ##==============================================================================
 ## Process "local" Link peak-genes (by cluster)
 
-## find peaks that are correlated with the expression of nearby genes 
+## find peaks by cluster correlated with the expression of nearby genes 
+
+clusters <- levels(SeuratOBJ)
+
+# make a list to store all subsets
+seurat_subsets <- list()
+
+for (clust in clusters) {
+    message("Subsetting cluster: ", clust)
+    
+    seurat_subsets[[clust]] <- subset(
+        SeuratOBJ,
+        idents = clust
+    )
+}
+
+# now access each subset by name
+
+for (seurat_cluster in names(seurat_subsets)) {
+    # seurat_cluster = "Endo"
+    
+    message("Processing seurat cluster: ", seurat_cluster)
+    
+    seurat_subset <- seurat_subsets[[seurat_cluster]]
+    seurat_subset
+    
+    message("Total cells in cluster ", seurat_cluster, ": ", length(Cells(seurat_subset)))
+    
+    atac <- LinkPeaks(
+        object = seurat_subset,
+        peak.assay = "ATAC",
+        expression.assay = "RNA",
+        genes.use = keep_genes,
+        method = p_met,
+        distance = as.numeric(w_size)             # Only consider peaks within ±100 kb of gene TSS (cis-window)
+    )
+    
+    message("Local link-peaks correlations completed!")
+    ## inspect data
+    head(Links(atac), n=3)
+
+    ## prepare data to save cvs
+    link_df <- as.data.frame(Links(atac))
+    summary(link_df$score)
+    
+    f_name <- paste0(seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
+    write.csv(
+        link_df,
+        file = here(cvsDir, f_name),
+        row.names = FALSE
+    )
+    
+}
 
 
-atac <- LinkPeaks(
-    object = SeuratOBJ,
-    peak.assay = "ATAC",
-    expression.assay = "RNA",
-    genes.use = keep_genes,
-    method = p_met,
-    distance = as.numeric(w_size)             # Only consider peaks within ±100 kb of gene TSS (cis-window)
-)
-
-message("Computing global link-peaks correlations completed!")
-
-
-##==============================================================================
-
-## Process "global" Link peak-genes
-
-## find peaks that are correlated with the expression of nearby genes 
-atac <- LinkPeaks(
-    object = SeuratOBJ,
-    peak.assay = "ATAC",
-    expression.assay = "RNA",
-    genes.use = keep_genes,
-    method = p_met,
-    distance = as.numeric(w_size)             # Only consider peaks within ±100 kb of gene TSS (cis-window)
-)
-
-message("Computing global link-peaks correlations completed!")
-
-
+message("Local link-peaks correlations completed!")
 
 
 message("All done!!!")
