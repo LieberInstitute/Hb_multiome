@@ -293,13 +293,24 @@ ggsave(
 
 ##==============================================================================
 
+head(links_cl)
+write.csv(
+    links_cl,
+    file = here(csvDir, paste0("all_peak_gene_links_annotated", f_sufix, ".csv")),
+    row.names = FALSE
+)
+
+message("Link Peak-Genes Annotated Saved!")
 
 
+##==============================================================================
 
 ##  Top genes by total linked peaks, across clusters
 # Pick top N genes by total linked peaks (across all clusters)
 
 N <- 50
+
+nrow(links_cl)
 
 top_genes <- links_cl %>%
     group_by(gene) %>%
