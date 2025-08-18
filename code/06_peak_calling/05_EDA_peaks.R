@@ -17,9 +17,15 @@ library("here")
 # Check/create directories
 ## clusters renamed for Spatial-Registration on Visium project
 
+resolution_level = c("Fine", "Broad", "Mid")
+# resolution_level = "Fine" # 42 clusters
+# resolution_level = "Broad"  # 8 cell-types
+# resolution_level = "Mid" # 8 cell-types
+
 inputRDS_Dir <- here(
     "processed-data",
-    "06_peak_calling"
+    "06_peak_calling",
+    "01_call_peaks_MACS2"
 )
 plot_Dir <- here(
     "plots",
@@ -37,7 +43,7 @@ if (!dir.exists(plot_Dir)) { dir.create(plot_Dir) }
 
 message("Loading all peaks found")
 
-f_name <- here(inputRDS_Dir, "all_peaks_by_cluster.csv") 
+f_name <- here(inputRDS_Dir, "macs_peaks_Mid_resolution.csv") 
 peaks_df <- read.csv(f_name, header = TRUE)
 
 message("Number of peaks found: ", nrow(peaks_df))
@@ -102,45 +108,45 @@ colnames(cluster_df) <- c("cluster_ann", "n_peaks")
 p1 <- ggplot(cluster_df, aes(x = reorder(cluster_ann, -n_peaks), y = n_peaks)) +
     geom_bar(stat = "identity", fill = ifelse(cluster_df$cluster_ann %in% target_clusters, "#FF6F61", "grey")) +
     theme_minimal() +
-    labs(title = "Number of peaks called per cluster",
+    labs(title = "Number of peaks per cluster",
          #x = "Cluster",
          y = "Number of Peaks",
-         caption = paste("Number of peaks found:", nrow(peaks_hb_subset))) +
+         caption = paste("Total peaks (raw):", nrow(peaks_hb_subset))) +
     theme(axis.text.x = element_text(angle = 90, hjust = 0.6),
           axis.title.x = element_blank(),
           plot.caption = element_text(size = 10, hjust = 0),
           panel.background = element_rect(fill = "white", color = NA),
           plot.background = element_rect(fill = "white", color = NA))
-#p1
+
 plot_name <- here(plot_Dir, "peaks_frequency_by_cluster.png")
 ggsave(plot_name, plot = p1, width = 10, height = 6, dpi = 300)
 
 message("Plot for number of peaks called per cluster done!")
 
 ##==============================================================================
-## (2) Plot by regions of interest: Hb vs Others
-
-# custom order, Hb clusters first, then the rest
-remaining_clusters <- setdiff(cluster_df$cluster_ann, target_clusters)
-custom_order <- c(target_clusters, sort(remaining_clusters))
-cluster_df$cluster_ann <- factor(cluster_df$cluster_ann, levels = custom_order)
-
-p2 <- ggplot(cluster_df, aes(x = cluster_ann, y = n_peaks)) +
-    geom_bar(stat = "identity", fill = ifelse(cluster_df$cluster_ann %in% target_clusters, "#FF6F61", "grey")) +
-    theme_minimal() +
-    labs(title = "Number of peaks called per cluster and region",
-         y = "Number of Peaks",
-         caption = paste("Number of peaks found:", nrow(peaks_hb_subset))) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 0.6),
-          axis.title.x = element_blank(),
-          plot.caption = element_text(size = 10, hjust = 0),
-          panel.background = element_rect(fill = "white", color = NA),
-          plot.background = element_rect(fill = "white", color = NA))
-#p2
-plot_name <- here(plot_Dir, "peaks_frequency_by_region.png")
-ggsave(plot_name, plot = p2, width = 10, height = 6, dpi = 300)
-
-message("Plot for number of peaks called per cluster and region done!")
+# ## (2) Plot by regions of interest: Hb vs Others
+# 
+# # custom order, Hb clusters first, then the rest
+# remaining_clusters <- setdiff(cluster_df$cluster_ann, target_clusters)
+# custom_order <- c(target_clusters, sort(remaining_clusters))
+# cluster_df$cluster_ann <- factor(cluster_df$cluster_ann, levels = custom_order)
+# 
+# p2 <- ggplot(cluster_df, aes(x = cluster_ann, y = n_peaks)) +
+#     geom_bar(stat = "identity", fill = ifelse(cluster_df$cluster_ann %in% target_clusters, "#FF6F61", "grey")) +
+#     theme_minimal() +
+#     labs(title = "Number of peaks called per cluster and region",
+#          y = "Number of Peaks",
+#          caption = paste("Total peaks (raw):", nrow(peaks_hb_subset))) +
+#     theme(axis.text.x = element_text(angle = 90, hjust = 0.6),
+#           axis.title.x = element_blank(),
+#           plot.caption = element_text(size = 10, hjust = 0),
+#           panel.background = element_rect(fill = "white", color = NA),
+#           plot.background = element_rect(fill = "white", color = NA))
+# 
+# plot_name <- here(plot_Dir, "peaks_frequency_by_region.png")
+# ggsave(plot_name, plot = p2, width = 10, height = 6, dpi = 300)
+# 
+# message("Plot for number of peaks called per cluster and region done!")
 
 
 ##==============================================================================
