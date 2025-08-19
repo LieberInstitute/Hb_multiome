@@ -8,6 +8,10 @@
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
 
+00_link_peaks.sh
+06_exploratory_peak_scores.sh
+
+
 set -e
 
 
@@ -36,7 +40,7 @@ SUBDIR="06_peak_calling"
 cd ${CODEDIR}/${SUBDIR}
 pwd
 
-echo "===== Make Coverage Plots - Running 01_coverage_basic.R ................."
+echo "===== Make Coverage Plots for cannonical genes and top5 DEG ................."
 ## rm previous log files and output files
 rm -f ${CODEDIR}/${SUBDIR}/logs/01_coverage_basic.txt
 rm -f ${PLOTDIR}/${SUBDIR}/*.png
