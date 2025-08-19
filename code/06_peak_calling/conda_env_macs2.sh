@@ -3,6 +3,8 @@
 ## - Here, you will find a draft with suggestions to create an isolated env for macs2 to avoid dependency conflicts
 ## - Plus a pseudo slurm script to activate your conda env
 
+ /users/csoto/.conda/envs/macs2_conda3_env/bin/macs2 --version
+
 #=====================================
 # if necessary (optional), update your conda
 conda update -n base -c conda-forge conda
@@ -11,6 +13,7 @@ conda update -n base -c conda-forge conda
 # JHPCE env preparation
 # conda_R/4.4.x is too slow, hangs too long the installation
 module unload conda_R/4.4.x 
+which macs
 ## Unloading conda_R/4.4.x
 
 # So, the alternative was to unload the module and kept conda/3-24.3.0, which is faster
