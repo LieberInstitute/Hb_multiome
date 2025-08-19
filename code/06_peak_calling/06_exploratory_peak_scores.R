@@ -248,6 +248,9 @@ total_peaks <- nrow(link_df2_parsed)
 # - table(link_df2_parsed$width == link_df2_parsed$peak_width_bp, useNA = "ifany")
 
 # Overall peak width distribution (log scale)
+# Compute summary stats
+median_width <- median(link_df2_parsed$peak_width_bp, na.rm = TRUE)
+mean_width   <- mean(link_df2_parsed$peak_width_bp, na.rm = TRUE)
 
 p_hist <- ggplot(link_df2_parsed, aes(x = peak_width_bp)) +
     # histogram as horizontal bars
@@ -257,21 +260,28 @@ p_hist <- ggplot(link_df2_parsed, aes(x = peak_width_bp)) +
     ) +
     # density curve
     geom_density(color = "darkred", linewidth = 1) +
+    geom_vline(xintercept = median_width, color = "black", linetype = "dashed", size = 0.8) +
+    geom_vline(xintercept = mean_width, color = "orange", linetype = "dotted", size = 0.8) +
     # log scale for widths
     scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
     labs(
-        title = "Distribution of peak widths",
-        subtitle = paste(total_peaks, "total peaks"),
+        title = paste("Distribution of peak widths", f_sufix),
+        subtitle = paste(total_peaks, "total global peaks"),
         x = "Peak width (bp, log scale)",
         y = "Density",
-        caption = f_sufix
+        caption = paste("Dashed = median (", round(median_width), 
+                        "bp), dotted = mean (", round(mean_width), "bp)")
     ) +
-    theme_minimal() +
+    theme_minimal(base_size = 12) +
+    theme(
+        panel.background = element_rect(fill = "gray95", color = NA),
+        plot.background = element_rect(fill = "gray98", color = NA)
+    ) +
     coord_flip()
 
 
 f_name <- paste0("peak_width_histogram", f_sufix, ".png")
-ggsave(here::here(plotDir, f_name), p_hist, width = 5, height = 4, dpi = 300)
+ggsave(here::here(plotDir, f_name), p_hist, width = 8, height = 8, dpi = 300)
 
 
 #===============================================================================
