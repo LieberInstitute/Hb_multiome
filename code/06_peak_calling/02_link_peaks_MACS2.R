@@ -32,6 +32,7 @@ w_size = "5e5"
 ## read input arguments
 args = commandArgs(trailingOnly = TRUE)
 resolution_level <- args[2]
+# w_size <- args[4]
 
 ## for testing:
 # resolution_level = "Mid" 
@@ -59,11 +60,11 @@ inputRDS_Dir <- here(
 cvsDir <- here(
     "processed-data",
     "06_peak_calling",
-    "01_call_peaks_MACS2"
+    "02_link_peaks_MACS2"
 )
 
 if (!dir.exists(cvsDir)) {
-    stop("Peaks file should exist!")
+    dir.create(cvsDir)
 }
    
 
@@ -207,7 +208,7 @@ atac <- LinkPeaks(
     expression.assay = "RNA",
     genes.use = keep_genes,
     method = p_met,
-    distance = as.numeric(w_size)             # Only consider peaks within ±100 kb of gene TSS (cis-window)
+    distance = as.numeric(w_size)             # Only consider peaks within ±500 kb of gene TSS (cis-window)
 )
 
 message("Global link-peaks correlations completed!")
