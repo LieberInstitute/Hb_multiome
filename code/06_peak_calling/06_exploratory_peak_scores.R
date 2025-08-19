@@ -29,7 +29,7 @@ w_size <- args[4]
 
 # for testing
 # p_met = "spearman"
-# w_size = 2.5e4
+# w_size = "2.5e4"
 
 ## p_met:
 # pearson -> peak-scores<0.2: likely due scATAC counts are ultra‑sparse; scRNA is zero‑inflated. Pearson r’s of 0.05–0.2 are common even for real links
@@ -42,14 +42,15 @@ if (length(p_met) && length(w_size)) {
         "\nWindow-size\n",
         w_size
     )
-    ## Use numeric comparison first, then assign string labels
-    w_size_label <- case_when(
-        isTRUE(all.equal(w_size, 25000))  ~ "2.5e4",
-        isTRUE(all.equal(w_size, 50000))  ~ "5e4",
-        isTRUE(all.equal(w_size, 100000)) ~ "1e5",
-        TRUE                              ~ "00"
-    )
-    f_sufix <- paste0(".", p_met, ".", format(w_size_label, scientific = TRUE), ".cells_filtered_2perc")
+    # ## Use numeric comparison first, then assign string labels
+    # w_size_label <- case_when(
+    #     isTRUE(all.equal(w_size, 25000))  ~ "2.5e4",
+    #     isTRUE(all.equal(w_size, 50000))  ~ "5e4",
+    #     isTRUE(all.equal(w_size, 100000)) ~ "1e5",
+    #     TRUE                              ~ "00"
+    # )
+    #f_sufix <- paste0(".", p_met, ".", format(w_size_label, scientific = TRUE), ".cells_filtered_2perc")
+    f_sufix <- paste0(".", p_met, ".", w_size, ".cells_filtered_2perc")
     message("Processing: ", f_sufix)
 } else {
     message("Input arguments missed")
@@ -99,6 +100,8 @@ if (file.exists(gene_peaks_csv)) {
 ## for testing: ================================================================
 
 colnames(link_df)
+nrow(link_df)
+
 link_df <- link_df |>
     mutate(
         gene     = trimws(as.character(gene)),
@@ -136,7 +139,7 @@ head(has_biotype)
 # keep protein_coding, then take first per (gene_name, chr) - this avoid 1:many associations
 tss_df <- tss_raw %>%
     mutate(gene_biotype = if (has_biotype) gene_biotype else NA_character_) %>%
-    arrange(desc(gene_biotype == "protein_coding")) %>%  # prefer protein-coding where available
+    #arrange(desc(gene_biotype == "protein_coding")) %>%  # prefer protein-coding where available
     group_by(gene_name, seqnames) %>%
     slice_head(n = 1) %>%
     ungroup() %>%
@@ -218,6 +221,14 @@ table(link_df2$gene_strand, useNA = "ifany")
     # 2714 2786 
 
 message("Peak center and distance to TSS completed!")
+
+
+#===============================================================================
+## plot peak width
+
+
+
+
 
 
 #===============================================================================
