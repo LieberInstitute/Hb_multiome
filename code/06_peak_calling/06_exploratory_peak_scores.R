@@ -15,6 +15,7 @@ library("ggplot2")
 library("patchwork")
 library("tidyverse")
 library("dplyr")
+library("scales")
 library("here")
 
 
@@ -226,9 +227,51 @@ message("Peak center and distance to TSS completed!")
 #===============================================================================
 ## plot peak width
 
+# Parse true peak coordinates from the `peak` column
+# peak format assumed: "chrX-start-end"
+colnames(link_df2)
+head(link_df$peak)
+
+link_df2_parsed <- link_df2 %>%
+    tidyr::separate(peak, into = c("p_chr","p_start","p_end"), sep = "-", remove = FALSE, convert = TRUE) %>%
+    mutate(
+        peak_width_bp = as.numeric(p_end) - as.numeric(p_start) + 1,
+        peak_width_kb = peak_width_bp / 1000
+    )
+
+head(link_df2_parsed)
+summary(link_df2_parsed)
+total_peaks <- nrow(link_df2_parsed)
+
+# compare to existing 'width' column
+# - This will likely be FALSE for many rows; that's expected here
+# - table(link_df2_parsed$width == link_df2_parsed$peak_width_bp, useNA = "ifany")
+
+# Overall peak width distribution (log scale)
+
+p_hist <- ggplot(link_df2_parsed, aes(x = peak_width_bp)) +
+    # histogram as horizontal bars
+    geom_histogram(
+        aes(y = after_stat(density)),  # normalize for density overlay
+        bins = 100, fill = "steelblue", color = "white", alpha = 0.6
+    ) +
+    # density curve
+    geom_density(color = "darkred", linewidth = 1) +
+    # log scale for widths
+    scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
+    labs(
+        title = "Distribution of peak widths",
+        subtitle = paste(total_peaks, "total peaks"),
+        x = "Peak width (bp, log scale)",
+        y = "Density",
+        caption = f_sufix
+    ) +
+    theme_minimal() +
+    coord_flip()
 
 
-
+f_name <- paste0("peak_width_histogram", f_sufix, ".png")
+ggsave(here::here(plotDir, f_name), p_hist, width = 5, height = 4, dpi = 300)
 
 
 #===============================================================================
