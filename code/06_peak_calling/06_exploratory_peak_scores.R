@@ -331,21 +331,6 @@ hist(link_df2$distance / 1000, breaks = 100,
      col = "lightblue")
 dev.off()
 
-# ## Correlation vs Distance with smoothing
-# g1 <- ggplot(link_df2, aes(distance_kb, score)) +
-#     geom_point(alpha = 0.3, color = "steelblue") +
-#     geom_hline(yintercept = 0.2, linetype = "dashed", color = "red") +
-#     labs(
-#         x = "Distance from TSS (kb)",
-#         y = paste("Correlation Score", p_met),
-#         title = "Peak-Gene Correlation vs.Distance"
-#     ) + geom_smooth(method = "loess", se = FALSE, color = "darkred") +
-#     theme_minimal()
-# 
-# ggsave(here(plotDir, 
-#             paste0("peak_distribution_scores", f_sufix, ".pdf")),
-#             g1, width = 8, height = 5)
-
 
 #===============================================================================
 # adding exploratory scores
