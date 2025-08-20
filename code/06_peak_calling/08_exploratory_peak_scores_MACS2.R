@@ -86,57 +86,12 @@ message("Processing:")
 lst_peak_files
 
 # for testing at Mid resolution:
-lst_peak_files <- lst_peak_files[5]
-lst_peak_files
+#lst_peak_files <- lst_peak_files[5]
 
-for (ct in lst_peak_files) {
-    
-    gene_peaks_csv <- here(input_cvsDir, ct)
-    
-    message("Processing: ", basename(gene_peaks_csv))
-    
-    if (file.exists(gene_peaks_csv)) {
-        link_df <- read.csv(gene_peaks_csv)
-        message("File loaded!")
-    } else {
-        stop(paste("File not found:", gene_peaks_csv))
-    }
-    print(head(link_df))
-}
+#===========================================================================
 
-# load link peak-gene csv
+message("Build TSS (strand-aware) GRanges table...")
 
-## for testing: ================================================================
-#link_df <- read.csv(file = here(input_cvsDir, "all_peak_gene_links.spearman.5e4_test.csv"))
-## for testing: ================================================================
-
-colnames(link_df)
-head(link_df, n=3)
-# seqnames  start    end width strand
-#     1     chr1 181329 181534   206      *
-#     2     chr1 191217 191619   403      *
-#     3     chr1 629146 629354   209      *
-#     peak_called_in
-# 1                                                                                        Inhib.Thal
-# 2 OPC,Oligo,Inhib.Thal,LHb.4,MHb.2,MHb.1.2,LHb.7,LHb.2.7,Excit.Thal,Astrocyte,LHb.1.3.4,MHb.1,LHb.1
-# 3                                                                                         Astrocyte
-
-message(nrow(link_df), " peaks found ...")
-
-link_df <- link_df |>
-    mutate(
-        gene     = trimws(as.character(gene)),
-        seqnames = as.character(seqnames),
-        start    = as.numeric(start),
-        end      = as.numeric(end),
-        peak_called_in = peak_called_in
-    )
-head(link_df)
-
-message("Computing distance between peaks and TSS ...")
-
-## Build TSS (strand-aware) GRanges table and 
-#  compute the distance between each peak and its linked gene's TSS
 gene_coords <- genes(EnsDb.Hsapiens.v86)
 # tss_coords <- resize(gene_coords, width = 1, fix = "start")
 # tss_coords <- keepStandardChromosomes(tss_coords, pruning.mode = "coarse")
@@ -192,58 +147,80 @@ if (nrow(dup_pairs) > 0) {
     stop("Non-unique (gene_name, seqnames) in tss_df: ", nrow(dup_pairs), " duplicates.")
 }
 
-# Join by gene + chromosome to avoid many-to-many 
-colnames(link_df)
-colnames(tss_df)
-link_df2 <- link_df %>%
-    left_join(tss_df, by = c("gene" = "gene_name", "seqnames" = "seqnames"))
-head(link_df2, n = 3)
-#     seqnames  start     end width strand      score  gene               peak
-# 1     chr1 921198 1001138 79941      * 0.06070581 ISG15 chr1-920766-921629
-# 2     chr1 960688 1000172 39485      * 0.07694616  HES4 chr1-960318-961058
-# 3     chr1 960688 1001138 40451      * 0.06605429 ISG15 chr1-960318-961058
-#     zscore     pvalue     tss gene_strand         gene_id
-# 1 2.052715 0.02005013 1001138           + ENSG00000187608
-# 2 1.758599 0.03932286 1000172           - ENSG00000188290
-# 3 2.016967 0.02184947 1001138           + ENSG00000187608
+message("Build TSS completed...")
 
-# drop rows with no TSS match
-n_before <- nrow(link_df2)
-link_df2 <- link_df2 %>% filter(!is.na(tss))
-message("Dropped ", n_before - nrow(link_df2), " rows with no TSS match.")
 
-nrow(link_df2)
+#===========================================================================
+# parse Linked peak-gene tables for each cell-type
 
-message("Distance between peaks and TSS added ...")
+for (ct in lst_peak_files) {
+    
+    gene_peaks_csv <- here(input_cvsDir, ct)
+    
+    message("Processing: ", basename(gene_peaks_csv))
+    
+    if (file.exists(gene_peaks_csv)) {
+        link_df <- read.csv(gene_peaks_csv)
+        message("File loaded!")
+    } else {
+        stop(paste("File not found:", gene_peaks_csv))
+    }
+    
+    #=========================================
+    # preapare df
+    message(nrow(link_df), " peaks found ...")
+    print(head(link_df))
+    
+    link_df <- link_df |>
+        mutate(
+            gene     = trimws(as.character(gene)),
+            seqnames = as.character(seqnames),
+            start    = as.numeric(start),
+            end      = as.numeric(end),
+            peak_called_in = peak_called_in
+        )
+    head(link_df)
+    
+    #=========================================
+    
+    message("Computing distance between peaks and TSS ...")
+    
+    # Join by gene + chromosome to avoid many-to-many 
+    colnames(link_df)
+    colnames(tss_df)
+    link_df2 <- link_df %>%
+        left_join(tss_df, by = c("gene" = "gene_name", "seqnames" = "seqnames"))
+    colnames(link_df2)
+    head(link_df2, n = 3)
+    
+    # drop rows with no TSS match
+    n_before <- nrow(link_df2)
+    link_df2 <- link_df2 %>% filter(!is.na(tss))
+    message("Dropped ", n_before - nrow(link_df2), " rows with no TSS match.")
+    
+    message("Distance between peaks and TSS added ...")
+    
+    #=========================================
+    
+    message("Computing Peak center and distance to TSS ...")
+    
+    link_df2 <- link_df2 %>%
+        mutate(
+            peak_center       = (start + end) / 2,
+            distance          = abs(peak_center - tss),
+            signed_distance   = peak_center - tss,                       # genomic sign
+            signed_by_strand  = ifelse(gene_strand == "-", -signed_distance, signed_distance),
+            distance_kb       = distance / 1000
+        )
+    head(link_df2, n=3)
+    message("Link gene-peak scores with TSS:")
+    summary(link_df2)
+    table(link_df2$gene_strand, useNA = "ifany")
 
-message("Computing Peak center and distance to TSS ...")
-
-link_df2 <- link_df2 %>%
-    mutate(
-        peak_center       = (start + end) / 2,
-        distance          = abs(peak_center - tss),
-        signed_distance   = peak_center - tss,                       # genomic sign
-        signed_by_strand  = ifelse(gene_strand == "-", -signed_distance, signed_distance),
-        distance_kb       = distance / 1000
-    )
-head(link_df2, n=2)
-# seqnames  start     end width strand      score  gene               peak
-# 1     chr1 921198 1001138 79941      * 0.06070581 ISG15 chr1-920766-921629
-# 2     chr1 960688 1000172 39485      * 0.07694616  HES4 chr1-960318-961058
-#   zscore     pvalue     tss gene_strand         gene_id peak_center distance
-# 1 2.052715 0.02005013 1001138           + ENSG00000187608      961168    39970
-# 2 1.758599 0.03932286 1000172           - ENSG00000188290      980430    19742
-# signed_distance signed_by_strand distance_kb
-# 1          -39970           -39970      39.970
-# 2          -19742            19742      19.742
-message("Link gene-peak scores with TSS:")
-summary(link_df2)
-#sum(link_df2$distance > 1e5)  # should be ~0 if you used LinkPeaks(..., distance=1e5)
-table(link_df2$gene_strand, useNA = "ifany")
-    # -    + 
-    # 2714 2786 
-
-message("Peak center and distance to TSS added ...")
+    message("Peak center and distance to TSS added ...")
+    
+    
+}
 
 
 #===============================================================================
@@ -361,21 +338,6 @@ hist(link_df2$distance / 1000, breaks = 100,
      xlab = "Distance (kb)",
      col = "lightblue")
 dev.off()
-
-# ## Correlation vs Distance with smoothing
-# g1 <- ggplot(link_df2, aes(distance_kb, score)) +
-#     geom_point(alpha = 0.3, color = "steelblue") +
-#     geom_hline(yintercept = 0.2, linetype = "dashed", color = "red") +
-#     labs(
-#         x = "Distance from TSS (kb)",
-#         y = paste("Correlation Score", p_met),
-#         title = "Peak-Gene Correlation vs.Distance"
-#     ) + geom_smooth(method = "loess", se = FALSE, color = "darkred") +
-#     theme_minimal()
-# 
-# ggsave(here(plotDir, 
-#             paste0("peak_distribution_scores", f_sufix, ".pdf")),
-#             g1, width = 8, height = 5)
 
 
 #===============================================================================
