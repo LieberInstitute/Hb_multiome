@@ -14,6 +14,7 @@ library("EnsDb.Hsapiens.v86")           # Gene annotation (GTF-style)
 library("ggplot2")
 library("patchwork")
 library("tidyverse")
+library("stringr")
 library("dplyr")
 library("scales")
 library("here")
@@ -27,7 +28,7 @@ resolution_level <- args[2]
 # resolution_level = "Mid" # 8 cell-types
 
 # for testing ( Note only spearman at 5e4 was tested on macs2 peaks )
-# resolution_level = "Mid"
+# resolution_level = "Broad"
 # p_met = "spearman"
 # w_size = "5e4"
 
@@ -58,7 +59,7 @@ f_sufix
 input_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
-    "01_call_peaks_MACS2"
+    "02_link_peaks_MACS2"
 )
 plotDir <- here(
     "plots",
@@ -80,9 +81,14 @@ if (!dir.exists(csvDir)) {
     dir.create(csvDir)
 }
 
-# List all files and directories
-lst_peak_files = list.files(path = input_cvsDir)
-message("Processing:")
+# List all files matching the specific clustering resolution level
+# List only files that start with "LHb"
+lst_peak_files <- list.files(
+    path = input_cvsDir,
+    pattern = resolution_level,     # ^ = beginning of string
+)
+#lst_peak_files = list.files(path = input_cvsDir)
+message("Link peak-genes files found:")
 lst_peak_files
 
 # for testing at Mid resolution:
@@ -151,7 +157,117 @@ message("Build TSS completed...")
 
 
 #===========================================================================
+# add function to make plots related with peak's width
+
+make_width_plots <- function(
+    link_df2,
+    resolution_lev,
+    ct_name,
+    plotDir
+    ) {
+
+    print(paste0("Processing plots for ", resolution_lev, " for ", ct_name, " cell_type"))
+    
+    # Parse true peak coordinates from the `peak` column
+    # peak format assumed: "chrX-start-end"
+    colnames(link_df2)
+    link_df2_parsed <- link_df2 %>%
+        tidyr::separate(peak, into = c("p_chr","p_start","p_end"), sep = "-", remove = FALSE, convert = TRUE) %>%
+        mutate(
+            peak_width_bp = as.numeric(p_end) - as.numeric(p_start) + 1,
+            peak_width_kb = peak_width_bp / 1000
+        )
+    
+    head(link_df2_parsed)
+    summary(link_df2_parsed)
+    total_peaks <- nrow(link_df2_parsed)
+    
+    #=========================================
+    
+    # Overall peak width distribution (log scale)
+    # Compute summary stats
+    median_width <- median(link_df2_parsed$peak_width_bp, na.rm = TRUE)
+    mean_width   <- mean(link_df2_parsed$peak_width_bp, na.rm = TRUE)
+    
+    suffix_subtitle <- paste("Spearman / 5e5d at ", resolution_lev, "resolution. ", ct_name)
+    
+    p_hist <- ggplot(link_df2_parsed, aes(x = peak_width_bp)) +
+        # histogram as horizontal bars
+        geom_histogram(
+            aes(y = after_stat(density)),  # normalize for density overlay
+            bins = 100, fill = "steelblue", color = "white", alpha = 0.6
+        ) +
+        # density curve
+        geom_density(color = "darkred", linewidth = 1) +
+        geom_vline(xintercept = median_width, color = "black", linetype = "dashed", linewidth = 0.8) +
+        geom_vline(xintercept = mean_width, color = "orange", linetype = "dotted", linewidth = 0.8) +
+        # log scale for widths
+        scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
+        labs(
+            title = paste("Distribution of peak widths"),
+            subtitle = suffix_subtitle,
+            x = "Peak width (bp, log scale)",
+            y = "Density",
+            caption = paste("Dashed = median (", round(median_width), 
+                            "bp), dotted = mean (", round(mean_width), "bp)\n", 
+                            paste(total_peaks, "total peaks"))
+        ) +
+        theme_minimal(base_size = 12) +
+        theme(
+            panel.background = element_rect(fill = "gray95", color = NA),
+            plot.background = element_rect(fill = "gray98", color = NA)
+        ) +
+        coord_flip()
+    
+    # Peak width vs. distance to TSS
+    p_scatter_dist <- ggplot(link_df2_parsed, aes(x = distance_kb, y = peak_width_bp)) +
+        geom_point(alpha = 0.25, size = 0.8, color = "grey30") +
+        geom_smooth(method = "loess", se = FALSE, color = "darkred") +
+        scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
+        labs(
+            title = "Peak width vs distance to TSS",
+            subtitle = suffix_subtitle,
+            x = "Distance from TSS (kb)",
+            y = "Peak width (bp, log scale)",
+            caption = paste(total_peaks, "total local peaks")
+        ) +
+        theme_minimal()
+    
+    # Peak width vs. correlation score
+    # log10 creates NaN/Inf, remove those rows to avoid warnings
+    df <- link_df2_parsed %>%
+        mutate(score = as.numeric(score),
+               peak_width_bp = as.numeric(peak_width_bp)) %>%
+        filter(is.finite(score), is.finite(peak_width_bp), peak_width_bp > 0)
+    
+    p_scatter_score <- ggplot(df, aes(x = score, y = peak_width_bp)) +
+        geom_point(alpha = 0.25, size = 0.8, color = "grey30") +
+        geom_smooth(method = "loess", se = FALSE, color = "darkred") +
+        #scale_x_continuous(trans = pseudo_log_trans(base = 10, sigma = 0.01)) +
+        scale_y_log10() +
+        labs(title = "Peak width vs correlation score",
+             subtitle = suffix_subtitle,
+             x = "Correlation Score (pseudo-log scaled)",
+             y = "Peak width (bp, log scale)",
+             caption = paste(total_peaks, "total local peaks")) +
+        theme_minimal()
+    
+    f_name <- paste0(resolution_lev, "_", ct_name, "_peak_width_histogram_spearman_5e5.pdf")
+    ggsave(here::here(plotDir, f_name), p_hist, width = 8, height = 8)
+    f_name <- paste0(resolution_lev, "_", ct_name, "_peak_width_vs_distance_spearman_5e5.pdf")
+    ggsave(here::here(plotDir, f_name), p_scatter_dist, width = 8, height = 6)
+    f_name <- paste0(resolution_lev, "_", ct_name, "_peak_width_vs_score_spearman_5e5.pdf")
+    ggsave(here::here(plotDir, f_name), p_scatter_score, width = 8, height = 6)
+
+    print(paste0("Width related plots for ", ct_name, " done!"))    
+
+}
+
+
+#===========================================================================
 # parse Linked peak-gene tables for each cell-type
+
+message("Making plots for ", length(lst_peak_files), " cell-types")
 
 for (ct in lst_peak_files) {
     
@@ -166,9 +282,12 @@ for (ct in lst_peak_files) {
         stop(paste("File not found:", gene_peaks_csv))
     }
     
+    # Extract text between first and second "_"
+    ct_name <- sub("^[^_]*_([^_]*)_.*", "\\1", ct)
+    
     #=========================================
     # preapare df
-    message(nrow(link_df), " peaks found ...")
+    message(nrow(link_df), " peaks found on ", ct_name, " ...")
     print(head(link_df))
     
     link_df <- link_df |>
@@ -176,8 +295,8 @@ for (ct in lst_peak_files) {
             gene     = trimws(as.character(gene)),
             seqnames = as.character(seqnames),
             start    = as.numeric(start),
-            end      = as.numeric(end),
-            peak_called_in = peak_called_in
+            end      = as.numeric(end)
+            #peak_called_in = peak_called_in
         )
     head(link_df)
     
@@ -219,108 +338,13 @@ for (ct in lst_peak_files) {
 
     message("Peak center and distance to TSS added ...")
     
+    #=========================================
+    
+    make_width_plots(link_df2, resolution_level, ct_name, plotDir)
     
 }
 
 
-#===============================================================================
-## plot peak width
-
-# Parse true peak coordinates from the `peak` column
-# peak format assumed: "chrX-start-end"
-colnames(link_df2)
-head(link_df$peak)
-
-link_df2_parsed <- link_df2 %>%
-    tidyr::separate(peak, into = c("p_chr","p_start","p_end"), sep = "-", remove = FALSE, convert = TRUE) %>%
-    mutate(
-        peak_width_bp = as.numeric(p_end) - as.numeric(p_start) + 1,
-        peak_width_kb = peak_width_bp / 1000
-    )
-
-head(link_df2_parsed)
-summary(link_df2_parsed)
-total_peaks <- nrow(link_df2_parsed)
-
-# compare to existing 'width' column
-# - This will likely be FALSE for many rows; that's expected here
-# - table(link_df2_parsed$width == link_df2_parsed$peak_width_bp, useNA = "ifany")
-
-# Overall peak width distribution (log scale)
-# Compute summary stats
-median_width <- median(link_df2_parsed$peak_width_bp, na.rm = TRUE)
-mean_width   <- mean(link_df2_parsed$peak_width_bp, na.rm = TRUE)
-
-p_hist <- ggplot(link_df2_parsed, aes(x = peak_width_bp)) +
-    # histogram as horizontal bars
-    geom_histogram(
-        aes(y = after_stat(density)),  # normalize for density overlay
-        bins = 100, fill = "steelblue", color = "white", alpha = 0.6
-    ) +
-    # density curve
-    geom_density(color = "darkred", linewidth = 1) +
-    geom_vline(xintercept = median_width, color = "black", linetype = "dashed", linewidth = 0.8) +
-    geom_vline(xintercept = mean_width, color = "orange", linetype = "dotted", linewidth = 0.8) +
-    # log scale for widths
-    scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
-    labs(
-        title = paste("Distribution of peak widths - ", f_sufix),
-        subtitle = paste(total_peaks, "total global peaks"),
-        x = "Peak width (bp, log scale)",
-        y = "Density",
-        caption = paste("Dashed = median (", round(median_width), 
-                        "bp), dotted = mean (", round(mean_width), "bp)")
-    ) +
-    theme_minimal(base_size = 12) +
-    theme(
-        panel.background = element_rect(fill = "gray95", color = NA),
-        plot.background = element_rect(fill = "gray98", color = NA)
-    ) +
-    coord_flip()
-
-f_name <- paste0("peak_width_histogram", f_sufix, ".pdf")
-ggsave(here::here(plotDir, f_name), p_hist, width = 8, height = 8)
-
-
-# Peak width vs. distance to TSS
-p_scatter_dist <- ggplot(link_df2_parsed, aes(x = distance_kb, y = peak_width_bp)) +
-    geom_point(alpha = 0.25, size = 0.8, color = "grey30") +
-    geom_smooth(method = "loess", se = FALSE, color = "darkred") +
-    scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
-    labs(
-        title = paste("Peak width vs distance to TSS - ", f_sufix),
-        subtitle = paste(total_peaks, "total global peaks"),
-        x = "Distance from TSS (kb)",
-        y = "Peak width (bp, log scale)"
-    ) +
-    theme_minimal()
-
-f_name <- paste0("peak_width_vs_distance", f_sufix, ".pdf")
-ggsave(here::here(plotDir, f_name), p_scatter_dist, width = 8, height = 6)
-
-
-# Peak width vs. correlation score
-colnames(link_df2_parsed)
-
-# log10 creates NaN/Inf, remove those rows to avoid warnings
-df <- link_df2_parsed %>%
-    mutate(score = as.numeric(score),
-           peak_width_bp = as.numeric(peak_width_bp)) %>%
-    filter(is.finite(score), is.finite(peak_width_bp), peak_width_bp > 0)
-
-p_scatter_score <- ggplot(df, aes(x = score, y = peak_width_bp)) +
-    geom_point(alpha = 0.25, size = 0.8, color = "grey30") +
-    geom_smooth(method = "loess", se = FALSE, color = "darkred") +
-    #scale_x_continuous(trans = pseudo_log_trans(base = 10, sigma = 0.01)) +
-    scale_y_log10() +
-    labs(title = paste("Peak width vs correlation score - ", f_sufix),
-         subtitle = paste(total_peaks, "total global peaks"),
-         x = "Correlation Score (pseudo-log scaled)",
-         y = "Peak width (bp, log scale)") +
-    theme_minimal()
-
-f_name <- paste0("peak_width_vs_score", f_sufix, ".pdf")
-ggsave(here::here(plotDir, f_name), p_scatter_score, width = 8, height = 6)
 
 
 
