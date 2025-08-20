@@ -1,5 +1,5 @@
 ########################################################################
-## explore and filter strong peak-gene links for evaluation 
+## Explore/Evaluate Signac::LinkPeaks() output = FROM CELLRANGER OUTPUT
 ## - Make several visualization to evaluate Peak scores
 ## - Make table with several confidence Peak scores
 ##
@@ -60,8 +60,6 @@ if (length(p_met) && length(w_size)) {
 
 
 # Check/create directories
-
-## clusters renamed for Spatial-Registration on Visium project
 input_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
@@ -137,7 +135,7 @@ has_biotype <- "gene_biotype" %in% colnames(tss_raw)
 head(has_biotype)
 #unique(tss_raw$gene_biotype)
 
-# keep protein_coding, then take first per (gene_name, chr) - this avoid 1:many associations
+# then take first per (gene_name, chr) - this avoid 1:many associations
 tss_df <- tss_raw %>%
     mutate(gene_biotype = if (has_biotype) gene_biotype else NA_character_) %>%
     #arrange(desc(gene_biotype == "protein_coding")) %>%  # prefer protein-coding where available
@@ -189,10 +187,10 @@ head(link_df2, n = 3)
 n_before <- nrow(link_df2)
 link_df2 <- link_df2 %>% filter(!is.na(tss))
 message("Dropped ", n_before - nrow(link_df2), " rows with no TSS match.")
-# Dropped 0 rows with no TSS match.
+
 nrow(link_df2)
 
-message("Distance between peaks and TSS completed!")
+message("Distance between peaks and TSS added ...")
 
 message("Computing Peak center and distance to TSS ...")
 
@@ -221,7 +219,7 @@ table(link_df2$gene_strand, useNA = "ifany")
     # -    + 
     # 2714 2786 
 
-message("Peak center and distance to TSS completed!")
+message("Peak center and distance to TSS added ...")
 
 
 #===============================================================================
@@ -260,8 +258,8 @@ p_hist <- ggplot(link_df2_parsed, aes(x = peak_width_bp)) +
     ) +
     # density curve
     geom_density(color = "darkred", linewidth = 1) +
-    geom_vline(xintercept = median_width, color = "black", linetype = "dashed", size = 0.8) +
-    geom_vline(xintercept = mean_width, color = "orange", linetype = "dotted", size = 0.8) +
+    geom_vline(xintercept = median_width, color = "black", linetype = "dashed", linewidth = 0.8) +
+    geom_vline(xintercept = mean_width, color = "orange", linetype = "dotted", linewidth = 0.8) +
     # log scale for widths
     scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
     labs(
