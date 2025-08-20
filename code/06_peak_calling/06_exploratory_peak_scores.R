@@ -43,14 +43,6 @@ if (length(p_met) && length(w_size)) {
         "\nWindow-size\n",
         w_size
     )
-    # ## Use numeric comparison first, then assign string labels
-    # w_size_label <- case_when(
-    #     isTRUE(all.equal(w_size, 25000))  ~ "2.5e4",
-    #     isTRUE(all.equal(w_size, 50000))  ~ "5e4",
-    #     isTRUE(all.equal(w_size, 100000)) ~ "1e5",
-    #     TRUE                              ~ "00"
-    # )
-    #f_sufix <- paste0(".", p_met, ".", format(w_size_label, scientific = TRUE), ".cells_filtered_2perc")
     f_sufix <- paste0(".", p_met, ".", w_size, ".cells_filtered_2perc")
     message("Processing: ", f_sufix)
 } else {
@@ -99,6 +91,7 @@ if (file.exists(gene_peaks_csv)) {
 ## for testing: ================================================================
 
 colnames(link_df)
+head(link_df, n=3)
 nrow(link_df)
 
 link_df <- link_df |>
