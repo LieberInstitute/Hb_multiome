@@ -32,7 +32,6 @@ w_size = "5e5"
 ## read input arguments
 args = commandArgs(trailingOnly = TRUE)
 resolution_level <- args[2]
-# w_size <- args[4]
 
 ## for testing:
 # resolution_level = "Mid" 
@@ -42,7 +41,7 @@ if (length(resolution_level)) {
         "Processing job for resolution_level:\n",
         resolution_level
     )
-    f_sufix <- paste0(resolution_level, ".", p_met, ".", w_size, ".cells_filtered_2perc")
+    f_sufix <- paste0(".", p_met, ".", w_size, ".cells_filtered_2perc")
 } else {
     message("Input argument missed")
     stop()
@@ -224,7 +223,7 @@ summary(link_df$score)
 
 write.csv(
     link_df,
-    file = here(cvsDir, paste0("global_link_peak_genes", f_sufix, ".csv")),
+    file = here(cvsDir, paste0(resolution_level, "_global_link_peak_genes", f_sufix, ".csv")),
     row.names = FALSE
 )
 
@@ -280,7 +279,7 @@ for (seurat_cluster in names(seurat_subsets)) {
     link_df <- as.data.frame(Links(atac))
     summary(link_df$score)
     
-    f_name <- paste0(seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
+    f_name <- paste0(resolution_level, "_ ", seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
     write.csv(
         link_df,
         file = here(cvsDir, f_name),
