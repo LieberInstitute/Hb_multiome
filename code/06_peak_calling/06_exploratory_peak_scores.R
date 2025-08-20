@@ -277,9 +277,25 @@ p_hist <- ggplot(link_df2_parsed, aes(x = peak_width_bp)) +
     ) +
     coord_flip()
 
-
 f_name <- paste0("peak_width_histogram", f_sufix, ".png")
 ggsave(here::here(plotDir, f_name), p_hist, width = 8, height = 8, dpi = 300)
+
+
+# Peak width vs. distance to TSS
+p_scatter_dist <- ggplot(link_df2_parsed, aes(x = distance_kb, y = peak_width_bp)) +
+    geom_point(alpha = 0.25, size = 0.8, color = "grey30") +
+    geom_smooth(method = "loess", se = FALSE, color = "darkred") +
+    scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
+    labs(
+        title = paste("Peak width vs distance to TSS", f_sufix),
+        subtitle = paste(total_peaks, "total global peaks"),
+        x = "Distance from TSS (kb)",
+        y = "Peak width (bp, log scale)"
+    ) +
+    theme_minimal()
+
+f_name <- paste0("peak_width_vs_distance", f_sufix, ".pdf")
+ggsave(here::here(plotDir, f_name), p_scatter_dist, width = 8, height = 6)
 
 
 #===============================================================================
