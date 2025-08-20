@@ -1,10 +1,10 @@
 ########################################################################
-## Explore/Evaluate Signac::LinkPeaks() output = FROM CELLRANGER OUTPUT
+## Explore/Evaluate Signac::LinkPeaks() output = FROM Signac::CallPeaks() --MACS2 Ooutput
 ## - Make several visualization to evaluate Peak scores
 ## - Make table with several confidence Peak scores
 ##
 ## Authors. CSC
-## Date. Aug 11, 2025
+## Date. Aug 20, 2025
 ## Recommended resources on interactive mode: srun --pty --mem=30GB --x11 bash
 ## Note. Seurat objects were created with module load conda_R/4.4.x
 ########################################################################
@@ -21,59 +21,54 @@ library("here")
 
 ## read input arguments
 args = commandArgs(trailingOnly = TRUE)
-p_met <- args[2]
-w_size <- args[4]
-# 0: pearson, 1e5
-# 1: pearson, 5e4
-# 2: spearman, 1e5
-# 3: spearman, 2.5e4
+resolution_level <- args[2]
+# resolution_level = "Fine" # 42 clusters
+# resolution_level = "Broad"  # 8 cell-types
+# resolution_level = "Mid" # 8 cell-types
 
-# for testing
+# for testing ( Note only spearman at 5e4 was tested on macs2 peaks )
+# resolution_level = "Mid"
 # p_met = "spearman"
-# w_size = "2.5e4"
+# w_size = "5e4"
 
-## p_met:
-# pearson -> peak-scores<0.2: likely due scATAC counts are ultra‑sparse; scRNA is zero‑inflated. Pearson r’s of 0.05–0.2 are common even for real links
-# spearman -> as enhancer → gene relationships aren’t strictly linear; Pearson seems to underestimates. I will try spearman, more robust to nonlinearity/zeros
-
-if (length(p_met) && length(w_size)) {
-    message(
-        "Processing job for peak-method:\n",
-        p_met,
-        "\nWindow-size\n",
-        w_size
-    )
-    # ## Use numeric comparison first, then assign string labels
-    # w_size_label <- case_when(
-    #     isTRUE(all.equal(w_size, 25000))  ~ "2.5e4",
-    #     isTRUE(all.equal(w_size, 50000))  ~ "5e4",
-    #     isTRUE(all.equal(w_size, 100000)) ~ "1e5",
-    #     TRUE                              ~ "00"
-    # )
-    #f_sufix <- paste0(".", p_met, ".", format(w_size_label, scientific = TRUE), ".cells_filtered_2perc")
-    f_sufix <- paste0(".", p_met, ".", w_size, ".cells_filtered_2perc")
-    message("Processing: ", f_sufix)
+if (length(resolution_level)) {
+    
+    if (length(p_met) && length(w_size)) {
+        message(
+            "Processing job for peak-method:\n",
+            p_met,
+            "\nWindow-size\n",
+            w_size
+        )
+        f_sufix <- paste0(".resolution.", resolution_level, ".", p_met, ".", w_size, ".cells_filtered_2perc")
+    } else {
+        message("Methodology or Window-Size arguments missed")
+        stop()
+    }
+    
 } else {
-    message("Input arguments missed")
+    
+    message("Resolution input arguments missed")
     stop()
+    
 }
-
+f_sufix
 
 # Check/create directories
 input_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
-    "00_link_peaks"
+    "01_call_peaks_MACS2"
 )
 plotDir <- here(
-  "plots",
-  "06_peak_calling",
-  "06_exploratory_peak_scores"
+    "plots",
+    "06_peak_calling",
+    "08_exploratory_peak_scores_MACS2"
 )
 csvDir <- here(
     "processed-data",
     "06_peak_calling",
-    "06_exploratory_peak_scores"
+    "08_exploratory_peak_scores_MACS2"
 )
 
 
@@ -85,28 +80,56 @@ if (!dir.exists(csvDir)) {
     dir.create(csvDir)
 }
 
-# load link peak-gene csv
-gene_peaks_csv <- here(input_cvsDir, paste0("all_peak_gene_links", f_sufix, ".csv"))
-if (file.exists(gene_peaks_csv)) {
-    link_df <- read.csv(gene_peaks_csv)
-    message("File loaded!")
-} else {
-    stop(paste("File not found:", gene_peaks_csv))
+# List all files and directories
+lst_peak_files = list.files(path = input_cvsDir)
+message("Processing:")
+lst_peak_files
+
+# for testing at Mid resolution:
+lst_peak_files <- lst_peak_files[5]
+lst_peak_files
+
+for (ct in lst_peak_files) {
+    
+    gene_peaks_csv <- here(input_cvsDir, ct)
+    
+    message("Processing: ", basename(gene_peaks_csv))
+    
+    if (file.exists(gene_peaks_csv)) {
+        link_df <- read.csv(gene_peaks_csv)
+        message("File loaded!")
+    } else {
+        stop(paste("File not found:", gene_peaks_csv))
+    }
+    print(head(link_df))
 }
+
+# load link peak-gene csv
 
 ## for testing: ================================================================
 #link_df <- read.csv(file = here(input_cvsDir, "all_peak_gene_links.spearman.5e4_test.csv"))
 ## for testing: ================================================================
 
 colnames(link_df)
-nrow(link_df)
+head(link_df, n=3)
+# seqnames  start    end width strand
+#     1     chr1 181329 181534   206      *
+#     2     chr1 191217 191619   403      *
+#     3     chr1 629146 629354   209      *
+#     peak_called_in
+# 1                                                                                        Inhib.Thal
+# 2 OPC,Oligo,Inhib.Thal,LHb.4,MHb.2,MHb.1.2,LHb.7,LHb.2.7,Excit.Thal,Astrocyte,LHb.1.3.4,MHb.1,LHb.1
+# 3                                                                                         Astrocyte
+
+message(nrow(link_df), " peaks found ...")
 
 link_df <- link_df |>
     mutate(
         gene     = trimws(as.character(gene)),
         seqnames = as.character(seqnames),
         start    = as.numeric(start),
-        end      = as.numeric(end)
+        end      = as.numeric(end),
+        peak_called_in = peak_called_in
     )
 head(link_df)
 
@@ -133,7 +156,8 @@ tss_raw <- as.data.frame(tss_coords)
 head(tss_raw)
 has_biotype <- "gene_biotype" %in% colnames(tss_raw)
 head(has_biotype)
-#unique(tss_raw$gene_biotype)
+message("Biotypes included:")
+unique(tss_raw$gene_biotype)
 
 # then take first per (gene_name, chr) - this avoid 1:many associations
 tss_df <- tss_raw %>%
