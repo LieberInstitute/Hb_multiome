@@ -338,6 +338,15 @@ for (ct in lst_peak_files) {
 
     message("Peak center and distance to TSS added ...")
     
+    #===============================================================================
+    
+    write.csv(link_df2,
+              file = here(csvDir, 
+                          paste0(resolution_level, "_", ct_name,  "_peak_gene_links_with_TSS_and_CC_spearman_5e5.csv")),
+              row.names = FALSE)
+    
+    message("Link Gene-Peak table with TSS distances and CC scores saved!")
+    
     #=========================================
     
     make_width_plots(link_df2, resolution_level, ct_name, plotDir)
@@ -440,16 +449,6 @@ ggsave(here(plotDir,
             paste0("peak_exploratory_scores_high_confidence", f_sufix, ".pdf")),
        g1, width = 8, height = 5,
        device = cairo_pdf)
-
-#===============================================================================
-
-
-## filtered peaks
-write.csv(link_df2,
-          file = here(csvDir, paste0("peak_gene_links_with_TSS_and_CC", f_sufix, ".csv")),
-          row.names = FALSE)
-
-message("Link Gene-Peak table with TSS distances and CC scores saved!")
 
 
 #===============================================================================
