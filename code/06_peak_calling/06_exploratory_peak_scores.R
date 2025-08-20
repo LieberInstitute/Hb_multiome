@@ -263,7 +263,7 @@ p_hist <- ggplot(link_df2_parsed, aes(x = peak_width_bp)) +
     # log scale for widths
     scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
     labs(
-        title = paste("Distribution of peak widths", f_sufix),
+        title = paste("Distribution of peak widths - ", f_sufix),
         subtitle = paste(total_peaks, "total global peaks"),
         x = "Peak width (bp, log scale)",
         y = "Density",
@@ -277,8 +277,8 @@ p_hist <- ggplot(link_df2_parsed, aes(x = peak_width_bp)) +
     ) +
     coord_flip()
 
-f_name <- paste0("peak_width_histogram", f_sufix, ".png")
-ggsave(here::here(plotDir, f_name), p_hist, width = 8, height = 8, dpi = 300)
+f_name <- paste0("peak_width_histogram", f_sufix, ".pdf")
+ggsave(here::here(plotDir, f_name), p_hist, width = 8, height = 8)
 
 
 # Peak width vs. distance to TSS
@@ -287,7 +287,7 @@ p_scatter_dist <- ggplot(link_df2_parsed, aes(x = distance_kb, y = peak_width_bp
     geom_smooth(method = "loess", se = FALSE, color = "darkred") +
     scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
     labs(
-        title = paste("Peak width vs distance to TSS", f_sufix),
+        title = paste("Peak width vs distance to TSS - ", f_sufix),
         subtitle = paste(total_peaks, "total global peaks"),
         x = "Distance from TSS (kb)",
         y = "Peak width (bp, log scale)"
@@ -298,13 +298,38 @@ f_name <- paste0("peak_width_vs_distance", f_sufix, ".pdf")
 ggsave(here::here(plotDir, f_name), p_scatter_dist, width = 8, height = 6)
 
 
+# Peak width vs. correlation score
+colnames(link_df2_parsed)
+
+# log10 creates NaN/Inf, remove those rows to avoid warnings
+df <- link_df2_parsed %>%
+    mutate(score = as.numeric(score),
+           peak_width_bp = as.numeric(peak_width_bp)) %>%
+    filter(is.finite(score), is.finite(peak_width_bp), peak_width_bp > 0)
+
+p_scatter_score <- ggplot(df, aes(x = score, y = peak_width_bp)) +
+    geom_point(alpha = 0.25, size = 0.8, color = "grey30") +
+    geom_smooth(method = "loess", se = FALSE, color = "darkred") +
+    #scale_x_continuous(trans = pseudo_log_trans(base = 10, sigma = 0.01)) +
+    scale_y_log10() +
+    labs(title = paste("Peak width vs correlation score - ", f_sufix),
+         subtitle = paste(total_peaks, "total global peaks"),
+         x = "Correlation Score (pseudo-log scaled)",
+         y = "Peak width (bp, log scale)") +
+    theme_minimal()
+
+f_name <- paste0("peak_width_vs_score", f_sufix, ".pdf")
+ggsave(here::here(plotDir, f_name), p_scatter_score, width = 8, height = 6)
+
+
+
 #===============================================================================
 
 message("Building plots ...")
 
 ## Histogram TSS Scores
 pdf(file = here(plotDir, 
-                paste0("histogram_scores", f_sufix, ".pdf")), 
+                paste0("peak_histogram_distance_TSS", f_sufix, ".pdf")), 
     width = 7, height = 5)
 
 hist(link_df2$distance / 1000, breaks = 100,
@@ -313,20 +338,20 @@ hist(link_df2$distance / 1000, breaks = 100,
      col = "lightblue")
 dev.off()
 
-## Correlation vs Distance with smoothing
-g1 <- ggplot(link_df2, aes(distance_kb, score)) +
-    geom_point(alpha = 0.3, color = "steelblue") +
-    geom_hline(yintercept = 0.2, linetype = "dashed", color = "red") +
-    labs(
-        x = "Distance from TSS (kb)",
-        y = paste("Correlation Score", p_met),
-        title = "Peak-Gene Correlation vs.Distance"
-    ) + geom_smooth(method = "loess", se = FALSE, color = "darkred") +
-    theme_minimal()
-
-ggsave(here(plotDir, 
-            paste0("distribution_scores", f_sufix, ".pdf")),
-            g1, width = 8, height = 5)
+# ## Correlation vs Distance with smoothing
+# g1 <- ggplot(link_df2, aes(distance_kb, score)) +
+#     geom_point(alpha = 0.3, color = "steelblue") +
+#     geom_hline(yintercept = 0.2, linetype = "dashed", color = "red") +
+#     labs(
+#         x = "Distance from TSS (kb)",
+#         y = paste("Correlation Score", p_met),
+#         title = "Peak-Gene Correlation vs.Distance"
+#     ) + geom_smooth(method = "loess", se = FALSE, color = "darkred") +
+#     theme_minimal()
+# 
+# ggsave(here(plotDir, 
+#             paste0("peak_distribution_scores", f_sufix, ".pdf")),
+#             g1, width = 8, height = 5)
 
 
 #===============================================================================
@@ -402,7 +427,7 @@ g1 <- ggplot(df_plot, aes(x = distance/1000, y = score, color = tier)) +
     theme(legend.position = "bottom")
 
 ggsave(here(plotDir, 
-            paste0("exploratory_scores_high_confidence", f_sufix, ".pdf")),
+            paste0("peak_exploratory_scores_high_confidence", f_sufix, ".pdf")),
        g1, width = 8, height = 5,
        device = cairo_pdf)
 
@@ -455,7 +480,7 @@ combined_plot <- g1 + g2
 combined_plot
 
 ggsave(here(plotDir, 
-            paste0("histograms_link_peak_genes_peaks", f_sufix, ".pdf")),
+            paste0("link_peak_gene_histograms", f_sufix, ".pdf")),
        combined_plot, width = 8, height = 5)
 
 
