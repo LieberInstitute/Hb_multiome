@@ -1,5 +1,5 @@
 ########################################################################
-## Search Peaks on ATAC modality
+## Search Peaks on ATAC modality: Uses Signac::CallPeaks() to redo ATAC with local peaks (wnn clusters)
 ##
 ## Authors. CSC
 ## Date. June 13, 2025
