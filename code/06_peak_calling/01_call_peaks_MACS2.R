@@ -43,7 +43,6 @@ if (length(resolution_level)) {
 inputRDS_Dir <- here(
     "processed-data",
     "05_Clustering_ARCr",
-    #"17_wnn_clustering_final_ct"
     "22_add_mid_level_clustering"
 )
 plotDir <- here(
