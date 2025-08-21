@@ -259,34 +259,34 @@ message("Pre-processing ready ...")
 
 message("Computing global link-peaks correlations ...")
 
-## find peaks that are correlated with the expression of nearby genes 
-atac <- LinkPeaks(
-    object = SeuratOBJ,
-    peak.assay = "ATAC",
-    expression.assay = "RNA",
-    genes.use = keep_genes,
-    method = p_met,
-    distance = as.numeric(w_size)             # Only consider peaks within ±500 kb of gene TSS (cis-window)
-)
-
-message("Global link-peaks correlations completed!")
-
-## inspect data
-head(Links(atac), n=3)
-# GRanges object with 5 ranges and 5 metadata columns:
-#     seqnames              ranges strand |     score        gene
-#        <Rle>           <IRanges>  <Rle> | <numeric> <character>
-
-link_df <- as.data.frame(Links(atac))
-summary(link_df$score)
-
-write.csv(
-    link_df,
-    file = here(cvsDir, paste0(resolution_level, "_global_link_peak_genes", f_sufix, ".csv")),
-    row.names = FALSE
-)
-
-message("Global peaks saved!")
+# ## find peaks that are correlated with the expression of nearby genes 
+# atac <- LinkPeaks(
+#     object = SeuratOBJ,
+#     peak.assay = "ATAC",
+#     expression.assay = "RNA",
+#     genes.use = keep_genes,
+#     method = p_met,
+#     distance = as.numeric(w_size)             # Only consider peaks within ±500 kb of gene TSS (cis-window)
+# )
+# 
+# message("Global link-peaks correlations completed!")
+# 
+# ## inspect data
+# head(Links(atac), n=3)
+# # GRanges object with 5 ranges and 5 metadata columns:
+# #     seqnames              ranges strand |     score        gene
+# #        <Rle>           <IRanges>  <Rle> | <numeric> <character>
+# 
+# link_df <- as.data.frame(Links(atac))
+# summary(link_df$score)
+# 
+# write.csv(
+#     link_df,
+#     file = here(cvsDir, paste0(resolution_level, "_global_link_peak_genes", f_sufix, ".csv")),
+#     row.names = FALSE
+# )
+# 
+# message("Global peaks saved!")
 
 
 
