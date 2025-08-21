@@ -1,5 +1,5 @@
 ########################################################################
-## Make visualizations for Peaks found on WNN clusters
+## Make Histograms from Peaks found by cluster: Fine, Mid and Broad Level
 ##
 ## Authors. CSC
 ## Date. June 25, 2025
@@ -185,34 +185,6 @@ for (clust_level in resolution_level) {
     
 }
 
-##==============================================================================
-# ## (2) Plot by regions of interest: Hb vs Others
-
-# custom order, Hb clusters first, then the rest
-# remaining_clusters <- setdiff(cluster_df$cluster_ann, target_clusters)
-# custom_order <- c(target_clusters, sort(remaining_clusters))
-# cluster_df$cluster_ann <- factor(cluster_df$cluster_ann, levels = custom_order)
-
-# p2 <- ggplot(cluster_df, aes(x = cluster_ann, y = n_peaks)) +
-#     geom_bar(stat = "identity", fill = ifelse(cluster_df$cluster_ann %in% target_clusters, "#FF6F61", "grey")) +
-#     theme_minimal() +
-#     labs(title = "Number of peaks called per cluster and region",
-#          y = "Number of Peaks",
-#          caption = paste("Total peaks (raw):", nrow(peaks_hb_subset))) +
-#     theme(axis.text.x = element_text(angle = 90, hjust = 0.6),
-#           axis.title.x = element_blank(),
-#           plot.caption = element_text(size = 10, hjust = 0),
-#           panel.background = element_rect(fill = "white", color = NA),
-#           plot.background = element_rect(fill = "white", color = NA))
-# 
-# plot_name <- here(plot_Dir, "peaks_frequency_by_region.png")
-# ggsave(plot_name, plot = p2, width = 10, height = 6, dpi = 300)
-# 
-# message("Plot for number of peaks called per cluster and region done!")
-
-
-##==============================================================================
-
 
 # library("slurmjobs")
 # job_single(
@@ -227,31 +199,12 @@ for (clust_level in resolution_level) {
 # )
 
 
-##==============================================================================
-# ## Preparing to compute pair peaks comparison in the Habenula clusters
-# 
-# all_cluster_IDs <- levels(SeuratOBJ)
-# ## extract Hb clusters
-# Hb_cluster_IDs <- cluster_IDs[grepl("MHb|LHb", all_cluster_IDs)]
-# Hb_cluster_IDs
-# # [1] "C.05.DD_LHb" "C.07.DD_MHb" "C.10.DD_MHb" "C.11.DD_MHb" "C.14.DD_MHb"
-# # [6] "C.16.DD_MHb" "C.18.DD_LHb" "C.23.DD_LHb" "C.24.DD_LHb" "C.30.DD_LHb"
-# # [11] "C.33.DD_LHb" "C.36.DD_MHb" "C.40.DD_LHb"
-# pairwise_combinations <- combn(Hb_cluster_IDs, 2, simplify = FALSE)
-# pairwise_combinations
-# pairwise_df <- do.call(rbind, pairwise_combinations)
-# colnames(pairwise_df) <- c("cluster_1", "cluster_2")
-# pairwise_df <- as.data.frame(pairwise_df)
-# pairwise_df
-# 
-# 
-# for (clust_p in pairwise_df) {
-#     da_peaks <- FindMarkers(
-#         object = seurat_atac,
-#         ident.1 = clust_p["cluster1"],
-#         ident.2 = clust_p["cluster2"],
-#         test.use = 'LR',
-#         min.pct = 0.05
-#     )
-# }
+## Reproducibility information
+library("sessioninfo")
+print("Reproducibility information:")
+Sys.time()
+proc.time()
+options(width = 120)
+session_info()
+
 
