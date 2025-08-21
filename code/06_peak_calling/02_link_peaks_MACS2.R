@@ -54,12 +54,12 @@ if (length(resolution_level)) {
 inputRDS_Dir <- here(
   "processed-data",
   "05_Clustering_ARCr",
-  "22_add_mid_level_clustering" # recent version with final wnn cell-types
+  "22_add_mid_level_clustering" # Seurat multiome final version with annotations
 )
 cvsDir <- here(
     "processed-data",
     "06_peak_calling",
-    "02_link_peaks_MACS2"
+    "02_link_peaks_MACS2" # local peaks redo with Signac::CallPeaks()
 )
 
 if (!dir.exists(cvsDir)) {
@@ -106,6 +106,7 @@ Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_ls
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
+SeuratOBJ
 DefaultAssay(SeuratOBJ) <- "RNA"
 
 # colnames(SeuratOBJ@meta.data)
@@ -133,7 +134,7 @@ message("Seurat loaded and ready!")
 
 
 ##==============================================================================
-## filter genes to those expressed in 3% of cells
+## filter genes to those expressed in 2% of cells
 
 rna_counts <- GetAssayData(SeuratOBJ, assay="RNA", layer="data")
 length(rownames(rna_counts)) # [1] 36601
@@ -143,6 +144,14 @@ length(rownames(rna_counts)) # [1] 36601
 # filter rna count expressed in at least 2% of the cells
 keep_genes <- rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.02 * ncol(rna_counts)]
 length(keep_genes) # in count: [1] 14526
+# Note. By default behavior on Seurat v5, after remove cells, ATAC assay was removed, which will be attached later
+SeuratOBJ_subset <- SeuratOBJ
+SeuratOBJ_subset <- SeuratOBJ_subset[keep_genes, ]  
+Assays(SeuratOBJ_subset)
+
+##==============================================================================
+
+## Pre-processing to identifies cis-regulatory elements by linking chromatin-accessible peaks
 
 ## Set ATAC assay 
 DefaultAssay(SeuratOBJ) <- "ATAC"
@@ -150,13 +159,7 @@ class(SeuratOBJ[["ATAC"]])
 
 message("Chromatin loaded!")
 
-
-##==============================================================================
-
-## Identifies cis-regulatory elements by linking chromatin-accessible peaks to gene expression using correlation (and optionally accounting for covariates).
-
 ## pre-processed peaks / QC
-
 message("Starting GC content correction ... ")
 
 ## GC content correction
@@ -171,23 +174,79 @@ SeuratOBJ
 
 message("GC content correction done!")
 
-message("Searching LinkPeaks ... ")
+# ## For documentation purposes, I fix this chunk in case we need to filter peaks on Seurat v5
+# ## In this case, we have only Std Chromosomes - just skip it 
+# 
+# table(seqnames(granges(SeuratOBJ)))
+# 
+# # pull assay
+# atac <- SeuratOBJ[["ATAC"]]     # Get ChromatinAssay 
+# gr_all <- granges(SeuratOBJ)        # GRanges of ATAC features (peaks)
+# frag_list  <- Fragments(SeuratOBJ)              # carry fragment(s)
+# annot <- tryCatch(Annotation(SeuratOBJ), error = function(e) NULL)
+# 
+# # normalize
+# seqlevelsStyle(gr_all) <- "UCSC"    # normalize naming style
+# gr_std <-  keepStandardChromosomes(gr_all, pruning.mode = "coarse")
+# 
+# # give GRanges canonical IDs that match the assay rownames - features Seurat uses
+# ids_from_assay <- rownames(atac)
+# ids_from_gr <- Signac::GRangesToString(gr_std)
+# # build the keep list by intersecting with the assay’s rownames
+# peaks.keep <- intersect(ids_from_gr, ids_from_assay)
+# # check returned features > 0
+# length(peaks.keep) # 262951
+# stopifnot(length(peaks.keep) > 0) 
+# 
+# # ensure the GRanges names match the assay IDs (prefer the assay’s own IDs)
+# if (length(peaks.keep) == length(ids_from_assay)) {
+#     message("All peaks are already on standard chromosomes; no subsetting needed.")
+# } else {
+#     idx <- match(peaks.keep, ids_from_assay)                # integer indices
+#     counts_mat <- GetAssayData(SeuratOBJ, assay = "ATAC", layer = "counts")[idx, , drop = FALSE]
+# }
+# 
+# head(SeuratOBJ[["ATAC"]]@meta.features, n=3)
+# # count percentile AA AC AG AT CA  CC  CG  CT GA  GC  GG GT TA
+# # chr1-180813-181799   893  0.6523116 48 67 76  6 59 115 107  67 49 142 113 28 41
+# # chr1-182478-183337   137  0.0943788 24 32 86 28 66  77  19  71 63  73  90 53 17
+# # chr1-183785-184772   592  0.5414279 37 50 62 34 73 131  16 107 51  72  61 44 22
+# # TC TG TT GC.percent sequence.length
+# # chr1-180813-181799 24 36  8   68.99696             987
+# # chr1-182478-183337 51 84 25   59.65116             860
+# # chr1-183785-184772 74 89 64   56.17409             988
+# 
+# # SeuratOBJ[["ATAC"]] <- SeuratOBJ[["ATAC"]][peaks.keep, ] --> easy step fails
+# 
+# # Subset counts *matrix* from the assay
+# counts_mat <- GetAssayData(SeuratOBJ, assay = "ATAC", layer = "counts")[peaks.keep, , drop = FALSE]
+# 
+# # Align ranges to the same order as counts
+# names(gr_all) <- Signac::GRangesToString(gr_all)
+# new_ranges <- gr_all[peaks.keep]
+# 
+# ## Build a new ChromatinAssay with counts + ranges (+ fragments/annotation)
+# subsetted_atac_assay <- CreateChromatinAssay(
+#     counts     = counts_mat,
+#     ranges     = new_ranges,
+#     fragments  = if (length(frag_list) > 0) frag_list else NULL,
+#     annotation = annot
+# )
+# 
+# # carry over per-peak meta.features for kept peaks (same row order!)
+# mf_old <- tryCatch(atac@meta.features, error = function(e) NULL)
+# if (!is.null(mf_old)) {
+#     mf_new <- mf_old[peaks.keep, , drop = FALSE]
+#     subsetted_atac_assay@meta.features <- mf_new
+# }
+# 
+# # Replace the original "ATAC" assay with the subsetted one
+# SeuratOBJ[["ATAC"]] <- subsetted_atac_assay
+# DefaultAssay(SeuratOBJ) <- "ATAC"
 
-## see all chromosomes
-table(seqnames(granges(SeuratOBJ)))
-## see what are considered standard chromosomes
-standardChromosomes(granges(SeuratOBJ))
-
-## Even though this filtering doesn’t change anything in this dataset, it ensures reproducibility
-## remove the features that correspond to chromosome scaffolds or other sequences instead of the (22+2) standard chromosomes
-peaks.keep <- seqnames(granges(SeuratOBJ)) %in% standardChromosomes(granges(SeuratOBJ))
-tryCatch(
-    {
-        SeuratOBJ <- SeuratOBJ[as.vector(peaks.keep), ]
-    }, error = function(e) {
-        message(e)
-    })
-
+## Re-atach chromatin 
+SeuratOBJ_subset[["ATAC"]]  <- SeuratOBJ[["ATAC"]]
+SeuratOBJ <- SeuratOBJ_subset 
 
 ## set a subset of genes to test
 #hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
@@ -238,7 +297,7 @@ message("Global peaks saved!")
 
 clusters <- levels(SeuratOBJ)
 
-# make a list to store all subsets
+# make a list to store all subsets: cluster level
 seurat_subsets <- list()
 
 for (clust in clusters) {
@@ -277,14 +336,15 @@ for (seurat_cluster in names(seurat_subsets)) {
 
     ## prepare data to save cvs
     link_df <- as.data.frame(Links(atac))
-    summary(link_df$score)
+    print(summary(link_df$score))
     
-    f_name <- paste0(resolution_level, "_ ", seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
+    f_name <- paste0(resolution_level, "_", seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
     write.csv(
         link_df,
         file = here(cvsDir, f_name),
         row.names = FALSE
     )
+    message("LinkPeaks saved: ", f_name)
     
 }
 
