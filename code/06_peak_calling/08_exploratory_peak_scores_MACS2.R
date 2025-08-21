@@ -265,6 +265,97 @@ make_width_plots <- function(
 
 
 #===========================================================================
+
+make_exploratory_plots <- function(
+        link_df2,
+        resolution_lev,
+        ct_name,
+        plotDir        
+){
+    
+    #===============================
+    # adding exploratory scores
+    # define high-confidence
+    # High: score ≥ 0.30 & FDR < 0.05
+    # Moderate: 0.20 ≤ score < 0.30 & FDR < 0.10
+    # Exploratory: 0.10 ≤ score < 0.20 & FDR < 0.10 (treat as hypotheses)
+    
+    print(paste0("Processing plots for ", resolution_lev, " for ", ct_name, " cell_type"))
+    suffix_subtitle <- paste("Spearman / 5e5d at ", resolution_lev, "resolution. ", ct_name)
+    total_peaks <- nrow(link_df2)
+    
+    colnames(link_df2)
+    ## add adjusted p-value using the Benjamini–Hochberg correction
+    link_df2 <- link_df2 %>%
+        mutate(FDR = p.adjust(pvalue, method = "BH"))
+    
+    # set tiers due we have confidente peaks < 0.2 
+    link_df2 <- link_df2 %>%
+        mutate(tier = case_when(
+            score >= 0.30 & FDR < 0.05 ~ "High (>=0.30, FDR<0.05)",
+            score >= 0.20 & FDR < 0.10 ~ "Moderate (0.20–0.30, FDR<0.10)",
+            score >= 0.10 & FDR < 0.10 ~ "Exploratory (0.10–0.20, FDR<0.10)",
+            TRUE ~ "Discarded"
+        ))
+    # use plain ASCII hyphens
+    link_df$tier <- gsub("\u2013", "-", link_df2$tier)
+    table(link_df2$tier)
+    
+    # quick view by distance (kb)
+    # Keep all data, no filtering of "Discarded" on the plot for visualization purposes
+    df_plot <- link_df2  
+    
+    # Count total peaks and how many are below 0.1 to plot on discarted zone
+    count_below_01 <- sum(df_plot$score < 0.1, na.rm = TRUE)
+    count_below_02 <- sum((df_plot$score < 0.2 & df_plot$score > 0.1), na.rm = TRUE)
+    count_below_03 <- sum((df_plot$score < 0.3 & df_plot$score > 0.2), na.rm = TRUE)
+    
+    g1 <- ggplot(df_plot, aes(x = distance/1000, y = score, color = tier)) +
+        geom_point(alpha = 0.5, size = 0.8) +
+        # trend over ALL tested links
+        geom_smooth(
+            data = df_plot,
+            aes(x = distance_kb, y = score),
+            method = "loess", se = FALSE, span = 0.8, color = "black", linewidth = 0.9) +
+        # Threshold lines
+        geom_hline(yintercept = 0.3, linetype = "dashed", color = "red") +
+        geom_hline(yintercept = 0.2, linetype = "dashed", color = "orange") +
+        geom_hline(yintercept = 0.1, linetype = "dashed", color = "grey50") +
+        # Labels for thresholds
+        annotate("text", x = max(df_plot$distance/1000)*1.02, y = 0.3, 
+                 label = paste("<0.3 (", count_below_03, " peaks)"), hjust = 0.8, vjust = -0.5, color = "red") +
+        annotate("text", x = max(df_plot$distance/1000)*1.02, y = 0.2, 
+                 label = paste("<0.2 (", count_below_02, " peaks)"), hjust = 0.8, vjust = -0.5, color = "orange") +
+        annotate("text", x = max(df_plot$distance/1000)*1.02, y = 0.1, 
+                 label = paste("<0.1 (", count_below_01, " peaks)"), hjust = 0.8, vjust = -0.5, color = "grey50") +
+        # Custom legend with count
+        scale_color_manual(
+            values = c(
+                "High (>=0.30, FDR<0.05)"          = "#b2182b",
+                "Moderate (0.20–0.30, FDR<0.10)"   = "#ef8a62",
+                "Exploratory (0.10–0.20, FDR<0.10)" = "#67a9cf",
+                "Discarded"                        = "grey80"
+            ),
+            name = paste0("Tier (Count < 0.1: ", count_below_01, ")")
+        )  +
+        labs(
+            title = "Peak–gene links by tier",
+            subtitle = suffix_subtitle,
+            x = "Distance from TSS (kb)",
+            y = "Correlation score",
+        ) +
+        theme_minimal() +
+        theme(legend.position = "bottom")
+    
+    f_name <- paste0(resolution_lev, "_", ct_name, "_peak_exploratory_scores_high_confidence.pdf")
+    ggsave(here(plotDir, f_name), g1, width = 8, height = 5, device = cairo_pdf)
+    
+    print(paste0("Exploratory plots for ", ct_name, " done!"))  
+    
+}
+
+
+#===========================================================================
 # parse Linked peak-gene tables for each cell-type
 
 message("Making plots for ", length(lst_peak_files), " cell-types")
@@ -340,16 +431,15 @@ for (ct in lst_peak_files) {
     
     #===============================================================================
     
-    write.csv(link_df2,
-              file = here(csvDir, 
-                          paste0(resolution_level, "_", ct_name,  "_peak_gene_links_with_TSS_and_CC_spearman_5e5.csv")),
-              row.names = FALSE)
+    f_name <- here(csvDir, paste0(resolution_level, "_", ct_name,  "_peak_gene_links_with_TSS_and_CC_spearman_5e5.csv"))
+    write.csv(link_df2, file = f_name, row.names = FALSE)
     
     message("Link Gene-Peak table with TSS distances and CC scores saved!")
     
     #=========================================
     
-    make_width_plots(link_df2, resolution_level, ct_name, plotDir)
+    #make_width_plots(link_df2, resolution_level, ct_name, plotDir)
+    make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir)
     
 }
 
@@ -371,84 +461,6 @@ hist(link_df2$distance / 1000, breaks = 100,
      xlab = "Distance (kb)",
      col = "lightblue")
 dev.off()
-
-
-#===============================================================================
-# adding exploratory scores
-# define high-confidence
-# High: score ≥ 0.30 & FDR < 0.05
-# Moderate: 0.20 ≤ score < 0.30 & FDR < 0.10
-# Exploratory: 0.10 ≤ score < 0.20 & FDR < 0.10 (treat as hypotheses)
-
-colnames(link_df2)
-## add adjusted p-value using the Benjamini–Hochberg correction
-link_df2 <- link_df2 %>%
-    mutate(FDR = p.adjust(pvalue, method = "BH"))
-
-# set tiers due we have confidente peaks < 0.2 
-link_df2 <- link_df2 %>%
-    mutate(tier = case_when(
-        score >= 0.30 & FDR < 0.05 ~ "High (>=0.30, FDR<0.05)",
-        score >= 0.20 & FDR < 0.10 ~ "Moderate (0.20–0.30, FDR<0.10)",
-        score >= 0.10 & FDR < 0.10 ~ "Exploratory (0.10–0.20, FDR<0.10)",
-        TRUE ~ "Discarded"
-    ))
-# use plain ASCII hyphens
-link_df$tier <- gsub("\u2013", "-", link_df2$tier)
-head(link_df2)
-table(link_df2$tier)
-
-# quick view by distance (kb)
-# Keep all data, no filtering of "Discarded" on the plot for visualization purposes
-df_plot <- link_df2  
-
-# Count total peaks and how many are below 0.1 to plot on discarted zone
-count_below_01 <- sum(df_plot$score < 0.1, na.rm = TRUE)
-count_below_02 <- sum((df_plot$score < 0.2 & df_plot$score > 0.1), na.rm = TRUE)
-count_below_03 <- sum((df_plot$score < 0.3 & df_plot$score > 0.2), na.rm = TRUE)
-
-g1 <- ggplot(df_plot, aes(x = distance/1000, y = score, color = tier)) +
-    geom_point(alpha = 0.5, size = 0.8) +
-    # trend over ALL tested links
-    geom_smooth(
-        data = df_plot,
-        aes(x = distance_kb, y = score),
-        method = "loess", se = FALSE, span = 0.8, color = "black", linewidth = 0.9) +
-    # Threshold lines
-    geom_hline(yintercept = 0.3, linetype = "dashed", color = "red") +
-    geom_hline(yintercept = 0.2, linetype = "dashed", color = "orange") +
-    geom_hline(yintercept = 0.1, linetype = "dashed", color = "grey50") +
-    # Labels for thresholds
-    annotate("text", x = max(df_plot$distance/1000)*1.02, y = 0.3, 
-             label = paste("<0.3 (", count_below_03, " peaks)"), hjust = 0.8, vjust = -0.5, color = "red") +
-    annotate("text", x = max(df_plot$distance/1000)*1.02, y = 0.2, 
-             label = paste("<0.2 (", count_below_02, " peaks)"), hjust = 0.8, vjust = -0.5, color = "orange") +
-    annotate("text", x = max(df_plot$distance/1000)*1.02, y = 0.1, 
-             label = paste("<0.1 (", count_below_01, " peaks)"), hjust = 0.8, vjust = -0.5, color = "grey50") +
-    # Custom legend with count
-    scale_color_manual(
-        values = c(
-            "High (>=0.30, FDR<0.05)"          = "#b2182b",
-            "Moderate (0.20–0.30, FDR<0.10)"   = "#ef8a62",
-            "Exploratory (0.10–0.20, FDR<0.10)" = "#67a9cf",
-            "Discarded"                        = "grey80"
-        ),
-        name = paste0("Tier (Count < 0.1: ", count_below_01, ")")
-    )  +
-    labs(
-        x = "Distance from TSS (kb)",
-        y = "Correlation score",
-        title = "Peak–gene links by tier",
-        subtitle = paste(p_met, 
-                         format(w_size, scientific = TRUE), "filtered genes < 2%")
-    ) +
-    theme_minimal() +
-    theme(legend.position = "bottom")
-
-ggsave(here(plotDir, 
-            paste0("peak_exploratory_scores_high_confidence", f_sufix, ".pdf")),
-       g1, width = 8, height = 5,
-       device = cairo_pdf)
 
 
 #===============================================================================
