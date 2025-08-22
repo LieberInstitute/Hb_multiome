@@ -417,13 +417,13 @@ message("All done!!!")
 
 # library("slurmjobs")
 # job_single(
-#   "00_link_peaks",
+#   "02_link_peaks_pseudobulk_MACS2",
 #   create_shell = TRUE,
 #   partition = "katun",
-#   memory = "30G",
+#   memory = "80G",
 #   cores = 2,
 #   logdir = "logs",
-#   command = "Rscript -e \"options(width = 120); sessioninfo::session_info()\"",
+#   command = "Rscript 02_link_peaks_pseudobulk_MACS2.R",
 #   create_logdir = TRUE
 # )
 
