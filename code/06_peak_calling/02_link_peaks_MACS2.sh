@@ -48,7 +48,7 @@ module list
 which Rscript || true
 
 ## Edit with your job command
-Rscript 02_link_peaks_MACS2.R --clust_res "${clust_res}"
+Rscript 02_link_peaks_MACS2.R --clust_res "${res}"
 ret=$?
 
 echo "**** Job ends ****"
