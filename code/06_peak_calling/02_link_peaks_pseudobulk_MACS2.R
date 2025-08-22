@@ -52,16 +52,15 @@ f_sufix
 
 ## clusters renamed for Spatial-Registration on Visium project
 inputRDS_Dir <- here(
-  "processed-data",
-  "05_Clustering_ARCr",
-  "22_add_mid_level_clustering" # Seurat multiome final version with annotations
+    "processed-data",
+    "05_Clustering_ARCr",
+    "22_add_mid_level_clustering" # Seurat multiome final version with annotations
 )
 input_macs_file <- here(
     "processed-data",
     "06_peak_calling",
     "01_call_peaks_MACS2"
 )
-
 cvsDir <- here(
     "processed-data",
     "06_peak_calling",
@@ -146,15 +145,17 @@ length(peaks_gr) # 355127
 peaks_gr[1]
 str(peaks_gr)
 
-# After run CallPeaks() per cluster need to unify/re-quantify, so each cluster will have same peak set; And AggregateExpression() across the original assay will reflect those new peaks.
-# reduce method will align the ranges and merge overlapping ranges to produce a simplified set.
-
+## After run CallPeaks() per cluster, peaks could be unify/re-quantify, so each cluster will have same peak set
 # I have one GRanges that contains peaks from all clusters
-# union_peaks <- GenomicRanges::reduce(peaks_gr) 
 
-# Merge ranges whose gaps are < 100 bp (i.e., within 100 bp)
+#union_peaks <- GenomicRanges::reduce(peaks_gr)  # here, I do not found overpapping peaks
+# Note. Defaults on GenomicRanges::reduce() does not allow gaps. And, we have "NO" overlapping genomic ranges within peaks_gr.
+# That’s common if peaks came from MACS2 (which already merges/filters peaks) or if peaks were deduplicated before saving the CSV.
+# Alternativately, I am merging ranges whose gaps are < 100 bp
+
 union_peaks <- GenomicRanges::reduce(peaks_gr, min.gapwidth = 101)  # gap < 101 → 0..100 bp
 
+# fast confirmation
 length(union_peaks) # [1] 355127
 head(union_peaks)
 
@@ -162,47 +163,18 @@ length(peaks_gr)            # 355127 - original count
 length(union_peaks)         # 355127 / 351037 (gap) - unified count (should be <= original)
 any(width(union_peaks) <= 0)  # should be FALSE
 
-# Note. No overlapping genomic ranges within your peaks_gr object that could be merged or "reduced" 
-# That’s common if peaks came from MACS2 (which already merges/filters peaks) or if you deduplicated before saving the CSV.
-# fast confirmation
 any_overlaps <- any(countOverlaps(peaks_gr, peaks_gr) > 1)
 any_overlaps # FALSE
-is_disjoint <- isDisjoint(peaks_gr, ignore.strand = TRUE) # [1] TRUE
+is_disjoint <- isDisjoint(peaks_gr, ignore.strand = TRUE) 
+is_disjoint # [1] TRUE
 n_dups <- sum(duplicated(peaks_gr)) # 0 duplicate intervals
 
+n_dups # 0 
 
 ##==============================================================================
 
-# # Make sure ranges and IDs are consistent
-# union_ids <- Signac::GRangesToString(union_peaks)
-# 
-# mat_unified <- FeatureMatrix(
-#     fragments = Fragments(SeuratOBJ)[[1]],
-#     features  = union_peaks,
-#     cells     = colnames(SeuratOBJ)
-# )
-# 
-# atac_unified <- CreateChromatinAssay(
-#     counts     = mat_unified,
-#     ranges     = union_peaks,
-#     annotation = tryCatch(Annotation(SeuratOBJ), error = function(e) NULL)
-# )
-# 
-# SeuratOBJ[["ATAC_unified"]] <- atac_unified
-# DefaultAssay(SeuratOBJ) <- "ATAC_unified"
-# 
-# # Rebuild normalization & bias covariates
-# SeuratOBJ <- RunTFIDF(SeuratOBJ)
-# SeuratOBJ <- FindTopFeatures(SeuratOBJ, min.cutoff = "q0")
-# SeuratOBJ <- RegionStats(SeuratOBJ, genome = BSgenome.Hsapiens.UCSC.hg38)
-# 
-# # -> AggregateExpression() by cluster and LinkPeaks() on the unified assay
 
-
-
-
-
-## Load Seurat and make verification
+## Load Seurat and set desired clutering level
 
 # Use Seurat with clusters renamed for Spatial-Registration on Visium project
 Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
@@ -248,32 +220,62 @@ length(rownames(rna_counts)) # [1] 36601
 keep_genes <- rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.02 * ncol(rna_counts)]
 length(keep_genes) # in count: [1] 14526
 
+
+##==============================================================================
+## Prepare data for aggregate all cells in a cluster to get one accessibility profile per cluster
+
+# Make sure ranges and IDs are consistent
+union_ids <- Signac::GRangesToString(union_peaks)
+
+# use *all* fragment files
+frags_list <- Fragments(SeuratOBJ)
+length(frags_list) # 10
+#str(frags_list[1:2])
+stopifnot(length(frags_list) >= 1)
+
+length(colnames(SeuratOBJ)) # 55516
+
+# Build the unified feature-by-cell matrix for ALL cells
+mat_unified <- FeatureMatrix(
+    fragments = frags_list[1:2],              # list of Fragment objects
+    features  = union_peaks,             # GRanges
+    cells     = colnames(SeuratOBJ),     # all barcodes across samples
+    verbose   = TRUE
+)
+head(mat_unified)
+# > head(mat_unified)
+# 6 x 8354 sparse Matrix of class "dgCMatrix"
+# [[ suppressing 34 column names ‘S04_AAACAGCCAGAATGAC-1’, ‘S04_AAACAGCCAGCAAGGC-1’, ‘S04_AAACATGCACCTGGTG-1’ ... ]]
+# 
+# chr1-181329-181534 . . . . . . . . . . . . . 1 . . . . . . . . . . . . . . . .
+# chr1-191217-191619 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+
+
 ##==============================================================================
 
-## Pre-processing to identifies cis-regulatory elements by linking chromatin-accessible peaks
+# AggregateExpression() by cluster on the unified assay
 
-## Set ATAC assay 
-DefaultAssay(SeuratOBJ) <- "ATAC"
-class(SeuratOBJ[["ATAC"]])
+# Note. CallPeaks() run per cluster returns different GRanges per group.
+# Aggregation across clusters needs a common peak matrix (same rows), otherwise per‑cluster sums aren’t comparable. 
+# So, AggregateExpression() cannot be used directatly in the peaks dataset generated by CallPeaks()
 
-message("Chromatin loaded!")
+# pb <- AggregateExpression(
+#     SeuratOBJ,
+#     assays =  c("RNA", "ATAC_unified"),
+#     group.by = "cluster_ann",
+#     # layer = c("counts", "counts"), 
+#     # return.seurat = TRUE
+#     verbose = TRUE
+# )   # matrix: peaks x clusters
+# 
+# #  Aggregated values are placed in the 'counts' layer of the returned object. 
+# #  the data is then normalized by running NormalizeData on the aggregated counts. ScaleData is then run on the default assay before returning the object.
+# pb
 
-## pre-processed peaks / QC
-message("Starting GC content correction ... ")
+# pb_rna_counts  <- pb$RNA   # genes x clusters
+# pb_atac_counts <- pb$ATAC  # peaks x clusters
 
-## GC content correction
-genome <- BSgenome.Hsapiens.UCSC.hg38
-
-SeuratOBJ <- RegionStats(
-    object = SeuratOBJ,
-    genome = genome,
-    assay = "ATAC"
-)
-SeuratOBJ
-
-message("GC content correction done!")
-
-message("Pre-processing ready ...")
 
 
 ##==============================================================================
@@ -296,28 +298,6 @@ for (clust in clusters) {
 message("Seurat subsets by cell-type arrenged: ", length(seurat_subsets))
 
 
-##==============================================================================
-## Aggregate all cells in a cluster (or cell type) to get one accessibility profile per cluster
-
-# Note. CallPeaks() run per cluster returns different GRanges per group.
-# Aggregation across clusters needs a common peak matrix (same rows), otherwise per‑cluster sums aren’t comparable. 
-# So, AggregateExpression() cannot be used directatly in the peaks dataset generated by CallPeaks()
-
-# pb <- AggregateExpression(
-#     SeuratOBJ,
-#     assays =  c("RNA", "ATAC"),
-#     group.by = "cluster_ann",
-#     # layer = c("counts", "counts"), 
-#     # return.seurat = TRUE
-#     verbose = TRUE
-# )   # matrix: peaks x clusters
-# 
-# #  Aggregated values are placed in the 'counts' layer of the returned object. 
-# #  the data is then normalized by running NormalizeData on the aggregated counts. ScaleData is then run on the default assay before returning the object.
-# Seurat_psedo_atac
-# 
-# pb_rna_counts  <- pb$RNA   # genes x clusters
-# pb_atac_counts <- pb$ATAC  # peaks x clusters
 
 ##==============================================================================
 
