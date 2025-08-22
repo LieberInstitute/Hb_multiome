@@ -244,9 +244,9 @@ message("GC content correction done!")
 # SeuratOBJ[["ATAC"]] <- subsetted_atac_assay
 # DefaultAssay(SeuratOBJ) <- "ATAC"
 
-## Re-atach chromatin 
-SeuratOBJ_subset[["ATAC"]]  <- SeuratOBJ[["ATAC"]]
-SeuratOBJ <- SeuratOBJ_subset 
+## Re-attach chromatin 
+# SeuratOBJ_subset[["ATAC"]]  <- SeuratOBJ[["ATAC"]]
+# SeuratOBJ <- SeuratOBJ_subset 
 
 ## set a subset of genes to test
 #hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
@@ -309,17 +309,23 @@ for (clust in clusters) {
     )
 }
 
+message("Seurat subsets by cell-type arrenged: ", length(seurat_subsets))
+
 # now access each subset by name
+
+set.seed(22082025)
+
 
 for (seurat_cluster in names(seurat_subsets)) {
     # seurat_cluster = "Endo"
     
-    message("Processing seurat cluster: ", seurat_cluster)
+    print(paste("Processing seurat cluster: ", seurat_cluster))
     
     seurat_subset <- seurat_subsets[[seurat_cluster]]
     seurat_subset
     
-    message("Total cells in cluster ", seurat_cluster, ": ", length(Cells(seurat_subset)))
+    print(paste("Processing Peaks for ", seurat_cluster, "\n", 
+                "Total cells found:", length(Cells(seurat_subset))))
     
     atac <- LinkPeaks(
         object = seurat_subset,
@@ -330,9 +336,10 @@ for (seurat_cluster in names(seurat_subsets)) {
         distance = as.numeric(w_size)             # Only consider peaks within x kb of gene TSS
     )
     
-    message("Local link-peaks correlations completed!")
+    print("Local link-peaks correlations completed!")
+    
     ## inspect data
-    head(Links(atac), n=3)
+    print(head(Links(atac), n=3))
 
     ## prepare data to save cvs
     link_df <- as.data.frame(Links(atac))
@@ -344,7 +351,7 @@ for (seurat_cluster in names(seurat_subsets)) {
         file = here(cvsDir, f_name),
         row.names = FALSE
     )
-    message("LinkPeaks saved: ", f_name)
+    print(paste("LinkPeaks saved: ", f_name))
     
 }
 
