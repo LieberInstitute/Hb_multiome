@@ -250,7 +250,45 @@ head(mat_unified)
 # chr1-181329-181534 . . . . . . . . . . . . . 1 . . . . . . . . . . . . . . . .
 # chr1-191217-191619 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
+# create the unified ATAC assay with ranges
+atac_unified <- CreateChromatinAssay(
+    counts     = mat_unified,
+    ranges     = union_peaks,
+    annotation = tryCatch(Annotation(SeuratOBJ), error = function(e) NULL)
+)
+atac_unified
 
+## Append new atac with peaks merged  by cluster 
+SeuratOBJ[["ATAC_unified"]] <- atac_unified
+SeuratOBJ
+DefaultAssay(SeuratOBJ) <- "ATAC_unified"
+ 
+
+
+##==============================================================================
+
+## Set ATAC assay 
+DefaultAssay(SeuratOBJ) <- "ATAC_unified"
+class(SeuratOBJ[["ATAC_unified"]])
+
+message("Chromatin loaded!")
+
+## pre-processed peaks / QC
+message("Starting GC content correction ... ")
+
+## GC content correction
+genome <- BSgenome.Hsapiens.UCSC.hg38
+
+SeuratOBJ <- RegionStats(
+    object = SeuratOBJ,
+    assay = "ATAC_unified",
+    genome = genome,
+)
+SeuratOBJ
+
+message("GC content correction done!")
+
+message("Pre-processing ready ...")
 
 ##==============================================================================
 
