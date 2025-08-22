@@ -37,15 +37,16 @@ resolution_level <- args[2]
 
 if (length(resolution_level)) {
     message(
-        "Processing job for resolution_level:\n",
-        resolution_level
+        "Processing job for resolution_level: ", resolution_level,
+        "\nMethod: ", p_met,
+        "\nWindow-size: ", w_size
     )
     f_sufix <- paste0(".", p_met, ".", w_size, ".cells_filtered_2perc")
 } else {
     message("Input argument missed")
     stop()
 }
-
+f_sufix
 
 # Check/create directories
 
@@ -173,15 +174,11 @@ message("Pre-processing ready ...")
 
 
 ##==============================================================================
-## Process "global" Link peak-genes
 
-message("Computing local link-peaks correlations ...")
-
-## find peaks by cluster correlated with the expression of nearby genes 
+message("make a list to store all subsets: cluster level")
 
 clusters <- levels(SeuratOBJ)
 
-# make a list to store all subsets: cluster level
 seurat_subsets <- list()
 
 for (clust in clusters) {
@@ -193,7 +190,32 @@ for (clust in clusters) {
     )
 }
 
-# now access each subset by name
+message("Seurat subsets by cell-type arrenged: ", length(seurat_subsets))
+
+
+##==============================================================================
+## Aggregate all cells in a cluster (or cell type) to get one accessibility profile per cluster
+
+pb <- AggregateExpression(
+    SeuratOBJ,
+    assays =  c("RNA", "ATAC"),
+    group.by = "cluster_ann",
+    # layer = c("counts", "counts"), 
+    # return.seurat = TRUE
+    verbose = TRUE
+)   # matrix: peaks x clusters
+
+#  Aggregated values are placed in the 'counts' layer of the returned object. 
+#  the data is then normalized by running NormalizeData on the aggregated counts. ScaleData is then run on the default assay before returning the object.
+Seurat_psedo_atac
+
+pb_rna_counts  <- pb$RNA   # genes x clusters
+pb_atac_counts <- pb$ATAC  # peaks x clusters
+
+
+##==============================================================================
+
+message("Computing local link-peaks correlations ...")
 
 for (seurat_cluster in names(seurat_subsets)) {
     # seurat_cluster = "Endo"
@@ -222,7 +244,7 @@ for (seurat_cluster in names(seurat_subsets)) {
     link_df <- as.data.frame(Links(atac))
     print(summary(link_df$score))
     
-    f_name <- paste0(resolution_level, "_", seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
+    f_name <- paste0(resolution_level, "_pseudo_", seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
     write.csv(
         link_df,
         file = here(cvsDir, f_name),
