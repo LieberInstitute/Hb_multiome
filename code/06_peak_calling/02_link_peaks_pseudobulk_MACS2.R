@@ -138,7 +138,7 @@ head(peaks_gr)
 # [2]     chr1 191217-191619      * | OPC,Oligo,Inhib.Thal..
 # [3]     chr1 629146-629354      * |              Astrocyte
 # [4]     chr1 629811-630032      * | LHb.7,Astrocyte,Olig..
-# [5]     chr1 630189-630389      * |             Oligo,Endo
+# [5]     chr1 630189-630389      * |             Oligo,Endowhy a
 # [6]     chr1 632189-632410      * |              Astrocyte
 # -------
 #     seqinfo: 34 sequences from an unspecified genome; no seqlengths
@@ -149,9 +149,17 @@ str(peaks_gr)
 # After run CallPeaks() per cluster need to unify/re-quantify, so each cluster will have same peak set; And AggregateExpression() across the original assay will reflect those new peaks.
 # reduce method will align the ranges and merge overlapping ranges to produce a simplified set.
 
-union_peaks <- GenomicRanges::reduce(do.call(c, peaks_gr)) ## consensus, non-overlapping
+# I have one GRanges that contains peaks from all clusters
+union_peaks <- GenomicRanges::reduce(peaks_gr) 
+length(union_peaks) # [1] 355127
+head(union_peaks)
 
-  
+length(peaks_gr)            # 355127 - original count
+length(union_peaks)         # 355127 - unified count (should be <= original)
+any(width(union_peaks) <= 0)  # should be FALSE
+
+# Note. No overlapping genomic ranges within your peaks_gr object that could be merged or "reduced" 
+
 ##==============================================================================
 
 
