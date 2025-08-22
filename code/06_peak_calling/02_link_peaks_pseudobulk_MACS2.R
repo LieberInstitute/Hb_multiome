@@ -150,17 +150,55 @@ str(peaks_gr)
 # reduce method will align the ranges and merge overlapping ranges to produce a simplified set.
 
 # I have one GRanges that contains peaks from all clusters
-union_peaks <- GenomicRanges::reduce(peaks_gr) 
+# union_peaks <- GenomicRanges::reduce(peaks_gr) 
+
+# Merge ranges whose gaps are < 100 bp (i.e., within 100 bp)
+union_peaks <- GenomicRanges::reduce(peaks_gr, min.gapwidth = 101)  # gap < 101 → 0..100 bp
+
 length(union_peaks) # [1] 355127
 head(union_peaks)
 
 length(peaks_gr)            # 355127 - original count
-length(union_peaks)         # 355127 - unified count (should be <= original)
+length(union_peaks)         # 355127 / 351037 (gap) - unified count (should be <= original)
 any(width(union_peaks) <= 0)  # should be FALSE
 
 # Note. No overlapping genomic ranges within your peaks_gr object that could be merged or "reduced" 
+# That’s common if peaks came from MACS2 (which already merges/filters peaks) or if you deduplicated before saving the CSV.
+# fast confirmation
+any_overlaps <- any(countOverlaps(peaks_gr, peaks_gr) > 1)
+any_overlaps # FALSE
+is_disjoint <- isDisjoint(peaks_gr, ignore.strand = TRUE) # [1] TRUE
+n_dups <- sum(duplicated(peaks_gr)) # 0 duplicate intervals
+
 
 ##==============================================================================
+
+# # Make sure ranges and IDs are consistent
+# union_ids <- Signac::GRangesToString(union_peaks)
+# 
+# mat_unified <- FeatureMatrix(
+#     fragments = Fragments(SeuratOBJ)[[1]],
+#     features  = union_peaks,
+#     cells     = colnames(SeuratOBJ)
+# )
+# 
+# atac_unified <- CreateChromatinAssay(
+#     counts     = mat_unified,
+#     ranges     = union_peaks,
+#     annotation = tryCatch(Annotation(SeuratOBJ), error = function(e) NULL)
+# )
+# 
+# SeuratOBJ[["ATAC_unified"]] <- atac_unified
+# DefaultAssay(SeuratOBJ) <- "ATAC_unified"
+# 
+# # Rebuild normalization & bias covariates
+# SeuratOBJ <- RunTFIDF(SeuratOBJ)
+# SeuratOBJ <- FindTopFeatures(SeuratOBJ, min.cutoff = "q0")
+# SeuratOBJ <- RegionStats(SeuratOBJ, genome = BSgenome.Hsapiens.UCSC.hg38)
+# 
+# # -> AggregateExpression() by cluster and LinkPeaks() on the unified assay
+
+
 
 
 
