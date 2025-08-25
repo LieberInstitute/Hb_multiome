@@ -143,21 +143,22 @@ head(peaks_gr)
 #     seqinfo: 34 sequences from an unspecified genome; no seqlengths
 length(peaks_gr) # 355127
 peaks_gr[1]
-str(peaks_gr)
+#str(peaks_gr)
 
 ## After run CallPeaks() per cluster, peaks could be unify/re-quantify, so each cluster will have same peak set
-# I have one GRanges that contains peaks from all clusters
 
-#union_peaks <- GenomicRanges::reduce(peaks_gr)  # here, I do not found overpapping peaks
 # Note. Defaults on GenomicRanges::reduce() does not allow gaps. And, we have "NO" overlapping genomic ranges within peaks_gr.
 # That’s common if peaks came from MACS2 (which already merges/filters peaks) or if peaks were deduplicated before saving the CSV.
 # Alternativately, I am merging ranges whose gaps are < 100 bp
 
-union_peaks <- GenomicRanges::reduce(peaks_gr, min.gapwidth = 101)  # gap < 101 → 0..100 bp
+# union_peaks <- GenomicRanges::reduce(peaks_gr)
+union_peaks <- GenomicRanges::reduce(peaks_gr, min.gapwidth = 101)  # allow a gap < 101 → 0..100 bp
+union_peaks <- GenomicRanges::reduce(peaks_gr, min.gapwidth = 101, with.revmap = TRUE) # Use the with.revmap=TRUE to record which original peaks fed each merged range
 
 # fast confirmation
 length(union_peaks) # [1] 355127
 head(union_peaks)
+revmap <- mcols(union)$revmap  # IntegerList: indices of contributing peaks
 
 length(peaks_gr)            # 355127 - original count
 length(union_peaks)         # 355127 / 351037 (gap) - unified count (should be <= original)
@@ -224,6 +225,8 @@ length(keep_genes) # in count: [1] 14526
 ##==============================================================================
 ## Prepare data for aggregate all cells in a cluster to get one accessibility profile per cluster
 
+DefaultAssay(SeuratOBJ) <- "ATAC"
+
 # Make sure ranges and IDs are consistent
 union_ids <- Signac::GRangesToString(union_peaks)
 
@@ -231,24 +234,27 @@ union_ids <- Signac::GRangesToString(union_peaks)
 frags_list <- Fragments(SeuratOBJ)
 length(frags_list) # 10
 #str(frags_list[1:2])
+#Cells(frags_list[[2]])
+# verifications
 stopifnot(length(frags_list) >= 1)
+all_cells_frag <- unique(do.call(c, lapply(frags_list, Cells)))
+length(all_cells_frag) # 55516
+barcodes_in_frags <- unique(unlist(all_cells_frag, Cells(SeuratOBJ)))
+mean(colnames(SeuratOBJ) %in% barcodes_in_frags)  # should be ~1.0
 
-length(colnames(SeuratOBJ)) # 55516
-
-# Build the unified feature-by-cell matrix for ALL cells
+# Quantify unified peaks-by-ct
 mat_unified <- FeatureMatrix(
     fragments = frags_list,              # list of Fragment objects
     features  = union_peaks,             # GRanges
     cells     = colnames(SeuratOBJ),     # all barcodes across samples
     verbose   = TRUE
 )
+
+identical(colnames(mat_unified), colnames(SeuratOBJ))
 head(mat_unified)
-# > head(mat_unified)
-# 6 x 8354 sparse Matrix of class "dgCMatrix"
+# > head(mat_unified) # ge. Mid_level: 18 x 55,516 cells
+# 6 x 55516 sparse Matrix of class "dgCMatrix"
 # [[ suppressing 34 column names ‘S04_AAACAGCCAGAATGAC-1’, ‘S04_AAACAGCCAGCAAGGC-1’, ‘S04_AAACATGCACCTGGTG-1’ ... ]]
-# 
-# chr1-181329-181534 . . . . . . . . . . . . . 1 . . . . . . . . . . . . . . . .
-# chr1-191217-191619 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
 # create the unified ATAC assay with ranges
 atac_unified <- CreateChromatinAssay(
@@ -265,37 +271,46 @@ DefaultAssay(SeuratOBJ) <- "ATAC_unified"
  
 # Rebuild normalization & bias covariates with previous thresholds
 # https://github.com/LieberInstitute/Hb_multiome/blob/a87c3512395b0488af9413174796787412e99567/code/03_pseudobulking/08_harmony_CR_ARCr.R#L99-L105
-SeuratOBJ <- RunTFIDF(SeuratOBJ,
-      assay = "ATAC_unified",
-      method = 1,  # computes log(𝑇𝐹×𝐼𝐷𝐹).
-      scale.factor = 10000
-      )
-SeuratOBJ <- FindTopFeatures(SeuratOBJ,
-     assay = "ATAC_unified",
-     min.cutoff = 'q5', # 95% most common features coverage as VariableFeatures
-     verbose = TRUE
-     )
-SeuratOBJ <- RunSVD(SeuratOBJ,
-    assay = "ATAC_unified"
-    )
 
-message("Starting GC content correction ... ")
 
-## GC content correction
-genome <- BSgenome.Hsapiens.UCSC.hg38
+rebuild_atac_normalization <- function(
+        SeuratOBJ,
+        assay_name = "ATAC_unified"
+    ) {
 
-SeuratOBJ <- RegionStats(
-    object = SeuratOBJ,
-    assay = "ATAC_unified",
-    genome = genome,
-)
-SeuratOBJ
+    message("Starting normalization ... ")
+    
+    SeuratOBJ <- RunTFIDF(SeuratOBJ,
+          assay = assay_name,
+          method = 1,  # computes log(𝑇𝐹×𝐼𝐷𝐹).
+          scale.factor = 10000)
+    SeuratOBJ <- FindTopFeatures(SeuratOBJ,
+         assay = assay_name,
+         min.cutoff = 'q5', # 95% most common features coverage as VariableFeatures
+         verbose = TRUE)
+    SeuratOBJ <- RunSVD(SeuratOBJ,
+        assay = assay_name)
+    
+    message("Starting GC content correction ... ")
+    
+    ## GC content correction
+    genome <- BSgenome.Hsapiens.UCSC.hg38
+    
+    SeuratOBJ <- RegionStats(
+        object = SeuratOBJ,
+        assay = assay_name,
+        genome = genome)
+    
+    return(SeuratOBJ)
 
-message("GC content correction done!")
+}
+
+SeuratOBJ <- rebuild_atac_normalization(SeuratOBJ, "ATAC_unified")
 
 message("Pre-processing ready ...")
 
 ##==============================================================================
+
 
 # AggregateExpression() by cluster on the unified assay
 
@@ -304,11 +319,14 @@ message("Pre-processing ready ...")
 # So, AggregateExpression() cannot be used directatly in the peaks dataset generated by CallPeaks()
 
 # Build a cluster‑level Seurat object using pseudobulk sums for both RNA and ATAC_unified, then run LinkPeaks across clusters (columns).
+colnames(SeuratOBJ@meta.data)
+unique(SeuratOBJ[[meta_col]])
 
 Seurat_pb <- AggregateExpression(
     SeuratOBJ,
     assays =  c("RNA", "ATAC_unified"),
-    group.by = "cluster_ann",
+    #group.by = "cluster_ann",
+    group.by = meta_col,
     # layer = c("counts", "counts"),
     # return.seurat = TRUE
     verbose = TRUE
@@ -316,22 +334,68 @@ Seurat_pb <- AggregateExpression(
 
 #  Aggregated values are placed in the 'counts' layer of the returned object.
 #  the data is then normalized by running NormalizeData on the aggregated counts. ScaleData is then run on the default assay before returning the object.
-pb_rna_counts_df  <- as.data.frame(Seurat_pb$RNA)   # genes x clusters
-pb_atac_counts_df <- as.data.frame(Seurat_pb$ATAC)  # peaks x clusters
 
-f_name <- paste0(resolution_level, "_pb_rna_counts_df.csv")
-write.csv(
-    pb_rna_counts_df,
-    file = here(cvsDir, f_name),
-    row.names = FALSE
+pb_rna_counts  <- Seurat_pb$RNA   # genes x clusters
+pb_atac_counts <- Seurat_pb$ATAC_unified  # peaks x clusters
+all(colnames(pb_rna_counts) == colnames(pb_atac_counts))   # clusters align
+
+pb_rna_counts_df  <- as.data.frame(pb_rna_counts)   # genes x clusters
+pb_atac_counts_df <- as.data.frame(pb_atac_counts)  # peaks x clusters
+
+# build a cluster-level object
+pb_obj <- CreateSeuratObject(counts = pb_rna_counts, assay = "RNA")
+pb_obj <- NormalizeData(pb_obj) # RNA log-normalize per cluster
+pb_obj <- FindVariableFeatures(pb_obj, selection.method = "vst") 
+pb_obj <- ScaleData(pb_obj, features = rownames(pb_obj))
+
+# ensure peaks order & ranges match
+gr_peaks <- granges(SeuratOBJ[["ATAC_unified"]])
+peak_ids <- Signac::GRangesToString(gr_peaks)
+pb_atac_counts <- pb_atac_counts[peak_ids, , drop = FALSE]  # reorder to ranges
+
+pb_atac <- CreateChromatinAssay(
+    counts     = pb_atac_counts,
+    ranges     = gr_peaks,
+    annotation = tryCatch(Annotation(SeuratOBJ), error = function(e) NULL)
 )
-f_name <- paste0(resolution_level, "_pb_atac_counts.csv")
-write.csv(
-    pb_atac_counts_df,
-    file = here(cvsDir, f_name),
-    row.names = FALSE
-)
-message("Pseudobulk files saved!")
+pb_obj[["ATAC_unified"]] <- pb_atac
+
+DefaultAssay(pb_obj) <- "ATAC_unified"
+
+# ATAC normalization & bias covariates on pseudobulk
+pb_obj <- rebuild_atac_normalization(pb_obj, "ATAC_unified")
+
+# verification
+head(pb_obj@meta.data)
+# orig.ident nCount_RNA nFeature_RNA nCount_ATAC_unified
+# Astrocyte  SeuratProject   16100320        29950            14066550
+# Endo       SeuratProject    1435841        22262             1340147
+# Excit.Thal SeuratProject  165408249        32995           121029625
+# Inhib.Thal SeuratProject   55039199        30951            49965552
+# LHb.1      SeuratProject   19120834        28831            13670681
+# LHb.1.3    SeuratProject    2960861        22701             2011885
+# nFeature_ATAC_unified
+# Astrocyte                 351031
+# Endo                      307849
+# Excit.Thal                351037
+# Inhib.Thal                351037
+# LHb.1                     351015
+# LHb.1.3                   330675
+
+# f_name <- paste0(resolution_level, "_pb_rna_counts_df.csv")
+# write.csv(
+#     pb_rna_counts_df,
+#     file = here(cvsDir, f_name),
+#     row.names = FALSE
+# )
+# f_name <- paste0(resolution_level, "_pb_atac_counts.csv")
+# write.csv(
+#     pb_atac_counts_df,
+#     file = here(cvsDir, f_name),
+#     row.names = FALSE
+# )
+
+message("Pseudobulk Done!")
 
 
 
@@ -360,47 +424,62 @@ message("Pseudobulk files saved!")
 
 ##==============================================================================
 
+# LinkPeaks across clusters (pseudobulk)
 
-message("Computing local link-peaks correlations ...")
+links_pb <- LinkPeaks(
+    object = pb_obj,
+    peak.assay = "ATAC_unified",
+    expression.assay = "RNA",
+    genes.use = keep_genes, 
+    method = p_met,             # "spearman"
+    distance = as.numeric(w_size),
+    min.cells = 1               # columns are clusters
+    #pvalue.cutoff = 1.0
+)
+link_df_pb <- as.data.frame(links_pb)
+write.csv(link_df_pb, here(cvsDir, paste0(resolution_level, "_pseudobulk_links", f_sufix, ".csv")), row.names = FALSE)
 
-for (seurat_cluster in names(seurat_subsets)) {
-    # seurat_cluster = "Endo"
-    
-    message("Processing seurat cluster: ", seurat_cluster)
-    
-    seurat_subset <- seurat_subsets[[seurat_cluster]]
-    seurat_subset
-    
-    message("Total cells in cluster ", seurat_cluster, ": ", length(Cells(seurat_subset)))
-    
-    atac <- LinkPeaks(
-        object = seurat_subset,
-        #peak.assay = "ATAC",
-        peak.assay = "ATAC_unified",
-        expression.assay = "RNA",
-        genes.use = keep_genes,
-        method = p_met,
-        distance = as.numeric(w_size)             # Only consider peaks within x kb of gene TSS
-    )
-    
-    message("Local link-peaks correlations completed!")
-    ## inspect data
-    head(Links(atac), n=3)
 
-    ## prepare data to save cvs
-    link_df <- as.data.frame(Links(atac))
-    print(summary(link_df$score))
-    
-    f_name <- paste0(resolution_level, "_pseudo_", seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
-    write.csv(
-        link_df,
-        file = here(cvsDir, f_name),
-        row.names = FALSE
-    )
-    message("LinkPeaks saved: ", f_name)
-    
-}
-
+# message("Computing local link-peaks correlations ...")
+# 
+# for (seurat_cluster in names(seurat_subsets)) {
+#     # seurat_cluster = "Endo"
+#     
+#     message("Processing seurat cluster: ", seurat_cluster)
+#     
+#     seurat_subset <- seurat_subsets[[seurat_cluster]]
+#     seurat_subset
+#     
+#     message("Total cells in cluster ", seurat_cluster, ": ", length(Cells(seurat_subset)))
+#     
+#     atac <- LinkPeaks(
+#         object = seurat_subset,
+#         #peak.assay = "ATAC",
+#         peak.assay = "ATAC_unified",
+#         expression.assay = "RNA",
+#         genes.use = keep_genes,
+#         method = p_met,
+#         distance = as.numeric(w_size)             # Only consider peaks within x kb of gene TSS
+#     )
+#     
+#     message("Local link-peaks correlations completed!")
+#     ## inspect data
+#     head(Links(atac), n=3)
+# 
+#     ## prepare data to save cvs
+#     link_df <- as.data.frame(Links(atac))
+#     print(summary(link_df$score))
+#     
+#     f_name <- paste0(resolution_level, "_pseudo_", seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
+#     write.csv(
+#         link_df,
+#         file = here(cvsDir, f_name),
+#         row.names = FALSE
+#     )
+#     message("LinkPeaks saved: ", f_name)
+#     
+# }
+# 
 
 message("Local link-peaks correlations completed!")
 
