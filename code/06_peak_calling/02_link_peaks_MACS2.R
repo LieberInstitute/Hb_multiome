@@ -67,11 +67,19 @@ cvsDir <- here(
     "06_peak_calling",
     "02_link_peaks_MACS2" # local peaks redo with Signac::CallPeaks()
 )
+output_RDS <- here(
+    "processed-data",
+    "06_peak_calling",
+    "01_call_peaks_MACS2"
+)
 
 gene_peaks_csv <- here(input_macs_file, paste0("macs_peaks_Mid_resolution.csv"))
 
 if (!dir.exists(cvsDir)) {
     dir.create(cvsDir)
+}
+if (!dir.exists(output_RDS)) {
+    dir.create(output_RDS)
 }
    
 
@@ -191,6 +199,8 @@ message("Seurat subsets by cell-type arranged: ", length(seurat_subsets))
 
 # load link peak-gene csv
 
+message("Loading ", basename(gene_peaks_csv))
+
 if (file.exists(gene_peaks_csv)) {
     peaks_df <- read.csv(gene_peaks_csv)
     message("File loaded!")
@@ -214,6 +224,16 @@ peaks_gr <- makeGRangesFromDataFrame(
 class(peaks_gr)  # [1] "GenomicRanges"
 head(peaks_gr)
 length(peaks_gr) # 355127 -> mid resolution
+head(peaks_gr)
+# GRanges object with 6 ranges and 1 metadata column:
+# seqnames        ranges strand |         peak_called_in
+# <Rle>     <IRanges>  <Rle> |            <character>
+# [1]     chr1 181329-181534      * |             Inhib.Thal
+# [2]     chr1 191217-191619      * | OPC,Oligo,Inhib.Thal..
+# [3]     chr1 629146-629354      * |              Astrocyte
+# [4]     chr1 629811-630032      * | LHb.7,Astrocyte,Olig..
+# [5]     chr1 630189-630389      * |             Oligo,Endo
+# [6]     chr1 632189-632410      * |              Astrocyte
 
 
 ##==============================================================================
@@ -224,100 +244,134 @@ length(peaks_gr) # 355127 -> mid resolution
 Assays(SeuratOBJ)
 DefaultAssay(SeuratOBJ) <- "ATAC"
 
-# use *all* fragment files
+# Use *all* fragment files: meaning from all the samples 
 ## pick-up smallest cell-type size to run test:
-tmp <- purrr::map(seurat_subsets, ~ length(Cells(.x)))
-tmp
-# get the name of the object with minimum number of cells
-names(tmp)[which.min(tmp)]
-small_idx_to_test <- which.min(tmp)
-as.integer(small_idx_to_test)
-
-Cells(seurat_subsets[[16]])
-
-frags_list <- Fragments(seurat_subsets[[16]])
+# tmp <- purrr::map(seurat_subsets, ~ length(Cells(.x)))
+# tmp
+# # get the name of the object with minimum number of cells
+# names(tmp)[which.min(tmp)]
+# small_idx_to_test <- which.min(tmp)
+# as.integer(small_idx_to_test)
 
 frags_list <- Fragments(SeuratOBJ)
 length(frags_list) # 10
-#str(frags_list[1:2])
-#Cells(frags_list[[2]])
 
-# verification
+## verification
 stopifnot(length(frags_list) >= 1)
 all_cells_frag <- unique(do.call(c, lapply(frags_list, Cells)))
 length(all_cells_frag) # 55516
 barcodes_in_frags <- unique(unlist(all_cells_frag, Cells(SeuratOBJ)))
 mean(colnames(SeuratOBJ) %in% barcodes_in_frags)  # should be ~1.0
 
-SeuratOBJ <- RegionStats(
-    object = SeuratOBJ,
-    genome = genome,
-    assay = "ATAC"
+## Quantify peaks detected by Signac::CallPeaks() - not unified peaks
+mat_macs2_peaks <- FeatureMatrix(
+    fragments = frags_list,              # list of Fragment objects
+    features  = peaks_gr,                # GRanges from CallPeaks
+    cells     = colnames(SeuratOBJ),     # all barcodes across samples
+    verbose   = TRUE
 )
+
+saveRDS(mat_macs2_peaks, file = "mat_macs2_peaks.rds")
+# To load it back:
+# loaded_features <- readRDS("mat_macs2_peaks.rds")
+
+# identical(colnames(mat_macs2_peaks), colnames(SeuratOBJ))
+# head(mat_macs2_peaks)
+# # > head(mat_macs2_peaks) # ge. Mid_level: 18 x 55,516 cells
+# # 6 x 55516 sparse Matrix of class "dgCMatrix"
+# # [[ suppressing 34 column names ‘S04_AAACAGCCAGAATGAC-1’, ‘S04_AAACAGCCAGCAAGGC-1’, ‘S04_AAACATGCACCTGGTG-1’ ... ]]
+
+# create the unified ATAC assay with ranges
+atac_macs2 <- CreateChromatinAssay(
+    counts     = mat_macs2_peaks,
+    ranges     = peaks_gr,
+    annotation = tryCatch(Annotation(SeuratOBJ), error = function(e) NULL)
+)
+atac_macs2
+
+## add new chromatin object to Seurat 
+SeuratOBJ[["ATAC_macs2"]] <- atac_macs2
 SeuratOBJ
+DefaultAssay(SeuratOBJ) <- "ATAC_macs2"
 
-message("GC content correction done!")
+## milestone
+f_name <- paste0("seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_", sufix_name, ".rds")
+rds_name <- here(output_RDS, f_name)
+saveRDS(SeuratOBJ, file = rds_name)
 
-## set a subset of genes to test
-#hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
-
-
-##==============================================================================
-## Process "global" Link peak-genes
-
-message("Computing global link-peaks correlations ...")
+message("Seurat with new chromatin saved succesfully!")
 
 
-##==============================================================================
-## Process "local" Link peak-genes (by cluster)
-
-## find peaks by cluster correlated with the expression of nearby genes 
-# access each subset by name
-
-set.seed(22082025)
-
-
-for (seurat_cluster in names(seurat_subsets)) {
-    # seurat_cluster = "Endo"
-    
-    print(paste("Processing seurat cluster: ", seurat_cluster))
-    
-    seurat_subset <- seurat_subsets[[seurat_cluster]]
-    seurat_subset
-    
-    print(paste("Processing Peaks for ", seurat_cluster, "\n", 
-                "Total cells found:", length(Cells(seurat_subset))))
-    
-    atac <- LinkPeaks(
-        object = seurat_subset,
-        peak.assay = "ATAC",
-        expression.assay = "RNA",
-        genes.use = keep_genes,
-        method = p_met,
-        distance = as.numeric(w_size)             # Only consider peaks within x kb of gene TSS
-    )
-    
-    print("Local link-peaks correlations completed!")
-    
-    ## inspect data
-    print(head(Links(atac), n=3))
-
-    ## prepare data to save cvs
-    link_df <- as.data.frame(Links(atac))
-    print(summary(link_df$score))
-    
-    f_name <- paste0(resolution_level, "_", seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
-    write.csv(
-        link_df,
-        file = here(cvsDir, f_name),
-        row.names = FALSE
-    )
-    print(paste("LinkPeaks saved: ", f_name))
-    
-}
-
-
-message("Local link-peaks correlations completed!")
+# ## Calculate GC content for each peak and add it to the feature metadata
+# SeuratOBJ <- RegionStats(
+#     object = SeuratOBJ,
+#     genome = genome,
+#     assay = "ATAC"
+# )
+# colnames(SeuratOBJ)
+# 
+# message("GC content correction done!")
+# 
+# ## set a subset of genes to test
+# #hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
+# 
+# 
+# ##==============================================================================
+# ## Process "global" Link peak-genes
+# 
+# message("Computing global link-peaks correlations ...")
+# 
+# 
+# ##==============================================================================
+# ## Process "local" Link peak-genes (by cluster)
+# 
+# ## find peaks by cluster correlated with the expression of nearby genes 
+# # access each subset by name
+# 
+# set.seed(22082025)
+# 
+# 
+# for (seurat_cluster in names(seurat_subsets)) {
+#     # seurat_cluster = "Endo"
+#     
+#     print(paste("Processing seurat cluster: ", seurat_cluster))
+#     
+#     seurat_subset <- seurat_subsets[[seurat_cluster]]
+#     seurat_subset
+#     
+#     print(paste("Processing Peaks for ", seurat_cluster, "\n", 
+#                 "Total cells found:", length(Cells(seurat_subset))))
+#     
+#     atac <- LinkPeaks(
+#         object = seurat_subset,
+#         peak.assay = "ATAC",
+#         expression.assay = "RNA",
+#         genes.use = keep_genes,
+#         method = p_met,
+#         distance = as.numeric(w_size)             # Only consider peaks within x kb of gene TSS
+#     )
+#     
+#     print("Local link-peaks correlations completed!")
+#     
+#     ## inspect data
+#     print(head(Links(atac), n=3))
+# 
+#     ## prepare data to save cvs
+#     link_df <- as.data.frame(Links(atac))
+#     print(summary(link_df$score))
+#     
+#     f_name <- paste0(resolution_level, "_", seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
+#     write.csv(
+#         link_df,
+#         file = here(cvsDir, f_name),
+#         row.names = FALSE
+#     )
+#     print(paste("LinkPeaks saved: ", f_name))
+#     
+# }
+# 
+# 
+# message("Local link-peaks correlations completed!")
 
 
 message("All done!!!")
