@@ -275,13 +275,15 @@ saveRDS(mat_macs2_peaks, file = "mat_macs2_peaks.rds")
 # To load it back:
 # loaded_features <- readRDS("mat_macs2_peaks.rds")
 
+message("Chromatin counts saved ...")
+
 # identical(colnames(mat_macs2_peaks), colnames(SeuratOBJ))
 # head(mat_macs2_peaks)
 # # > head(mat_macs2_peaks) # ge. Mid_level: 18 x 55,516 cells
 # # 6 x 55516 sparse Matrix of class "dgCMatrix"
 # # [[ suppressing 34 column names ‘S04_AAACAGCCAGAATGAC-1’, ‘S04_AAACAGCCAGCAAGGC-1’, ‘S04_AAACATGCACCTGGTG-1’ ... ]]
 
-# create the unified ATAC assay with ranges
+# create new ATAC assay with macs2 Granges
 atac_macs2 <- CreateChromatinAssay(
     counts     = mat_macs2_peaks,
     ranges     = peaks_gr,
@@ -289,7 +291,7 @@ atac_macs2 <- CreateChromatinAssay(
 )
 atac_macs2
 
-## add new chromatin object to Seurat 
+## add the new chromatin object to existing Seurat 
 SeuratOBJ[["ATAC_macs2"]] <- atac_macs2
 SeuratOBJ
 DefaultAssay(SeuratOBJ) <- "ATAC_macs2"
