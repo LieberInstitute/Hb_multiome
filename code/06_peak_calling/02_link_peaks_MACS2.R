@@ -15,6 +15,7 @@ library("Seurat")
 library("Signac")
 ## I use BSgenome.Hsapiens.UCSC.hg38 for extracting DNA motifs, k-mers, sequence-based features and compute Tn5 bias correction
 library("BSgenome.Hsapiens.UCSC.hg38")  # full reference genome sequence / actual DNA bases (A/T/C/G) for each chromosome
+library("purrr")
 library("tidyverse")
 library("tidyr")
 library("stringr")
@@ -66,6 +67,8 @@ cvsDir <- here(
     "06_peak_calling",
     "02_link_peaks_MACS2" # local peaks redo with Signac::CallPeaks()
 )
+
+gene_peaks_csv <- here(input_macs_file, paste0("macs_peaks_Mid_resolution.csv"))
 
 if (!dir.exists(cvsDir)) {
     dir.create(cvsDir)
@@ -135,7 +138,11 @@ meta_col <- case_when(
 SeuratOBJ <- set_idents_from_meta(SeuratOBJ, meta_col = meta_col)
 levels(SeuratOBJ)
 
+clusters <- levels(SeuratOBJ)
+
 message("Seurat loaded and ready!")
+
+clusters
 
 
 ##==============================================================================
@@ -148,18 +155,41 @@ length(rownames(rna_counts)) # [1] 36601
 
 # filter rna count expressed in at least 2% of the cells
 keep_genes <- rownames(rna_counts)[Matrix::rowSums(rna_counts > 0) > 0.02 * ncol(rna_counts)]
-length(keep_genes) # in count: [1] 14526
+length(keep_genes) # in count: [1] 15896
 # Note. By default behavior on Seurat v5, after remove cells, ATAC assay was removed, which will be attached later
-SeuratOBJ_subset <- SeuratOBJ
-SeuratOBJ_subset <- SeuratOBJ_subset[keep_genes, ]  
-Assays(SeuratOBJ_subset)
+#SeuratOBJ_subset <- SeuratOBJ
+#SeuratOBJ_subset <- SeuratOBJ_subset[keep_genes, ]  
+# Convert GRanges to data frame and save for further analysis
+head(keep_genes)
 
+## save genes to avoid redundant step on other scripts
+f_name <- paste0("rna_filtered_genes_2perc_cells.csv")
+write.csv(
+    keep_genes, 
+    here(cvsDir, f_name),
+    row.names = FALSE
+)
+
+message("Filtered gene names saved ...")
+
+## make a list to store all Seurat subsets: cluster level
+
+seurat_subsets <- list()
+
+for (clust in clusters) {
+    message("Subsetting cluster: ", clust)
+    
+    seurat_subsets[[clust]] <- subset(
+        SeuratOBJ,
+        idents = clust
+    )
+}
+
+message("Seurat subsets by cell-type arranged: ", length(seurat_subsets))
 
 ##==============================================================================
 
 # load link peak-gene csv
-
-gene_peaks_csv <- here(input_macs_file, paste0("macs_peaks_Mid_resolution.csv"))
 
 if (file.exists(gene_peaks_csv)) {
     peaks_df <- read.csv(gene_peaks_csv)
@@ -181,37 +211,43 @@ peaks_gr <- makeGRangesFromDataFrame(
     end.field         = "end"
 )
 # inspect
-class(peaks_gr) # [1] "GenomicRanges"
+class(peaks_gr)  # [1] "GenomicRanges"
 head(peaks_gr)
-# GRanges object with 6 ranges and 1 metadata column:
-#     seqnames        ranges strand |         peak_called_in
-# <Rle>     <IRanges>  <Rle> |            <character>
-# [1]     chr1 181329-181534      * |             Inhib.Thal
-# [2]     chr1 191217-191619      * | OPC,Oligo,Inhib.Thal..
-# [3]     chr1 629146-629354      * |              Astrocyte
-# [4]     chr1 629811-630032      * | LHb.7,Astrocyte,Olig..
-# [5]     chr1 630189-630389      * |             Oligo,Endowhy a
-# [6]     chr1 632189-632410      * |              Astrocyte
-# -------
-#     seqinfo: 34 sequences from an unspecified genome; no seqlengths
-length(peaks_gr) # 355127
+length(peaks_gr) # 355127 -> mid resolution
 
 
 ##==============================================================================
 
-## Pre-processing to identifies cis-regulatory elements by linking chromatin-accessible peaks
+## Pre-processing: create new ATAC object from CallPeaks output fragments
 
 ## Set ATAC assay 
+Assays(SeuratOBJ)
 DefaultAssay(SeuratOBJ) <- "ATAC"
-class(SeuratOBJ[["ATAC"]])
 
-message("Chromatin loaded!")
+# use *all* fragment files
+## pick-up smallest cell-type size to run test:
+tmp <- purrr::map(seurat_subsets, ~ length(Cells(.x)))
+tmp
+# get the name of the object with minimum number of cells
+names(tmp)[which.min(tmp)]
+small_idx_to_test <- which.min(tmp)
+as.integer(small_idx_to_test)
 
-## pre-processed peaks / QC
-message("Starting GC content correction ... ")
+Cells(seurat_subsets[[16]])
 
-## GC content correction
-genome <- BSgenome.Hsapiens.UCSC.hg38
+frags_list <- Fragments(seurat_subsets[[16]])
+
+frags_list <- Fragments(SeuratOBJ)
+length(frags_list) # 10
+#str(frags_list[1:2])
+#Cells(frags_list[[2]])
+
+# verification
+stopifnot(length(frags_list) >= 1)
+all_cells_frag <- unique(do.call(c, lapply(frags_list, Cells)))
+length(all_cells_frag) # 55516
+barcodes_in_frags <- unique(unlist(all_cells_frag, Cells(SeuratOBJ)))
+mean(colnames(SeuratOBJ) %in% barcodes_in_frags)  # should be ~1.0
 
 SeuratOBJ <- RegionStats(
     object = SeuratOBJ,
@@ -236,24 +272,7 @@ message("Computing global link-peaks correlations ...")
 ## Process "local" Link peak-genes (by cluster)
 
 ## find peaks by cluster correlated with the expression of nearby genes 
-
-clusters <- levels(SeuratOBJ)
-
-# make a list to store all subsets: cluster level
-seurat_subsets <- list()
-
-for (clust in clusters) {
-    message("Subsetting cluster: ", clust)
-    
-    seurat_subsets[[clust]] <- subset(
-        SeuratOBJ,
-        idents = clust
-    )
-}
-
-message("Seurat subsets by cell-type arranged: ", length(seurat_subsets))
-
-# now access each subset by name
+# access each subset by name
 
 set.seed(22082025)
 
