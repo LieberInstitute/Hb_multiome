@@ -271,7 +271,8 @@ mat_macs2_peaks <- FeatureMatrix(
     verbose   = TRUE
 )
 
-saveRDS(mat_macs2_peaks, file = "mat_macs2_peaks.rds")
+f_name <- paste0("mtx_peaks_cell_level_", resolution_level, "_resolution.rds")
+saveRDS(mat_macs2_peaks, file = f_name)
 # To load it back:
 # loaded_features <- readRDS("mat_macs2_peaks.rds")
 
@@ -294,15 +295,15 @@ atac_macs2
 ## add the new chromatin object to existing Seurat 
 SeuratOBJ[["ATAC_macs2"]] <- atac_macs2
 SeuratOBJ
-DefaultAssay(SeuratOBJ) <- "ATAC_macs2"
 
 ## milestone
-f_name <- paste0("seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_", sufix_name, ".rds")
+f_name <- paste0("Seurat_peaks_macs2_cell_level_", resolution_level, "_resolution.rds")
 rds_name <- here(output_RDS, f_name)
 saveRDS(SeuratOBJ, file = rds_name)
 
 message("Seurat with new chromatin saved succesfully!")
 
+DefaultAssay(SeuratOBJ) <- "ATAC_macs2"
 
 # ## Calculate GC content for each peak and add it to the feature metadata
 # SeuratOBJ <- RegionStats(
