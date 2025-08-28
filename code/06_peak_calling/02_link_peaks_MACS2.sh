@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=80G
+#SBATCH --mem=100G
 #SBATCH --job-name=02_link_peaks_MACS2
 #SBATCH -c 2
 #SBATCH -t 2-00:00:00
@@ -23,6 +23,12 @@ if (( i < 0 || i >= m )); then
 fi
 
 res="${clust_res[$i]}"
+
+# skip Broad
+if [[ "$res" == "Broad" ]]; then
+  echo "[$(date)] Skipping clust_res='Broad' for array task $i"
+  exit 0   # success so SLURM won’t retry
+fi
 
 #mkdir -p logs
 log_path="logs/02_link_peaks_MACS2_${res}_task_${i}.log"
