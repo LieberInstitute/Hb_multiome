@@ -56,6 +56,11 @@ inputRDS_Dir <- here(
   "05_Clustering_ARCr",
   "22_add_mid_level_clustering" # Seurat multiome final version with annotations
 )
+input_macs_file <- here(
+    "processed-data",
+    "06_peak_calling",
+    "01_call_peaks_MACS2"
+)
 cvsDir <- here(
     "processed-data",
     "06_peak_calling",
@@ -149,6 +154,49 @@ SeuratOBJ_subset <- SeuratOBJ
 SeuratOBJ_subset <- SeuratOBJ_subset[keep_genes, ]  
 Assays(SeuratOBJ_subset)
 
+
+##==============================================================================
+
+# load link peak-gene csv
+
+gene_peaks_csv <- here(input_macs_file, paste0("macs_peaks_Mid_resolution.csv"))
+
+if (file.exists(gene_peaks_csv)) {
+    peaks_df <- read.csv(gene_peaks_csv)
+    message("File loaded!")
+} else {
+    stop(paste("File not found:", gene_peaks_csv))
+}
+
+colnames(peaks_df)
+# [1] "seqnames"       "start"          "end"            "width"         
+# [5] "strand"         "peak_called_in"
+
+# CSV has columns like: seqnames, start, end, etc
+peaks_gr <- makeGRangesFromDataFrame(
+    peaks_df,
+    keep.extra.columns = TRUE,       # keep additional metadata columns
+    seqnames.field    = "seqnames",  # adjust if column name differs
+    start.field       = "start",
+    end.field         = "end"
+)
+# inspect
+class(peaks_gr) # [1] "GenomicRanges"
+head(peaks_gr)
+# GRanges object with 6 ranges and 1 metadata column:
+#     seqnames        ranges strand |         peak_called_in
+# <Rle>     <IRanges>  <Rle> |            <character>
+# [1]     chr1 181329-181534      * |             Inhib.Thal
+# [2]     chr1 191217-191619      * | OPC,Oligo,Inhib.Thal..
+# [3]     chr1 629146-629354      * |              Astrocyte
+# [4]     chr1 629811-630032      * | LHb.7,Astrocyte,Olig..
+# [5]     chr1 630189-630389      * |             Oligo,Endowhy a
+# [6]     chr1 632189-632410      * |              Astrocyte
+# -------
+#     seqinfo: 34 sequences from an unspecified genome; no seqlengths
+length(peaks_gr) # 355127
+
+
 ##==============================================================================
 
 ## Pre-processing to identifies cis-regulatory elements by linking chromatin-accessible peaks
@@ -174,120 +222,14 @@ SeuratOBJ
 
 message("GC content correction done!")
 
-# ## For documentation purposes, I fix this chunk in case we need to filter peaks on Seurat v5
-# ## In this case, we have only Std Chromosomes - just skip it 
-# 
-# table(seqnames(granges(SeuratOBJ)))
-# 
-# # pull assay
-# atac <- SeuratOBJ[["ATAC"]]     # Get ChromatinAssay 
-# gr_all <- granges(SeuratOBJ)        # GRanges of ATAC features (peaks)
-# frag_list  <- Fragments(SeuratOBJ)              # carry fragment(s)
-# annot <- tryCatch(Annotation(SeuratOBJ), error = function(e) NULL)
-# 
-# # normalize
-# seqlevelsStyle(gr_all) <- "UCSC"    # normalize naming style
-# gr_std <-  keepStandardChromosomes(gr_all, pruning.mode = "coarse")
-# 
-# # give GRanges canonical IDs that match the assay rownames - features Seurat uses
-# ids_from_assay <- rownames(atac)
-# ids_from_gr <- Signac::GRangesToString(gr_std)
-# # build the keep list by intersecting with the assay’s rownames
-# peaks.keep <- intersect(ids_from_gr, ids_from_assay)
-# # check returned features > 0
-# length(peaks.keep) # 262951
-# stopifnot(length(peaks.keep) > 0) 
-# 
-# # ensure the GRanges names match the assay IDs (prefer the assay’s own IDs)
-# if (length(peaks.keep) == length(ids_from_assay)) {
-#     message("All peaks are already on standard chromosomes; no subsetting needed.")
-# } else {
-#     idx <- match(peaks.keep, ids_from_assay)                # integer indices
-#     counts_mat <- GetAssayData(SeuratOBJ, assay = "ATAC", layer = "counts")[idx, , drop = FALSE]
-# }
-# 
-# head(SeuratOBJ[["ATAC"]]@meta.features, n=3)
-# # count percentile AA AC AG AT CA  CC  CG  CT GA  GC  GG GT TA
-# # chr1-180813-181799   893  0.6523116 48 67 76  6 59 115 107  67 49 142 113 28 41
-# # chr1-182478-183337   137  0.0943788 24 32 86 28 66  77  19  71 63  73  90 53 17
-# # chr1-183785-184772   592  0.5414279 37 50 62 34 73 131  16 107 51  72  61 44 22
-# # TC TG TT GC.percent sequence.length
-# # chr1-180813-181799 24 36  8   68.99696             987
-# # chr1-182478-183337 51 84 25   59.65116             860
-# # chr1-183785-184772 74 89 64   56.17409             988
-# 
-# # SeuratOBJ[["ATAC"]] <- SeuratOBJ[["ATAC"]][peaks.keep, ] --> easy step fails
-# 
-# # Subset counts *matrix* from the assay
-# counts_mat <- GetAssayData(SeuratOBJ, assay = "ATAC", layer = "counts")[peaks.keep, , drop = FALSE]
-# 
-# # Align ranges to the same order as counts
-# names(gr_all) <- Signac::GRangesToString(gr_all)
-# new_ranges <- gr_all[peaks.keep]
-# 
-# ## Build a new ChromatinAssay with counts + ranges (+ fragments/annotation)
-# subsetted_atac_assay <- CreateChromatinAssay(
-#     counts     = counts_mat,
-#     ranges     = new_ranges,
-#     fragments  = if (length(frag_list) > 0) frag_list else NULL,
-#     annotation = annot
-# )
-# 
-# # carry over per-peak meta.features for kept peaks (same row order!)
-# mf_old <- tryCatch(atac@meta.features, error = function(e) NULL)
-# if (!is.null(mf_old)) {
-#     mf_new <- mf_old[peaks.keep, , drop = FALSE]
-#     subsetted_atac_assay@meta.features <- mf_new
-# }
-# 
-# # Replace the original "ATAC" assay with the subsetted one
-# SeuratOBJ[["ATAC"]] <- subsetted_atac_assay
-# DefaultAssay(SeuratOBJ) <- "ATAC"
-
-## Re-attach chromatin 
-# SeuratOBJ_subset[["ATAC"]]  <- SeuratOBJ[["ATAC"]]
-# SeuratOBJ <- SeuratOBJ_subset 
-
 ## set a subset of genes to test
 #hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
-
-message("Pre-processing ready ...")
 
 
 ##==============================================================================
 ## Process "global" Link peak-genes
 
 message("Computing global link-peaks correlations ...")
-
-# ## find peaks that are correlated with the expression of nearby genes 
-# atac <- LinkPeaks(
-#     object = SeuratOBJ,
-#     peak.assay = "ATAC",
-#     expression.assay = "RNA",
-#     genes.use = keep_genes,
-#     method = p_met,
-#     distance = as.numeric(w_size)             # Only consider peaks within ±500 kb of gene TSS (cis-window)
-# )
-# 
-# message("Global link-peaks correlations completed!")
-# 
-# ## inspect data
-# head(Links(atac), n=3)
-# # GRanges object with 5 ranges and 5 metadata columns:
-# #     seqnames              ranges strand |     score        gene
-# #        <Rle>           <IRanges>  <Rle> | <numeric> <character>
-# 
-# link_df <- as.data.frame(Links(atac))
-# summary(link_df$score)
-# 
-# write.csv(
-#     link_df,
-#     file = here(cvsDir, paste0(resolution_level, "_global_link_peak_genes", f_sufix, ".csv")),
-#     row.names = FALSE
-# )
-# 
-# message("Global peaks saved!")
-
 
 
 ##==============================================================================
@@ -309,7 +251,7 @@ for (clust in clusters) {
     )
 }
 
-message("Seurat subsets by cell-type arrenged: ", length(seurat_subsets))
+message("Seurat subsets by cell-type arranged: ", length(seurat_subsets))
 
 # now access each subset by name
 
