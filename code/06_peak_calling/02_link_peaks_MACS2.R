@@ -176,6 +176,10 @@ peaks_gr <- makeGRangesFromDataFrame(
     start.field       = "start",
     end.field         = "end"
 )
+
+## Ensure your fragment files and peaks use the same UCSC-style naming style
+seqlevelsStyle(peaks_gr) <- "UCSC"
+
 # inspect
 class(peaks_gr)  # [1] "GenomicRanges"
 head(peaks_gr)
@@ -220,6 +224,11 @@ mat_macs2_peaks <- FeatureMatrix(
     cells     = colnames(SeuratOBJ),     # all barcodes across samples
     verbose   = TRUE
 )
+
+# ## if crashes for memory, I will try to filter for peaks occurring in a minimum number of cells
+# peak_counts <- Matrix::rowSums(mat_macs2_peaks > 0)
+# keep_peaks <- peak_counts > 50 
+# mat_macs2_peaks <- mat_macs2_peaks[keep_peaks, ]
 
 f_name <- paste0("mtx_peaks_cell_level_", resolution_level, "_resolution.rds")
 rds_name <- here(output_RDS, f_name)
@@ -330,6 +339,9 @@ for (seurat_cluster in names(seurat_subsets)) {
         distance = as.numeric(w_size)             # Only consider peaks within x kb of gene TSS
     )
 
+    # This is for embedding the peak-gene links in the Seurat object directly, in case I need it
+    # Links(SeuratOBJ[["ATAC_macs2"]]) <- Links(atac)
+    
     print("Local link-peaks correlations completed!")
 
     ## inspect data
