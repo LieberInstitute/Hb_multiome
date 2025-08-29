@@ -15,17 +15,8 @@ library("scales")
 library("here")
 
 
-## read input arguments
-args = commandArgs(trailingOnly = TRUE)
-p_met <- args[2]
-w_size <- args[4]
-# 0: pearson, 1e5
-# 1: pearson, 5e4
-# 2: spearman, 1e5
-# 3: spearman, 2.5e4
-
 # for testing
-# p_met = "spearman"
+p_met = "spearman"
 # w_size = "1e5"
 w_sizes = c("1e5", "5e4", "2.5e4")
 
@@ -58,7 +49,7 @@ if (!dir.exists(csvDir)) {
 
 
 ## =============================================================================
-## load CellRanger-ARC peaks
+## load CellRanger-ARC peaks counts and compute TSS stats 
 
 ## list of data frames with peak coordinates, central values and peak width
 lst_peaks_df <- list()
@@ -66,7 +57,7 @@ lst_peaks_df <- list()
 message("Processing peak width histograms ...")
 
 for (ws in w_sizes) {
-    # ws = "1e5"
+    # ws = w_sizes[3]
     print(ws)    
     if (length(p_met)) {
         message(
@@ -239,35 +230,58 @@ for (ws in w_sizes) {
     
 }
 
+message("Peaks Dataframes: ")
+names(lst_peaks_df)
 
-p_hist <- ggplot(link_df2_parsed, aes(x = peak_width_bp)) +
-    # histogram as horizontal bars
-    geom_histogram(
-        aes(y = after_stat(density)),  # normalize for density overlay
-        bins = 100, fill = "steelblue", color = "white", alpha = 0.6
-    ) +
-    # density curve
-    geom_density(color = "darkred", linewidth = 1) +
-    geom_vline(xintercept = median_width, color = "black", linetype = "dashed", linewidth = 0.8) +
-    geom_vline(xintercept = mean_width, color = "orange", linetype = "dotted", linewidth = 0.8) +
-    # log scale for widths
-    scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
-    labs(
-        title = paste("Distribution of peak widths - ", f_sufix),
-        subtitle = paste(total_peaks, "total global peaks"),
-        x = "Peak width (bp, log scale)",
-        y = "Density",
-        caption = paste("Dashed = median (", round(median_width), 
-                        "bp), dotted = mean (", round(mean_width), "bp)")
-    ) +
-    theme_minimal(base_size = 12) +
-    theme(
-        panel.background = element_rect(fill = "gray95", color = NA),
-        plot.background = element_rect(fill = "gray98", color = NA)
-    ) +
-    coord_flip()
+# Combine all dataframes in lst_peaks_df, tagging each with its list name
+combined_df <- bind_rows(
+    lapply(names(lst_peaks_df), function(nm) {
+        df <- lst_peaks_df[[nm]]
+        df$group <- nm
+        return(df)
+    })
+)
 
+# covert grp to factor and check
+combined_df$group <- factor(combined_df$group, levels = names(lst_peaks_df))
+table(combined_df$group)
 
+p_hist <- ggplot(combined_df, aes(x = peak_width_bp, fill = group, color = group)) +
+    geom_histogram(aes(y = after_stat(density)), bins = 100, alpha = 0.4, position = "identity") +
+    geom_density(linewidth = 0.8,  alpha = 0.1) +
+    scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_si("b"))) +
+    #coord_flip() +
+    theme_minimal() +
+    labs(title = "Overlaid Peak Width Distributions - ATAC Assay", x = "Peak width (bp)", y = "Density")
+
+# 
+# 
+# p_hist <- ggplot(link_df2_parsed, aes(x = peak_width_bp)) +
+#     # histogram as horizontal bars
+#     geom_histogram(
+#         aes(y = after_stat(density)),  # normalize for density overlay
+#         bins = 100, fill = "steelblue", color = "white", alpha = 0.6
+#     ) +
+#     # density curve
+#     geom_density(color = "darkred", linewidth = 1) +
+#     geom_vline(xintercept = median_width, color = "black", linetype = "dashed", linewidth = 0.8) +
+#     geom_vline(xintercept = mean_width, color = "orange", linetype = "dotted", linewidth = 0.8) +
+#     # log scale for widths
+#     scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
+#     labs(
+#         title = paste("Distribution of peak widths - ", f_sufix),
+#         subtitle = paste(total_peaks, "total global peaks"),
+#         x = "Peak width (bp, log scale)",
+#         y = "Density",
+#         caption = paste("Dashed = median (", round(median_width), 
+#                         "bp), dotted = mean (", round(mean_width), "bp)")
+#     ) +
+#     theme_minimal(base_size = 12) +
+#     theme(
+#         panel.background = element_rect(fill = "gray95", color = NA),
+#         plot.background = element_rect(fill = "gray98", color = NA)
+#     ) +
+#     coord_flip()
 
 
 f_name <- paste0("peak_width_histogram", f_sufix, ".pdf")
