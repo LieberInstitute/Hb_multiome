@@ -1,10 +1,9 @@
 ########################################################################
-## EDA: Compute LinkPeaks() and filter High-Confident Peaks 
-## INPUT: Peaks generated with CallPeaks() - MACS2
-##
-## CVS tables with links peaks "global" and "local" with
-## - Spearman at 5e5 open-windows sized (check below details) 
-##
+## Compute LinkPeaks() from CallPeaks() - MACS2
+## Count macs2 peaks, make GC bias corrections and normalize new chromatin assay
+## Next compute LinkPeaks correlations by cluster (multiome WNN)
+## Save genes-filtered, peaks-mtx and update Seurat
+## 
 ## Authors. CSC
 ## Date. August 18, 2025
 ## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
@@ -154,21 +153,6 @@ write.csv(
 
 message("Filtered gene names saved ...")
 
-## make a list to store all Seurat subsets: cluster level
-
-seurat_subsets <- list()
-
-for (clust in clusters) {
-    message("Subsetting cluster: ", clust)
-    
-    seurat_subsets[[clust]] <- subset(
-        SeuratOBJ,
-        idents = clust
-    )
-}
-
-message("Seurat subsets by cell-type arranged: ", length(seurat_subsets))
-
 
 ##==============================================================================
 
@@ -264,13 +248,7 @@ SeuratOBJ[["ATAC_macs2"]] <- atac_macs2
 Assays(SeuratOBJ)
 # [1] "RNA"        "ATAC"       "ATAC_macs2"
 
-## milestone
-f_name <- paste0("Seurat_peaks_macs2_cell_level_", resolution_level, "_resolution.rds")
-rds_name <- here(output_RDS, f_name)
-saveRDS(SeuratOBJ, file = rds_name)
-#readRDS(SeuratOBJ, file = rds_name)
-
-message("Seurat with new chromatin saved succesfully!")
+message("Seurat with new chromatin assay: ATAC_macs2")
 
 DefaultAssay(SeuratOBJ) <- "ATAC_macs2"
 
@@ -298,59 +276,81 @@ message("GC content correction and normalization done!")
 
 SeuratOBJ <- global_rebuild_atac_normalization(SeuratOBJ, "ATAC_macs2")
 
-## set a subset of genes to test
-#hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
+## milestone
+f_name <- paste0("Seurat_peaks_macs2_cell_level_", resolution_level, "_resolution.rds")
+rds_name <- here(output_RDS, f_name)
+saveRDS(SeuratOBJ, file = rds_name)
+#readRDS(SeuratOBJ, file = rds_name)
 
-# ##==============================================================================
-# ## Process "local" Link peak-genes (by cluster)
-# 
-# ## find peaks by cluster correlated with the expression of nearby genes 
-# # access each subset by name
-# 
-# set.seed(22082025)
-# 
-# 
-# for (seurat_cluster in names(seurat_subsets)) {
-#     # seurat_cluster = "Endo"
-#     
-#     print(paste("Processing seurat cluster: ", seurat_cluster))
-#     
-#     seurat_subset <- seurat_subsets[[seurat_cluster]]
-#     seurat_subset
-#     
-#     print(paste("Processing Peaks for ", seurat_cluster, "\n", 
-#                 "Total cells found:", length(Cells(seurat_subset))))
-#     
-#     atac <- LinkPeaks(
-#         object = seurat_subset,
-#         peak.assay = "ATAC",
-#         expression.assay = "RNA",
-#         genes.use = keep_genes,
-#         method = p_met,
-#         distance = as.numeric(w_size)             # Only consider peaks within x kb of gene TSS
-#     )
-#     
-#     print("Local link-peaks correlations completed!")
-#     
-#     ## inspect data
-#     print(head(Links(atac), n=3))
-# 
-#     ## prepare data to save cvs
-#     link_df <- as.data.frame(Links(atac))
-#     print(summary(link_df$score))
-#     
-#     f_name <- paste0(resolution_level, "_", seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
-#     write.csv(
-#         link_df,
-#         file = here(output_cvsDir, f_name),
-#         row.names = FALSE
-#     )
-#     print(paste("LinkPeaks saved: ", f_name))
-#     
-# }
-# 
-# 
-# message("Local link-peaks correlations completed!")
+message("Seurat with new chromatin assay GC bias corrected and normalized saved!")
+
+
+##==============================================================================
+## Compute cell-type specific (local) Link peak-genes
+
+## find peaks by cluster correlated with the expression of nearby genes
+# access each subset by name
+
+message("Making list of Seurat subsets:", resolution_level)
+
+seurat_subsets <- list()
+
+for (clust in clusters) {
+    message("Subsetting cluster: ", clust)
+    
+    seurat_subsets[[clust]] <- subset(
+        SeuratOBJ,
+        idents = clust
+    )
+}
+
+message("Seurat subsets by cell-type arranged: ", length(seurat_subsets))
+
+message("Starting LinkPeaks by cluster ... ")
+
+set.seed(22082025)
+
+for (seurat_cluster in names(seurat_subsets)) {
+    # seurat_cluster = "Endo"
+
+    print(paste("Processing seurat cluster: ", seurat_cluster))
+
+    seurat_subset <- seurat_subsets[[seurat_cluster]]
+    seurat_subset
+
+    print(paste("Processing Peaks for ", seurat_cluster, "\n",
+                "Total cells found:", length(Cells(seurat_subset))))
+
+    atac <- LinkPeaks(
+        object = seurat_subset,
+        peak.assay = "ATAC_macs2",
+        expression.assay = "RNA",
+        genes.use = keep_genes,
+        method = p_met,
+        distance = as.numeric(w_size)             # Only consider peaks within x kb of gene TSS
+    )
+
+    print("Local link-peaks correlations completed!")
+
+    ## inspect data
+    print(head(Links(atac), n=3))
+
+    ## prepare data to save cvs
+    link_df <- as.data.frame(Links(atac))
+    print(summary(link_df$score))
+
+    f_name <- paste0(resolution_level, "_", seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
+    write.csv(
+        link_df,
+        file = here(output_cvsDir, f_name),
+        row.names = FALSE
+    )
+    print(paste("LinkPeaks saved: ", f_name))
+
+}
+
+
+message("MACS2 link-peaks correlations completed!")
 
 
 message("All done!!!")
