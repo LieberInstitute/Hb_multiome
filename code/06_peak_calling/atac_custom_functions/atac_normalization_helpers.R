@@ -23,11 +23,13 @@ if (!requireNamespace("Seurat", quietly = TRUE)) {
     stop("Package 'Seurat' is required but not installed.")
 }
 
-# Rebuild normalization & bias co-variates with previous thresholds
-# based on # https://github.com/LieberInstitute/Hb_multiome/blob/a87c3512395b0488af9413174796787412e99567/code/03_pseudobulking/08_harmony_CR_ARCr.R#L99-L105 
+# Rebuild TF-IDF normalization (with previous thresholds), runSVD & make GC content correction
+# based on:
+# https://github.com/LieberInstitute/Hb_multiome/blob/a87c3512395b0488af9413174796787412e99567/code/03_pseudobulking/08_harmony_CR_ARCr.R#L99-L105 
+
 global_rebuild_atac_normalization <- function(
         SeuratOBJ,
-        assay_name = "ATAC_unified"
+        assay_name
 ) {
     
     message("Starting normalization ... ")
@@ -51,15 +53,24 @@ global_rebuild_atac_normalization <- function(
         assay = assay_name
     )
     
-    message("Starting GC content correction ... ")
-    
-    genome <- BSgenome.Hsapiens.UCSC.hg38
-    
-    SeuratOBJ <- RegionStats(
-        object = SeuratOBJ,
-        assay = assay_name,
-        genome = genome
-    )
+    # message("Starting GC content correction ... ")
+    # 
+    # genome <- BSgenome.Hsapiens.UCSC.hg38
+    # # Normalize naming style before running RegionStats
+    # seqlevelsStyle(SeuratOBJ) <- "UCSC"
+    # # Keep only standard chromosomes
+    # SeuratOBJ[[assay_name]] <- SeuratOBJ[[assay_name]][
+    #     seqnames(granges(SeuratOBJ)) %in% standardChromosomes(granges(SeuratOBJ)), ]
+    # # Suppress scaffolds
+    # # suppressWarnings(
+    # #     SeuratOBJ <- RegionStats(SeuratOBJ, genome = genome, assay = assay_name)
+    # # )
+    # 
+    # SeuratOBJ <- RegionStats(
+    #     object = SeuratOBJ,
+    #     assay = assay_name,
+    #     genome = genome
+    # )
     
     message("Normalization done!")
     
