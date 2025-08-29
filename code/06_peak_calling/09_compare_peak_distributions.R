@@ -31,22 +31,18 @@ input_cvsDir <- here(
 plotDir <- here(
     "plots",
     "06_peak_calling",
-    "06_exploratory_peak_scores"
+    "09_compare_peak_distributions"
 )
-csvDir <- here(
-    "processed-data",
-    "06_peak_calling",
-    "06_exploratory_peak_scores"
-)
+# csvDir <- here(
+#     "processed-data",
+#     "06_peak_calling",
+#     "06_exploratory_peak_scores"
+# )
 
 ## Check directories
 if (!dir.exists(plotDir)) {
     dir.create(plotDir)
 }
-if (!dir.exists(csvDir)) {
-    dir.create(csvDir)
-}
-
 
 ## =============================================================================
 ## load CellRanger-ARC peaks counts and compute TSS stats 
@@ -55,6 +51,7 @@ if (!dir.exists(csvDir)) {
 lst_peaks_df <- list()
 
 message("Processing peak width histograms ...")
+
 
 for (ws in w_sizes) {
     # ws = w_sizes[3]
@@ -117,9 +114,7 @@ for (ws in w_sizes) {
     seqlevelsStyle(tss_coords) <- "UCSC"
     
     tss_raw <- as.data.frame(tss_coords)
-    head(tss_raw)
     has_biotype <- "gene_biotype" %in% colnames(tss_raw)
-    head(has_biotype)
     
     # then take first per (gene_name, chr) - this avoid 1:many associations
     tss_df <- tss_raw %>%
@@ -135,9 +130,7 @@ for (ws in w_sizes) {
             gene_strand = as.character(strand),
             gene_id
         )
-    head(tss_df)
-    nrow(tss_df)
-    
+
     ## check duplicates
     dup_pairs <- tss_df %>%
         count(gene_name, seqnames, name = "n") %>%
@@ -177,12 +170,8 @@ for (ws in w_sizes) {
     head(link_df2, n=2)
 
     message("Link gene-peak scores with TSS:")
-    summary(link_df2)
-    #sum(link_df2$distance > 1e5)  # should be ~0 if you used LinkPeaks(..., distance=1e5)
-    table(link_df2$gene_strand, useNA = "ifany")
-    # -    + 
-    # 2714 2786 
-    
+    #table(link_df2$gene_strand, useNA = "ifany")
+
     message("Peak center and distance to TSS added ...")
     
     #===============================================================================
@@ -203,16 +192,7 @@ for (ws in w_sizes) {
     summary(link_df2_parsed)
     total_peaks <- nrow(link_df2_parsed)
     
-    # compare to existing 'width' column
-    # - This will likely be FALSE for many rows; that's expected here
-    # - table(link_df2_parsed$width == link_df2_parsed$peak_width_bp, useNA = "ifany")
-    
-    # Overall peak width distribution (log scale)
-    # Compute summary stats
-    median_width <- median(link_df2_parsed$peak_width_bp, na.rm = TRUE)
-    mean_width   <- mean(link_df2_parsed$peak_width_bp, na.rm = TRUE)
-    
-    name_df = paste0("cellrangerARC_peaks_", p_met, "_ws_", ws)
+    name_df = paste0("ARC_peaks_", p_met, "_ws_", ws)
 
     if (length(lst_peaks_df) == 0) {
         
@@ -246,46 +226,42 @@ combined_df <- bind_rows(
 combined_df$group <- factor(combined_df$group, levels = names(lst_peaks_df))
 table(combined_df$group)
 
+# Compute group-specific median and mean widths
+group_stats <- combined_df |>
+    group_by(group) |>
+    summarise(
+        median_width = median(peak_width_bp, na.rm = TRUE),
+        mean_width = mean(peak_width_bp, na.rm = TRUE)
+    )
+
 p_hist <- ggplot(combined_df, aes(x = peak_width_bp, fill = group, color = group)) +
     geom_histogram(aes(y = after_stat(density)), bins = 100, alpha = 0.4, position = "identity") +
-    geom_density(linewidth = 0.8,  alpha = 0.1) +
+    geom_density(linewidth = 0.7,  alpha = 0.05) +
+    # Median and mean lines per group
+    geom_vline(data = group_stats, aes(xintercept = median_width, color = group),
+               linetype = "dashed", linewidth = 0.7, show.legend = FALSE) +
+    geom_vline(data = group_stats, aes(xintercept = mean_width, color = group),
+               linetype = "dotted", linewidth = 0.7, show.legend = FALSE) +
+    # Axes and theme
     scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_si("b"))) +
     #coord_flip() +
-    theme_minimal() +
-    labs(title = "Overlaid Peak Width Distributions - ATAC Assay", x = "Peak width (bp)", y = "Density")
-
-# 
-# 
-# p_hist <- ggplot(link_df2_parsed, aes(x = peak_width_bp)) +
-#     # histogram as horizontal bars
-#     geom_histogram(
-#         aes(y = after_stat(density)),  # normalize for density overlay
-#         bins = 100, fill = "steelblue", color = "white", alpha = 0.6
-#     ) +
-#     # density curve
-#     geom_density(color = "darkred", linewidth = 1) +
-#     geom_vline(xintercept = median_width, color = "black", linetype = "dashed", linewidth = 0.8) +
-#     geom_vline(xintercept = mean_width, color = "orange", linetype = "dotted", linewidth = 0.8) +
-#     # log scale for widths
-#     scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
-#     labs(
-#         title = paste("Distribution of peak widths - ", f_sufix),
-#         subtitle = paste(total_peaks, "total global peaks"),
-#         x = "Peak width (bp, log scale)",
-#         y = "Density",
-#         caption = paste("Dashed = median (", round(median_width), 
-#                         "bp), dotted = mean (", round(mean_width), "bp)")
-#     ) +
-#     theme_minimal(base_size = 12) +
-#     theme(
-#         panel.background = element_rect(fill = "gray95", color = NA),
-#         plot.background = element_rect(fill = "gray98", color = NA)
-#     ) +
-#     coord_flip()
+    theme_minimal(base_size = 10) +
+    theme(
+        legend.position = "top",
+        legend.text = element_text(size = 8),
+        legend.title = element_text(size = 8),
+        panel.background = element_rect(fill = "gray95", color = NA),
+        plot.background = element_rect(fill = "gray98", color = NA)
+    ) +
+    labs(title = "Overlaid Peak Width Distributions - CellRanger ATAC Assay", 
+         x = "Peak width (bp)", 
+         y = "Density",
+         fill = "Peak dataset:",
+         color = "Peak dataset:")
 
 
-f_name <- paste0("peak_width_histogram", f_sufix, ".pdf")
-ggsave(here::here(plotDir, f_name), p_hist, width = 8, height = 8)
+f_name <- paste0("peak_width_histogram_cellrangerARC.pdf")
+ggsave(here::here(plotDir, f_name), p_hist, width = 10, height = 6, dpi = 300)
 
 
 
