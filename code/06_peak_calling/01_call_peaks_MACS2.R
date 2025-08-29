@@ -168,7 +168,6 @@ message("Calling peaks at FINE level ... ")
 ## call macs
 peaks <- CallPeaks(
     object = SeuratOBJ,
-    #object = Seurat_subset,
     group.by = meta_col,
     macs2.path = "/users/csoto/.conda/envs/macs2_conda3_env/bin/macs2",
     verbose = TRUE
