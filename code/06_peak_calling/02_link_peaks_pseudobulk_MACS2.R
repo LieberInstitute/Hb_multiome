@@ -13,12 +13,19 @@
 
 library("Seurat")
 library("Signac")
-library("BSgenome.Hsapiens.UCSC.hg38")  # full reference genome sequence / actual DNA bases (A/T/C/G) for each chromosome
+library("BSgenome.Hsapiens.UCSC.hg38")  # full reference genome sequence
 library("GenomicRanges") 
 library("tidyverse")
 library("tidyr")
 library("stringr")
 library("here")
+
+
+## ATAC function's helper used globally
+source(here("code", "06_peak_calling", "atac_custom_functions", "atac_normalization_helpers.R"))
+# ls()
+# global_rebuild_atac_normalization
+# global_set_idents_from_meta
 
 #===============================================================================
 # resolution_level = "Broad"    # 8 cell-types
@@ -73,36 +80,6 @@ if (!dir.exists(cvsDir)) {
    
 
 ##==============================================================================
-## Set desired meta-data as current level: Mid or Broad
-
-# Set Seurat identities from a metadata column
-set_idents_from_meta <- function(seurat_obj, meta_col, level_order = NULL, na_fill = "Unknown") {
-    ## double check level exist on meta-data
-    if (!meta_col %in% colnames(seurat_obj@meta.data)) {
-        stop("Meta column '", meta_col, "' not found in SeuratOBJ@meta.data")
-    }
-    # extract target vector
-    target_vec <- as.character(seurat_obj[[meta_col]][, 1])
-    
-    # decide levels and keep appearance order
-    if (is.null(level_order)) {
-        level_order <- sort(unique(target_vec))
-    }
-    
-    # only update if different from current Idents
-    current_idents <- as.character(Idents(seurat_obj))
-    if (!identical(current_idents, target_vec)) {
-        seurat_obj <- SetIdent(seurat_obj, value = factor(target_vec, levels = level_order))
-        message("Idents set from meta column '", meta_col, "'.")
-    } else {
-        message("Idents already match '", meta_col, "', nothing to do.")
-    }
-    
-    return(seurat_obj)
-}
-
-
-##==============================================================================
 
 # load link peak-gene csv
 
@@ -134,13 +111,8 @@ head(peaks_gr)
 #     seqnames        ranges strand |         peak_called_in
 # <Rle>     <IRanges>  <Rle> |            <character>
 # [1]     chr1 181329-181534      * |             Inhib.Thal
-# [2]     chr1 191217-191619      * | OPC,Oligo,Inhib.Thal..
-# [3]     chr1 629146-629354      * |              Astrocyte
-# [4]     chr1 629811-630032      * | LHb.7,Astrocyte,Olig..
-# [5]     chr1 630189-630389      * |             Oligo,Endowhy a
-# [6]     chr1 632189-632410      * |              Astrocyte
 # -------
-#     seqinfo: 34 sequences from an unspecified genome; no seqlengths
+
 length(peaks_gr) # 355127
 peaks_gr[1]
 #str(peaks_gr)
@@ -152,8 +124,8 @@ peaks_gr[1]
 # Alternativately, I am merging ranges whose gaps are < 100 bp
 
 # union_peaks <- GenomicRanges::reduce(peaks_gr)
-union_peaks <- GenomicRanges::reduce(peaks_gr, min.gapwidth = 101)  # allow a gap < 101 → 0..100 bp
-union_peaks <- GenomicRanges::reduce(peaks_gr, min.gapwidth = 101, with.revmap = TRUE) # Use the with.revmap=TRUE to record which original peaks fed each merged range
+# Use the with.revmap=TRUE to record which original peaks fed each merged range
+union_peaks <- GenomicRanges::reduce(peaks_gr, min.gapwidth = 101, with.revmap = TRUE) 
 
 # fast confirmation
 length(union_peaks) # [1] 355127
@@ -169,13 +141,12 @@ any_overlaps # FALSE
 is_disjoint <- isDisjoint(peaks_gr, ignore.strand = TRUE) 
 is_disjoint # [1] TRUE
 n_dups <- sum(duplicated(peaks_gr)) # 0 duplicate intervals
-
 n_dups # 0 
+
 
 ##==============================================================================
 
-
-## Load Seurat and set desired clutering level
+## Load Seurat and set desired clustering level
 
 # Use Seurat with clusters renamed for Spatial-Registration on Visium project
 Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
@@ -202,8 +173,8 @@ meta_col <- case_when(
     resolution_level=="Mid" ~ "mid_cluster"
 )
 
-## set desired idents as current level
-SeuratOBJ <- set_idents_from_meta(SeuratOBJ, meta_col = meta_col)
+## set desired "idents" as current level
+SeuratOBJ <-  global_set_idents_from_meta(SeuratOBJ, meta_col = meta_col)
 levels(SeuratOBJ)
 
 message("Seurat loaded and ready!")
@@ -223,7 +194,7 @@ length(keep_genes) # in count: [1] 14526
 
 
 ##==============================================================================
-## Prepare data for aggregate all cells in a cluster to get one accessibility profile per cluster
+## Prepare data for aggregating all cells by cluster to compute accessibility profile per cluster
 
 DefaultAssay(SeuratOBJ) <- "ATAC"
 
@@ -235,7 +206,8 @@ frags_list <- Fragments(SeuratOBJ)
 length(frags_list) # 10
 #str(frags_list[1:2])
 #Cells(frags_list[[2]])
-# verifications
+
+# verification
 stopifnot(length(frags_list) >= 1)
 all_cells_frag <- unique(do.call(c, lapply(frags_list, Cells)))
 length(all_cells_frag) # 55516
@@ -270,42 +242,42 @@ SeuratOBJ
 DefaultAssay(SeuratOBJ) <- "ATAC_unified"
  
 # Rebuild normalization & bias covariates with previous thresholds
-# https://github.com/LieberInstitute/Hb_multiome/blob/a87c3512395b0488af9413174796787412e99567/code/03_pseudobulking/08_harmony_CR_ARCr.R#L99-L105
+# # https://github.com/LieberInstitute/Hb_multiome/blob/a87c3512395b0488af9413174796787412e99567/code/03_pseudobulking/08_harmony_CR_ARCr.R#L99-L105
+# 
+# 
+# global_rebuild_atac_normalization <- function(
+#         SeuratOBJ,
+#         assay_name = "ATAC_unified"
+#     ) {
+# 
+#     message("Starting normalization ... ")
+#     
+#     SeuratOBJ <- RunTFIDF(SeuratOBJ,
+#           assay = assay_name,
+#           method = 1,  # computes log(𝑇𝐹×𝐼𝐷𝐹).
+#           scale.factor = 10000)
+#     SeuratOBJ <- FindTopFeatures(SeuratOBJ,
+#          assay = assay_name,
+#          min.cutoff = 'q5', # 95% most common features coverage as VariableFeatures
+#          verbose = TRUE)
+#     SeuratOBJ <- RunSVD(SeuratOBJ,
+#         assay = assay_name)
+#     
+#     message("Starting GC content correction ... ")
+#     
+#     ## GC content correction
+#     genome <- BSgenome.Hsapiens.UCSC.hg38
+#     
+#     SeuratOBJ <- RegionStats(
+#         object = SeuratOBJ,
+#         assay = assay_name,
+#         genome = genome)
+#     
+#     return(SeuratOBJ)
+# 
+# }
 
-
-rebuild_atac_normalization <- function(
-        SeuratOBJ,
-        assay_name = "ATAC_unified"
-    ) {
-
-    message("Starting normalization ... ")
-    
-    SeuratOBJ <- RunTFIDF(SeuratOBJ,
-          assay = assay_name,
-          method = 1,  # computes log(𝑇𝐹×𝐼𝐷𝐹).
-          scale.factor = 10000)
-    SeuratOBJ <- FindTopFeatures(SeuratOBJ,
-         assay = assay_name,
-         min.cutoff = 'q5', # 95% most common features coverage as VariableFeatures
-         verbose = TRUE)
-    SeuratOBJ <- RunSVD(SeuratOBJ,
-        assay = assay_name)
-    
-    message("Starting GC content correction ... ")
-    
-    ## GC content correction
-    genome <- BSgenome.Hsapiens.UCSC.hg38
-    
-    SeuratOBJ <- RegionStats(
-        object = SeuratOBJ,
-        assay = assay_name,
-        genome = genome)
-    
-    return(SeuratOBJ)
-
-}
-
-SeuratOBJ <- rebuild_atac_normalization(SeuratOBJ, "ATAC_unified")
+SeuratOBJ <- global_rebuild_atac_normalization(SeuratOBJ, "ATAC_unified")
 
 message("Pre-processing ready ...")
 
@@ -325,7 +297,6 @@ unique(SeuratOBJ[[meta_col]])
 Seurat_pb <- AggregateExpression(
     SeuratOBJ,
     assays =  c("RNA", "ATAC_unified"),
-    #group.by = "cluster_ann",
     group.by = meta_col,
     # layer = c("counts", "counts"),
     # return.seurat = TRUE
@@ -426,7 +397,7 @@ message("Pseudobulk Done!")
 
 # LinkPeaks across clusters (pseudobulk)
 
-links_pb <- LinkPeaks(
+seurat_pb <- LinkPeaks(
     object = pb_obj,
     peak.assay = "ATAC_unified",
     expression.assay = "RNA",
@@ -437,49 +408,9 @@ links_pb <- LinkPeaks(
     #pvalue.cutoff = 1.0
 )
 link_df_pb <- as.data.frame(links_pb)
+
 write.csv(link_df_pb, here(cvsDir, paste0(resolution_level, "_pseudobulk_links", f_sufix, ".csv")), row.names = FALSE)
 
-
-# message("Computing local link-peaks correlations ...")
-# 
-# for (seurat_cluster in names(seurat_subsets)) {
-#     # seurat_cluster = "Endo"
-#     
-#     message("Processing seurat cluster: ", seurat_cluster)
-#     
-#     seurat_subset <- seurat_subsets[[seurat_cluster]]
-#     seurat_subset
-#     
-#     message("Total cells in cluster ", seurat_cluster, ": ", length(Cells(seurat_subset)))
-#     
-#     atac <- LinkPeaks(
-#         object = seurat_subset,
-#         #peak.assay = "ATAC",
-#         peak.assay = "ATAC_unified",
-#         expression.assay = "RNA",
-#         genes.use = keep_genes,
-#         method = p_met,
-#         distance = as.numeric(w_size)             # Only consider peaks within x kb of gene TSS
-#     )
-#     
-#     message("Local link-peaks correlations completed!")
-#     ## inspect data
-#     head(Links(atac), n=3)
-# 
-#     ## prepare data to save cvs
-#     link_df <- as.data.frame(Links(atac))
-#     print(summary(link_df$score))
-#     
-#     f_name <- paste0(resolution_level, "_pseudo_", seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
-#     write.csv(
-#         link_df,
-#         file = here(cvsDir, f_name),
-#         row.names = FALSE
-#     )
-#     message("LinkPeaks saved: ", f_name)
-#     
-# }
-# 
 
 message("Local link-peaks correlations completed!")
 
