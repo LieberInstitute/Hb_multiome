@@ -14,12 +14,17 @@
 library("Seurat")
 library("Signac")
 ## I use BSgenome.Hsapiens.UCSC.hg38 for extracting DNA motifs, k-mers, sequence-based features and compute Tn5 bias correction
-library("BSgenome.Hsapiens.UCSC.hg38")  # full reference genome sequence / actual DNA bases (A/T/C/G) for each chromosome
+library("BSgenome.Hsapiens.UCSC.hg38")  # full reference genome sequence
 library("purrr")
 library("tidyverse")
 library("tidyr")
 library("stringr")
 library("here")
+
+
+## ATAC function's helper used globally
+source(here("code", "06_peak_calling", "atac_custom_functions", "atac_normalization_helpers.R"))
+# ls()
 
 #===============================================================================
 # resolution_level = "Fine"     # 42 clusters (small clusters - not run)
@@ -62,7 +67,7 @@ input_macs_file <- here(
     "06_peak_calling",
     "01_call_peaks_MACS2"
 )
-cvsDir <- here(
+output_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
     "02_link_peaks_MACS2" # local peaks redo with Signac::CallPeaks()
@@ -75,8 +80,8 @@ output_RDS <- here(
 
 gene_peaks_csv <- here(input_macs_file, paste0("macs_peaks_Mid_resolution.csv"))
 
-if (!dir.exists(cvsDir)) {
-    dir.create(cvsDir)
+if (!dir.exists(output_cvsDir)) {
+    dir.create(output_cvsDir)
 }
 if (!dir.exists(output_RDS)) {
     dir.create(output_RDS)
@@ -84,37 +89,6 @@ if (!dir.exists(output_RDS)) {
    
 
 ##==============================================================================
-## Set desired meta-data as current level: Mid or Broad
-
-# Set Seurat identities from a metadata column
-set_idents_from_meta <- function(seurat_obj, meta_col, level_order = NULL, na_fill = "Unknown") {
-    ## double check level exist on meta-data
-    if (!meta_col %in% colnames(seurat_obj@meta.data)) {
-        stop("Meta column '", meta_col, "' not found in SeuratOBJ@meta.data")
-    }
-    # extract target vector
-    target_vec <- as.character(seurat_obj[[meta_col]][, 1])
-    
-    # decide levels and keep appearance order
-    if (is.null(level_order)) {
-        level_order <- sort(unique(target_vec))
-    }
-    
-    # only update if different from current Idents
-    current_idents <- as.character(Idents(seurat_obj))
-    if (!identical(current_idents, target_vec)) {
-        seurat_obj <- SetIdent(seurat_obj, value = factor(target_vec, levels = level_order))
-        message("Idents set from meta column '", meta_col, "'.")
-    } else {
-        message("Idents already match '", meta_col, "', nothing to do.")
-    }
-    
-    return(seurat_obj)
-}
-
-
-##==============================================================================
-
 ## Load Seurat and make verification
 
 # Use Seurat with clusters renamed for Spatial-Registration on Visium project
@@ -143,7 +117,7 @@ meta_col <- case_when(
 )
 
 ## set desired idents as current level
-SeuratOBJ <- set_idents_from_meta(SeuratOBJ, meta_col = meta_col)
+SeuratOBJ <-  global_set_idents_from_meta(SeuratOBJ, meta_col = meta_col)
 levels(SeuratOBJ)
 
 clusters <- levels(SeuratOBJ)
@@ -174,7 +148,7 @@ head(keep_genes)
 f_name <- paste0("rna_filtered_genes_2perc_cells.csv")
 write.csv(
     keep_genes, 
-    here(cvsDir, f_name),
+    here(output_cvsDir, f_name),
     row.names = FALSE
 )
 
@@ -367,7 +341,7 @@ DefaultAssay(SeuratOBJ) <- "ATAC_macs2"
 #     f_name <- paste0(resolution_level, "_", seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
 #     write.csv(
 #         link_df,
-#         file = here(cvsDir, f_name),
+#         file = here(output_cvsDir, f_name),
 #         row.names = FALSE
 #     )
 #     print(paste("LinkPeaks saved: ", f_name))
