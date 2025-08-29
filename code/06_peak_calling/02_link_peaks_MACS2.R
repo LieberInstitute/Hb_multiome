@@ -70,7 +70,7 @@ cvsDir <- here(
 output_RDS <- here(
     "processed-data",
     "06_peak_calling",
-    "01_call_peaks_MACS2"
+    "02_link_peaks_MACS2"
 )
 
 gene_peaks_csv <- here(input_macs_file, paste0("macs_peaks_Mid_resolution.csv"))
@@ -170,7 +170,7 @@ length(keep_genes) # in count: [1] 15896
 # Convert GRanges to data frame and save for further analysis
 head(keep_genes)
 
-## save genes to avoid redundant step on other scripts
+## save genes to avoid redundant step on subsequent scripts
 f_name <- paste0("rna_filtered_genes_2perc_cells.csv")
 write.csv(
     keep_genes, 
@@ -272,7 +272,8 @@ mat_macs2_peaks <- FeatureMatrix(
 )
 
 f_name <- paste0("mtx_peaks_cell_level_", resolution_level, "_resolution.rds")
-saveRDS(mat_macs2_peaks, file = f_name)
+rds_name <- here(output_RDS, f_name)
+saveRDS(mat_macs2_peaks, file = rds_name)
 # To load it back:
 # loaded_features <- readRDS("mat_macs2_peaks.rds")
 
