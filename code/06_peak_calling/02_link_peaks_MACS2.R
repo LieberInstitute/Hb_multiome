@@ -15,6 +15,7 @@ library("Seurat")
 library("Signac")
 ## I use BSgenome.Hsapiens.UCSC.hg38 for extracting DNA motifs, k-mers, sequence-based features and compute Tn5 bias correction
 library("BSgenome.Hsapiens.UCSC.hg38")  # full reference genome sequence
+library("GenomicRanges") 
 library("purrr")
 library("tidyverse")
 library("tidyr")
@@ -78,23 +79,22 @@ output_RDS <- here(
     "02_link_peaks_MACS2"
 )
 
-gene_peaks_csv <- here(input_macs_file, paste0("macs_peaks_Mid_resolution.csv"))
-
 if (!dir.exists(output_cvsDir)) {
     dir.create(output_cvsDir)
 }
 if (!dir.exists(output_RDS)) {
     dir.create(output_RDS)
 }
-   
 
 ##==============================================================================
-## Load Seurat and make verification
+## Load Seurat / macs peaks / filtered genes. And make verification
 
-# Use Seurat with clusters renamed for Spatial-Registration on Visium project
+## macs2 peaks
+macs2_peaks_csv <- here(input_macs_file, paste0("macs_peaks_Mid_resolution.csv"))
+
+## Seurat with final ct - Visium HD corrected 
 Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
-
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
 SeuratOBJ
 DefaultAssay(SeuratOBJ) <- "RNA"
@@ -169,22 +169,20 @@ for (clust in clusters) {
 
 message("Seurat subsets by cell-type arranged: ", length(seurat_subsets))
 
+
 ##==============================================================================
 
-# load link peak-gene csv
+# load macs2 peaks
 
-message("Loading ", basename(gene_peaks_csv))
+message("Loading ", basename(macs2_peaks_csv))
 
-if (file.exists(gene_peaks_csv)) {
-    peaks_df <- read.csv(gene_peaks_csv)
+if (file.exists(macs2_peaks_csv)) {
+    peaks_df <- read.csv(macs2_peaks_csv)
     message("File loaded!")
 } else {
-    stop(paste("File not found:", gene_peaks_csv))
+    stop(paste("File not found:", macs2_peaks_csv))
 }
-
 colnames(peaks_df)
-# [1] "seqnames"       "start"          "end"            "width"         
-# [5] "strand"         "peak_called_in"
 
 # CSV has columns like: seqnames, start, end, etc
 peaks_gr <- makeGRangesFromDataFrame(
@@ -203,12 +201,6 @@ head(peaks_gr)
 # seqnames        ranges strand |         peak_called_in
 # <Rle>     <IRanges>  <Rle> |            <character>
 # [1]     chr1 181329-181534      * |             Inhib.Thal
-# [2]     chr1 191217-191619      * | OPC,Oligo,Inhib.Thal..
-# [3]     chr1 629146-629354      * |              Astrocyte
-# [4]     chr1 629811-630032      * | LHb.7,Astrocyte,Olig..
-# [5]     chr1 630189-630389      * |             Oligo,Endo
-# [6]     chr1 632189-632410      * |              Astrocyte
-
 
 ##==============================================================================
 
@@ -249,7 +241,7 @@ f_name <- paste0("mtx_peaks_cell_level_", resolution_level, "_resolution.rds")
 rds_name <- here(output_RDS, f_name)
 saveRDS(mat_macs2_peaks, file = rds_name)
 # To load it back:
-# loaded_features <- readRDS("mat_macs2_peaks.rds")
+# mat_macs2_peaks <- readRDS(rds_name)
 
 message("Chromatin counts saved ...")
 
@@ -269,37 +261,46 @@ atac_macs2
 
 ## add the new chromatin object to existing Seurat 
 SeuratOBJ[["ATAC_macs2"]] <- atac_macs2
-SeuratOBJ
+Assays(SeuratOBJ)
+# [1] "RNA"        "ATAC"       "ATAC_macs2"
 
 ## milestone
 f_name <- paste0("Seurat_peaks_macs2_cell_level_", resolution_level, "_resolution.rds")
 rds_name <- here(output_RDS, f_name)
 saveRDS(SeuratOBJ, file = rds_name)
+#readRDS(SeuratOBJ, file = rds_name)
 
 message("Seurat with new chromatin saved succesfully!")
 
 DefaultAssay(SeuratOBJ) <- "ATAC_macs2"
 
-# ## Calculate GC content for each peak and add it to the feature metadata
-# SeuratOBJ <- RegionStats(
-#     object = SeuratOBJ,
-#     genome = genome,
-#     assay = "ATAC"
-# )
-# colnames(SeuratOBJ)
-# 
-# message("GC content correction done!")
-# 
-# ## set a subset of genes to test
-# #hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
-# 
-# 
-# ##==============================================================================
-# ## Process "global" Link peak-genes
-# 
-# message("Computing global link-peaks correlations ...")
-# 
-# 
+# Make GC content correction and run TF-IDF normalization, runSVD & 
+
+message("Starting GC content correction ... ")
+
+# Set genome
+genome <- BSgenome.Hsapiens.UCSC.hg38
+
+# Compute GC content for each peak
+SeuratOBJ <- RegionStats(
+    object = SeuratOBJ,
+    assay = "ATAC_macs2",
+    genome = genome
+)
+
+message("GC content correction and normalization done!")
+
+# Filter cells / QC ? 
+
+# before_peaks <- sum(SeuratOBJ[["nCount_ATAC"]])
+# tmp_Sobj <- subset(SeuratOBJ, subset = nCount_ATAC < 75000 & nCount_ATAC > 1000)
+# after_peaks <- sum(SeuratOBJ[["nCount_ATAC"]])
+
+SeuratOBJ <- global_rebuild_atac_normalization(SeuratOBJ, "ATAC_macs2")
+
+## set a subset of genes to test
+#hb_cannonical_genes <- c("GPR151",  "POU4F1", "TAC3")
+
 # ##==============================================================================
 # ## Process "local" Link peak-genes (by cluster)
 # 
