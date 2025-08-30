@@ -1,5 +1,7 @@
 ########################################################################
-## Compare width peaks distributions between CellRanger Peaks and Signac::CallPeakss() outputs
+## Compare width peaks
+## Input: LinkPeaks() results using CellRanger-ARC atac assay (global)
+## Output a combined histogram
 ##
 ## Authors. CSC
 ## Date. Aug 28, 2025
@@ -31,13 +33,8 @@ input_cvsDir <- here(
 plotDir <- here(
     "plots",
     "06_peak_calling",
-    "09_compare_peak_distributions"
+    "09_compare_link_peak_gene_distributions"
 )
-# csvDir <- here(
-#     "processed-data",
-#     "06_peak_calling",
-#     "06_exploratory_peak_scores"
-# )
 
 ## Check directories
 if (!dir.exists(plotDir)) {
@@ -48,7 +45,7 @@ if (!dir.exists(plotDir)) {
 ## load CellRanger-ARC peaks counts and compute TSS stats 
 
 ## list of data frames with peak coordinates, central values and peak width
-lst_peaks_df <- list()
+lst_links_df <- list()
 
 message("Processing peak width histograms ...")
 
@@ -73,7 +70,7 @@ for (ws in w_sizes) {
     # load link peak-gene csv
     gene_peaks_csv <- here(input_cvsDir, paste0("all_peak_gene_links", f_sufix, ".csv"))
     if (file.exists(gene_peaks_csv)) {
-        link_df <- read.csv(gene_peaks_csv)
+        links_df <- read.csv(gene_peaks_csv)
         message("File loaded!")
     } else {
         stop(paste("File not found:", gene_peaks_csv))
@@ -82,18 +79,18 @@ for (ws in w_sizes) {
     ##==========================================================================
     ## prepare df with peak ranges and width
     
-    colnames(link_df)
-    head(link_df, n=3)
-    nrow(link_df)
+    colnames(links_df)
+    head(links_df, n=3)
+    nrow(links_df)
     
-    link_df <- link_df |>
+    links_df <- links_df |>
         mutate(
             gene     = trimws(as.character(gene)),
             seqnames = as.character(seqnames),
             start    = as.numeric(start),
             end      = as.numeric(end)
         )
-    head(link_df)
+    head(links_df)
     
     message("Computing distance between peaks and TSS ...")
     
@@ -142,24 +139,24 @@ for (ws in w_sizes) {
     }
     
     # Join by gene + chromosome to avoid many-to-many 
-    colnames(link_df)
+    colnames(links_df)
     colnames(tss_df)
-    link_df2 <- link_df %>%
+    links_df2 <- links_df %>%
         left_join(tss_df, by = c("gene" = "gene_name", "seqnames" = "seqnames"))
-    head(link_df2, n = 3)
+    head(links_df2, n = 3)
 
     # drop rows with no TSS match
-    n_before <- nrow(link_df2)
-    link_df2 <- link_df2 %>% filter(!is.na(tss))
-    message("Dropped ", n_before - nrow(link_df2), " rows with no TSS match.")
+    n_before <- nrow(links_df2)
+    links_df2 <- links_df2 %>% filter(!is.na(tss))
+    message("Dropped ", n_before - nrow(links_df2), " rows with no TSS match.")
     
-    nrow(link_df2)
+    nrow(links_df2)
     
     message("Distance between peaks and TSS added ...")
     
     message("Computing Peak center and distance to TSS ...")
     
-    link_df2 <- link_df2 %>%
+    links_df2 <- links_df2 %>%
         mutate(
             peak_center       = (start + end) / 2,
             distance          = abs(peak_center - tss),
@@ -167,10 +164,10 @@ for (ws in w_sizes) {
             signed_by_strand  = ifelse(gene_strand == "-", -signed_distance, signed_distance),
             distance_kb       = distance / 1000
         )
-    head(link_df2, n=2)
+    head(links_df2, n=2)
 
     message("Link gene-peak scores with TSS:")
-    #table(link_df2$gene_strand, useNA = "ifany")
+    #table(links_df2$gene_strand, useNA = "ifany")
 
     message("Peak center and distance to TSS added ...")
     
@@ -178,32 +175,32 @@ for (ws in w_sizes) {
     # Parse true peak coordinates from the `peak` column
     # peak format assumed: "chrX-start-end"
     
-    colnames(link_df2)
-    head(link_df$peak)
+    colnames(links_df2)
+    head(links_df$peak)
     
-    link_df2_parsed <- link_df2 %>%
+    links_df2_parsed <- links_df2 %>%
         tidyr::separate(peak, into = c("p_chr","p_start","p_end"), sep = "-", remove = FALSE, convert = TRUE) %>%
         mutate(
             peak_width_bp = as.numeric(p_end) - as.numeric(p_start) + 1,
             peak_width_kb = peak_width_bp / 1000
         )
     
-    head(link_df2_parsed)
-    summary(link_df2_parsed)
-    total_peaks <- nrow(link_df2_parsed)
+    head(links_df2_parsed)
+    summary(links_df2_parsed)
+    total_peaks <- nrow(links_df2_parsed)
     
     name_df = paste0("ARC_peaks_", p_met, "_ws_", ws)
 
-    if (length(lst_peaks_df) == 0) {
+    if (length(lst_links_df) == 0) {
         
         # initialize list with a named element
-        lst_peaks_df <- list(link_df2_parsed)
-        names(lst_peaks_df) <- name_df
+        lst_links_df <- list(links_df2_parsed)
+        names(lst_links_df) <- name_df
         
     } else {
         
         # append with a name
-        lst_peaks_df[[name_df]] <- link_df2_parsed
+        lst_links_df[[name_df]] <- links_df2_parsed
     }
     
     message("New dataframe added")
@@ -211,19 +208,19 @@ for (ws in w_sizes) {
 }
 
 message("Peaks Dataframes: ")
-names(lst_peaks_df)
+names(lst_links_df)
 
-# Combine all dataframes in lst_peaks_df, tagging each with its list name
+# Combine all dataframes in lst_links_df, tagging each with its list name
 combined_df <- bind_rows(
-    lapply(names(lst_peaks_df), function(nm) {
-        df <- lst_peaks_df[[nm]]
+    lapply(names(lst_links_df), function(nm) {
+        df <- lst_links_df[[nm]]
         df$group <- nm
         return(df)
     })
 )
 
 # covert grp to factor and check
-combined_df$group <- factor(combined_df$group, levels = names(lst_peaks_df))
+combined_df$group <- factor(combined_df$group, levels = names(lst_links_df))
 table(combined_df$group)
 
 # Compute group-specific median and mean widths
@@ -264,5 +261,27 @@ f_name <- paste0("peak_width_histogram_cellrangerARC.pdf")
 ggsave(here::here(plotDir, f_name), p_hist, width = 10, height = 6, dpi = 300)
 
 
+message("Plots done!!!")
+
+
+# library("slurmjobs")
+# job_single(
+#   "09_compare_link_peak_gene_distributions",
+#   create_shell = TRUE,
+#   partition = "katun",
+#   memory = "30G",
+#   cores = 2,
+#   logdir = "logs",
+#   command = "Rscript 09_compare_link_peak_gene_distributions.R",
+#   create_logdir = TRUE
+# )
+
+## Reproducibility information
+library("sessioninfo")
+print("Reproducibility information:")
+Sys.time()
+proc.time()
+options(width = 120)
+session_info()
 
 
