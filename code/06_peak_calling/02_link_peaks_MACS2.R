@@ -168,6 +168,22 @@ if (file.exists(macs2_peaks_csv)) {
 }
 colnames(peaks_df)
 
+## verify shorter and longer peaks
+quantile(peaks_df$width, probs = c(0.01, 0.02, 0.05, 0.25, 0.5, 0.75, 0.95, 0.98, 0.99, 0.995, 0.997))
+# 1%   2%   5%  25%  50%  75%  95%  98%  99% 
+# 200  200  205  260  362  545 1131 1515 1766 
+peaks_df[peaks_df$width < 200, ]
+# <0 rows> (or 0-length row.names)
+nrow(peaks_df[peaks_df$width > 2000, ])
+# 1756
+## Avoid very small or very large peaks (< 20bp or > 2kb). Improve quality
+x <- nrow(peaks_df)
+peaks_df <- peaks_df[peaks_df$width >= 200 & peaks_df$width <= 2000, ]
+y <- nrow(peaks_df)
+
+message("Peaks removed ", (x - y))
+message("Peaks kept: ", (x - (x-y)), " (", round((y * 100) / x, digits = 2), "%)")
+
 # CSV has columns like: seqnames, start, end, etc
 peaks_gr <- makeGRangesFromDataFrame(
     peaks_df,
@@ -190,9 +206,14 @@ head(peaks_gr)
 # <Rle>     <IRanges>  <Rle> |            <character>
 # [1]     chr1 181329-181534      * |             Inhib.Thal
 
+message("MACS2 peaks prepared!")
+
+
 ##==============================================================================
 
 ## Pre-processing: create new ATAC object from CallPeaks output fragments
+
+message("Stating Quantification ...")
 
 ## Set ATAC assay 
 Assays(SeuratOBJ)
@@ -229,6 +250,10 @@ mat_macs2_peaks <- FeatureMatrix(
 # peak_counts <- Matrix::rowSums(mat_macs2_peaks > 0)
 # keep_peaks <- peak_counts > 50 
 # mat_macs2_peaks <- mat_macs2_peaks[keep_peaks, ]
+# or
+# Avoid very small or very large peaks (< 20bp or > 2kb)
+
+message("Peaks quantification done!")
 
 f_name <- paste0("mtx_peaks_cell_level_", resolution_level, "_resolution.rds")
 rds_name <- here(output_RDS, f_name)
@@ -357,7 +382,8 @@ for (seurat_cluster in names(seurat_subsets)) {
         file = here(output_cvsDir, f_name),
         row.names = FALSE
     )
-    print(paste("LinkPeaks saved: ", f_name))
+    
+    message("LinkPeaks saved: ", f_name)
 
 }
 
