@@ -21,6 +21,7 @@ library("here")
 p_met = "spearman"
 # w_size = "1e5"
 w_sizes = c("1e5", "5e4", "2.5e4")
+resolution_level = "Broad"
 
 here::here()
 
@@ -219,6 +220,23 @@ combined_df <- bind_rows(
     })
 )
 
+
+message("Sumary stats:")
+
+summary_stats <- combined_df |>
+    group_by(group) |>
+    summarise(
+        n = n(),
+        median_width_bp = round(median(peak_width_bp, na.rm = TRUE), 1),
+        Q1 = round(quantile(peak_width_bp, 0.25, na.rm = TRUE), 1),
+        Q3 = round(quantile(peak_width_bp, 0.75, na.rm = TRUE), 1),
+        IQR = Q3 - Q1
+    ) |>
+    arrange(median_width_bp)
+
+summary_stats
+
+
 # covert grp to factor and check
 combined_df$group <- factor(combined_df$group, levels = names(lst_links_df))
 table(combined_df$group)
@@ -231,34 +249,66 @@ group_stats <- combined_df |>
         mean_width = mean(peak_width_bp, na.rm = TRUE)
     )
 
+# p_hist <- ggplot(combined_df, aes(x = peak_width_bp, fill = group, color = group)) +
+#     geom_histogram(aes(y = after_stat(density)), bins = 100, alpha = 0.4, position = "identity") +
+#     geom_density(linewidth = 0.7,  alpha = 0.05) +
+#     # Median and mean lines per group
+#     geom_vline(data = group_stats, aes(xintercept = median_width, color = group),
+#                linetype = "dashed", linewidth = 0.7, show.legend = FALSE) +
+#     geom_vline(data = group_stats, aes(xintercept = mean_width, color = group),
+#                linetype = "dotted", linewidth = 0.7, show.legend = FALSE) +
+#     # Axes and theme
+#     scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_si("b"))) +
+#     #coord_flip() +
+#     theme_minimal(base_size = 10) +
+#     theme(
+#         legend.position = "top",
+#         legend.text = element_text(size = 8),
+#         legend.title = element_text(size = 8),
+#         panel.background = element_rect(fill = "gray95", color = NA),
+#         plot.background = element_rect(fill = "gray98", color = NA)
+#     ) +
+#     labs(title = "Overlaid Peak Width Distributions - Raw LinkPeaks (CellRanger-ARC assay)", 
+#          x = "Peak width (bp)", 
+#          y = "Density",
+#          fill = "LinkPeak dataset:",
+#          color = "LinkPeak dataset:")
+
 p_hist <- ggplot(combined_df, aes(x = peak_width_bp, fill = group, color = group)) +
-    geom_histogram(aes(y = after_stat(density)), bins = 100, alpha = 0.4, position = "identity") +
-    geom_density(linewidth = 0.7,  alpha = 0.05) +
+    # geom_histogram(
+    #     bins = 50, alpha = 0.4, position = "identity") +
+    geom_density(
+        aes(y = after_stat(density), group = group),
+        linewidth = 0.7,  alpha = 0.1) +
     # Median and mean lines per group
     geom_vline(data = group_stats, aes(xintercept = median_width, color = group),
-               linetype = "dashed", linewidth = 0.7, show.legend = FALSE) +
-    geom_vline(data = group_stats, aes(xintercept = mean_width, color = group),
-               linetype = "dotted", linewidth = 0.7, show.legend = FALSE) +
+               linetype = "dashed", linewidth = 0.3, show.legend = FALSE) +
+    # geom_vline(data = group_stats, aes(xintercept = mean_width, color = group),
+    #           linetype = "dotted", linewidth = 0.7, show.legend = FALSE) +
     # Axes and theme
     scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_si("b"))) +
     #coord_flip() +
+    coord_cartesian(xlim = c(100, 0.5e4)) +
     theme_minimal(base_size = 10) +
     theme(
-        legend.position = "top",
+        #legend.position = "top",
         legend.text = element_text(size = 8),
         legend.title = element_text(size = 8),
         panel.background = element_rect(fill = "gray95", color = NA),
         plot.background = element_rect(fill = "gray98", color = NA)
     ) +
-    labs(title = "Overlaid Peak Width Distributions - CellRanger ATAC Assay", 
-         x = "Peak width (bp)", 
+    labs(title = "Overlaid Peak Width Distributions - Raw LinkPeaks (CellRanger-ARC assay)", 
+         subtitle = paste0(resolution_level, " cell-types"),
+         x = "Peak width (bp, log scale)", 
          y = "Density",
-         fill = "Peak dataset:",
-         color = "Peak dataset:")
+         # y = "Link-Peak counts",
+         fill = "Correlation Window",
+         color = "Correlation Window",
+         caption = "Dashed lines = median peak width per group")
 
 
-f_name <- paste0("peak_width_histogram_cellrangerARC.pdf")
-ggsave(here::here(plotDir, f_name), p_hist, width = 10, height = 6, dpi = 300)
+f_name <- paste0("link_peak_width_histogram_cellrangerARC.pdf")
+ggsave(here::here(plotDir, f_name), p_hist, width = 8, height = 6, dpi = 300)
 
 
 message("Plots done!!!")
