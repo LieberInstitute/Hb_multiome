@@ -24,11 +24,11 @@ fi
 
 res="${clust_res[$i]}"
 
-# skip Broad
-if [[ "$res" == "Broad" ]]; then
-  echo "[$(date)] Skipping clust_res='Broad' for array task $i"
-  exit 0   # success so SLURM won’t retry
-fi
+# # skip Broad
+# if [[ "$res" == "Broad" ]]; then
+#   echo "[$(date)] Skipping clust_res='Broad' for array task $i"
+#   exit 0   # success so SLURM won’t retry
+# fi
 
 #mkdir -p logs
 log_path="logs/02_link_peaks_MACS2_${res}_task_${i}.log"
