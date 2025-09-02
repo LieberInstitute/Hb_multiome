@@ -301,6 +301,9 @@ ggsave(here::here(plotDir, f_name), p_hist, width = 8, height = 6, dpi = 300)
 
 ## Define Enhancer Class (Promoter vs Distal)
 
+# use abs(signed_by_strand) = Distance from peak center to TSS, it is strand-aware
+# This metric tells how far the linked peak is from the TSS of the gene
+# note, peak_width_kb is the length of the peak itself
 combined_df <- combined_df |>
     mutate(
         enhancer_class = case_when(
@@ -313,13 +316,14 @@ combined_df$enhancer_class <- factor(
     combined_df$enhancer_class,
     levels = c("Promoter (<1kb)", "Proximal (1–10kb)", "Distal (>10kb)")
 )
+head(combined_df)
 
 p1 <- ggplot(combined_df, aes(x = enhancer_class, y = peak_width_bp, fill = enhancer_class)) +
-    geom_violin(scale = "width", trim = TRUE, alpha = 0.8) +
-    geom_boxplot(width = 0.1, outlier.size = 0.3, alpha = 0.5) +  # optional overlay
-    scale_y_log10() +
+    geom_violin(scale = "width", trim = TRUE, alpha = 0.2) +
+    geom_boxplot(width = 0.1, outlier.size = 0.3, alpha = 0.5) +  
+    #scale_y_log10() +
     facet_wrap(~ group) +
-    #theme_minimal(base_size = 10) +
+    theme_minimal() +
     theme(
         axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
         legend.position = "none"
@@ -327,7 +331,7 @@ p1 <- ggplot(combined_df, aes(x = enhancer_class, y = peak_width_bp, fill = enha
     labs(
         title = "Peak width by enhancer class",
         x = "Enhancer category (distance to TSS)",
-        y = "Peak width (bp, log scale)"
+        y = "Peak width (bp)"
     )
 
 
