@@ -120,7 +120,10 @@ meta_col <- case_when(
 
 ## set desired idents as current level
 SeuratOBJ <-  global_set_idents_from_meta(SeuratOBJ, meta_col = meta_col)
-                                                                                                         
+levels(SeuratOBJ)
+clusters <- levels(SeuratOBJ)
+message("Seurat loaded and ready!")
+clusters
 
 ##==============================================================================
 ## filter genes to those expressed in 2% of cells
