@@ -19,53 +19,61 @@ library("scales")
 library("here")
 
 
-resolution_level = "Broad"
+resolution_level = "Mid"
 
 # Check/create directories
 input_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
-    "02_link_peaks_MACS2"
+    "02_link_peaks_MACS2", 
+    "old_Mid" # <= temporal dir for testing / should be removed
 )
 plotDir <- here(
     "plots",
     "06_peak_calling",
-    "10_compare_peak_distributions_MACS2"
+    "10_compare_link_peak_gene_distributions_MACS2"
+)
+output_cvsDir <- here(
+    "processed-data",
+    "06_peak_calling",
+    "10_compare_link_peak_gene_distributions_MACS2"
 )
 
 ## Check directories
 if (!dir.exists(plotDir)) {
-  dir.create(plotDir)
+    dir.create(plotDir)
 }
+if (!dir.exists(output_cvsDir)) {
+    dir.create(output_cvsDir)
+}
+
 
 ## load linked peaks from Signac::CallPeaks() and compute TSS stats 
 
 # List all files matching the specific clustering resolution level
+pattern = paste0("^", resolution_level, ".*\\.csv$")
 lst_link_files <- list.files(
     path = input_cvsDir,
-    pattern = paste0("^", resolution_level)
+    pattern = pattern
 )
 
-#lst_peak_files = list.files(path = input_cvsDir)
 message("Link peak-genes files found:")
 lst_link_files
 
-## list of data frames with peak coordinates, central values and peak width
+## list of file names with link peaks-to-genes information
 lst_links_df <- list()
 
 message("Processing peak width histograms ...")
 
-macs2_resolutions = c("Broad")  
+for (ct_links in lst_link_files) {
+    # ct_links = lst_link_files[1]
 
-
-for (clust_res in macs2_resolutions) {
-    # clust_res = macs2_resolutions[1]
-
-    print(clust_res)    
+    message("Processing ", ct_links)
+    
     # load link peak-gene csv
-    gene_peaks_csv <- here(input_cvsDir, clust_res)
+    gene_peaks_csv <- here(input_cvsDir, ct_links)
     if (file.exists(gene_peaks_csv)) {
-        peaks_df <- read.csv(gene_peaks_csv)
+        links_df <- read.csv(gene_peaks_csv)
         message("File loaded!")
     } else {
         stop(paste("File not found:", gene_peaks_csv))
@@ -74,27 +82,24 @@ for (clust_res in macs2_resolutions) {
     ##==========================================================================
     ## prepare df with peak ranges and width
     
-    colnames(peaks_df)
-    head(peaks_df, n=3)
-    nrow(peaks_df)
+    colnames(links_df)
+    head(links_df, n=3)
+    nrow(links_df)
     
-    peaks_df <- peaks_df |>
+    links_df <- links_df |>
         mutate(
             gene     = trimws(as.character(gene)),
             seqnames = as.character(seqnames),
             start    = as.numeric(start),
             end      = as.numeric(end)
         )
-    head(peaks_df)
+    head(links_df)
     
     message("Computing distance between peaks and TSS ...")
     
     ## Build TSS (strand-aware) GRanges table and compute the distance between each peak and its linked gene's TSS
     gene_coords <- genes(EnsDb.Hsapiens.v86)
-    # tss_coords <- resize(gene_coords, width = 1, fix = "start")
-    # tss_coords <- keepStandardChromosomes(tss_coords, pruning.mode = "coarse")
-    # head(tss_coords)
-    
+
     # Build TSS table (strand-aware)
     # extracts promoter regions from those gene_coords, upstream = 0 (don’t include any bases before the TSS, 
     # downstream = 1 (take exactly one base downstream from the TSS)
@@ -134,24 +139,24 @@ for (clust_res in macs2_resolutions) {
     }
     
     # Join by gene + chromosome to avoid many-to-many 
-    colnames(peaks_df)
+    colnames(links_df)
     colnames(tss_df)
-    peaks_df2 <- peaks_df %>%
+    links_df2 <- links_df %>%
         left_join(tss_df, by = c("gene" = "gene_name", "seqnames" = "seqnames"))
-    head(peaks_df2, n = 3)
+    head(links_df2, n = 3)
     
     # drop rows with no TSS match
-    n_before <- nrow(peaks_df2)
-    peaks_df2 <- peaks_df2 %>% filter(!is.na(tss))
-    message("Dropped ", n_before - nrow(peaks_df2), " rows with no TSS match.")
+    n_before <- nrow(links_df2)
+    links_df2 <- links_df2 %>% filter(!is.na(tss))
+    message("Dropped ", n_before - nrow(links_df2), " rows with no TSS match.")
     
-    nrow(peaks_df2)
+    nrow(links_df2)
     
     message("Distance between peaks and TSS added ...")
     
     message("Computing Peak center and distance to TSS ...")
     
-    peaks_df2 <- peaks_df2 %>%
+    links_df2 <- links_df2 %>%
         mutate(
             peak_center       = (start + end) / 2,
             distance          = abs(peak_center - tss),
@@ -159,10 +164,10 @@ for (clust_res in macs2_resolutions) {
             signed_by_strand  = ifelse(gene_strand == "-", -signed_distance, signed_distance),
             distance_kb       = distance / 1000
         )
-    head(peaks_df2, n=2)
+    head(links_df2, n=2)
     
     message("Link gene-peak scores with TSS:")
-    #table(peaks_df2$gene_strand, useNA = "ifany")
+    #table(links_df2$gene_strand, useNA = "ifany")
     
     message("Peak center and distance to TSS added ...")
     
@@ -170,37 +175,28 @@ for (clust_res in macs2_resolutions) {
     # Parse true peak coordinates from the `peak` column
     # peak format assumed: "chrX-start-end"
     
-    colnames(peaks_df2)
-    head(peaks_df$peak)
+    colnames(links_df2)
+    head(links_df$peak)
     
-    peaks_df2_parsed <- peaks_df2 %>%
+    links_df2_parsed <- links_df2 %>%
         tidyr::separate(peak, into = c("p_chr","p_start","p_end"), sep = "-", remove = FALSE, convert = TRUE) %>%
         mutate(
             peak_width_bp = as.numeric(p_end) - as.numeric(p_start) + 1,
             peak_width_kb = peak_width_bp / 1000
         )
     
-    head(peaks_df2_parsed)
-    summary(peaks_df2_parsed)
-    total_peaks <- nrow(peaks_df2_parsed)
+    head(links_df2_parsed, n=2)
+    total_peaks <- nrow(links_df2_parsed)
     
-    name_df = paste0("ARC_peaks_", p_met, "_res_", clust_res)
-    
-    if (length(lst_links_df) == 0) {
-        
-        # initialize list with a named element
-        lst_links_df <- list(peaks_df2_parsed)
-        names(lst_links_df) <- name_df
-        
-    } else {
-        
-        # append with a name
-        lst_links_df[[name_df]] <- peaks_df2_parsed
-    }
+    # extract name for named list    
+    name_df = sub("^([^_]+_[^_]+)_.*", "\\1", ct_links)
+    # build lst of df
+    lst_links_df[[name_df]] <- links_df2_parsed
     
     message("New dataframe added")
     
 }
+
 
 message("Peaks Dataframes: ")
 names(lst_links_df)
@@ -227,35 +223,104 @@ group_stats <- combined_df |>
     )
 
 p_hist <- ggplot(combined_df, aes(x = peak_width_bp, fill = group, color = group)) +
-    geom_histogram(aes(y = after_stat(density)), bins = 100, alpha = 0.4, position = "identity") +
-    geom_density(linewidth = 0.7,  alpha = 0.05) +
+    # geom_histogram(
+    #     aes(y = after_stat(density)), 
+    #     bins = 50, alpha = 0.4, position = "identity") +
+    geom_density(
+        aes(y = after_stat(density), group = group),
+        linewidth = 0.7,  alpha = 0.1) +
     # Median and mean lines per group
     geom_vline(data = group_stats, aes(xintercept = median_width, color = group),
-               linetype = "dashed", linewidth = 0.7, show.legend = FALSE) +
-    geom_vline(data = group_stats, aes(xintercept = mean_width, color = group),
-               linetype = "dotted", linewidth = 0.7, show.legend = FALSE) +
+               linetype = "dashed", linewidth = 0.3, show.legend = FALSE) +
+    # geom_vline(data = group_stats, aes(xintercept = mean_width, color = group),
+    #           linetype = "dotted", linewidth = 0.7, show.legend = FALSE) +
     # Axes and theme
-    scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_si("b"))) +
-    #coord_flip() +
+    scale_x_log10(
+        labels = scales::label_number(scale_cut = scales::cut_si("b")),
+        expand = expansion(mult = c(0.01, 0.01))
+    ) +
+    coord_cartesian(xlim = c(20, NA)) + # correspond with left tail cut off
     theme_minimal(base_size = 10) +
     theme(
-        legend.position = "top",
+        #legend.position = "top",
         legend.text = element_text(size = 8),
         legend.title = element_text(size = 8),
         panel.background = element_rect(fill = "gray95", color = NA),
         plot.background = element_rect(fill = "gray98", color = NA)
     ) +
-    labs(title = "Overlaid Peak Width Distributions - CellRanger ATAC Assay", 
-         x = "Peak width (bp)", 
+    labs(title = "Overlaid Peak Width Distributions - Raw LinkPeaks (macs2)",
+         subtitle = paste0(resolution_level, " cell-types"),
+         x = "Peak width (bp, log scale)", 
          y = "Density",
-         fill = "Peak dataset:",
-         color = "Peak dataset:")
+         fill = "Correlation Window",
+         color = "Correlation Window",
+         caption = paste0(
+             "Dashed lines = median peak width per group\n",
+             "Total peaks: ", scales::comma(nrow(combined_df))
+         ))
 
 
-f_name <- paste0("peak_width_histogram_cellrangerARC.pdf")
-ggsave(here::here(plotDir, f_name), p_hist, width = 10, height = 6, dpi = 300)
+f_name <- paste0(resolution_level, "_link_peak_width_histogram_macs2.pdf")
+ggsave(here(plotDir, f_name), p_hist, width = 6, height = 6, dpi = 300)
 
-message("Plots done!!!")
+message("Plots done!")
+
+summary_stats <- combined_df |>
+    group_by(group) |>
+    summarise(
+        n = n(),
+        median_width_bp = round(median(peak_width_bp, na.rm = TRUE), 1),
+        Q1 = round(quantile(peak_width_bp, 0.25, na.rm = TRUE), 1),
+        Q3 = round(quantile(peak_width_bp, 0.75, na.rm = TRUE), 1),
+        IQR = Q3 - Q1
+    ) |>
+    arrange(median_width_bp)
+
+summary_stats
+
+f_name <- paste0(resolution_level, "_link_peak_width_summary_macs2.csv")
+write.csv(summary_stats, here(output_cvsDir, f_name), row.names = FALSE)
+
+message("Summary done!")
+
+## Now plot peak widths by gene_biotype
+
+# ggplot(combined_df, aes(x = gene_biotype, y = peak_width_bp, fill = gene_biotype)) +
+#     geom_boxplot(outlier.size = 0.5) +
+#     scale_y_log10() +
+#     facet_wrap(~ group) +
+#     theme_minimal(base_size = 10) +
+#     theme(
+#         axis.text.x = element_text(angle = 45, hjust = 1),
+#         legend.position = "none"
+#     ) +
+#     labs(
+#         title = "Peak width distribution by gene biotype",
+#         x = "Gene biotype",
+#         y = "Peak width (bp, log scale)"
+#     )
+
+## Define Enhancer Class (Promoter vs Distal)
+
+# combined_df <- combined_df %>%
+#     mutate(
+#         enhancer_class = case_when(
+#             abs(signed_by_strand) <= 1000 ~ "Promoter (<1kb)",
+#             abs(signed_by_strand) <= 10000 ~ "Proximal (1–10kb)",
+#             TRUE ~ "Distal (>10kb)"
+#         )
+#     )
+# 
+# ggplot(combined_df, aes(x = enhancer_class, y = peak_width_bp, fill = enhancer_class)) +
+#     geom_boxplot(outlier.size = 0.3) +
+#     scale_y_log10() +
+#     facet_wrap(~ group) +
+#     theme_minimal(base_size = 10) +
+#     labs(
+#         title = "Peak width by enhancer class",
+#         x = "Enhancer category (distance to TSS)",
+#         y = "Peak width (bp, log scale)"
+#     )
 
 
 # library("slurmjobs")
@@ -266,7 +331,7 @@ message("Plots done!!!")
 #   memory = "30G",
 #   cores = 2,
 #   logdir = "logs",
-#   command = "Rscript 06_exploratory_peak_scores.R",
+#   command = "Rscript 06_exploratory_peak_scores",
 #   create_logdir = TRUE
 # )
 
