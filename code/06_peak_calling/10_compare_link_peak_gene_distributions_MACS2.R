@@ -302,26 +302,32 @@ message("Summary done!")
 
 ## Define Enhancer Class (Promoter vs Distal)
 
-# combined_df <- combined_df %>%
-#     mutate(
-#         enhancer_class = case_when(
-#             abs(signed_by_strand) <= 1000 ~ "Promoter (<1kb)",
-#             abs(signed_by_strand) <= 10000 ~ "Proximal (1–10kb)",
-#             TRUE ~ "Distal (>10kb)"
-#         )
-#     )
-# 
-# ggplot(combined_df, aes(x = enhancer_class, y = peak_width_bp, fill = enhancer_class)) +
-#     geom_boxplot(outlier.size = 0.3) +
-#     scale_y_log10() +
-#     facet_wrap(~ group) +
-#     theme_minimal(base_size = 10) +
-#     labs(
-#         title = "Peak width by enhancer class",
-#         x = "Enhancer category (distance to TSS)",
-#         y = "Peak width (bp, log scale)"
-#     )
+combined_df <- combined_df %>%
+    mutate(
+        enhancer_class = case_when(
+            abs(signed_by_strand) <= 1000 ~ "Promoter (<1kb)",
+            abs(signed_by_strand) <= 10000 ~ "Proximal (1–10kb)",
+            TRUE ~ "Distal (>10kb)"
+        )
+    )
 
+p1 <- ggplot(combined_df, aes(x = enhancer_class, y = peak_width_bp, fill = enhancer_class)) +
+    geom_boxplot(outlier.size = 0.3) +
+    scale_y_log10() +
+    facet_wrap(~ group) +
+    theme_minimal(base_size = 10) +
+    theme(
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "none"
+    ) +
+    labs(
+        title = "Peak width by enhancer class",
+        x = "Enhancer category (distance to TSS)",
+        y = "Peak width (bp, log scale)"
+    )
+
+f_name <- paste0(resolution_level, "_link_peak_width_by_enhancer_class_macs2.pdf")
+ggsave(here::here(plotDir, f_name), p1, width = 8, height = 6, dpi = 300)
 
 # library("slurmjobs")
 # job_single(
