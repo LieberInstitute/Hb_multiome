@@ -70,13 +70,15 @@ input_macs_file <- here(
 output_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
-    "02_link_peaks_MACS2" # local peaks redo with Signac::CallPeaks()
+    "02_link_peaks_MACS2", # local peaks redo with Signac::CallPeaks()
+    "tmp_relaxed_filter"
 )
 output_RDS <- here(
     "processed-data",
     "06_peak_calling",
     "02_link_peaks_MACS2",
-    "Seurat_subsets_links_rds"
+    "Seurat_subsets_links_rds",
+    "tmp_relaxed_filter"
 )
 
 if (!dir.exists(output_cvsDir)) {
@@ -167,9 +169,9 @@ peaks_df[peaks_df$width < 200, ]
 # <0 rows> (or 0-length row.names)
 nrow(peaks_df[peaks_df$width > 2000, ])
 # 1756
-## Avoid very small or very large peaks (< 20bp or > 2kb). Improve quality
+## Avoid very small or very large peaks (< 20bp or > 10kb). Improve quality
 x <- nrow(peaks_df)
-peaks_df <- peaks_df[peaks_df$width >= 200 & peaks_df$width <= 2000, ]
+peaks_df <- peaks_df[peaks_df$width >= 20 & peaks_df$width <= 10000, ]
 y <- nrow(peaks_df)
 
 message("Peaks removed ", (x - y))
