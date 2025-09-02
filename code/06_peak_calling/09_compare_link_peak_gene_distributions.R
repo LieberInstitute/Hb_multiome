@@ -311,6 +311,42 @@ f_name <- paste0("link_peak_width_histogram_cellrangerARC.pdf")
 ggsave(here::here(plotDir, f_name), p_hist, width = 8, height = 6, dpi = 300)
 
 
+## Define Enhancer Class (Promoter vs Distal)
+
+combined_df <- combined_df |>
+    mutate(
+        enhancer_class = case_when(
+            abs(signed_by_strand) <= 1000 ~ "Promoter (<1kb)",
+            abs(signed_by_strand) <= 10000 ~ "Proximal (1–10kb)",
+            TRUE ~ "Distal (>10kb)"
+        )
+    )
+combined_df$enhancer_class <- factor(
+    combined_df$enhancer_class,
+    levels = c("Promoter (<1kb)", "Proximal (1–10kb)", "Distal (>10kb)")
+)
+
+p1 <- ggplot(combined_df, aes(x = enhancer_class, y = peak_width_bp, fill = enhancer_class)) +
+    geom_violin(scale = "width", trim = TRUE, alpha = 0.8) +
+    geom_boxplot(width = 0.1, outlier.size = 0.3, alpha = 0.5) +  # optional overlay
+    scale_y_log10() +
+    facet_wrap(~ group) +
+    #theme_minimal(base_size = 10) +
+    theme(
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "none"
+    ) +
+    labs(
+        title = "Peak width by enhancer class",
+        x = "Enhancer category (distance to TSS)",
+        y = "Peak width (bp, log scale)"
+    )
+
+
+f_name <- paste0("link_peak_width_by_enhancer_class_cellrangerARC.pdf")
+ggsave(here::here(plotDir, f_name), p1, width = 8, height = 6, dpi = 300)
+
+
 message("Plots done!!!")
 
 
