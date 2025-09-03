@@ -272,11 +272,10 @@ p_hist <- ggplot(combined_df, aes(x = peak_width_bp, fill = group, color = group
     #           linetype = "dotted", linewidth = 0.7, show.legend = FALSE) +
     # Axes and theme
     scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_si("b"))) +
-    #coord_flip() +
-    coord_cartesian(xlim = c(50, 0.5e4)) +
-    theme_minimal(base_size = 10) +
+    # coord_flip() +
+    # coord_cartesian(xlim = c(20, 0.5e4)) +
+    theme_minimal() +
     theme(
-        #legend.position = "top",
         legend.text = element_text(size = 8),
         legend.title = element_text(size = 8),
         panel.background = element_rect(fill = "gray95", color = NA),
@@ -289,7 +288,7 @@ p_hist <- ggplot(combined_df, aes(x = peak_width_bp, fill = group, color = group
          fill = "Correlation Window",
          color = "Correlation Window",
          caption = paste0(
-             "Dashed lines = median peak width per group",
+             "Dashed lines = median peak width per group\n",
              "Total peaks: ", scales::comma(nrow(combined_df))
          ))
 
