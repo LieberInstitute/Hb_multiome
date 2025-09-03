@@ -23,37 +23,23 @@ library("here")
 ## read input arguments
 args = commandArgs(trailingOnly = TRUE)
 resolution_level <- args[2]
-# resolution_level = "Fine" # 42 clusters
 # resolution_level = "Broad"  # 8 cell-types
 # resolution_level = "Mid" # 8 cell-types
 
 # for testing ( Note only spearman at 5e4 was tested on macs2 peaks )
-# resolution_level = "Broad"
-# p_met = "spearman"
-# w_size = "5e4"
+# resolution_level = "Mid"
+p_met = "spearman"
+w_size = "5e5"
 
 if (length(resolution_level)) {
-    
-    if (length(p_met) && length(w_size)) {
-        message(
-            "Processing job for peak-method:\n",
+        message("Processing job for peak-method:\n",
             p_met,
             "\nWindow-size\n",
-            w_size
-        )
-        f_sufix <- paste0(".resolution.", resolution_level, ".", p_met, ".", w_size, ".cells_filtered_2perc")
-    } else {
-        message("Methodology or Window-Size arguments missed")
-        stop()
-    }
-    
+            w_size)
 } else {
-    
-    message("Resolution input arguments missed")
+    message("Input arguments missed")
     stop()
-    
 }
-f_sufix
 
 # Check/create directories
 input_cvsDir <- here(
@@ -82,26 +68,23 @@ if (!dir.exists(csvDir)) {
 }
 
 # List all files matching the specific clustering resolution level
-# List only files that start with "LHb"
+pattern = paste0("^", resolution_level, ".*\\.csv$")
 lst_peak_files <- list.files(
     path = input_cvsDir,
-    pattern = resolution_level,     # ^ = beginning of string
+    pattern = pattern,
 )
 #lst_peak_files = list.files(path = input_cvsDir)
 message("Link peak-genes files found:")
 lst_peak_files
 
 # for testing at Mid resolution:
-#lst_peak_files <- lst_peak_files[5]
+# lst_peak_files <- lst_peak_files[5]
 
 #===========================================================================
 
 message("Build TSS (strand-aware) GRanges table...")
 
 gene_coords <- genes(EnsDb.Hsapiens.v86)
-# tss_coords <- resize(gene_coords, width = 1, fix = "start")
-# tss_coords <- keepStandardChromosomes(tss_coords, pruning.mode = "coarse")
-# head(tss_coords)
 
 # Build TSS table (strand-aware)
 # extracts promoter regions from those gene_coords, upstream = 0 (don’t include any bases before the TSS, 
@@ -112,7 +95,6 @@ tss_coords  <- promoters(gene_coords, upstream = 0, downstream = 1) %>%   # 1bp 
 
 # match UCSC-style peaks (chr1, chr2, etc.)
 seqlevelsStyle(tss_coords) <- "UCSC"
-
 tss_raw <- as.data.frame(tss_coords)
 head(tss_raw)
 has_biotype <- "gene_biotype" %in% colnames(tss_raw)
@@ -135,13 +117,7 @@ tss_df <- tss_raw %>%
         gene_id
     )
 head(tss_df)
-#     gene_name seqnames       tss gene_strand gene_id        
-#     <chr>     <chr>        <dbl> <chr>       <chr>          
-# 1 5S_rRNA   chr1     143439605 +           ENSG00000252830
-# 2 5S_rRNA   chr11    102057854 +           ENSG00000274097
-# 3 5S_rRNA   chr17     37940790 -           ENSG00000277488
-nrow(tss_df)
-# [1] 56747
+nrow(tss_df) # [1] 56747
 
 ## check duplicates
 dup_pairs <- tss_df %>%
@@ -189,7 +165,7 @@ make_width_plots <- function(
     median_width <- median(link_df2_parsed$peak_width_bp, na.rm = TRUE)
     mean_width   <- mean(link_df2_parsed$peak_width_bp, na.rm = TRUE)
     
-    suffix_subtitle <- paste("Spearman / 5e5d at ", resolution_lev, "resolution. ", ct_name)
+    suffix_subtitle <- paste(resolution_lev, "resolution. ", ct_name)
     
     p_hist <- ggplot(link_df2_parsed, aes(x = peak_width_bp)) +
         # histogram as horizontal bars
@@ -219,20 +195,6 @@ make_width_plots <- function(
         ) +
         coord_flip()
     
-    # Peak width vs. distance to TSS
-    p_scatter_dist <- ggplot(link_df2_parsed, aes(x = distance_kb, y = peak_width_bp)) +
-        geom_point(alpha = 0.25, size = 0.8, color = "grey30") +
-        geom_smooth(method = "loess", se = FALSE, color = "darkred") +
-        scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
-        labs(
-            title = "Peak width vs distance to TSS",
-            subtitle = suffix_subtitle,
-            x = "Distance from TSS (kb)",
-            y = "Peak width (bp, log scale)",
-            caption = paste(total_peaks, "total local peaks")
-        ) +
-        theme_minimal()
-    
     # Peak width vs. correlation score
     # log10 creates NaN/Inf, remove those rows to avoid warnings
     df <- link_df2_parsed %>%
@@ -252,11 +214,9 @@ make_width_plots <- function(
              caption = paste(total_peaks, "total local peaks")) +
         theme_minimal()
     
-    f_name <- paste0(resolution_lev, "_", ct_name, "_peak_width_histogram_spearman_5e5.pdf")
+    f_name <- paste0(resolution_lev, "_", ct_name, "_peak_width_histogram_spearman.pdf")
     ggsave(here::here(plotDir, f_name), p_hist, width = 8, height = 8)
-    f_name <- paste0(resolution_lev, "_", ct_name, "_peak_width_vs_distance_spearman_5e5.pdf")
-    ggsave(here::here(plotDir, f_name), p_scatter_dist, width = 8, height = 6)
-    f_name <- paste0(resolution_lev, "_", ct_name, "_peak_width_vs_score_spearman_5e5.pdf")
+    f_name <- paste0(resolution_lev, "_", ct_name, "_peak_width_vs_score_spearman.pdf")
     ggsave(here::here(plotDir, f_name), p_scatter_score, width = 8, height = 6)
 
     print(paste0("Width related plots for ", ct_name, " done!"))    
@@ -280,11 +240,16 @@ make_exploratory_plots <- function(
     # Moderate: 0.20 ≤ score < 0.30 & FDR < 0.10
     # Exploratory: 0.10 ≤ score < 0.20 & FDR < 0.10 (treat as hypotheses)
     
+    # # testing: (link_df2, resolution_level, ct_name, plotDir)
+    # link_df2 = link_df2
+    # resolution_lev = resolution_level
+    # ct_name = ct_name
+    # plotDir = plotDir
+    
     print(paste0("Processing plots for ", resolution_lev, " for ", ct_name, " cell_type"))
-    suffix_subtitle <- paste("Spearman / 5e5d at ", resolution_lev, "resolution. ", ct_name)
+    suffix_subtitle <- paste(resolution_lev, "resolution. ", ct_name)
     total_peaks <- nrow(link_df2)
     
-    colnames(link_df2)
     ## add adjusted p-value using the Benjamini–Hochberg correction
     link_df2 <- link_df2 %>%
         mutate(FDR = p.adjust(pvalue, method = "BH"))
@@ -298,7 +263,7 @@ make_exploratory_plots <- function(
             TRUE ~ "Discarded"
         ))
     # use plain ASCII hyphens
-    link_df$tier <- gsub("\u2013", "-", link_df2$tier)
+    # link_df$tier <- gsub("\u2013", "-", link_df2$tier)
     table(link_df2$tier)
     
     # quick view by distance (kb)
@@ -310,7 +275,10 @@ make_exploratory_plots <- function(
     count_below_02 <- sum((df_plot$score < 0.2 & df_plot$score > 0.1), na.rm = TRUE)
     count_below_03 <- sum((df_plot$score < 0.3 & df_plot$score > 0.2), na.rm = TRUE)
     
-    g1 <- ggplot(df_plot, aes(x = distance/1000, y = score, color = tier)) +
+    #g1 <- ggplot(df_plot, aes(x = distance/1000, y = score, color = tier)) +
+    g1 <- ggplot(df_plot, 
+                 aes(x = signed_by_strand/1000, y = score, color = tier),
+                 method = "loess", se = FALSE, span = 0.8, color = "black", linewidth = 0.9) +
         geom_point(alpha = 0.5, size = 0.8) +
         # trend over ALL tested links
         geom_smooth(
@@ -345,12 +313,14 @@ make_exploratory_plots <- function(
             y = "Correlation score",
         ) +
         theme_minimal() +
-        theme(legend.position = "bottom")
+        theme(legend.position = "bottom",
+              legend.text = element_text(size = 8),
+              legend.title = element_text(size = 9))
     
-    f_name <- paste0(resolution_lev, "_", ct_name, "_peak_exploratory_scores_high_confidence.pdf")
+    f_name <- paste0(resolution_lev, "_", ct_name, "_EDA_tier_scores.pdf")
     ggsave(here(plotDir, f_name), g1, width = 8, height = 5, device = cairo_pdf)
     
-    print(paste0("Exploratory plots for ", ct_name, " done!"))  
+    message("Exploratory plots for ", ct_name, " done!")
     
 }
 
@@ -361,6 +331,8 @@ make_exploratory_plots <- function(
 message("Making plots for ", length(lst_peak_files), " cell-types")
 
 for (ct in lst_peak_files) {
+    # testing
+    # ct =  lst_peak_files[1]
     
     gene_peaks_csv <- here(input_cvsDir, ct)
     
@@ -377,10 +349,9 @@ for (ct in lst_peak_files) {
     ct_name <- sub("^[^_]*_([^_]*)_.*", "\\1", ct)
     
     #=========================================
-    # preapare df
-    message(nrow(link_df), " peaks found on ", ct_name, " ...")
-    print(head(link_df))
-    
+    # prepare df
+    message("Processing ", nrow(link_df), " peaks found in ", ct_name, " ...")
+
     link_df <- link_df |>
         mutate(
             gene     = trimws(as.character(gene)),
@@ -438,12 +409,10 @@ for (ct in lst_peak_files) {
     
     #=========================================
     
-    #make_width_plots(link_df2, resolution_level, ct_name, plotDir)
+    make_width_plots(link_df2, resolution_level, ct_name, plotDir)
     make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir)
     
 }
-
-
 
 
 
@@ -453,13 +422,14 @@ message("Building plots ...")
 
 ## Histogram TSS Scores
 pdf(file = here(plotDir, 
-                paste0("peak_histogram_distance_TSS", f_sufix, ".pdf")), 
+                paste0("peak_histogram_distance_TSS.pdf")), 
     width = 7, height = 5)
 
 hist(link_df2$distance / 1000, breaks = 100,
      main = "Distance from Peaks to TSS",
      xlab = "Distance (kb)",
      col = "lightblue")
+
 dev.off()
 
 
@@ -501,7 +471,7 @@ combined_plot <- g1 + g2
 combined_plot
 
 ggsave(here(plotDir, 
-            paste0("link_peak_gene_histograms", f_sufix, ".pdf")),
+            paste0("link_peak_gene_histograms.pdf")),
        combined_plot, width = 8, height = 5)
 
 
