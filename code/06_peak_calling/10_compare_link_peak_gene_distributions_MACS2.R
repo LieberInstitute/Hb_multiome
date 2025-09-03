@@ -25,8 +25,8 @@ resolution_level = "Mid"
 input_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
-    "02_link_peaks_MACS2", 
-    "old_Mid" # <= temporal dir for testing / should be removed
+    "02_link_peaks_MACS2" 
+    #"old_Mid" # <= temporal dir for testing / should be removed
 )
 plotDir <- here(
     "plots",
@@ -212,6 +212,7 @@ combined_df <- bind_rows(
 
 # covert grp to factor and check
 combined_df$group <- factor(combined_df$group, levels = names(lst_links_df))
+head(combined_df)
 table(combined_df$group)
 
 # Compute group-specific median and mean widths
@@ -235,14 +236,10 @@ p_hist <- ggplot(combined_df, aes(x = peak_width_bp, fill = group, color = group
     # geom_vline(data = group_stats, aes(xintercept = mean_width, color = group),
     #           linetype = "dotted", linewidth = 0.7, show.legend = FALSE) +
     # Axes and theme
-    scale_x_log10(
-        labels = scales::label_number(scale_cut = scales::cut_si("b")),
-        expand = expansion(mult = c(0.01, 0.01))
-    ) +
+    scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_si("b"))) +
     coord_cartesian(xlim = c(20, NA)) + # correspond with left tail cut off
     theme_minimal(base_size = 10) +
     theme(
-        #legend.position = "top",
         legend.text = element_text(size = 8),
         legend.title = element_text(size = 8),
         panel.background = element_rect(fill = "gray95", color = NA),
