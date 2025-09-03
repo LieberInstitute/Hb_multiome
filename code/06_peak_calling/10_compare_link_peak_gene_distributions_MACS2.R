@@ -223,22 +223,35 @@ group_stats <- combined_df |>
         mean_width = mean(peak_width_bp, na.rm = TRUE)
     )
 
-p_hist <- ggplot(combined_df, aes(x = peak_width_bp, fill = group, color = group)) +
+# # Create a label with number of links. ge "Mid_LHb.4 (n = 1149)" 
+group_counts <- combined_df |>
+    count(group, name = "n_peaks") |>
+    arrange(desc(n_peaks)) |>
+    mutate(group_label = paste0(group, " (", n_peaks, ")"))
+# Create a named vector: names are original group, values are new labels
+label_map <- setNames(group_counts$group_label, group_counts$group)
+# update to use labels with peak counts
+combined_df$group_labeled <- label_map[combined_df$group]
+combined_df$group_labeled <- factor(combined_df$group_labeled, levels = label_map)
+# add new label to stats to plot gemo_vLine
+group_stats$group_labeled <- label_map[group_stats$group]
+
+p_hist <- ggplot(combined_df, aes(x = peak_width_bp, fill = group_labeled, color = group_labeled)) +
     # geom_histogram(
     #     aes(y = after_stat(density)), 
     #     bins = 50, alpha = 0.4, position = "identity") +
     geom_density(
-        aes(y = after_stat(density), group = group),
+        aes(y = after_stat(density), group = group_labeled),
         linewidth = 0.7,  alpha = 0.1) +
     # Median and mean lines per group
-    geom_vline(data = group_stats, aes(xintercept = median_width, color = group),
+    geom_vline(data = group_stats, 
+               aes(xintercept = median_width, color = group_labeled), 
                linetype = "dashed", linewidth = 0.3, show.legend = FALSE) +
     # geom_vline(data = group_stats, aes(xintercept = mean_width, color = group),
     #           linetype = "dotted", linewidth = 0.7, show.legend = FALSE) +
     # Axes and theme
     scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_si("b"))) +
-    coord_cartesian(xlim = c(20, NA)) + # correspond with left tail cut off
-    theme_minimal(base_size = 10) +
+    theme_minimal() +
     theme(
         legend.text = element_text(size = 8),
         legend.title = element_text(size = 8),
@@ -249,8 +262,8 @@ p_hist <- ggplot(combined_df, aes(x = peak_width_bp, fill = group, color = group
          subtitle = paste0(resolution_level, " cell-types"),
          x = "Peak width (bp, log scale)", 
          y = "Density",
-         fill = "Correlation Window",
-         color = "Correlation Window",
+         fill = "Correlation by ct",
+         color = "Correlation by ct",
          caption = paste0(
              "Dashed lines = median peak width per group\n",
              "Total peaks: ", scales::comma(nrow(combined_df))
@@ -304,7 +317,7 @@ p1 <- ggplot(combined_df, aes(x = enhancer_class, y = peak_width_bp, fill = enha
     geom_violin(scale = "width", trim = TRUE, alpha = 0.2) +
     geom_boxplot(width = 0.1, outlier.size = 0.3, alpha = 0.5) +  # optional overlay
     #scale_y_log10() +
-    #facet_wrap(~ group) +
+    # facet_wrap(~ group) +
     theme_minimal() +
     theme(
         axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
@@ -315,9 +328,29 @@ p1 <- ggplot(combined_df, aes(x = enhancer_class, y = peak_width_bp, fill = enha
         x = "Enhancer category (distance to TSS)",
         y = "Peak width (bp)"
     )
+p2 <- ggplot(combined_df, aes(x = enhancer_class, y = peak_width_bp, fill = enhancer_class)) +
+    geom_violin(scale = "width", trim = TRUE, alpha = 0.2) +
+    geom_boxplot(width = 0.1, outlier.size = 0.3, alpha = 0.5) +  # optional overlay
+    #scale_y_log10() +
+    facet_wrap(~ group) +
+    theme_minimal() +
+    theme(
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "none"
+    ) +
+    labs(
+        title = "Peak width by RE class",
+        x = "Enhancer category (distance to TSS)",
+        y = "Peak width (bp)"
+    )
+
+plt_enhancer <- p1 + p2
 
 f_name <- paste0(resolution_level, "_link_peak_width_by_enhancer_class_macs2.pdf")
-ggsave(here::here(plotDir, f_name), p1, width = 8, height = 6, dpi = 300)
+ggsave(here::here(plotDir, f_name), plt_enhancer, width = 10, height = 6, dpi = 300)
+
+
+message("Plots done!!!")
 
 
 # library("slurmjobs")
