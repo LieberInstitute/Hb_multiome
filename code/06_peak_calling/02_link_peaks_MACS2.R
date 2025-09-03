@@ -70,15 +70,15 @@ input_macs_file <- here(
 output_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
-    "02_link_peaks_MACS2", # local peaks redo with Signac::CallPeaks()
-    "tmp_relaxed_filter"
+    "02_link_peaks_MACS2"
+    #"tmp_relaxed_filter"
 )
 output_RDS <- here(
     "processed-data",
     "06_peak_calling",
     "02_link_peaks_MACS2",
-    "Seurat_subsets_links_rds",
-    "tmp_relaxed_filter"
+    "Seurat_subsets_links_rds"
+    #"tmp_relaxed_filter"
 )
 
 if (!dir.exists(output_cvsDir)) {
@@ -319,7 +319,8 @@ SeuratOBJ <- global_rebuild_atac_normalization(SeuratOBJ, "ATAC_macs2")
 f_name <- paste0("Seurat_peaks_macs2_cell_level_", resolution_level, "_resolution.rds")
 rds_name <- here(output_RDS, f_name)
 saveRDS(SeuratOBJ, file = rds_name)
-# readRDS(SeuratOBJ, file = rds_name)
+# SeuratOBJ <- readRDS(SeuratOBJ, file = rds_name)
+# levels(SeuratOBJ)
 
 message("Seurat with new chromatin assay GC bias corrected and normalized saved!")
 
@@ -329,7 +330,6 @@ message("Seurat with new chromatin assay GC bias corrected and normalized saved!
 
 # Get the gene annotation from the original object's assay to reattach it later to the subset 
 orig_annot <- Annotation(SeuratOBJ[["ATAC_macs2"]])
-remove("SeuratOBJ")
 
 ## find peaks by cluster correlated with the expression of nearby genes
 # access each subset by name
@@ -346,6 +346,7 @@ for (clust in clusters) {
         idents = clust
     )
 }
+remove("SeuratOBJ")
 
 ## For loop only in peaks under the same cluster
 #  - Build peaks per cluster from MACS2 GRanges
@@ -353,9 +354,13 @@ peaks_gr$peak_id <- Signac::GRangesToString(peaks_gr)   # "chr-start-end"
 
 peaks_by_cluster_uniqueness <- function(cluster) {
     # test: cluster = "MHb.1.2"
-    cls = grep(paste0("(^|,)", cluster, "(,|$)"), peaks_gr$peak_called_in, value = TRUE)
-    v_cls = unique(unlist(strsplit(cls, ",")))
-    if (length(v_cls) > 0) { message(cluster, " peaks present on ", length(v_cls), " clusters") }
+    cls <- grep(paste0("(^|,)", cluster, "(,|$)"), peaks_gr$peak_called_in, value = TRUE)
+    v_cls <- unique(unlist(strsplit(cls, ",")))
+    if (length(v_cls) > 0) {
+        message(cluster, " peaks present on ", length(v_cls), " clusters")
+    } else {
+        message(cluster, " not found in peak_call_in")
+    }
 }
 
 peaks_by_cluster <- function(cluster) {
@@ -371,7 +376,7 @@ message("Starting LinkPeaks by cluster ... ")
 set.seed(22082025)
 
 for (seurat_cluster in names(seurat_subsets)) {
-    # seurat_cluster = "MHb.1.2"
+    # seurat_cluster = names(seurat_subsets)[1]
     
     seurat_subset <- seurat_subsets[[seurat_cluster]]
     DefaultAssay(seurat_subset) <- "ATAC_macs2"
@@ -384,7 +389,7 @@ for (seurat_cluster in names(seurat_subsets)) {
         peaks_by_cluster(seurat_cluster),
         rownames(seurat_subset[["ATAC_macs2"]])
     )
-    peaks_by_cluster_uniqueness
+    peaks_by_cluster_uniqueness(seurat_cluster)
     
     # If not peaks
     if (length(cluster_peaks) == 0) {
@@ -475,7 +480,7 @@ for (seurat_cluster in names(seurat_subsets)) {
     ## prepare data to save cvs
     link_df <- as.data.frame(Links(atac))
     # summary(link_df$score)
-    f_name <- paste0(resolution_level, "_", seurat_cluster, "_local_link_peak_genes", f_sufix, ".csv")
+    f_name <- paste0(resolution_level, "_", seurat_cluster, "_local_link_peak_genes.csv")
     write.csv(
         link_df,
         file = here(output_cvsDir, f_name),
