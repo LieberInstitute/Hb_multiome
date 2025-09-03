@@ -1,13 +1,13 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=100G
-#SBATCH --job-name=02_link_peaks_MACS2
+#SBATCH --mem=30G
+#SBATCH --job-name=08_exploratory_peak_scores_MACS2
 #SBATCH -c 2
 #SBATCH -t 2-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
-#SBATCH --array=0-1%2   # 2 methods
+#SBATCH --array=0-1%2   # 2 clustering levels
 
 set -eo pipefail
 
@@ -31,7 +31,7 @@ res="${clust_res[$i]}"
 # fi
 
 #mkdir -p logs
-log_path="logs/02_link_peaks_MACS2_${res}_task_${i}.log"
+log_path="logs/08_exploratory_peak_scores_MACS2_${res}_task_${i}.log"
 
 {
 
@@ -47,14 +47,13 @@ echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 echo "Selected clust_res: ${res}"
 
 ## Load the R module
-module load conda_R/4.3.x
+module load conda_R/4.4.x
 
 ## List current modules for reproducibility
 module list
-which Rscript || true
 
 ## Edit with your job command
-Rscript 02_link_peaks_MACS2.R --clust_res "${res}"
+Rscript 08_exploratory_peak_scores_MACS2.R --clust_res "${res}"
 ret=$?
 
 echo "**** Job ends ****"
