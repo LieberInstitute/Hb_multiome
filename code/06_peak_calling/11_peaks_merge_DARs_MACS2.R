@@ -279,36 +279,31 @@ message("Seurat with new chromatin assay: ATAC_macs2_merged")
 
 DefaultAssay(SeuratOBJ) <- "ATAC_macs2_merged"
 
-# ## =============================================================================
-# ## Note. It's not strictly necessary to perform GC content correction and 
-# #  normalization on the whole SeuratOBJ before the loop, as the ultimate goal is
-# #  only the cluster-specific LinkPeaks analysis.
-# #  Essentially I making this Pre-Loop Normalization to keep consistency and attach 
-# #  to Standard Practice, Data Integrity to use it later and debugging and verification 
-# 
-# # Make GC content correction and run TF-IDF normalization, runSVD & 
-# 
-# message("Starting GC content correction ... ")
-# 
-# # Set genome
-# genome <- BSgenome.Hsapiens.UCSC.hg38
-# 
-# # Compute GC content for each peak
-# SeuratOBJ <- RegionStats(
-#     object = SeuratOBJ,
-#     assay = "ATAC_macs2",
-#     genome = genome
-# )
-# 
-# message("GC content correction and normalization done!")
-# 
-# # Filter cells / QC ? 
-# # before_peaks <- sum(SeuratOBJ[["nCount_ATAC"]])
-# # tmp_Sobj <- subset(SeuratOBJ, subset = nCount_ATAC < 75000 & nCount_ATAC > 1000)
-# # after_peaks <- sum(SeuratOBJ[["nCount_ATAC"]])
-# 
-# SeuratOBJ <- global_rebuild_atac_normalization(SeuratOBJ, "ATAC_macs2")
-# 
+## =============================================================================
+
+# Make GC content correction and run TF-IDF normalization, runSVD &
+
+message("Starting GC content correction ... ")
+
+# Set genome
+genome <- BSgenome.Hsapiens.UCSC.hg38
+
+# Compute GC content for each peak
+SeuratOBJ <- RegionStats(
+    object = SeuratOBJ,
+    assay = "ATAC_macs2_merged",
+    genome = genome
+)
+
+message("GC content correction and normalization done!")
+
+# Filter cells / QC ?
+# before_peaks <- sum(SeuratOBJ[["nCount_ATAC"]])
+# tmp_Sobj <- subset(SeuratOBJ, subset = nCount_ATAC < 75000 & nCount_ATAC > 1000)
+# after_peaks <- sum(SeuratOBJ[["nCount_ATAC"]])
+
+SeuratOBJ <- global_rebuild_atac_normalization(SeuratOBJ, "ATAC_macs2_merged")
+
 ## ============================================================================/
 
 ## Milestone: save whole Seurat for further analysis
@@ -316,7 +311,7 @@ f_name <- paste0("Seurat_peaks_macs2_merged_cell_level_", resolution_level, "_re
 rds_name <- here(output_RDS, f_name)
 saveRDS(SeuratOBJ, file = rds_name)
 # SeuratOBJ <- readRDS(SeuratOBJ, file = rds_name)
-# levels(SeuratOBJ)
+levels(SeuratOBJ)
 
 message("Seurat with new chromatin assay GC bias corrected and normalized saved!")
 
