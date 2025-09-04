@@ -148,10 +148,12 @@ df2
 ## categories to pseudobulk data
 grp_by_variables <- c("mid_cluster", "orig.ident")
 
+# Subset peaks from the ATAC assay — get peak names
+keep_peaks <- rownames(SeuratOBJ[["ATAC_macs2"]])
 
 Seurat_pb <- AggregateExpression(
     SeuratOBJ,
-    features = keep_genes,
+    features = list(RNA = keep_genes, ATAC_macs2 = keep_peaks),
     assays =  c("RNA", "ATAC_macs2"),
     group.by = grp_by_variables,
     return.seurat = FALSE,
@@ -162,8 +164,17 @@ Seurat_pb <- AggregateExpression(
 #  the data is then normalized by running NormalizeData on the aggregated counts. ScaleData is then run on the default assay before returning the object.
 
 ## check assays and features 
-Seurat_pb
-Assays(Seurat_pb)
+head(Seurat_pb)
+# $ATAC_macs2
+# 355127 x 169 sparse Matrix of class "dgCMatrix"
+# [[ suppressing 31 column names ‘Astrocyte_S03-Hb-r’, ‘Astrocyte_S04-Hb-r’, ‘Astrocyte_S05-Hb-r’ ... ]]
+# [[ suppressing 31 column names ‘Astrocyte_S03-Hb-r’, ‘Astrocyte_S04-Hb-r’, ‘Astrocyte_S05-Hb-r’ ... ]]
+# 
+# chr1-181329-181534   .  1    1   .   3    2   .    1    .   1  .  1   .   .   .   .   1   .  .
+# chr1-191217-191619  13  .    1   2  13    8   7   13   13   6  1  .   1   1   .   2   .   .  .
+# chr1-629146-629354   .  . 1129   1   1    2   .    .    1   2  .  . 136   .   .   .   .   .  .
+# chr1-629811-630032  75 15  193  14  96  315  31  261  387 281  9  9  27  28  17  29  22  23  7
+
 
 ## Get the matrices directly, then add the ATAC matrix manually to the pseudobulk object
 pb_rna_counts  <- Seurat_pb$RNA   # genes x clusters
@@ -172,10 +183,11 @@ all(colnames(pb_rna_counts) == colnames(pb_atac_counts))   # clusters align
 
 
 pb_rna_counts_df  <- as.data.frame(pb_rna_counts)   # genes x clusters
-pb_atac_counts_df <- as.data.frame(pb_atac_counts)  # peaks x clusters
-dim(pb_rna_counts_df) # [1] 36601    18
+dim(pb_rna_counts_df) # [1] 15896   169
 head(pb_rna_counts_df)
 
+pb_atac_counts_df <- as.data.frame(pb_atac_counts)  # peaks x clusters
+dim(pb_atac_counts_df) # [1] 355127    169
 head(pb_atac_counts_df)
 
 # build a cluster-level object
@@ -183,56 +195,58 @@ pb_obj <- CreateSeuratObject(counts = pb_rna_counts, assay = "RNA")
 pb_obj <- NormalizeData(pb_obj) # RNA log-normalize per cluster
 pb_obj <- FindVariableFeatures(pb_obj, selection.method = "vst") 
 pb_obj <- ScaleData(pb_obj, features = rownames(pb_obj))
+pb_obj
+# An object of class Seurat 
+# 15896 features across 169 samples within 1 assay 
+# Active assay: RNA (15896 features, 2000 variable features)
+# 3 layers present: counts, data, scale.data
 
 # ensure peaks order & ranges match
 gr_peaks <- granges(SeuratOBJ[["ATAC_macs2"]])
 peak_ids <- Signac::GRangesToString(gr_peaks)
 pb_atac_counts <- pb_atac_counts[peak_ids, , drop = FALSE]  # reorder to ranges
-# Error in methods::slot(object = object, name = layer) : 
-# no slot of name "chr1-181329-181534" for this object of class "Assay"
 
 pb_atac <- CreateChromatinAssay(
     counts     = pb_atac_counts,
     ranges     = gr_peaks,
     annotation = tryCatch(Annotation(SeuratOBJ), error = function(e) NULL)
 )
+pb_atac
+# ChromatinAssay data with 355127 features for 169 cells
+# Variable features: 0 
+# Genome: 
+#     Annotation present: FALSE 
+# Motifs present: FALSE 
+# Fragment files: 0 
 
-SeuratOBJ[["ATAC_macs2_pseudo"]] <- pb_atac
 
-DefaultAssay(Seurat_pb) <- "ATAC_macs2_pseudo"
+pb_obj[["ATAC_macs2_pseudo"]] <- pb_atac
+Assays(pb_obj)
+# [1] "RNA"               "ATAC_macs2_pseudo"
+
+DefaultAssay(pb_obj) <- "ATAC_macs2_pseudo"
 
 # ATAC normalization & bias covariates on pseudobulk
-Seurat_pb <- global_rebuild_atac_normalization(SeuratOBJ, "ATAC_macs2_pseudo")
+pb_obj <- global_rebuild_atac_normalization(pb_obj, "ATAC_macs2_pseudo")
 
 # verification
-head(Seurat_pbj@meta.data)
-# orig.ident nCount_RNA nFeature_RNA nCount_ATAC_unified
-# Astrocyte  SeuratProject   16100320        29950            14066550
-# Endo       SeuratProject    1435841        22262             1340147
-# Excit.Thal SeuratProject  165408249        32995           121029625
-# Inhib.Thal SeuratProject   55039199        30951            49965552
-# LHb.1      SeuratProject   19120834        28831            13670681
-# LHb.1.3    SeuratProject    2960861        22701             2011885
-# nFeature_ATAC_unified
-# Astrocyte                 351031
-# Endo                      307849
-# Excit.Thal                351037
-# Inhib.Thal                351037
-# LHb.1                     351015
-# LHb.1.3                   330675
+head(pb_obj@meta.data)
+# orig.ident nCount_RNA nFeature_RNA nCount_ATAC_macs2_pseudo
+# Astrocyte_S03-Hb-r  Astrocyte    2347221        15577                  2256439
+# Astrocyte_S04-Hb-r  Astrocyte     316714        14726                   420938
+# Astrocyte_S05-Hb-r  Astrocyte    1395057        15813                  1302169
+# Astrocyte_S06-Hb-r  Astrocyte     177741        13875                   508489
+# Astrocyte_S07-Hb-r  Astrocyte    1997327        15859                  2126439
+# Astrocyte_S08-Hb-r  Astrocyte    2330802        15848                  1835445
+# nFeature_ATAC_macs2_pseudo
+# Astrocyte_S03-Hb-r                     334869
+# Astrocyte_S04-Hb-r                     179509
+# Astrocyte_S05-Hb-r                     319322
+# Astrocyte_S06-Hb-r                     194464
+# Astrocyte_S07-Hb-r                     327433
+# Astrocyte_S08-Hb-r                     324172
 
-# f_name <- paste0(resolution_level, "_pb_rna_counts_df.csv")
-# write.csv(
-#     pb_rna_counts_df,
-#     file = here(cvs_ouputDir, f_name),
-#     row.names = FALSE
-# )
-# f_name <- paste0(resolution_level, "_pb_atac_counts.csv")
-# write.csv(
-#     pb_atac_counts_df,
-#     file = here(cvs_ouputDir, f_name),
-#     row.names = FALSE
-# )
+
 
 message("Pseudobulk Done!")
 
