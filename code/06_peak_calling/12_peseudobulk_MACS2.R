@@ -76,13 +76,18 @@ if (!dir.exists(output_Dir)) {
 Seurat_base_name <- "Seurat_peaks_macs2_cell_level_Mid_resolution.rds"
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ <- readRDS(here(inputRDS_Dir, Seurat_base_name))
-SeuratOBJ
 
 DefaultAssay(SeuratOBJ) <- "RNA"
 levels(SeuratOBJ)
+message("Existing Assays:")
+Assays(SeuratOBJ)
+# [1] "RNA"        "ATAC"       "ATAC_macs2"
+
 clusters <- levels(SeuratOBJ)
-message("Seurat loaded and ready!")
+message("Current clustets at ", resolution_level, " level")
 clusters
+
+
 
 ##==============================================================================
 ## load filtered genes expressed at least in 2% of cells & peaks from CallPeaks()
@@ -97,336 +102,139 @@ if (file.exists(input_genes_filtered_file)) {
 
 
 ##==============================================================================
-## load macs2 peaks
+# AggregateExpression() by cluster on the non-unified peaks dataset 
 
-message("Loading ", basename(input_macs_file))
+## inspect data
+colnames(SeuratOBJ@meta.data)
+df <- unique(SeuratOBJ[["mid_cluster"]])
+rownames(df) <- NULL
+df
+# mid_cluster
+# 1   Excit.Thal
+# 2        LHb.4
+# 3   Inhib.Thal
+# 4    Astrocyte
+# 5      MHb.1.2
+# 6        LHb.1
+# 7          OPC
+# 8        Oligo
+# 9    Microglia
+# 10     LHb.2.7
+# 11        Endo
+# 12   LHb.1.3.4
+# 13       MHb.1
+# 14       MHb.2
+# 15       MHb.3
+# 16        Thal
+# 17     LHb.1.3
+# 18       LHb.7
 
-if (file.exists(input_macs_file)) {
-    peaks_df <- read.csv(input_macs_file)
-    message("File loaded!")
-} else {
-    stop(paste("File not found:", input_macs_file))
-}
-colnames(peaks_df)
-
-## verify shorter and longer peaks
-quantile(peaks_df$width, probs = c(0.01, 0.02, 0.05, 0.25, 0.5, 0.75, 0.95, 0.98, 0.99, 0.995, 0.997))
-# 1%   2%   5%  25%  50%  75%  95%  98%  99% 
-# 200  200  205  260  362  545 1131 1515 1766 
-peaks_df[peaks_df$width < 200, ]
-# <0 rows> (or 0-length row.names)
-nrow(peaks_df[peaks_df$width > 2000, ])
-# 1756
-## Avoid very small or very large peaks (< 20bp or > 10kb). Improve quality
-x <- nrow(peaks_df)
-peaks_df <- peaks_df[peaks_df$width >= 20 & peaks_df$width <= 10000, ]
-y <- nrow(peaks_df)
-
-message("Peaks removed ", (x - y))
-message("Peaks kept: ", (x - (x-y)), " (", round((y * 100) / x, digits = 2), "%)")
-
-## CSV has columns like: seqnames, start, end, etc
-peaks_gr <- makeGRangesFromDataFrame(
-    peaks_df,
-    keep.extra.columns = TRUE,       # keep additional metadata columns
-    seqnames.field    = "seqnames",  # adjust if column name differs
-    start.field       = "start",
-    end.field         = "end"
-)
-
-## Ensure your fragment files and peaks use the same UCSC-style naming style
-seqlevelsStyle(peaks_gr) <- "UCSC"
-
-# inspect
-class(peaks_gr)  # [1] "GenomicRanges"
-length(peaks_gr) # 355127 -> mid resolution
-head(peaks_gr)
-
-message("MACS2 peaks prepared!")
+df2 <- unique(SeuratOBJ[["orig.ident"]])
+rownames(df2) <- NULL
+df2
+# orig.ident
+# 1    S04_Hb_r
+# 2    S05_Hb_r
+# 3    S06_Hb_r
+# 4    S10_Hb_r
+# 5    S11_Hb_r
+# 6    S12_Hb_r
+# 7    S03_Hb_r
+# 8    S07_Hb_r
+# 9    S08_Hb_r
+# 10   S09_Hb_r
 
 
-##==============================================================================
-## - merge peaks 
-## - quantify peaks from CallPeaks output fragments
-
-message("Stating Quantification ...")
-
-## Set ATAC assay 
-Assays(SeuratOBJ)
-DefaultAssay(SeuratOBJ) <- "ATAC"
-
-## Use *all* fragment files: meaning from all the samples 
-frags_list <- Fragments(SeuratOBJ)
-length(frags_list) # 10
-
-message("Merging peaks ...")
-
-# mapping the new, unified peaks back to the original individual peaks. This allows you to retain a link to the original peak 
-union_peaks <- GenomicRanges::reduce(peaks_gr, min.gapwidth = 101, with.revmap = TRUE) 
-
-# fast confirmation
-length(union_peaks) # [1] 351037
-head(union_peaks)
-revmap <- mcols(union)$revmap  # IntegerList: indices of contributing peaks
-
-length(peaks_gr)            # 355127 - original count
-length(union_peaks)         # 355127 / 351037 (gap) - unified count (should be <= original)
-any(width(union_peaks) <= 0)  # should be FALSE
-
-any_overlaps <- any(countOverlaps(peaks_gr, peaks_gr) > 1)
-any_overlaps # FALSE
-is_disjoint <- isDisjoint(peaks_gr, ignore.strand = TRUE) 
-is_disjoint # [1] TRUE
-n_dups <- sum(duplicated(peaks_gr)) # 0 duplicate intervals
-n_dups # 0 
-
-## verification
-stopifnot(length(frags_list) >= 1)
-all_cells_frag <- unique(do.call(c, lapply(frags_list, Cells)))
-length(all_cells_frag) # 55516
-barcodes_in_frags <- unique(unlist(all_cells_frag, Cells(SeuratOBJ)))
-mean(colnames(SeuratOBJ) %in% barcodes_in_frags)  # should be ~1.0
-
-message("Quantifying merged peaks ...")
-
-mat_macs2_peaks <- FeatureMatrix(
-    fragments = frags_list,              # list of Fragment objects
-    features  = union_peaks,                # GRanges from CallPeaks
-    cells     = colnames(SeuratOBJ),     # all barcodes across samples
-    verbose   = TRUE
-)
-
-f_name <- paste0("mtx_merged_peaks_cell_level_", resolution_level, "_resolution.rds")
-rds_name <- here(output_RDS, f_name)
-saveRDS(mat_macs2_peaks, file = rds_name)
-# To load it back:
-# mat_macs2_peaks <- readRDS(rds_name)
-
-message("ATAC-Counts saved ...")
-
-# Verification
-identical(colnames(mat_macs2_peaks), colnames(SeuratOBJ))
-head(mat_macs2_peaks)
-# > head(mat_macs2_peaks) # ge. Mid_level: 18 x 55,516 cells
-# 6 x 55516 sparse Matrix of class "dgCMatrix"
-# [[ suppressing 34 column names ‘S04_AAACAGCCAGAATGAC-1’, ‘S04_AAACAGCCAGCAAGGC-1’, ‘S04_AAACATGCACCTGGTG-1’ ... ]]
+## categories to pseudobulk data
+grp_by_variables <- c("mid_cluster", "orig.ident")
 
 
+Seurat_pb <- AggregateExpression(
+    SeuratOBJ,
+    features = keep_genes,
+    assays =  c("RNA", "ATAC_macs2"),
+    group.by = grp_by_variables,
+    return.seurat = FALSE,
+    verbose = TRUE
+)   # matrix: peaks x clusters
 
-##==============================================================================
-## Redo new ATAC assay with merged peaks
+#  Aggregated values are placed in the 'counts' layer of the returned object.
+#  the data is then normalized by running NormalizeData on the aggregated counts. ScaleData is then run on the default assay before returning the object.
 
-atac_macs2 <- CreateChromatinAssay(
-    counts     = mat_macs2_peaks,
-    ranges     = peaks_gr,
+## check assays and features 
+Seurat_pb
+Assays(Seurat_pb)
+
+## Get the matrices directly, then add the ATAC matrix manually to the pseudobulk object
+pb_rna_counts  <- Seurat_pb$RNA   # genes x clusters
+pb_atac_counts <- Seurat_pb$ATAC_macs2  # peaks x clusters
+all(colnames(pb_rna_counts) == colnames(pb_atac_counts))   # clusters align
+
+
+pb_rna_counts_df  <- as.data.frame(pb_rna_counts)   # genes x clusters
+pb_atac_counts_df <- as.data.frame(pb_atac_counts)  # peaks x clusters
+dim(pb_rna_counts_df) # [1] 36601    18
+head(pb_rna_counts_df)
+
+head(pb_atac_counts_df)
+
+# build a cluster-level object
+pb_obj <- CreateSeuratObject(counts = pb_rna_counts, assay = "RNA")
+pb_obj <- NormalizeData(pb_obj) # RNA log-normalize per cluster
+pb_obj <- FindVariableFeatures(pb_obj, selection.method = "vst") 
+pb_obj <- ScaleData(pb_obj, features = rownames(pb_obj))
+
+# ensure peaks order & ranges match
+gr_peaks <- granges(SeuratOBJ[["ATAC_macs2"]])
+peak_ids <- Signac::GRangesToString(gr_peaks)
+pb_atac_counts <- pb_atac_counts[peak_ids, , drop = FALSE]  # reorder to ranges
+# Error in methods::slot(object = object, name = layer) : 
+# no slot of name "chr1-181329-181534" for this object of class "Assay"
+
+pb_atac <- CreateChromatinAssay(
+    counts     = pb_atac_counts,
+    ranges     = gr_peaks,
     annotation = tryCatch(Annotation(SeuratOBJ), error = function(e) NULL)
 )
-atac_macs2
 
-## add the new chromatin object to existing Seurat
-SeuratOBJ[["ATAC_macs2_merged"]] <- atac_macs2
-Assays(SeuratOBJ)
+SeuratOBJ[["ATAC_macs2_pseudo"]] <- pb_atac
 
-message("Seurat with new chromatin assay done: ATAC_macs2_merged")
+DefaultAssay(Seurat_pb) <- "ATAC_macs2_pseudo"
 
-DefaultAssay(SeuratOBJ) <- "ATAC_macs2_merged"
+# ATAC normalization & bias covariates on pseudobulk
+Seurat_pb <- global_rebuild_atac_normalization(SeuratOBJ, "ATAC_macs2_pseudo")
 
-message("Starting GC content correction ... ")
+# verification
+head(Seurat_pbj@meta.data)
+# orig.ident nCount_RNA nFeature_RNA nCount_ATAC_unified
+# Astrocyte  SeuratProject   16100320        29950            14066550
+# Endo       SeuratProject    1435841        22262             1340147
+# Excit.Thal SeuratProject  165408249        32995           121029625
+# Inhib.Thal SeuratProject   55039199        30951            49965552
+# LHb.1      SeuratProject   19120834        28831            13670681
+# LHb.1.3    SeuratProject    2960861        22701             2011885
+# nFeature_ATAC_unified
+# Astrocyte                 351031
+# Endo                      307849
+# Excit.Thal                351037
+# Inhib.Thal                351037
+# LHb.1                     351015
+# LHb.1.3                   330675
 
-# Set genome
-genome <- BSgenome.Hsapiens.UCSC.hg38
+# f_name <- paste0(resolution_level, "_pb_rna_counts_df.csv")
+# write.csv(
+#     pb_rna_counts_df,
+#     file = here(cvs_ouputDir, f_name),
+#     row.names = FALSE
+# )
+# f_name <- paste0(resolution_level, "_pb_atac_counts.csv")
+# write.csv(
+#     pb_atac_counts_df,
+#     file = here(cvs_ouputDir, f_name),
+#     row.names = FALSE
+# )
 
-SeuratOBJ <- RegionStats(
-    object = SeuratOBJ,
-    assay = "ATAC_macs2_merged",
-    genome = genome
-)
-
-# Filter cells / QC ?
-# before_peaks <- sum(SeuratOBJ[["nCount_ATAC"]])
-# tmp_Sobj <- subset(SeuratOBJ, subset = nCount_ATAC < 75000 & nCount_ATAC > 1000)
-# after_peaks <- sum(SeuratOBJ[["nCount_ATAC"]])
-
-SeuratOBJ <- global_rebuild_atac_normalization(SeuratOBJ, "ATAC_macs2_merged")
-
-message("GC content correction and normalization done!")
-
-## Milestone: save whole Seurat for further analysis
-f_name <- paste0("Seurat_peaks_merged_cell_level_", resolution_level, "_resolution.rds")
-rds_name <- here(output_RDS, f_name)
-saveRDS(SeuratOBJ, file = rds_name)
-# SeuratOBJ <- readRDS(SeuratOBJ, file = rds_name)
-levels(SeuratOBJ)
-
-message("Seurat with merged_peaks chromatin saved!")
-
-
-##==============================================================================
-# ## Compute cell-type specific (local) Link peak-genes
-# 
-# # Get the gene annotation from the original object's assay to reattach it later to the subset 
-# orig_annot <- Annotation(SeuratOBJ[["ATAC_macs2"]])
-# 
-# ## find peaks by cluster correlated with the expression of nearby genes
-# # access each subset by name
-# 
-# message("Making list of Seurat subsets: ", resolution_level)
-# 
-# seurat_subsets <- list()
-# 
-# for (clust in clusters) {
-#     message("Subsetting cluster: ", clust)
-#     
-#     seurat_subsets[[clust]] <- subset(
-#         SeuratOBJ,
-#         idents = clust
-#     )
-# }
-# remove("SeuratOBJ")
-# 
-# ## For loop only in peaks under the same cluster
-# #  - Build peaks per cluster from MACS2 GRanges
-# peaks_gr$peak_id <- Signac::GRangesToString(peaks_gr)   # "chr-start-end"
-# 
-# peaks_by_cluster_uniqueness <- function(cluster) {
-#     # test: cluster = "MHb.1.2"
-#     cls <- grep(paste0("(^|,)", cluster, "(,|$)"), peaks_gr$peak_called_in, value = TRUE)
-#     v_cls <- unique(unlist(strsplit(cls, ",")))
-#     if (length(v_cls) > 0) {
-#         message(cluster, " peaks present on ", length(v_cls), " clusters")
-#     } else {
-#         message(cluster, " not found in peak_call_in")
-#     }
-# }
-# 
-# peaks_by_cluster <- function(cluster) {
-#     #finds the indices of rows where the cluster name is present & returns a character vector of peak IDs 
-#     hits <- grepl(paste0("(^|,)", cluster, "(,|$)"), peaks_gr$peak_called_in)
-#     peaks_gr$peak_id[hits]
-# }
-# 
-# message("Seurat subsets by cell-type arranged: ", length(seurat_subsets))
-# 
-# message("Starting LinkPeaks by cluster ... ")
-# 
-# set.seed(22082025)
-# 
-# for (seurat_cluster in names(seurat_subsets)) {
-#     # seurat_cluster = names(seurat_subsets)[1]
-#     
-#     seurat_subset <- seurat_subsets[[seurat_cluster]]
-#     DefaultAssay(seurat_subset) <- "ATAC_macs2"
-#     
-#     n_cells <- ncol(seurat_subset)
-#     message("Processing ", unique(Idents(seurat_subset)), " (", n_cells, " cells)")
-#     
-#     # Peaks called in this cluster and present in the assay
-#     cluster_peaks <- intersect(
-#         peaks_by_cluster(seurat_cluster),
-#         rownames(seurat_subset[["ATAC_macs2"]])
-#     )
-#     peaks_by_cluster_uniqueness(seurat_cluster)
-#     
-#     # If not peaks
-#     if (length(cluster_peaks) == 0) {
-#         message("No MACS2 peaks found in assay for ", seurat_cluster, "; skipping.")
-#         next
-#     } else {
-#         message("MACS2 peaks found in assay for ", seurat_cluster, " ", length(cluster_peaks))
-#         message("Peaks available in the Seurat object assay: ", nrow(seurat_subset[["ATAC_macs2"]]))
-#         message("Number of peaks after intersection: ", length(cluster_peaks))
-#     }
-#     
-#     # Get the raw count matrix for the peaks 
-#     counts_data <- GetAssayData( # SubsetAssay?
-#         object = seurat_subset, 
-#         assay = "ATAC_macs2", 
-#         slot = "counts"
-#     )[cluster_peaks, , drop = FALSE]
-#     
-#     # Get the genomic ranges for the subsetted peaks
-#     peak_ranges <- Signac::StringToGRanges(cluster_peaks)
-#     
-#     # Create a new ChromatinAssay object with annotation
-#     new_assay <- CreateChromatinAssay(
-#         counts = counts_data, 
-#         ranges = peak_ranges,
-#         annotation = orig_annot 
-#     )
-#     
-#     # Add the new assay back to the Seurat object
-#     seurat_subset[["ATAC_macs2"]] <- new_assay
-#     
-#     # Set the default assay again since this was replaced it
-#     DefaultAssay(seurat_subset) <- "ATAC_macs2"
-#     
-#     # Compute GC content for each peak
-#     seurat_subset <- RegionStats(
-#         object = seurat_subset,
-#         assay = "ATAC_macs2",
-#         genome = genome
-#     )
-#     
-#     message("GC content correction and normalization done!")
-#     
-#     seurat_subset <- global_rebuild_atac_normalization(seurat_subset, "ATAC_macs2")
-#     
-#     #=====/
-#     
-#     if (length(cluster_peaks) < 50) {
-#         message("Very few peaks for ", seurat_cluster, " — results may be underpowered.")
-#     }
-#     
-#     # Default min.cells = 10 works fine for large clusters (>2,000 cells), but it’s too strict for tiny clusters (<200 cells)
-#     # I scaled min.cells with cluster size (n_cells); require that at least 5% of cells in that cluster support the peak
-#     # and never drop below 3 cells minimum, so the calculation always has some robustness
-#     min_cells_lp <- max(3, round(0.05 * n_cells))  # 5% or at least 3
-#     
-#     atac <- LinkPeaks(
-#         object = seurat_subset,
-#         peak.assay = "ATAC_macs2",
-#         expression.assay = "RNA",
-#         genes.use = keep_genes,
-#         method = p_met,
-#         distance = as.numeric(w_size),
-#         min.cells= min_cells_lp
-#     )
-#     
-#     # This is for embedding the peak-gene links in the Seurat object directly, in case I need it
-#     Links(seurat_subset[["ATAC_macs2"]]) <- Links(atac)
-#     
-#     message("Local link-peak-genes for cluster ", seurat_cluster, " completed!")
-#     
-#     ## inspect data
-#     head(Links(atac), n=3)
-#     
-#     ## prepare data to save cvs
-#     link_df <- as.data.frame(Links(atac))
-#     # summary(link_df$score)
-#     f_name <- paste0(resolution_level, "_", seurat_cluster, "_local_link_peak_genes.csv")
-#     write.csv(
-#         link_df,
-#         file = here(output_cvsDir, f_name),
-#         row.names = FALSE
-#     )
-#     
-#     message("LinkPeaks saved: ", f_name)
-#     
-#     #===
-#     
-#     # Save the seurat_subset object as an .rds file
-#     seurat_subset_filename <- paste0(resolution_level, "_", seurat_cluster, "_seurat_subset.rds")
-#     saveRDS(
-#         object = seurat_subset, 
-#         file = here(output_RDS, seurat_subset_filename)
-#     )
-#     
-#     message("Seurat subset saved: ", seurat_subset_filename)
-#     
-# }
-# 
-# 
-# message("MACS2 link-peaks correlations completed!")
+message("Pseudobulk Done!")
 
 
 message("All done!!!")
