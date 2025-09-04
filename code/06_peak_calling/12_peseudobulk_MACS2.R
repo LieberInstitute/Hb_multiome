@@ -246,6 +246,14 @@ head(pb_obj@meta.data)
 # Astrocyte_S07-Hb-r                     327433
 # Astrocyte_S08-Hb-r                     324172
 
+## ============================================================================/
+
+## Milestone: save Seurat pseudobulk
+f_name <- paste0("Seurat_pseudobulk_macs2_peaks_no_merged_", resolution_level, "_resolution.rds")
+rds_name <- here(output_Dir, f_name)
+saveRDS(SeuratOBJ, file = rds_name)
+
+## ============================================================================/
 
 
 message("Pseudobulk Done!")
