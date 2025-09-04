@@ -248,10 +248,10 @@ head(pb_obj@meta.data)
 
 ## ============================================================================/
 
-## Milestone: save Seurat pseudobulk
-f_name <- paste0("Seurat_pseudobulk_macs2_peaks_no_merged_", resolution_level, "_resolution.rds")
-rds_name <- here(output_Dir, f_name)
-saveRDS(SeuratOBJ, file = rds_name)
+# ## Milestone: save Seurat pseudobulk
+# f_name <- paste0("Seurat_pseudobulk_macs2_peaks_no_merged_", resolution_level, "_resolution.rds")
+# rds_name <- here(output_Dir, f_name)
+# saveRDS(pb_obj, file = rds_name)
 
 ## ============================================================================/
 
@@ -274,8 +274,31 @@ pb_obj <- LinkPeaks(
 
 message("Pseudobulk Done!")
 
+# This is for embedding the peak-gene links in the Seurat object directly, in case I need it
+Links(pb_obj[["ATAC_macs2"]]) <- Links(atac)
+
+message("Pseudobulk link-peak-genes for  ", resolution_level, " resolution level done!")
+
+## inspect data
+head(Links(atac), n=3)
+
+## prepare data to save cvs
+link_df <- as.data.frame(Links(atac))
+# summary(link_df$score)
+f_name <- paste0(resolution_level, "_peseudobulk_link_peak_genes.csv")
+write.csv(
+    link_df,
+    file = here(output_cvsDir, f_name),
+    row.names = FALSE
+)
 
 
+message("LinkPeaks saved: ", f_name)
+
+## Milestone: save Seurat pseudobulk
+f_name <- paste0("Seurat_pseudobulk_macs2_peaks_no_merged_", resolution_level, "_resolution.rds")
+rds_name <- here(output_Dir, f_name)
+saveRDS(pb_obj, file = rds_name)
 
 
 message("All done!!!")
