@@ -40,6 +40,7 @@ args = commandArgs(trailingOnly = TRUE)
 resolution_level <- args[2]
 
 ## for testing:
+# resolution_level = "Broad" 
 # resolution_level = "Mid" 
 
 if (length(resolution_level)) {
@@ -92,7 +93,7 @@ if (!dir.exists(output_RDS)) {
 ## Load Seurat / macs peaks / filtered genes. And make verification
 
 ## macs2 peaks
-macs2_peaks_csv <- here(input_macs_file, paste0("macs_peaks_Mid_resolution.csv"))
+macs2_peaks_csv <- here(input_macs_file, paste0("macs_peaks_", resolution_level, "_resolution.csv"))
 
 ## Seurat with final ct - Visium HD corrected 
 Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
@@ -163,6 +164,8 @@ if (file.exists(macs2_peaks_csv)) {
     stop(paste("File not found:", macs2_peaks_csv))
 }
 colnames(peaks_df)
+ct_parsed_chk_point <- unique(unlist(strsplit(peaks_df$peak_called_in, ",")))
+ct_parsed_chk_point
 
 ## verify shorter and longer peaks
 quantile(peaks_df$width, probs = c(0.01, 0.02, 0.05, 0.25, 0.5, 0.75, 0.95, 0.98, 0.99, 0.995, 0.997))
