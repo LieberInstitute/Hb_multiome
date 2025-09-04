@@ -1,5 +1,5 @@
 ########################################################################
-## Merge MACS2 peaks from DARs
+## Workflow for merging the peaks and creating a new assay
 ## 
 ## Authors. CSC
 ## Date. Sep 03, 2025
@@ -70,24 +70,14 @@ input_genes_filtered_file <- here(
     "02_link_peaks_MACS2",
     "rna_filtered_genes_2perc_cells.csv"
 )
-
-# output_cvsDir <- here(
-#     "processed-data",
-#     "06_peak_calling",
-#     "11_peaks_merge_DARs_MACS2"
-# )
-output_RDS <- here(
+output_Dir <- here(
     "processed-data",
     "06_peak_calling",
-    "11_peaks_merge_DARs_MACS2",
-    "Seurat_subsets_links_rds"
+    "11_peaks_merge_MACS2"
 )
 
-if (!dir.exists(output_cvsDir)) {
-    dir.create(output_cvsDir)
-}
-if (!dir.exists(output_RDS)) {
-    dir.create(output_RDS)
+if (!dir.exists(output_Dir)) {
+    dir.create(output_Dir)
 }
 
 ##==============================================================================
@@ -136,7 +126,6 @@ if (file.exists(input_genes_filtered_file)) {
 
 
 ##==============================================================================
-
 ## load macs2 peaks
 
 message("Loading ", basename(input_macs_file))
@@ -165,7 +154,7 @@ y <- nrow(peaks_df)
 message("Peaks removed ", (x - y))
 message("Peaks kept: ", (x - (x-y)), " (", round((y * 100) / x, digits = 2), "%)")
 
-# CSV has columns like: seqnames, start, end, etc
+## CSV has columns like: seqnames, start, end, etc
 peaks_gr <- makeGRangesFromDataFrame(
     peaks_df,
     keep.extra.columns = TRUE,       # keep additional metadata columns
@@ -186,8 +175,6 @@ message("MACS2 peaks prepared!")
 
 
 ##==============================================================================
-
-## Pre-processing: 
 ## - merge peaks 
 ## - quantify peaks from CallPeaks output fragments
 
@@ -201,18 +188,13 @@ DefaultAssay(SeuratOBJ) <- "ATAC"
 frags_list <- Fragments(SeuratOBJ)
 length(frags_list) # 10
 
-## After run CallPeaks() per cluster, peaks could be unify/re-quantify, so each cluster will have same peak set
+message("Merging peaks ...")
 
-# Note. Defaults on GenomicRanges::reduce() does not allow gaps. And, we have "NO" overlapping genomic ranges within peaks_gr.
-# That’s common if peaks came from MACS2 (which already merges/filters peaks) or if peaks were deduplicated before saving the CSV.
-# Alternativately, I am merging ranges whose gaps are < 100 bp
-
-## merge peaks
 # mapping the new, unified peaks back to the original individual peaks. This allows you to retain a link to the original peak 
 union_peaks <- GenomicRanges::reduce(peaks_gr, min.gapwidth = 101, with.revmap = TRUE) 
 
 # fast confirmation
-length(union_peaks) # [1] 355127
+length(union_peaks) # [1] 351037
 head(union_peaks)
 revmap <- mcols(union)$revmap  # IntegerList: indices of contributing peaks
 
@@ -234,7 +216,8 @@ length(all_cells_frag) # 55516
 barcodes_in_frags <- unique(unlist(all_cells_frag, Cells(SeuratOBJ)))
 mean(colnames(SeuratOBJ) %in% barcodes_in_frags)  # should be ~1.0
 
-## Quantify peaks detected by Signac::CallPeaks() - not unified peaks
+message("Quantifying merged peaks ...")
+
 mat_macs2_peaks <- FeatureMatrix(
     fragments = frags_list,              # list of Fragment objects
     features  = union_peaks,                # GRanges from CallPeaks
@@ -242,17 +225,15 @@ mat_macs2_peaks <- FeatureMatrix(
     verbose   = TRUE
 )
 
-message("Peaks quantification done ...")
-
-f_name <- paste0("mtx_peaks_cell_level_", resolution_level, "_resolution.rds")
+f_name <- paste0("mtx_merged_peaks_cell_level_", resolution_level, "_resolution.rds")
 rds_name <- here(output_RDS, f_name)
 saveRDS(mat_macs2_peaks, file = rds_name)
 # To load it back:
 # mat_macs2_peaks <- readRDS(rds_name)
 
-message("Counts saved ...")
+message("ATAC-Counts saved ...")
 
-Verification
+# Verification
 identical(colnames(mat_macs2_peaks), colnames(SeuratOBJ))
 head(mat_macs2_peaks)
 # > head(mat_macs2_peaks) # ge. Mid_level: 18 x 55,516 cells
@@ -262,8 +243,8 @@ head(mat_macs2_peaks)
 
 
 ##==============================================================================
+## Redo new ATAC assay with merged peaks
 
-## Create new ATAC assay with macs2 Granges
 atac_macs2 <- CreateChromatinAssay(
     counts     = mat_macs2_peaks,
     ranges     = peaks_gr,
@@ -275,27 +256,20 @@ atac_macs2
 SeuratOBJ[["ATAC_macs2_merged"]] <- atac_macs2
 Assays(SeuratOBJ)
 
-message("Seurat with new chromatin assay: ATAC_macs2_merged")
+message("Seurat with new chromatin assay done: ATAC_macs2_merged")
 
 DefaultAssay(SeuratOBJ) <- "ATAC_macs2_merged"
-
-## =============================================================================
-
-# Make GC content correction and run TF-IDF normalization, runSVD &
 
 message("Starting GC content correction ... ")
 
 # Set genome
 genome <- BSgenome.Hsapiens.UCSC.hg38
 
-# Compute GC content for each peak
 SeuratOBJ <- RegionStats(
     object = SeuratOBJ,
     assay = "ATAC_macs2_merged",
     genome = genome
 )
-
-message("GC content correction and normalization done!")
 
 # Filter cells / QC ?
 # before_peaks <- sum(SeuratOBJ[["nCount_ATAC"]])
@@ -304,16 +278,16 @@ message("GC content correction and normalization done!")
 
 SeuratOBJ <- global_rebuild_atac_normalization(SeuratOBJ, "ATAC_macs2_merged")
 
-## ============================================================================/
+message("GC content correction and normalization done!")
 
 ## Milestone: save whole Seurat for further analysis
-f_name <- paste0("Seurat_peaks_macs2_merged_cell_level_", resolution_level, "_resolution.rds")
+f_name <- paste0("Seurat_peaks_merged_cell_level_", resolution_level, "_resolution.rds")
 rds_name <- here(output_RDS, f_name)
 saveRDS(SeuratOBJ, file = rds_name)
 # SeuratOBJ <- readRDS(SeuratOBJ, file = rds_name)
 levels(SeuratOBJ)
 
-message("Seurat with new chromatin assay GC bias corrected and normalized saved!")
+message("Seurat with merged_peaks chromatin saved!")
 
 
 ##==============================================================================
