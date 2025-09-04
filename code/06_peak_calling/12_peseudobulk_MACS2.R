@@ -206,10 +206,13 @@ gr_peaks <- granges(SeuratOBJ[["ATAC_macs2"]])
 peak_ids <- Signac::GRangesToString(gr_peaks)
 pb_atac_counts <- pb_atac_counts[peak_ids, , drop = FALSE]  # reorder to ranges
 
+# Get the gene annotation from the original object's assay to reattach it later to the subset 
+orig_annot <- Annotation(SeuratOBJ[["ATAC_macs2"]])
+
 pb_atac <- CreateChromatinAssay(
     counts     = pb_atac_counts,
     ranges     = gr_peaks,
-    annotation = tryCatch(Annotation(SeuratOBJ), error = function(e) NULL)
+    annotation = orig_annot 
 )
 pb_atac
 # ChromatinAssay data with 355127 features for 169 cells
@@ -225,6 +228,18 @@ Assays(pb_obj)
 # [1] "RNA"               "ATAC_macs2_pseudo"
 
 DefaultAssay(pb_obj) <- "ATAC_macs2_pseudo"
+
+# Set genome
+genome <- BSgenome.Hsapiens.UCSC.hg38
+
+# Compute GC content for each peak
+pb_obj <- RegionStats(
+    object = pb_obj,
+    assay = "ATAC_macs2_pseudo",
+    genome = genome
+)
+
+message("GC content correction and normalization done!")
 
 # ATAC normalization & bias covariates on pseudobulk
 pb_obj <- global_rebuild_atac_normalization(pb_obj, "ATAC_macs2_pseudo")
@@ -260,6 +275,11 @@ message("Computing peak-gene correlations on pseudobulk ... ")
 # Default min.cells = 10 works fine for large clusters (>2,000 cells), but it’s too strict for tiny clusters (<200 cells)
 # I scaled min.cells with cluster size (n_cells); require that at least 5% of cells in that cluster support the peak
 # and never drop below 3 cells minimum, so the calculation always has some robustness
+
+n_cells <- ncol(pb_obj)
+# [1] 169
+message("Processing ", n_cells, " pseudobulk groups")
+
 min_cells_lp <- max(3, round(0.05 * n_cells))  # 5% or at least 3
 
 pb_obj <- LinkPeaks(
@@ -267,9 +287,9 @@ pb_obj <- LinkPeaks(
     peak.assay = "ATAC_macs2_pseudo",
     expression.assay = "RNA",
     genes.use = keep_genes,
-    distance = w_size,
+    distance = as.numeric(w_size),
     min.cells = min_cells_lp,
-    test.use = p_met 
+    method = p_met 
 )
 
 message("Pseudobulk Done!")
