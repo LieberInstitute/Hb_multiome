@@ -1,5 +1,5 @@
 ########################################################################
-## Workflow for merging the peaks and creating a new assay
+## Workflow for merging the peaks and creating a new assay with merged peaks
 ## 
 ## Authors. CSC
 ## Date. Sep 03, 2025
@@ -196,31 +196,42 @@ union_peaks <- GenomicRanges::reduce(peaks_gr, min.gapwidth = 101, with.revmap =
 # fast confirmation
 length(union_peaks) # [1] 351037
 head(union_peaks)
-revmap <- mcols(union)$revmap  # IntegerList: indices of contributing peaks
+revmap <- mcols(union_peaks)$revmap  # IntegerList: indices of contributing peaks
 
-length(peaks_gr)            # 355127 - original count
-length(union_peaks)         # 355127 / 351037 (gap) - unified count (should be <= original)
+## =============================================================================
+## log summary and stat verificacion
+
+message("Original number fo peaks:")
+p_total <- length(peaks_gr)            # 355127 - original count
+message("Unified number fo peaks:")
+p_unified <- length(union_peaks)         # 351037 - unified count (should be <= original)
+message("Peak difference:")
+p_total - p_unified # 4099
+message("Merged peaks %:")
+round((p_total - p_unified) *  100 / p_total, digits = 2)
+
+## verification
 any(width(union_peaks) <= 0)  # should be FALSE
-
 any_overlaps <- any(countOverlaps(peaks_gr, peaks_gr) > 1)
 any_overlaps # FALSE
 is_disjoint <- isDisjoint(peaks_gr, ignore.strand = TRUE) 
-is_disjoint # [1] TRUE
+is_disjoint # [1] TRUE / meaning none of the peak intervals overlapped with each other
 n_dups <- sum(duplicated(peaks_gr)) # 0 duplicate intervals
 n_dups # 0 
 
-## verification
 stopifnot(length(frags_list) >= 1)
 all_cells_frag <- unique(do.call(c, lapply(frags_list, Cells)))
 length(all_cells_frag) # 55516
 barcodes_in_frags <- unique(unlist(all_cells_frag, Cells(SeuratOBJ)))
 mean(colnames(SeuratOBJ) %in% barcodes_in_frags)  # should be ~1.0
 
+## =============================================================================
+
 message("Quantifying merged peaks ...")
 
 mat_macs2_peaks <- FeatureMatrix(
     fragments = frags_list,              # list of Fragment objects
-    features  = union_peaks,                # GRanges from CallPeaks
+    features  = union_peaks,             # GRanges from CallPeaks
     cells     = colnames(SeuratOBJ),     # all barcodes across samples
     verbose   = TRUE
 )
@@ -236,9 +247,6 @@ message("ATAC-Counts saved ...")
 # Verification
 identical(colnames(mat_macs2_peaks), colnames(SeuratOBJ))
 head(mat_macs2_peaks)
-# > head(mat_macs2_peaks) # ge. Mid_level: 18 x 55,516 cells
-# 6 x 55516 sparse Matrix of class "dgCMatrix"
-# [[ suppressing 34 column names ‘S04_AAACAGCCAGAATGAC-1’, ‘S04_AAACAGCCAGCAAGGC-1’, ‘S04_AAACATGCACCTGGTG-1’ ... ]]
 
 
 
@@ -247,7 +255,7 @@ head(mat_macs2_peaks)
 
 atac_macs2 <- CreateChromatinAssay(
     counts     = mat_macs2_peaks,
-    ranges     = peaks_gr,
+    ranges     = union_peaks,
     annotation = tryCatch(Annotation(SeuratOBJ), error = function(e) NULL)
 )
 atac_macs2
@@ -284,8 +292,6 @@ message("GC content correction and normalization done!")
 f_name <- paste0("Seurat_peaks_merged_cell_level_", resolution_level, "_resolution.rds")
 rds_name <- here(output_RDS, f_name)
 saveRDS(SeuratOBJ, file = rds_name)
-# SeuratOBJ <- readRDS(SeuratOBJ, file = rds_name)
-levels(SeuratOBJ)
 
 message("Seurat with merged_peaks chromatin saved!")
 
