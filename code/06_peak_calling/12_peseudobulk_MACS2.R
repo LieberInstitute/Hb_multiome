@@ -29,8 +29,8 @@ source(here("code", "06_peak_calling", "atac_custom_functions", "atac_normalizat
 # resolution_level = "Mid"      # 18 cell-types
 #===============================================================================
 
-# p_met = "spearman"
-# w_size = "5e5"
+p_met = "spearman"
+w_size = "5e5"
 resolution_level = "Mid" 
 
 if (length(resolution_level)) {
@@ -255,8 +255,27 @@ saveRDS(SeuratOBJ, file = rds_name)
 
 ## ============================================================================/
 
+message("Computing peak-gene correlations on pseudobulk ... ")
+
+# Default min.cells = 10 works fine for large clusters (>2,000 cells), but it’s too strict for tiny clusters (<200 cells)
+# I scaled min.cells with cluster size (n_cells); require that at least 5% of cells in that cluster support the peak
+# and never drop below 3 cells minimum, so the calculation always has some robustness
+min_cells_lp <- max(3, round(0.05 * n_cells))  # 5% or at least 3
+
+pb_obj <- LinkPeaks(
+    object = pb_obj,
+    peak.assay = "ATAC_macs2_pseudo",
+    expression.assay = "RNA",
+    genes.use = keep_genes,
+    distance = w_size,
+    min.cells = min_cells_lp,
+    test.use = p_met 
+)
 
 message("Pseudobulk Done!")
+
+
+
 
 
 message("All done!!!")
