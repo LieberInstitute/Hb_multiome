@@ -311,6 +311,7 @@ stopifnot(length(genes_for_lp) > 0)
 # keep_genes <- intersect(keep_genes, rownames(pb_obj[["RNA"]]))
 
 message("LinkPeaks on ", length(genes_for_lp), " genes; min.cells=", min_cells_lp, "; distance=", w_size_num)
+## Note. it is too sloooow: 355k peaks × ~13k genes (with 500 kb window) across 169 pseudobulk samples is heavy. 20h+ is believable
 
 pb_obj <- Signac::LinkPeaks(
     object = pb_obj,
@@ -360,18 +361,6 @@ message("Saved pseudobulk Seurat object at: ", rds_name)
 
 message("All done!!!")
 
-
-# library("slurmjobs")
-# job_single(
-#   "00_link_peaks",
-#   create_shell = TRUE,
-#   partition = "katun",
-#   memory = "30G",
-#   cores = 2,
-#   logdir = "logs",
-#   command = "Rscript -e \"options(width = 120); sessioninfo::session_info()\"",
-#   create_logdir = TRUE
-# )
 
 ## Reproducibility information
 library("sessioninfo")
