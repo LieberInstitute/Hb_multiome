@@ -63,7 +63,7 @@ input_genes_filtered_file <- here(
 output_Dir <- here(
     "processed-data",
     "06_peak_calling",
-    "12_peseudobulk_MACS2"
+    "12_pseudobulk_MACS2"
 )
 
 if (!dir.exists(output_Dir)) {
@@ -200,12 +200,22 @@ pb_obj
 # 3 layers present: counts, data, scale.data
 
 ## Create ChromatinAssay with correctly ordered peaks
-# ensure peaks order & ranges match
+
+## pull peaks from granges and ATAC_macs assay
 gr_peaks <- granges(SeuratOBJ[["ATAC_macs2"]])
 peak_ids <- Signac::GRangesToString(gr_peaks)
+
+## ensure peaks order & ranges match. Avoids errors if any peaks were filtered out
+missing_pk <- setdiff(peak_ids, rownames(pb_atac_counts))
+if (length(missing_pk) > 0) {
+    message("Warning: ", length(missing_pk), " peaks in gr_peaks not in pb_atac_counts; dropping those peaks.")
+    keep_ids <- intersect(peak_ids, rownames(pb_atac_counts))
+    gr_peaks  <- gr_peaks[match(keep_ids, peak_ids)]
+    peak_ids  <- keep_ids
+}
 pb_atac_counts <- pb_atac_counts[peak_ids, , drop = FALSE]  # reorder to ranges
 
-# Get the gene annotation from the original object's assay to reattach it later to the subset 
+# Get the gene annotation from the original object's assay to reattach it later
 # orig_annot <- Annotation(SeuratOBJ[["ATAC_macs2"]])
 orig_annot <- tryCatch(Annotation(SeuratOBJ[["ATAC_macs2"]]), error = function(e) NULL)
 if (is.null(orig_annot)) {
@@ -226,7 +236,7 @@ pb_atac
 # ChromatinAssay data with 355127 features for 169 cells
 # Variable features: 0 
 # Genome: 
-#     Annotation present: FALSE 
+#     Annotation present: TRUE 
 # Motifs present: FALSE 
 # Fragment files: 0 
 
@@ -236,7 +246,7 @@ Assays(pb_obj)
 # [1] "RNA"               "ATAC_macs2_pseudo"
 DefaultAssay(pb_obj) <- "ATAC_macs2_pseudo"
 
-# Set genome
+# Set genome to compute GC correction 
 genome <- BSgenome.Hsapiens.UCSC.hg38
 
 # Compute GC content for each peak
@@ -282,43 +292,59 @@ message("Computing peak-gene correlations on pseudobulk ... ")
 DefaultAssay(pb_obj) <- "RNA"  # not strictly required but conventional
 
 # Default min.cells = 10 works fine for large clusters (>2,000 cells), but it’s too strict for tiny clusters (<200 cells)
-# I scaled min.cells with cluster size (n_cells); require that at least 5% of cells in that cluster support the peak
+# I scaled min.cells with cluster size (n_samples); require that at least 5% of cells in that cluster support the peak
 # and never drop below 3 cells minimum, so the calculation always has some robustness
 
-n_cells <- ncol(pb_obj)
+n_samples <- ncol(pb_obj)
 # [1] 169
-message("Processing ", n_cells, " pseudobulk groups")
+message("Processing ", n_samples, " pseudobulk groups")
+# Processing 169 pseudobulk groups
 
-min_cells_lp <- max(3, floor(0.05 * n_cells))  # 5% or at least 3
+min_cells_lp <- max(3, floor(0.05 * n_samples))  # 5% or at least 3
 
-keep_genes <- intersect(keep_genes, rownames(pb_obj[["RNA"]]))
+## ensure genes.use exist in RNA assay and in annotation gene_name
+genes_in_rna <- rownames(pb_obj[["RNA"]])
+ga <- Annotation(pb_obj[["ATAC_macs2_pseudo"]])
+genes_in_annot <- if ("gene_name" %in% colnames(mcols(ga))) unique(ga$gene_name) else genes_in_rna
+genes_for_lp <- intersect(keep_genes, intersect(genes_in_rna, genes_in_annot))
+stopifnot(length(genes_for_lp) > 0)
+# keep_genes <- intersect(keep_genes, rownames(pb_obj[["RNA"]]))
 
-pb_obj <- LinkPeaks(
+message("LinkPeaks on ", length(genes_for_lp), " genes; min.cells=", min_cells_lp, "; distance=", w_size_num)
+
+pb_obj <- Signac::LinkPeaks(
     object = pb_obj,
     peak.assay = "ATAC_macs2_pseudo",
     expression.assay = "RNA",
-    genes.use = keep_genes,
+    genes.use = genes_for_lp,
     distance = w_size_num,
     min.cells = min_cells_lp,
     method = p_met 
 )
 
-message("Links found:")
-nrow(Links(pb_obj[["ATAC_macs2_pseudo"]])) > 0
+message("Pseudobulk LinkPeaks for  ", resolution_level, " resolution level done!")
 
-message("Pseudobulk link-peak-genes for  ", resolution_level, " resolution level done!")
-
-## inspect data
-head(Links(atac), n=3)
+lk <- Links(pb_obj[["ATAC_macs2_pseudo"]])
+message("Links found: ", nrow(lk))
+if (nrow(lk) > 0) {
+    print(head(lk, 3))
+}
 
 ## Extract and save links
-links_df <- as.data.frame(Links(pb_obj[["ATAC_macs2_pseudo"]]))
-summary(link_df$score)
+links_df <- as.data.frame(lk)
+## inspect data
+score_col <- intersect(c("score", "cor", "correlation", "pearson", "spearman"), colnames(links_df))
+if (length(score_col) == 1) {
+    message("Summary of ", score_col, ":")
+    print(summary(links_df[[score_col]]))
+} else {
+    message("Available link columns: ", paste(colnames(links_df), collapse = ", "))
+}
 
-f_name <- paste0(resolution_level, "_peseudobulk_link_peak_genes.csv")
+f_name <- paste0(resolution_level, "_pseudobulk_link_peak_genes.", p_met, ".", w_size, ".csv")
 write.csv(
-    link_df,
-    file = here(output_cvsDir, f_name),
+    links_df,
+    file = here(output_Dir, f_name),
     row.names = FALSE
 )
 
@@ -330,6 +356,7 @@ f_name <- paste0("Seurat_pseudobulk_macs2_peaks_no_merged_", resolution_level, "
 rds_name <- here(output_Dir, f_name)
 saveRDS(pb_obj, file = rds_name)
 
+message("Saved pseudobulk Seurat object at: ", rds_name)
 
 message("All done!!!")
 
