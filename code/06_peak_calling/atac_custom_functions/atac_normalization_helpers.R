@@ -27,6 +27,25 @@ if (!requireNamespace("Seurat", quietly = TRUE)) {
 # based on:
 # https://github.com/LieberInstitute/Hb_multiome/blob/a87c3512395b0488af9413174796787412e99567/code/03_pseudobulking/08_harmony_CR_ARCr.R#L99-L105 
 
+global_rebuild_rna_normalization <- function(
+        SeuratOBJ,
+        assay_name = "RNA"
+) {
+    
+    message("Starting normalization ... ")
+    
+    SeuratOBJ <- CreateSeuratObject(counts = pb_rna_counts, assay = assay_name)
+    SeuratOBJ <- NormalizeData(SeuratOBJ) # RNA log-normalize per cluster
+    SeuratOBJ <- FindVariableFeatures(SeuratOBJ, selection.method = "vst") 
+    SeuratOBJ <- ScaleData(SeuratOBJ, features = rownames(SeuratOBJ))
+
+    message("RNA normalization done!")
+    
+    return(SeuratOBJ)
+    
+}
+
+    
 global_rebuild_atac_normalization <- function(
         SeuratOBJ,
         assay_name
@@ -53,35 +72,20 @@ global_rebuild_atac_normalization <- function(
         assay = assay_name
     )
     
-    # message("Starting GC content correction ... ")
-    # 
-    # genome <- BSgenome.Hsapiens.UCSC.hg38
-    # # Normalize naming style before running RegionStats
-    # seqlevelsStyle(SeuratOBJ) <- "UCSC"
-    # # Keep only standard chromosomes
-    # SeuratOBJ[[assay_name]] <- SeuratOBJ[[assay_name]][
-    #     seqnames(granges(SeuratOBJ)) %in% standardChromosomes(granges(SeuratOBJ)), ]
-    # # Suppress scaffolds
-    # # suppressWarnings(
-    # #     SeuratOBJ <- RegionStats(SeuratOBJ, genome = genome, assay = assay_name)
-    # # )
-    # 
-    # SeuratOBJ <- RegionStats(
-    #     object = SeuratOBJ,
-    #     assay = assay_name,
-    #     genome = genome
-    # )
-    
-    message("Normalization done!")
+    message("ATAC normalization done!")
     
     return(SeuratOBJ)
     
 }
 
 
-# Set Seurat identities from a metadata column
-
-global_set_idents_from_meta <- function(seurat_obj, meta_col, level_order = NULL, na_fill = "Unknown") {
+## Set Seurat identities from a metadata column
+global_set_idents_from_meta <- function(
+        seurat_obj, 
+        meta_col, 
+        level_order = NULL, 
+        na_fill = "Unknown"
+) {
     
     message("Set new Seurat idents ... ")
     
