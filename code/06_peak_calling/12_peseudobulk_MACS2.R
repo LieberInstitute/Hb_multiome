@@ -30,7 +30,8 @@ source(here("code", "06_peak_calling", "atac_custom_functions", "atac_normalizat
 #===============================================================================
 
 p_met = "spearman"
-w_size = "5e5"
+w_size_num <- 5e5 
+w_size = "5e5" # for filenames only 
 resolution_level = "Mid" 
 
 if (length(resolution_level)) {
@@ -45,9 +46,8 @@ if (length(resolution_level)) {
 }
 
 
-# Check/create directories
+## Check/create directories
 
-## clusters renamed for Spatial-Registration on Visium project
 inputRDS_Dir <- here(
     "processed-data",
     "06_peak_calling",
@@ -181,7 +181,7 @@ pb_rna_counts  <- Seurat_pb$RNA   # genes x clusters
 pb_atac_counts <- Seurat_pb$ATAC_macs2  # peaks x clusters
 all(colnames(pb_rna_counts) == colnames(pb_atac_counts))   # clusters align
 
-
+## verify
 pb_rna_counts_df  <- as.data.frame(pb_rna_counts)   # genes x clusters
 dim(pb_rna_counts_df) # [1] 15896   169
 head(pb_rna_counts_df)
@@ -190,24 +190,32 @@ pb_atac_counts_df <- as.data.frame(pb_atac_counts)  # peaks x clusters
 dim(pb_atac_counts_df) # [1] 355127    169
 head(pb_atac_counts_df)
 
-# build a cluster-level object
+## build pseudobulk RNA Seurat and compute normalization on pseudobulk
 pb_obj <- CreateSeuratObject(counts = pb_rna_counts, assay = "RNA")
-pb_obj <- NormalizeData(pb_obj) # RNA log-normalize per cluster
-pb_obj <- FindVariableFeatures(pb_obj, selection.method = "vst") 
-pb_obj <- ScaleData(pb_obj, features = rownames(pb_obj))
+pb_obj <- global_rebuild_rna_normalization(pb_obj, "RNA")
 pb_obj
 # An object of class Seurat 
 # 15896 features across 169 samples within 1 assay 
 # Active assay: RNA (15896 features, 2000 variable features)
 # 3 layers present: counts, data, scale.data
 
+## Create ChromatinAssay with correctly ordered peaks
 # ensure peaks order & ranges match
 gr_peaks <- granges(SeuratOBJ[["ATAC_macs2"]])
 peak_ids <- Signac::GRangesToString(gr_peaks)
 pb_atac_counts <- pb_atac_counts[peak_ids, , drop = FALSE]  # reorder to ranges
 
 # Get the gene annotation from the original object's assay to reattach it later to the subset 
-orig_annot <- Annotation(SeuratOBJ[["ATAC_macs2"]])
+# orig_annot <- Annotation(SeuratOBJ[["ATAC_macs2"]])
+orig_annot <- tryCatch(Annotation(SeuratOBJ[["ATAC_macs2"]]), error = function(e) NULL)
+if (is.null(orig_annot)) {
+    message("Original annotation not found. Building hg38 gene annotations via EnsDb...")
+    suppressPackageStartupMessages(library(EnsDb.Hsapiens.v86))  # hg38-compatible EnsDb
+    genes_ens <- genes(EnsDb.Hsapiens.v86)
+    GenomeInfoDb::seqlevelsStyle(genes_ens) <- "UCSC"
+    GenomeInfoDb::genome(genes_ens) <- "hg38"
+    orig_annot <- genes_ens
+}
 
 pb_atac <- CreateChromatinAssay(
     counts     = pb_atac_counts,
@@ -222,11 +230,10 @@ pb_atac
 # Motifs present: FALSE 
 # Fragment files: 0 
 
-
+## assign new chromatin to seurat
 pb_obj[["ATAC_macs2_pseudo"]] <- pb_atac
 Assays(pb_obj)
 # [1] "RNA"               "ATAC_macs2_pseudo"
-
 DefaultAssay(pb_obj) <- "ATAC_macs2_pseudo"
 
 # Set genome
@@ -241,7 +248,7 @@ pb_obj <- RegionStats(
 
 message("GC content correction and normalization done!")
 
-# ATAC normalization & bias covariates on pseudobulk
+# ATAC normalization on pseudobulk: does TF-IDF/top-features/SVD
 pb_obj <- global_rebuild_atac_normalization(pb_obj, "ATAC_macs2_pseudo")
 
 # verification
@@ -272,6 +279,8 @@ head(pb_obj@meta.data)
 
 message("Computing peak-gene correlations on pseudobulk ... ")
 
+DefaultAssay(pb_obj) <- "RNA"  # not strictly required but conventional
+
 # Default min.cells = 10 works fine for large clusters (>2,000 cells), but it’s too strict for tiny clusters (<200 cells)
 # I scaled min.cells with cluster size (n_cells); require that at least 5% of cells in that cluster support the peak
 # and never drop below 3 cells minimum, so the calculation always has some robustness
@@ -280,31 +289,32 @@ n_cells <- ncol(pb_obj)
 # [1] 169
 message("Processing ", n_cells, " pseudobulk groups")
 
-min_cells_lp <- max(3, round(0.05 * n_cells))  # 5% or at least 3
+min_cells_lp <- max(3, floor(0.05 * n_cells))  # 5% or at least 3
+
+keep_genes <- intersect(keep_genes, rownames(pb_obj[["RNA"]]))
 
 pb_obj <- LinkPeaks(
     object = pb_obj,
     peak.assay = "ATAC_macs2_pseudo",
     expression.assay = "RNA",
     genes.use = keep_genes,
-    distance = as.numeric(w_size),
+    distance = w_size_num,
     min.cells = min_cells_lp,
     method = p_met 
 )
 
-message("Pseudobulk Done!")
-
-# This is for embedding the peak-gene links in the Seurat object directly, in case I need it
-Links(pb_obj[["ATAC_macs2"]]) <- Links(atac)
+message("Links found:")
+nrow(Links(pb_obj[["ATAC_macs2_pseudo"]])) > 0
 
 message("Pseudobulk link-peak-genes for  ", resolution_level, " resolution level done!")
 
 ## inspect data
 head(Links(atac), n=3)
 
-## prepare data to save cvs
-link_df <- as.data.frame(Links(atac))
-# summary(link_df$score)
+## Extract and save links
+links_df <- as.data.frame(Links(pb_obj[["ATAC_macs2_pseudo"]]))
+summary(link_df$score)
+
 f_name <- paste0(resolution_level, "_peseudobulk_link_peak_genes.csv")
 write.csv(
     link_df,
