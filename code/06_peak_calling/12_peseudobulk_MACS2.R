@@ -22,7 +22,7 @@ library("here")
 
 
 ## ATAC function's helper used globally
-source(here("code", "06_peak_calling", "atac_custom_functions", "atac_normalization_helpers.R"))
+source(here("code", "06_peak_calling", "multiome_custom_functions", "multiome_idents_normalization_helper.R"))
 # ls()
 
 #===============================================================================
