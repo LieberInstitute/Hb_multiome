@@ -178,7 +178,7 @@ make_width_plots <- function(
         # log scale for widths
         scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
         labs(
-            title = paste("Distribution of peak widths"),
+            title = paste("Distribution of linkpeak widths"),
             subtitle = suffix_subtitle,
             x = "Peak width (bp, log scale)",
             y = "Density",
@@ -187,10 +187,10 @@ make_width_plots <- function(
                             paste(total_peaks, "total peaks"))
         ) +
         theme_minimal(base_size = 12) +
-        theme(
-            panel.background = element_rect(fill = "gray95", color = NA),
-            plot.background = element_rect(fill = "gray98", color = NA)
-        ) +
+        # theme(
+        #     panel.background = element_rect(fill = "gray95", color = NA),
+        #     plot.background = element_rect(fill = "gray98", color = NA)
+        # ) +
         coord_flip()
     
     # Peak width vs. correlation score
@@ -205,7 +205,7 @@ make_width_plots <- function(
         geom_smooth(method = "loess", se = FALSE, color = "darkred") +
         #scale_x_continuous(trans = pseudo_log_trans(base = 10, sigma = 0.01)) +
         scale_y_log10() +
-        labs(title = "Peak width vs correlation score",
+        labs(title = "LinkPeak width vs correlation score",
              subtitle = suffix_subtitle,
              x = "Correlation Score (pseudo-log scaled)",
              y = "Peak width (bp, log scale)",
@@ -272,48 +272,53 @@ make_exploratory_plots <- function(
     count_below_01 <- sum(df_plot$score < 0.1, na.rm = TRUE)
     count_below_02 <- sum((df_plot$score < 0.2 & df_plot$score > 0.1), na.rm = TRUE)
     count_below_03 <- sum((df_plot$score < 0.3 & df_plot$score > 0.2), na.rm = TRUE)
+    count_above_03 <- sum((df_plot$score > 0.3), na.rm = TRUE)
     
-    #g1 <- ggplot(df_plot, aes(x = distance/1000, y = score, color = tier)) +
     g1 <- ggplot(df_plot, 
                  aes(x = signed_by_strand/1000, y = score, color = tier),
                  method = "loess", se = FALSE, span = 0.8, color = "black", linewidth = 0.9) +
-        geom_point(alpha = 0.5, size = 0.8) +
+        geom_point(alpha = 0.5, size = 0.5) +
         # trend over ALL tested links
-        geom_smooth(
-            data = df_plot,
-            aes(x = distance_kb, y = score),
-            method = "loess", se = FALSE, span = 0.8, color = "black", linewidth = 0.9) +
+        # geom_smooth(
+        #     data = df_plot,
+        #     aes(x = distance_kb, y = score),
+        #     method = "loess", se = FALSE, span = 0.8, color = "black", linewidth = 0.9) +
         # Threshold lines
         geom_hline(yintercept = 0.3, linetype = "dashed", color = "red") +
-        geom_hline(yintercept = 0.2, linetype = "dashed", color = "orange") +
+        geom_hline(yintercept = 0.2, linetype = "dashed", color = "darkorange") +
         geom_hline(yintercept = 0.1, linetype = "dashed", color = "grey50") +
         # Labels for thresholds
-        annotate("text", x = max(df_plot$distance/1000)*1.02, y = 0.3, 
-                 label = paste("<0.3 (", count_below_03, " peaks)"), hjust = 0.8, vjust = -0.5, color = "red") +
-        annotate("text", x = max(df_plot$distance/1000)*1.02, y = 0.2, 
-                 label = paste("<0.2 (", count_below_02, " peaks)"), hjust = 0.8, vjust = -0.5, color = "orange") +
-        annotate("text", x = max(df_plot$distance/1000)*1.02, y = 0.1, 
-                 label = paste("<0.1 (", count_below_01, " peaks)"), hjust = 0.8, vjust = -0.5, color = "grey50") +
+        annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.4, 
+                 label = paste(">0.3 (", count_above_03, " peaks)"), hjust = 0.8, vjust = +1, color = "black", fill = "white") +
+        annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.3, 
+                 label = paste("<0.3 (", count_below_03, " peaks)"), hjust = 0.8, vjust = +1, color = "black", fill = "white") +
+        annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.2, 
+                 label = paste("<0.2 (", count_below_02, " peaks)"), hjust = 0.8, vjust = +1, color = "black", fill = "white") +
+        annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.1, 
+                 label = paste("<0.1 (", count_below_01, " peaks)"), hjust = 0.8, vjust = +1, color = "black", fill = "white") +
         # Custom legend with count
         scale_color_manual(
             values = c(
-                "High (>=0.30, FDR<0.05)"          = "#b2182b",
-                "Moderate (0.20–0.30, FDR<0.10)"   = "#ef8a62",
-                "Exploratory (0.10–0.20, FDR<0.10)" = "#67a9cf",
-                "Discarded"                        = "grey80"
-            ),
-            name = paste0("Tier (Count < 0.1: ", count_below_01, ")")
+                "High (>=0.30, FDR<0.05)"          = "red",
+                "Moderate (0.20–0.30, FDR<0.10)"   = "deeppink4",
+                "Exploratory (0.10–0.20, FDR<0.10)" = "darkorange",
+                "Discarded"                        = "grey50"
+            ) #,
+            # name = paste0("Tier (Count < 0.1: ", count_below_01, ")")
         )  +
         labs(
-            title = "Peak–gene links by tier",
-            subtitle = suffix_subtitle,
+            title = "Pseudobulk peak–gene link scores by tier",
+            subtitle = paste(suffix_subtitle, " - spearman at 1e5; FDR<0.05"),
             x = "Distance from TSS (kb)",
             y = "Correlation score",
         ) +
-        theme_minimal() +
-        theme(legend.position = "bottom",
-              legend.text = element_text(size = 8),
-              legend.title = element_text(size = 9))
+        theme_minimal() + 
+        theme(legend.position = "none")
+        # +
+        # theme(legend.position = "bottom",
+        #       legend.text = element_text(size = 8),
+        #       legend.title = element_text(size = 9)) +
+        # guides(color = guide_legend(override.aes = list(size = 3)))
     
     f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_tier_scores.pdf")
     ggsave(here(plotDir, f_name), g1, width = 8, height = 5, device = cairo_pdf)
@@ -413,11 +418,10 @@ for (ct in lst_peak_files) {
 
 #===============================================================================
 
-message("Building plots ...")
 
 ## Histogram TSS Scores
 pdf(file = here(plotDir, 
-                paste0("peak_histogram_distance_TSS.pdf")), 
+                paste0("linkpeak_ps_histogram_distance_TSS.pdf")), 
     width = 7, height = 5)
 
 hist(link_df2$distance / 1000, breaks = 100,
