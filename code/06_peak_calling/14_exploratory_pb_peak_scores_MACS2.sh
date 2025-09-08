@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=30G
-#SBATCH --job-name=08_exploratory_peak_scores_MACS2
+#SBATCH --job-name=14_exploratory_pb_peak_scores_MACS2
 #SBATCH -c 2
-#SBATCH -t 2-00:00:00
+#SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
@@ -24,14 +24,14 @@ fi
 
 res="${clust_res[$i]}"
 
-# # skip Broad
-# if [[ "$res" == "Broad" ]]; then
-#   echo "[$(date)] Skipping clust_res='Broad' for array task $i"
-#   exit 0   # success so SLURM won’t retry
-# fi
+# skip Broad
+if [[ "$res" == "Broad" ]]; then
+  echo "[$(date)] Skipping clust_res='Broad' for array task $i"
+  exit 0   # success so SLURM won’t retry
+fi
 
 #mkdir -p logs
-log_path="logs/08_exploratory_peak_scores_MACS2_${res}_task_${i}.log"
+log_path="logs/14_exploratory_pb_peak_scores_MACS2_${res}.log"
 
 {
 
@@ -53,7 +53,7 @@ module load conda_R/4.4.x
 module list
 
 ## Edit with your job command
-Rscript 08_exploratory_peak_scores_MACS2.R --clust_res "${res}"
+Rscript 14_exploratory_pb_peak_scores_MACS2.R --clust_res "${res}"
 ret=$?
 
 echo "**** Job ends ****"
