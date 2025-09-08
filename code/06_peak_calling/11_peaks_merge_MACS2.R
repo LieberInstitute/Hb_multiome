@@ -203,9 +203,9 @@ revmap <- mcols(union_peaks)$revmap  # IntegerList: indices of contributing peak
 
 message("Original number fo peaks:")
 p_total <- length(peaks_gr)            # 355127 - original count
-message("Unified number fo peaks:")
+message("Unified number fo peaks:", p_total)
 p_unified <- length(union_peaks)         # 351037 - unified count (should be <= original)
-message("Peak difference:")
+message("Peak difference:", p_unified)
 p_total - p_unified # 4099
 message("Merged peaks %:")
 round((p_total - p_unified) *  100 / p_total, digits = 2)
@@ -237,7 +237,7 @@ mat_macs2_peaks <- FeatureMatrix(
 )
 
 f_name <- paste0("mtx_merged_peaks_cell_level_", resolution_level, "_resolution.rds")
-rds_name <- here(output_RDS, f_name)
+rds_name <- here(output_Dir, f_name)
 saveRDS(mat_macs2_peaks, file = rds_name)
 # To load it back:
 # mat_macs2_peaks <- readRDS(rds_name)
@@ -290,7 +290,7 @@ message("GC content correction and normalization done!")
 
 ## Milestone: save whole Seurat for further analysis
 f_name <- paste0("Seurat_peaks_merged_cell_level_", resolution_level, "_resolution.rds")
-rds_name <- here(output_RDS, f_name)
+rds_name <- here(output_Dir, f_name)
 saveRDS(SeuratOBJ, file = rds_name)
 
 message("Seurat with new merged_peaks (chromatin assay) added and saved!")
