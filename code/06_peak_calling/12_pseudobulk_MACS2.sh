@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=80G
-#SBATCH --job-name=12_pseudobulk_LinkPeaks_MACS2
+#SBATCH --job-name=12_pseudobulk_MACS2
 #SBATCH -c 4
 #SBATCH -t 3-00:00:00
 #SBATCH -o /dev/null
@@ -13,7 +13,7 @@ set -eo pipefail
 ## Compute pseubobulk on multiome-seurat and performs LinkPeaks()
 
 #mkdir -p logs
-log_path="logs/12_pseudobulk_LinkPeaks_MACS2.log"
+log_path="logs/12_pseudobulk_MACS2.log"
 
 {
 
@@ -34,7 +34,7 @@ module load conda_R/4.3.x
 module list
 
 ## Edit with your job command
-Rscript 12_pseudobulk_LinkPeaks_MACS2.R
+Rscript 12_pseudobulk_MACS2.R
 ret=$?
 
 echo "**** Job ends ****"
