@@ -20,13 +20,11 @@ library("here")
 
 
 ## read input arguments
-args = commandArgs(trailingOnly = TRUE)
-resolution_level <- args[2]
-# resolution_level = "Broad"  # 8 cell-types
-# resolution_level = "Mid" # 8 cell-types
+#args = commandArgs(trailingOnly = TRUE)
+#resolution_level <- args[2]
 
-# for testing ( Note only spearman at 5e4 was tested on macs2 peaks )
-# resolution_level = "Mid"
+# Testing spearman at 5e4 on macs2 peaks 
+resolution_level = "Mid"
 p_met = "spearman"
 w_size = "5e5"
 
@@ -44,17 +42,18 @@ if (length(resolution_level)) {
 input_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
-    "02_link_peaks_MACS2"
+    "12_pseudobulk_LinkPeaks_MACS2_split_ct"
 )
 plotDir <- here(
     "plots",
     "06_peak_calling",
-    "08_exploratory_peak_scores_MACS2"
+    "14_exploratory_pb_peak_scores_MACS2"
 )
 csvDir <- here(
     "processed-data",
     "06_peak_calling",
-    "08_exploratory_peak_scores_MACS2"
+    "14_exploratory_pb_peak_scores_MACS2"
+    
 )
 
 
@@ -213,9 +212,9 @@ make_width_plots <- function(
              caption = paste(total_peaks, "total local peaks")) +
         theme_minimal()
     
-    f_name <- paste0(resolution_lev, "_", ct_name, "_peak_width_histogram_spearman.pdf")
+    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_width_histogram.pdf")
     ggsave(here::here(plotDir, f_name), p_hist, width = 8, height = 8)
-    f_name <- paste0(resolution_lev, "_", ct_name, "_peak_width_vs_score_spearman.pdf")
+    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_width_vs_score.pdf")
     ggsave(here::here(plotDir, f_name), p_scatter_score, width = 8, height = 6)
 
     print(paste0("Width related plots for ", ct_name, " done!"))    
@@ -316,7 +315,7 @@ make_exploratory_plots <- function(
               legend.text = element_text(size = 8),
               legend.title = element_text(size = 9))
     
-    f_name <- paste0(resolution_lev, "_", ct_name, "_EDA_tier_scores.pdf")
+    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_tier_scores.pdf")
     ggsave(here(plotDir, f_name), g1, width = 8, height = 5, device = cairo_pdf)
     
     message("Exploratory plots for ", ct_name, " done!")
@@ -345,7 +344,7 @@ for (ct in lst_peak_files) {
     }
     
     # Extract text between first and second "_"
-    ct_name <- sub("^[^_]*_([^_]*)_.*", "\\1", ct)
+    ct_name <- sub("^[^_]*_([^_]*)_.*", "\\1", ct) #ge. [1] "LHb.2.7"
     
     #=========================================
     # prepare df
@@ -378,10 +377,6 @@ for (ct in lst_peak_files) {
     link_df2 <- link_df2 %>% filter(!is.na(tss))
     message("Dropped ", n_before - nrow(link_df2), " rows with no TSS match.")
     
-    message("Distance between peaks and TSS added ...")
-    
-    #=========================================
-    
     message("Computing Peak center and distance to TSS ...")
     
     link_df2 <- link_df2 %>%
@@ -393,6 +388,7 @@ for (ct in lst_peak_files) {
             distance_kb       = distance / 1000
         )
     head(link_df2, n=3)
+
     message("Link gene-peak scores with TSS:")
     summary(link_df2)
     table(link_df2$gene_strand, useNA = "ifany")
@@ -408,7 +404,7 @@ for (ct in lst_peak_files) {
     
     #=========================================
     
-    make_width_plots(link_df2, resolution_level, ct_name, plotDir)
+    #make_width_plots(link_df2, resolution_level, ct_name, plotDir)
     make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir)
     
 }
