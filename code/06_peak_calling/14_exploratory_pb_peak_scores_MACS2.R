@@ -178,7 +178,7 @@ make_width_plots <- function(
         # log scale for widths
         scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
         labs(
-            title = paste("Distribution of linkpeak widths"),
+            title = paste("Distribution of LinkPeak widths"),
             subtitle = suffix_subtitle,
             x = "Peak width (bp, log scale)",
             y = "Density",
@@ -205,7 +205,7 @@ make_width_plots <- function(
         geom_smooth(method = "loess", se = FALSE, color = "darkred") +
         #scale_x_continuous(trans = pseudo_log_trans(base = 10, sigma = 0.01)) +
         scale_y_log10() +
-        labs(title = "LinkPeak width vs correlation score",
+        labs(title = "LinkPeak width vs correlation scores",
              subtitle = suffix_subtitle,
              x = "Correlation Score (pseudo-log scaled)",
              y = "Peak width (bp, log scale)",
@@ -307,7 +307,7 @@ make_exploratory_plots <- function(
             # name = paste0("Tier (Count < 0.1: ", count_below_01, ")")
         )  +
         labs(
-            title = "Pseudobulk peak–gene link scores by tier",
+            title = "LinkPeak scores by tier",
             subtitle = paste(suffix_subtitle, " - spearman at 1e5; FDR<0.05"),
             x = "Distance from TSS (kb)",
             y = "Correlation score",
@@ -421,11 +421,11 @@ for (ct in lst_peak_files) {
 
 ## Histogram TSS Scores
 pdf(file = here(plotDir, 
-                paste0("linkpeak_ps_histogram_distance_TSS.pdf")), 
+                paste0(resolution_lev, "_", ct_name, "_pb_histogram_TSS_dist.pdf")), 
     width = 7, height = 5)
 
 hist(link_df2$distance / 1000, breaks = 100,
-     main = "Distance from Peaks to TSS",
+     main = "LinkPeaks distance from Peaks to TSS",
      xlab = "Distance (kb)",
      col = "lightblue")
 
@@ -444,8 +444,7 @@ g1 <- ggplot(peaks_per_gene, aes(x = n_peaks)) +
     geom_histogram(binwidth = 1, fill = "steelblue", color = "white") +
     scale_x_continuous(breaks = scales::pretty_breaks()) +
     labs(
-        title = paste(p_met, format(w_size, scientific = TRUE)),
-        subtitle = "Peaks per gene",
+        title = "Global LinkPeaks relations: 'peaks per gene' and 'genes per peak'", 
         x = "Number of linked peaks per gene",
         y = "Number of genes"
     ) +
@@ -470,7 +469,7 @@ combined_plot <- g1 + g2
 combined_plot
 
 ggsave(here(plotDir, 
-            paste0("link_peak_gene_histograms.pdf")),
+            paste0(resolution_lev, "_", ct_name, "_pb_link_peak_relations.pdf")),
        combined_plot, width = 8, height = 5)
 
 
