@@ -1,15 +1,13 @@
 ########################################################################
 ## Explore/Evaluate Signac::LinkPeaks() from pseudobulk assays
-## - Make several visualization to evaluate Peak scores
-## - Make table with several confidence Peak scores
+## - Make distribution plots to evaluate Peak scores
 ##
 ## Authors. CSC
 ## Date. Sep 08, 2025
-## Recommended resources on interactive mode: srun --pty --mem=30GB --x11 bash
-## Note. Seurat objects were created with module load conda_R/4.4.x
+## Recommended resources mem=30GB
 ########################################################################
 
-library("EnsDb.Hsapiens.v86")           # Gene annotation (GTF-style), gene names, positions, TSSs, chr locations, etc.
+library("EnsDb.Hsapiens.v86")  # Gene annotation (GTF-style), gene names, positions, TSSs, chr locations, etc.
 library("ggplot2")
 library("patchwork")
 library("tidyverse")
@@ -18,10 +16,6 @@ library("dplyr")
 library("scales")
 library("here")
 
-
-## read input arguments
-#args = commandArgs(trailingOnly = TRUE)
-#resolution_level <- args[2]
 
 # Testing spearman at 5e4 on macs2 peaks 
 resolution_level = "Mid"
@@ -42,7 +36,7 @@ if (length(resolution_level)) {
 input_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
-    "12_pseudobulk_LinkPeaks_MACS2_split_ct"
+    "13_pseudobulk_LinkPeaks_MACS2_split_ct"
 )
 plotDir <- here(
     "plots",
@@ -289,13 +283,13 @@ make_exploratory_plots <- function(
         geom_hline(yintercept = 0.1, linetype = "dashed", color = "grey50") +
         # Labels for thresholds
         annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.4, 
-                 label = paste(">0.3 (", count_above_03, " peaks)"), hjust = 0.8, vjust = +1, color = "black", fill = "white") +
+                 label = paste(">0.3 (", count_above_03, " links)"), hjust = 0.8, vjust = +1, color = "black", fill = "white") +
         annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.3, 
-                 label = paste("<0.3 (", count_below_03, " peaks)"), hjust = 0.8, vjust = +1, color = "black", fill = "white") +
+                 label = paste("<0.3 (", count_below_03, " links)"), hjust = 0.8, vjust = +1, color = "black", fill = "white") +
         annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.2, 
-                 label = paste("<0.2 (", count_below_02, " peaks)"), hjust = 0.8, vjust = +1, color = "black", fill = "white") +
+                 label = paste("<0.2 (", count_below_02, " links)"), hjust = 0.8, vjust = +1, color = "black", fill = "white") +
         annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.1, 
-                 label = paste("<0.1 (", count_below_01, " peaks)"), hjust = 0.8, vjust = +1, color = "black", fill = "white") +
+                 label = paste("<0.1 (", count_below_01, " links)"), hjust = 0.8, vjust = +1, color = "black", fill = "white") +
         # Custom legend with count
         scale_color_manual(
             values = c(
@@ -409,7 +403,7 @@ for (ct in lst_peak_files) {
     
     #=========================================
     
-    #make_width_plots(link_df2, resolution_level, ct_name, plotDir)
+    make_width_plots(link_df2, resolution_level, ct_name, plotDir)
     make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir)
     
 }
@@ -421,7 +415,7 @@ for (ct in lst_peak_files) {
 
 ## Histogram TSS Scores
 pdf(file = here(plotDir, 
-                paste0(resolution_lev, "_", ct_name, "_pb_histogram_TSS_dist.pdf")), 
+                paste0(resolution_level, "_", ct_name, "_pb_histogram_TSS_dist.pdf")), 
     width = 7, height = 5)
 
 hist(link_df2$distance / 1000, breaks = 100,
@@ -469,24 +463,13 @@ combined_plot <- g1 + g2
 combined_plot
 
 ggsave(here(plotDir, 
-            paste0(resolution_lev, "_", ct_name, "_pb_link_peak_relations.pdf")),
+            paste0(resolution_level, "_", ct_name, "_pb_link_peak_relations.pdf")),
        combined_plot, width = 8, height = 5)
 
 
 message("Plots done!!!")
 
 
-# library("slurmjobs")
-# job_single(
-#   "06_exploratory_peak_scores",
-#   create_shell = TRUE,
-#   partition = "katun",
-#   memory = "30G",
-#   cores = 2,
-#   logdir = "logs",
-#   command = "Rscript 06_exploratory_peak_scores.R",
-#   create_logdir = TRUE
-# )
 
 ## Reproducibility information
 library("sessioninfo")
@@ -495,3 +478,4 @@ Sys.time()
 proc.time()
 options(width = 120)
 session_info()
+
