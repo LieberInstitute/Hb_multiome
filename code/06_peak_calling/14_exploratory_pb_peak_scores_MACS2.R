@@ -225,7 +225,6 @@ make_exploratory_plots <- function(
         plotDir        
 ){
     
-    #===============================
     # adding exploratory scores
     # define high-confidence
     # High: score ≥ 0.30 & FDR < 0.05
@@ -322,6 +321,71 @@ make_exploratory_plots <- function(
 }
 
 
+#===============================================================================
+
+## Check number of linked peaks per gene and vice-verse
+# Number of linked peaks per gene
+make_peak_gene_histograms <- funcion(
+    link_df2 = link_df2,
+    resolution_lev,
+    ct_name,
+    plotDir 
+){
+    
+    
+    ## Histogram TSS Scores
+    pdf(file = here(plotDir, 
+                    paste0(resolution_level, "_", ct_name, "_pb_histogram_TSS_dist.pdf")), 
+        width = 7, height = 5)
+    
+    hist(link_df2$distance / 1000, breaks = 100,
+         main = "LinkPeaks distance from Peaks to TSS",
+         xlab = "Distance (kb)",
+         col = "lightblue")
+    dev.off()
+    
+    peaks_per_gene <- link_df2 %>%
+        count(gene, name = "n_peaks") %>%
+        arrange(desc(n_peaks))
+    
+    g1 <- ggplot(peaks_per_gene, aes(x = n_peaks)) +
+        geom_histogram(binwidth = 1, fill = "steelblue", color = "white") +
+        scale_x_continuous(breaks = scales::pretty_breaks()) +
+        labs(
+            title = "Local LinkPeaks by cell-type (pseudobulk)", 
+            subtitle = "Peaks per gene",
+            x = "Number of linked peaks per gene",
+            y = "Number of genes"
+        ) +
+        theme_minimal()
+    
+    # Number of linked genes per peak
+    genes_per_peak <- link_df2 %>%
+        count(peak, name = "n_genes") %>%
+        arrange(desc(n_genes))
+    
+    g2 <- ggplot(genes_per_peak, aes(x = n_genes)) +
+        geom_histogram(binwidth = 1, fill = "firebrick", color = "white") +
+        scale_x_continuous(breaks = scales::pretty_breaks()) +
+        labs(
+            subtitle = "Genes per peak",
+            x = "Number of linked genes per peak",
+            y = "Number of peaks"
+        ) +
+        theme_minimal()
+    
+    combined_plot <- g1 + g2
+    combined_plot
+    
+    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_link_peak_gene_histograms.pdf")
+    ggsave(here(plotDir, f_name),
+           combined_plot, width = 7, height = 7)
+    
+    message("Gene-Peak plots for ", ct_name, " done!")
+    
+}
+
+
 #===========================================================================
 # parse Linked peak-gene tables for each cell-type
 
@@ -398,73 +462,16 @@ for (ct in lst_peak_files) {
     
     f_name <- here(csvDir, paste0(resolution_level, "_", ct_name,  "_peak_gene_links_with_TSS_and_CC_spearman_5e5.csv"))
     write.csv(link_df2, file = f_name, row.names = FALSE)
-    
+
     message("Link Gene-Peak table with TSS distances and CC scores saved!")
-    
+
     #=========================================
-    
+
     make_width_plots(link_df2, resolution_level, ct_name, plotDir)
     make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir)
+    make_peak_gene_histograms(link_df2, resolution_level, ct_name, plotDir)
     
 }
-
-
-
-#===============================================================================
-
-
-## Histogram TSS Scores
-pdf(file = here(plotDir, 
-                paste0(resolution_level, "_", ct_name, "_pb_histogram_TSS_dist.pdf")), 
-    width = 7, height = 5)
-
-hist(link_df2$distance / 1000, breaks = 100,
-     main = "LinkPeaks distance from Peaks to TSS",
-     xlab = "Distance (kb)",
-     col = "lightblue")
-
-dev.off()
-
-
-#===============================================================================
-
-## Check number of linked peaks per gene and viceverce
-# Number of linked peaks per gene
-peaks_per_gene <- link_df2 %>%
-    count(gene, name = "n_peaks") %>%
-    arrange(desc(n_peaks))
-
-g1 <- ggplot(peaks_per_gene, aes(x = n_peaks)) +
-    geom_histogram(binwidth = 1, fill = "steelblue", color = "white") +
-    scale_x_continuous(breaks = scales::pretty_breaks()) +
-    labs(
-        title = "Global LinkPeaks relations: 'peaks per gene' and 'genes per peak'", 
-        x = "Number of linked peaks per gene",
-        y = "Number of genes"
-    ) +
-    theme_minimal()
-
-# Number of linked genes per peak
-genes_per_peak <- link_df2 %>%
-    count(peak, name = "n_genes") %>%
-    arrange(desc(n_genes))
-
-g2 <- ggplot(genes_per_peak, aes(x = n_genes)) +
-    geom_histogram(binwidth = 1, fill = "firebrick", color = "white") +
-    scale_x_continuous(breaks = scales::pretty_breaks()) +
-    labs(
-        subtitle = "Genes per peak",
-        x = "Number of linked genes per peak",
-        y = "Number of peaks"
-    ) +
-    theme_minimal()
-
-combined_plot <- g1 + g2
-combined_plot
-
-ggsave(here(plotDir, 
-            paste0(resolution_level, "_", ct_name, "_pb_link_peak_relations.pdf")),
-       combined_plot, width = 8, height = 5)
 
 
 message("Plots done!!!")
