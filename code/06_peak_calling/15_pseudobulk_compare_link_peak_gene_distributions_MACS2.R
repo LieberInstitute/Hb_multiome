@@ -20,32 +20,36 @@ library("here")
 
 
 resolution_level = "Mid"
+p_met = "spearman"
+w_size = "5e5"
+
+if (length(resolution_level)) {
+    message("Processing job for peak-method:\n",
+            p_met,
+            "\nWindow-size\n",
+            w_size)
+} else {
+    message("Input arguments missed")
+    stop()
+}
 
 # Check/create directories
 input_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
-    "02_link_peaks_MACS2" 
-    #"old_Mid" # <= temporal dir for testing / should be removed
+    "13_pseudobulk_LinkPeaks_MACS2_split_ct"
 )
 plotDir <- here(
     "plots",
     "06_peak_calling",
-    "10_compare_link_peak_gene_distributions_MACS2"
+    "14_exploratory_pb_peak_scores_MACS2"
 )
-output_cvsDir <- here(
-    "processed-data",
-    "06_peak_calling",
-    "10_compare_link_peak_gene_distributions_MACS2"
-)
-
-## Check directories
-if (!dir.exists(plotDir)) {
-    dir.create(plotDir)
-}
-if (!dir.exists(output_cvsDir)) {
-    dir.create(output_cvsDir)
-}
+# csvDir <- here(
+#     "processed-data",
+#     "06_peak_calling",
+#     "14_exploratory_pb_peak_scores_MACS2"
+#     
+# )
 
 
 ## load linked peaks from Signac::CallPeaks() and compute TSS stats 
@@ -237,38 +241,56 @@ combined_df$group_labeled <- factor(combined_df$group_labeled, levels = label_ma
 # add new label to stats to plot gemo_vLine
 group_stats$group_labeled <- label_map[group_stats$group]
 
-p_hist <- ggplot(combined_df, aes(x = peak_width_bp, fill = group_labeled, color = group_labeled)) +
-    # geom_histogram(
-    #     aes(y = after_stat(density)), 
-    #     bins = 50, alpha = 0.4, position = "identity") +
-    geom_density(
-        aes(y = after_stat(density), group = group_labeled),
-        linewidth = 0.7,  alpha = 0.1) +
-    # Median and mean lines per group
-    geom_vline(data = group_stats, 
-               aes(xintercept = median_width, color = group_labeled), 
-               linetype = "dashed", linewidth = 0.3, show.legend = FALSE) +
-    # geom_vline(data = group_stats, aes(xintercept = mean_width, color = group),
-    #           linetype = "dotted", linewidth = 0.7, show.legend = FALSE) +
-    # Axes and theme
-    scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_si("b"))) +
-    theme_minimal() +
-    theme(
-        legend.text = element_text(size = 8),
-        legend.title = element_text(size = 8),
-        panel.background = element_rect(fill = "gray95", color = NA),
-        plot.background = element_rect(fill = "gray98", color = NA)
-    ) +
-    labs(title = "Overlaid Peak Width Distributions - Raw LinkPeaks (macs2)",
-         subtitle = paste0(resolution_level, " cell-types"),
-         x = "Peak width (bp, log scale)", 
-         y = "Density",
-         fill = "Correlation by ct",
-         color = "Correlation by ct",
-         caption = paste0(
-             "Dashed lines = median peak width per group\n",
-             "Total peaks: ", scales::comma(nrow(combined_df))
-         ))
+
+# funcion to build plot panels
+make_density_plot <- function(
+        combined_df = combined_df,
+        
+    ) {
+    
+    plt1 <- ggplot(combined_df, aes(x = peak_width_bp, fill = group_labeled, color = group_labeled)) +
+        # geom_histogram(
+        #     aes(y = after_stat(density)), 
+        #     bins = 50, alpha = 0.4, position = "identity") +
+        geom_density(
+            aes(y = after_stat(density), group = group_labeled),
+            linewidth = 0.7,  alpha = 0.1) +
+        # Median and mean lines per group
+        geom_vline(data = group_stats, 
+                   aes(xintercept = median_width, color = group_labeled), 
+                   linetype = "dashed", linewidth = 0.3, show.legend = FALSE) +
+        # geom_vline(data = group_stats, aes(xintercept = mean_width, color = group),
+        #           linetype = "dotted", linewidth = 0.7, show.legend = FALSE) +
+        # Axes and theme
+        scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_si("b"))) +
+        theme_minimal() +
+        theme(
+            legend.text = element_text(size = 8),
+            legend.title = element_text(size = 8),
+            panel.background = element_rect(fill = "gray95", color = NA),
+            plot.background = element_rect(fill = "gray98", color = NA)
+        ) +
+        labs(title = "Overlaid Peak Width Distributions - Raw LinkPeaks (macs2)",
+             subtitle = paste0(resolution_level, " cell-types"),
+             x = "Peak width (bp, log scale)", 
+             y = "Density",
+             fill = "Correlation by ct",
+             color = "Correlation by ct",
+             caption = paste0(
+                 "Dashed lines = median peak width per group\n",
+                 "Total peaks: ", scales::comma(nrow(combined_df))
+             ))
+    
+    return(plt1)
+
+}
+
+
+
+## fix to plot panels by region: MHb, LHb and the rest
+p_hist_mhb <- ggplot(filter(combined_df, region_category == "MHb"), aes(...))
+p_hist_lhb <- ggplot(filter(combined_df, region_category == "LHb"), aes(...))
+p_hist_other <- ggplot(filter(combined_df, region_category == "Other"), aes(...))
 
 
 f_name <- paste0(resolution_level, "_link_peak_width_histogram_macs2.pdf")
