@@ -50,6 +50,9 @@ csvDir <- here(
     "15_pseudobulk_compare_link_peak_gene_distributions_MACS2"
 
 )
+if (!dir.exists(csvDir)) {
+    dir.create(csvDir)
+}
 
 
 ## load linked peaks from Signac::CallPeaks() and compute TSS stats 
@@ -256,6 +259,8 @@ combined_df$group_labeled <- factor(combined_df$group_labeled, levels = label_ma
 # add new label to stats to plot gemo_vLine
 group_stats$group_labeled <- label_map[as.character(group_stats$group)]
 
+table(combined_df$group, combined_df$group_labeled, useNA = "ifany")
+
 # create categories
 combined_df$region_category <- case_when(
     grepl("MHb", combined_df$cluster) ~ "MHb",
@@ -322,7 +327,7 @@ combined_plot <- (
 combined_plot
 
 f_name <- paste0(resolution_level, "_pb_link_peak_width_histogram_macs2.pdf")
-ggsave(here(plotDir, f_name), p_hist, width = 8, height = 8, dpi = 300)
+ggsave(here(plotDir, f_name), combined_plot, width = 8, height = 8, dpi = 300)
 
 
 message("Plots done!")
@@ -341,7 +346,7 @@ summary_stats <- combined_df |>
 summary_stats
 
 f_name <- paste0(resolution_level, "_pb_link_peak_width_summary_macs2.csv")
-write.csv(summary_stats, here(output_cvsDir, f_name), row.names = FALSE)
+write.csv(summary_stats, here(csvDir, f_name), row.names = FALSE)
 
 message("Summary done!")
 
@@ -354,14 +359,14 @@ combined_df <- combined_df |>
     mutate(
         enhancer_class = case_when(
             abs(signed_by_strand) <= 1000 ~ "Promoter (<1kb)",
-            abs(signed_by_strand) <= 10000 ~ "Proximal (1–10kb)",
-            TRUE ~ "Distal (>10kb)"
+            abs(signed_by_strand) <= 3000 ~ "Proximal (1–3kb)",
+            TRUE ~ "Distal (>3kb)"
         )
     )
 ## sort by distance to TSS
 combined_df$enhancer_class <- factor(
     combined_df$enhancer_class,
-    levels = c("Promoter (<1kb)", "Proximal (1–10kb)", "Distal (>10kb)")
+    levels = c("Promoter (<1kb)", "Proximal (1–3kb)", "Distal (>3kb)")
 )
 
 p1 <- ggplot(combined_df, aes(x = enhancer_class, y = peak_width_bp, fill = enhancer_class)) +
@@ -379,6 +384,10 @@ p1 <- ggplot(combined_df, aes(x = enhancer_class, y = peak_width_bp, fill = enha
         x = "Enhancer category (distance to TSS)",
         y = "Peak width (bp)"
     )
+
+f_name <- paste0(resolution_level, "_pb_link_peak_width_by_enhancer_class_macs2.pdf")
+ggsave(here::here(plotDir, f_name), p1, width = 4, height = 6, dpi = 300)
+
 p2 <- ggplot(combined_df, aes(x = enhancer_class, y = peak_width_bp, fill = enhancer_class)) +
     geom_violin(scale = "width", trim = TRUE, alpha = 0.2) +
     geom_boxplot(width = 0.1, outlier.size = 0.3, alpha = 0.5) +  # optional overlay
@@ -395,10 +404,10 @@ p2 <- ggplot(combined_df, aes(x = enhancer_class, y = peak_width_bp, fill = enha
         y = "Peak width (bp)"
     )
 
-plt_enhancer <- p1 + p2
+#plt_enhancer <- p1 + p2
 
-f_name <- paste0(resolution_level, "_pb_link_peak_width_by_enhancer_class_macs2.pdf")
-ggsave(here::here(plotDir, f_name), plt_enhancer, width = 10, height = 6, dpi = 300)
+f_name <- paste0(resolution_level, "_pb_link_peak_width_by_enhancer_class_macs2_facet.pdf")
+ggsave(here::here(plotDir, f_name), p2, width = 6, height = 6, dpi = 300)
 
 
 message("Plots done!!!")
