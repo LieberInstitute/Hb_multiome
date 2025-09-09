@@ -397,7 +397,7 @@ p2 <- ggplot(combined_df, aes(x = enhancer_class, y = peak_width_bp, fill = enha
 
 plt_enhancer <- p1 + p2
 
-f_name <- paste0(resolution_level, "_link_peak_width_by_enhancer_class_macs2.pdf")
+f_name <- paste0(resolution_level, "_pb_link_peak_width_by_enhancer_class_macs2.pdf")
 ggsave(here::here(plotDir, f_name), plt_enhancer, width = 10, height = 6, dpi = 300)
 
 
