@@ -42,14 +42,14 @@ input_cvsDir <- here(
 plotDir <- here(
     "plots",
     "06_peak_calling",
-    "14_exploratory_pb_peak_scores_MACS2"
+    "15_pseudobulk_compare_link_peak_gene_distributions_MACS2"
 )
-# csvDir <- here(
-#     "processed-data",
-#     "06_peak_calling",
-#     "14_exploratory_pb_peak_scores_MACS2"
-#     
-# )
+csvDir <- here(
+    "processed-data",
+    "06_peak_calling",
+    "15_pseudobulk_compare_link_peak_gene_distributions_MACS2"
+
+)
 
 
 ## load linked peaks from Signac::CallPeaks() and compute TSS stats 
@@ -205,6 +205,10 @@ for (ct_links in lst_link_files) {
 
 message("Peaks Dataframes: ")
 names(lst_links_df)
+# [1] "Mid_Astrocyte" "Mid_Endo"      "Mid_LHb.1"     "Mid_LHb.1.3"  
+# [5] "Mid_LHb.1.3.4" "Mid_LHb.2.7"   "Mid_LHb.4"     "Mid_LHb.7"    
+# [9] "Mid_MHb.1"     "Mid_MHb.1.2"   "Mid_MHb.2"     "Mid_MHb.3"    
+# [13] "Mid_Microglia" "Mid_Oligo"     "Mid_OPC"       "Mid_Thal" 
 
 # Combine all dataframes in lst_links_df, tagging each with its list name
 combined_df <- bind_rows(
@@ -228,73 +232,97 @@ group_stats <- combined_df |>
         mean_width = mean(peak_width_bp, na.rm = TRUE)
     )
 
-# # Create a label with number of links. ge "Mid_LHb.4 (n = 1149)" 
+# Create a label with number of links. ge "Mid_LHb.4 (n = 1149)" 
 group_counts <- combined_df |>
     count(group, name = "n_peaks") |>
     arrange(desc(n_peaks)) |>
     mutate(group_label = paste0(group, " (", n_peaks, ")"))
+#         group   n_peaks           group_label
+# 1      Mid_LHb.4   79618     Mid_LHb.4 (79618)
+# 2    Mid_LHb.2.7   35686   Mid_LHb.2.7 (35686)
+# 3      Mid_MHb.2   33484     Mid_MHb.2 (33484)
+# 4      Mid_Oligo   29344     Mid_Oligo (29344)
+
 # Create a named vector: names are original group, values are new labels
 label_map <- setNames(group_counts$group_label, group_counts$group)
+# Mid_LHb.4             Mid_LHb.2.7               Mid_MHb.2 
+# "Mid_LHb.4 (79618)"   "Mid_LHb.2.7 (35686)"     "Mid_MHb.2 (33484)" 
+# Mid_Oligo           Mid_Astrocyte               Mid_LHb.1 
+# "Mid_Oligo (29344)" "Mid_Astrocyte (23632)"     "Mid_LHb.1 (22401)" 
+
 # update to use labels with peak counts
-combined_df$group_labeled <- label_map[combined_df$group]
+combined_df$group_labeled <- label_map[as.character(combined_df$group)]
 combined_df$group_labeled <- factor(combined_df$group_labeled, levels = label_map)
 # add new label to stats to plot gemo_vLine
-group_stats$group_labeled <- label_map[group_stats$group]
+group_stats$group_labeled <- label_map[as.character(group_stats$group)]
+
+# create categories
+combined_df$region_category <- case_when(
+    grepl("MHb", combined_df$cluster) ~ "MHb",
+    grepl("LHb", combined_df$cluster) ~ "LHb",
+    TRUE                            ~ "Other"
+)
+head(combined_df, n=10)
+
+# set order for facets
+combined_df$region_category <- factor(combined_df$region_category, levels = c("MHb", "LHb", "Other"))
 
 
-# funcion to build plot panels
-make_density_plot <- function(
-        combined_df = combined_df,
-        
-    ) {
+# function to build plot panels
+make_density_plot <- function(combined_df = combined_df) {
     
-    plt1 <- ggplot(combined_df, aes(x = peak_width_bp, fill = group_labeled, color = group_labeled)) +
-        # geom_histogram(
-        #     aes(y = after_stat(density)), 
-        #     bins = 50, alpha = 0.4, position = "identity") +
+    plt1 <- ggplot(combined_df, aes(x = peak_width_bp, fill = group_labeled)) +
         geom_density(
             aes(y = after_stat(density), group = group_labeled),
-            linewidth = 0.7,  alpha = 0.1) +
-        # Median and mean lines per group
-        geom_vline(data = group_stats, 
-                   aes(xintercept = median_width, color = group_labeled), 
-                   linetype = "dashed", linewidth = 0.3, show.legend = FALSE) +
-        # geom_vline(data = group_stats, aes(xintercept = mean_width, color = group),
-        #           linetype = "dotted", linewidth = 0.7, show.legend = FALSE) +
-        # Axes and theme
+            linewidth = 0.7, alpha = 0.1
+        ) +
+        geom_vline(
+            data = group_stats %>% filter(group_labeled %in% combined_df$group_labeled),
+            aes(xintercept = median_width, color = group_labeled),
+            linetype = "dashed", linewidth = 0.3, show.legend = FALSE
+        ) +
         scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_si("b"))) +
         theme_minimal() +
         theme(
-            legend.text = element_text(size = 8),
-            legend.title = element_text(size = 8),
-            panel.background = element_rect(fill = "gray95", color = NA),
-            plot.background = element_rect(fill = "gray98", color = NA)
+            legend.position = "right",
+            legend.title = element_text(size = 9),
+            legend.text = element_text(size = 8)
         ) +
-        labs(title = "Overlaid Peak Width Distributions - Raw LinkPeaks (macs2)",
-             subtitle = paste0(resolution_level, " cell-types"),
-             x = "Peak width (bp, log scale)", 
-             y = "Density",
-             fill = "Correlation by ct",
-             color = "Correlation by ct",
-             caption = paste0(
-                 "Dashed lines = median peak width per group\n",
-                 "Total peaks: ", scales::comma(nrow(combined_df))
-             ))
+        labs(
+            x = "Peak width (bp, log scale)", 
+            y = "Density",
+            fill = "Region",
+            color = "Region",
+            caption = paste0(
+                "Dashed lines = median peak width per group\n",
+                "Total peaks: ", scales::comma(nrow(combined_df))
+            )
+        ) +
+        guides(
+            fill = guide_legend(override.aes = list(color = NA))
+        )
     
     return(plt1)
-
 }
 
 
 
 ## fix to plot panels by region: MHb, LHb and the rest
-p_hist_mhb <- ggplot(filter(combined_df, region_category == "MHb"), aes(...))
-p_hist_lhb <- ggplot(filter(combined_df, region_category == "LHb"), aes(...))
-p_hist_other <- ggplot(filter(combined_df, region_category == "Other"), aes(...))
+p_hist_mhb <- make_density_plot(filter(combined_df, region_category == "MHb"))
+p_hist_lhb <- make_density_plot(filter(combined_df, region_category == "LHb"))
+p_hist_other <- make_density_plot(filter(combined_df, region_category == "Other"))
 
+# Combine plots using patchwork
+combined_plot <- (
+    p_hist_mhb / p_hist_lhb / p_hist_other) + 
+    plot_annotation(
+        title = "Overlaid LinkPeak Width Distributions - pseudobulk",
+        theme = theme(plot.title = element_text(hjust = 0.5, size = 12))
+)
+combined_plot
 
-f_name <- paste0(resolution_level, "_link_peak_width_histogram_macs2.pdf")
-ggsave(here(plotDir, f_name), p_hist, width = 6, height = 6, dpi = 300)
+f_name <- paste0(resolution_level, "_pb_link_peak_width_histogram_macs2.pdf")
+ggsave(here(plotDir, f_name), p_hist, width = 8, height = 8, dpi = 300)
 
 
 message("Plots done!")
@@ -312,7 +340,7 @@ summary_stats <- combined_df |>
 
 summary_stats
 
-f_name <- paste0(resolution_level, "_link_peak_width_summary_macs2.csv")
+f_name <- paste0(resolution_level, "_pb_link_peak_width_summary_macs2.csv")
 write.csv(summary_stats, here(output_cvsDir, f_name), row.names = FALSE)
 
 message("Summary done!")
