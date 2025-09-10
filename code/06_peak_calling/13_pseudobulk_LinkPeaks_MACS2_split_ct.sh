@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=80G
-#SBATCH --job-name=12_pseudobulk_LinkPeaks_MACS2_split_ct
+#SBATCH --job-name=13_pseudobulk_LinkPeaks_MACS2_split_ct
 #SBATCH -c 4
 #SBATCH -t 2-00:00:00
 #SBATCH -o /dev/null
@@ -31,7 +31,7 @@ fi
 res="${clust[$i]}"
 
 mkdir -p logs
-log_path="logs/12_pseudobulk_LinkPeaks_MACS2_split_ct_${res}.log"
+log_path="logs/13_pseudobulk_LinkPeaks_MACS2_split_ct_${res}.log"
 
 {
   echo "**** Job starts ****"
@@ -50,7 +50,7 @@ log_path="logs/12_pseudobulk_LinkPeaks_MACS2_split_ct_${res}.log"
   module list
 
   ## Run payload; don't let 'set -e' abort before footer if it fails
-  Rscript 12_pseudobulk_LinkPeaks_MACS2_split_ct.R --clust "${res}"
+  Rscript 13_pseudobulk_LinkPeaks_MACS2_split_ct.R --clust "${res}"
   ret=$?
 
   echo "**** Job ends ****"
