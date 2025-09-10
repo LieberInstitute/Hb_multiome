@@ -36,6 +36,7 @@ resolution_level = "Mid"
 ## read input arguments
 args = commandArgs(trailingOnly = TRUE)
 cluster_name <- args[2]
+# cluster_name = "Inhib.Thal"
 if (is.na(cluster_name) || !nzchar(cluster_name)) stop("Missing cluster_name argument")
 
 ## Check/create directories
@@ -214,18 +215,15 @@ message("Summary:",
         "\n  Genes = ", length(genes_sub),
         "\n  min.cells = ", min_cells_sub,
         "\n  distance = ", w_size_num)
-
+seurat_subset
 
 ## ============================================================================/
 
 message("Computing peak-gene correlations on pseudobulk by cell-type ")
 
 DefaultAssay(seurat_subset) <- "RNA"  # not strictly required but conventional
-# LinkPeaks() reads expression from the data/log-normalized layer. I already have it
-# if (!"data" %in% seurat_subset[["RNA"]]@layers) {
-#     seurat_subset <- NormalizeData(seurat_subset, assay = "RNA")
-# }
 
+# retain all links for downstream multiple testing correction (FDR/HB)
 seurat_subset <- LinkPeaks(
     object           = seurat_subset,
     peak.assay       = atac_assay_name,
@@ -233,29 +231,34 @@ seurat_subset <- LinkPeaks(
     genes.use        = genes_sub,
     distance         = w_size_num,
     min.cells        = min_cells_sub,
+    pvalue_cutoff    = 1,   # keep everything / keep only links with pvalue <= pvalue.cutoff
+    score_cutoff     = 0,   # keep both positive and negative scores
     method           = p_met
 )
 
-# Extract links and save
-lk <- Links(seurat_subset[[atac_assay_name]])
+# Extract links and compute FDR
+lk_gr <- Links(seurat_subset[[atac_assay_name]])
+lk_df <- as.data.frame(lk_gr)
 
-message("Links found: ", length(lk))
-if (length(lk) > 0) {
-    print(head(as.data.frame(lk)[, c("peak", "gene", "score", "pvalue")], 5))
+# Add FDR column
+lk_df$FDR <- p.adjust(lk_df$pvalue, method = "BH")
+lk_df$cluster <- cluster_name
+
+message("Links found: ", nrow(lk_df))
+if (nrow(lk_df) > 0) {
+    print(head(lk_df[, c("peak", "gene", "score", "pvalue", "FDR")], 5))
 }
 
-if (length(lk) > 0) {
-    mcols(lk)$cluster <- cluster_name
-    out_csv <- here(output_Dir, paste0(resolution_level, "_", cluster_name,
-                                       "_pseudobulk_link_peak_genes.csv"))
-    write.csv(as.data.frame(lk), out_csv, row.names = FALSE)
-    message("Links: ", length(lk), " (saved: ", basename(out_csv), ")")
-} else {
-    message("No links for ", cluster_name)
-}
+# Save as CSV
+out_csv <- here(output_Dir, paste0(resolution_level, "_", cluster_name,
+                                   "_pseudobulk_link_peak_genes.csv"))
+write.csv(lk_df, out_csv, row.names = FALSE)
+message("Links: ", nrow(lk_df), " (saved: ", basename(out_csv), ")")
 
 # Save subset if desired
-saveRDS(seurat_subset, file = here(output_Dir, paste0(resolution_level, "_", cluster_name, "_seurat_subset.rds")))
+f_name <- paste0(resolution_level, "_", cluster_name,
+                 "__pseudobulk_seurat_subset.rds")
+saveRDS(seurat_subset, file = here(output_Dir, f_name))
 
 message("All done!!!")
 
