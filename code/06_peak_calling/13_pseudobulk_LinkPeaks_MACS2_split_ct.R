@@ -201,7 +201,7 @@ seurat_subset <- RegionStats(
 )
 # occasionally the peaks set contains seqnames not present in the genome package (e.g., random contigs, chrM if filtered, unplaced scaffolds). Those peaks simply won’t get stats assigned. Harmless
 
-seurat_subset <- global_rebuild_atac_normalization(seurat_subset, "ATAC_macs2_pseudo")
+seurat_subset <- global_rebuild_atac_normalization(seurat_subset, atac_assay_name)
 # Seurat auto-detects that only 9 SVD are valid (effective rank of the pb count matrix)
 # silently trims to 9 as I have only ~10 pseudobulk groups, and I can’t extract 50 components anyway.
 
@@ -216,6 +216,13 @@ message("Summary:",
         "\n  min.cells = ", min_cells_sub,
         "\n  distance = ", w_size_num)
 seurat_subset
+# Summary:
+#     Cell-type = LHb.1.3
+# Peaks = 3409
+# Genes = 15896
+# min.cells = 3
+# distance = 5e+05
+# An object of class Seurat 
 
 ## ============================================================================/
 
@@ -245,6 +252,7 @@ lk_df$FDR <- p.adjust(lk_df$pvalue, method = "BH")
 lk_df$cluster <- cluster_name
 
 message("Links found: ", nrow(lk_df))
+# Links found: 28251
 if (nrow(lk_df) > 0) {
     print(head(lk_df[, c("peak", "gene", "score", "pvalue", "FDR")], 5))
 }
@@ -257,7 +265,7 @@ message("Links: ", nrow(lk_df), " (saved: ", basename(out_csv), ")")
 
 # Save subset if desired
 f_name <- paste0(resolution_level, "_", cluster_name,
-                 "__pseudobulk_seurat_subset.rds")
+                 "_pseudobulk_seurat_subset.rds")
 saveRDS(seurat_subset, file = here(output_Dir, f_name))
 
 message("All done!!!")
