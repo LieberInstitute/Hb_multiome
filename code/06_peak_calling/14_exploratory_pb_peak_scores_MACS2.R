@@ -239,6 +239,7 @@ make_exploratory_plots <- function(
     # resolution_lev = resolution_level
     # ct_name = ct_name
     # plotDir = plotDir
+    # suffix_name = suffix
     
     print(paste0("Processing plots for ", resolution_lev, " for ", ct_name, " cell_type"))
     suffix_subtitle <- paste(resolution_lev, "resolution. ", ct_name)
@@ -262,33 +263,66 @@ make_exploratory_plots <- function(
     count_below_02 <- sum((df_plot$score <= 0.2 & df_plot$score >= 0.1), na.rm = TRUE)
     count_below_03 <- sum((df_plot$score <= 0.3 & df_plot$score >= 0.2), na.rm = TRUE)
     count_above_03 <- sum((df_plot$score >= 0.3), na.rm = TRUE)
-    count_neg_below_03 <- sum(df_plot$score <= 0.3, na.rm = TRUE)
+    count_neg_below_02 <- sum(df_plot$score <= 0.2, na.rm = TRUE)
+    
+    # Threshold labels with base annotations (always added)
+    threshold_labels <- list(
+        annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.4,
+                 label = paste(">0.3 (", count_above_03, " links)"),
+                 size = 3, hjust = 0.8, vjust = 1, color = "black", fill = "white", label.size = NA),
+        annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.3,
+                 label = paste(">0.2 and <0.3 (", count_below_03, " links)"),
+                 size = 3, hjust = 0.8, vjust = 1, color = "black", fill = "white", label.size = NA),
+        annotate("label", x = max(df_plot$distance/1000)*1.02, y = -0.2,
+                 label = paste("< -0.2 (", count_neg_below_02, " links)"),
+                 size = 3, hjust = 0.8, vjust = 1, color = "black", fill = "white", label.size = NA)
+    )
+    # Add conditional labels if suffix_name is not empty
+    if (suffix_name == "") {
+        threshold_labels <- append(threshold_labels, list(
+            annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.2,
+                     label = paste(">0.1 and <0.2 (", count_below_02, " links)"),
+                     size = 3, hjust = 0.8, vjust = 1, color = "black", fill = "white", label.size = NA),
+            annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.1,
+                     label = paste("<0.1 (", count_below_01, " links)"),
+                     size = 3, hjust = 0.8, vjust = 1, color = "black", fill = "white", label.size = NA)
+        ))
+    }
+    
     
     g1 <- ggplot(df_plot, 
                  aes(x = signed_by_strand/1000, y = score, color = tier),
                  method = "loess", se = FALSE, span = 0.8, color = "black", linewidth = 0.9) +
         geom_point(alpha = 0.5, size = 0.5) +
-        # Threshold lines
+        # Threshold lines for scores
         geom_hline(yintercept = 0.3, linetype = "dashed", color = "red") +
         geom_hline(yintercept = 0.2, linetype = "dashed", color = "darkorange") +
         geom_hline(yintercept = 0.1, linetype = "dashed", color = "grey50") +
-        geom_hline(yintercept = -0.3, linetype = "dashed", color = "darkgreen") +
+        geom_hline(yintercept = -0.2, linetype = "dashed", color = "black") +
+  
         # Labels for thresholds
-        annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.4, 
-                 label = paste(">0.3 (", count_above_03, " links)"), 
-                 size=3, hjust = 0.8, vjust = +1, color = "black", fill = "white") +
-        annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.3, 
-                 label = paste(">0.2 and <0.3 (", count_below_03, " links)"), 
-                 size=3, hjust = 0.8, vjust = +1, color = "black", fill = "white") +
-        annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.2, 
-                 label = paste(">0.1 and <0.2 (", count_below_02, " links)"), 
-                 size=3, hjust = 0.8, vjust = +1, color = "black", fill = "white") +
-        annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.1, 
-                 label = paste("<0.1 (", count_below_01, " links)"), 
-                 size=3, hjust = 0.8, vjust = +1, color = "black", fill = "white") +
-        annotate("label", x = max(df_plot$distance/1000)*1.02, y = -0.3, 
-                 label = paste("< -0.3 (", count_neg_below_03, " links)"), 
-                 size = 3, hjust = 0.8, vjust = 1, color = "black", fill = "white")+
+        threshold_labels +
+        
+        # Threshold lines for regions
+        # Vertical lines at regulatory zone boundaries
+        geom_vline(xintercept = c(-300, -100, -10, -2, 2, 10, 100, 300), 
+                   linetype = "dotted", color = "blue", linewidth = 0.2) +
+        
+        # Background shading for regulatory zones
+        annotate("rect", xmin = -2, xmax = 2, ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.05) +
+        annotate("rect", xmin = -10, xmax = 10, ymin = -Inf, ymax = Inf, fill = "lightblue", alpha = 0.05) +
+        annotate("rect", xmin = -100, xmax = 100, ymin = -Inf, ymax = Inf, fill = "lightgreen", alpha = 0.05) +
+        
+        # Labels for regulatory regions — adjusted y to avoid overlap
+        annotate("label", x = 0,    y = 0.9, label = "Promoter (±2 kb)", 
+                 size = 3, hjust = 0.5, label.size = NA) +
+        annotate("label", x = 6,    y = 0.8, label = "Near-Promoter (2–10 kb)",
+                 size = 3, hjust = 0, label.size = NA) +
+        annotate("label", x = -6,   y = 0.7, label = "Enhancer (10–100 kb)",
+                 size = 3, hjust = 1, label.size = NA) + 
+        annotate("label", x = -110, y = 0.6, label = "Long-range (100–500 kb)",
+                 size = 3, hjust = 1, label.size = NA) +
+    
         # Custom legend with count
         scale_color_manual(
             values = c(
