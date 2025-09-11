@@ -133,7 +133,8 @@ make_width_plots <- function(
         link_df2,
         resolution_lev,
         ct_name,
-        plotDir
+        plotDir,
+        suffix = ""
 ) {
     
     print(paste0("Processing plots for ", resolution_lev, " for ", ct_name, " cell_type"))
@@ -174,7 +175,7 @@ make_width_plots <- function(
         # log scale for widths
         scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
         labs(
-            title = paste("Distribution of LinkPeak widths"),
+            title = paste0(suffix, " Distribution of LinkPeak widths"),
             subtitle = suffix_subtitle,
             x = "Peak width (bp, log scale)",
             y = "Density",
@@ -183,14 +184,10 @@ make_width_plots <- function(
                             paste(total_peaks, "total peaks"))
         ) +
         theme_minimal(base_size = 12) +
-        # theme(
-        #     panel.background = element_rect(fill = "gray95", color = NA),
-        #     plot.background = element_rect(fill = "gray98", color = NA)
-        # ) +
         coord_flip()
     
     # Peak width vs. correlation score
-    # log10 creates NaN/Inf, remove those rows to avoid warnings
+    
     df <- link_df2_parsed %>%
         mutate(score = as.numeric(score),
                peak_width_bp = as.numeric(peak_width_bp)) %>%
@@ -201,16 +198,16 @@ make_width_plots <- function(
         geom_smooth(method = "loess", se = FALSE, color = "darkred") +
         #scale_x_continuous(trans = pseudo_log_trans(base = 10, sigma = 0.01)) +
         scale_y_log10() +
-        labs(title = "LinkPeak width vs correlation scores",
+        labs(title = paste0(suffix, " LinkPeak-Width vs Correlation-Scores"),
              subtitle = suffix_subtitle,
              x = "Correlation Score (pseudo-log scaled)",
              y = "Peak width (bp, log scale)",
              caption = paste(total_peaks, "total local peaks")) +
         theme_minimal()
     
-    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_width_histogram.pdf")
+    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_width_histogram", suffix, ".pdf")
     ggsave(here::here(plotDir, f_name), p_hist, width = 8, height = 8)
-    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_width_vs_score.pdf")
+    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_width_vs_score", suffix, ".pdf")
     ggsave(here::here(plotDir, f_name), p_scatter_score, width = 8, height = 6)
     
     print(paste0("Width related plots for ", ct_name, " done!"))    
@@ -341,12 +338,7 @@ make_exploratory_plots <- function(
         ) +
         theme_minimal() + 
         theme(legend.position = "none")
-    # +
-    # theme(legend.position = "bottom",
-    #       legend.text = element_text(size = 8),
-    #       legend.title = element_text(size = 9)) +
-    # guides(color = guide_legend(override.aes = list(size = 3)))
-    
+
     f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_tier_scores", suffix_name, ".pdf")
     ggsave(here(plotDir, f_name), g1, width = 8, height = 5, device = cairo_pdf)
     
@@ -359,21 +351,22 @@ make_exploratory_plots <- function(
 
 ## Check number of linked peaks per gene and vice-verse
 # Number of linked peaks per gene
-make_peak_gene_histograms <- funcion(
-    link_df2 = link_df2,
+make_peak_gene_histograms <- function(
+    link_df2,
     resolution_lev,
     ct_name,
-    plotDir 
+    plotDir, 
+    suffix =""
 ){
     
-    
     ## Histogram TSS Scores
-    pdf(file = here(plotDir, 
-                    paste0(resolution_level, "_", ct_name, "_pb_histogram_TSS_dist.pdf")), 
+    pdf(file = here(
+        plotDir, 
+        paste0(resolution_level, "_", ct_name, "_pb_histogram_TSS_dist", suffix, ".pdf")), 
         width = 7, height = 5)
     
     hist(link_df2$distance / 1000, breaks = 100,
-         main = "LinkPeaks distance from Peaks to TSS",
+         main = paste0(suffix, " LinkPeaks distance from Peaks to TSS"),
          xlab = "Distance (kb)",
          col = "lightblue")
     dev.off()
@@ -386,7 +379,7 @@ make_peak_gene_histograms <- funcion(
         geom_histogram(binwidth = 1, fill = "steelblue", color = "white") +
         scale_x_continuous(breaks = scales::pretty_breaks()) +
         labs(
-            title = "Local LinkPeaks by cell-type (pseudobulk)", 
+            title = paste0(suffix, " Local LinkPeaks by cell-type (pseudobulk)"), 
             subtitle = "Peaks per gene",
             x = "Number of linked peaks per gene",
             y = "Number of genes"
@@ -411,11 +404,12 @@ make_peak_gene_histograms <- funcion(
     combined_plot <- g1 + g2
     combined_plot
     
-    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_link_peak_gene_histograms.pdf")
+    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_link_peak_gene_histograms", suffix, ".pdf")
     ggsave(here(plotDir, f_name),
            combined_plot, width = 7, height = 7)
     
     message("Gene-Peak plots for ", ct_name, " done!")
+    
     
 }
 
@@ -492,8 +486,9 @@ for (ct in lst_peak_files) {
     
     message("Peak center and distance to TSS added ...")
     
-    #===============================================================================
+    #=========================================
     
+    # save full links found 
     f_name <- here(csvDir, paste0(resolution_level, "_", ct_name,  "_links_with_TSS_CC_FDR_spearman_5e5.csv"))
     write.csv(link_df2, file = f_name, row.names = FALSE)
     
@@ -501,9 +496,8 @@ for (ct in lst_peak_files) {
     
     #=========================================
     
+    # plot exploratory over the full links set
     make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir)
-    make_peak_gene_histograms(link_df2, resolution_level, ct_name, plotDir)
-    make_width_plots(link_df2, resolution_level, ct_name, plotDir)
     
     ## filter pRE links
     filtered_links <- link_df2 |>
@@ -527,14 +521,14 @@ for (ct in lst_peak_files) {
         
         # make exploratory of filtered links
         make_exploratory_plots(filtered_links, resolution_level, ct_name, plotDir, suffix)
+        make_peak_gene_histograms(filtered_links, resolution_level, ct_name, plotDir)
+        make_width_plots(filtered_links, resolution_level, ct_name, plotDir)
+        
         
     } else {
         message("No links passing threshold found!")
     }
-        
-    
-    
-    
+   
     
 }
 
