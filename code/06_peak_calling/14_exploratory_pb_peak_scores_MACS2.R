@@ -509,16 +509,31 @@ for (ct in lst_peak_files) {
     filtered_links <- link_df2 |>
         #dplyr::filter(FDR <= FDR_thresh, score >= score_thresh)
         dplyr::filter(FDR <= FDR_thresh, abs(score) >= score_thresh)
-    nrow(filtered_links)    
+    total_lk_filtered <- nrow(filtered_links)    
     head(filtered_links)    
     
-    suffix = paste0("FDR", FDR_thresh, "_score", score_thresh)
-    f_name <- here(csvDir, paste0(resolution_level, "_", ct_name,
-                                           "_links_FDR", suffix, ".csv"))
-    write.csv(filtered_links, f_name, row.names = FALSE)
-    message("Links passing threshold saved: ", nrow(filtered_links))
+    if (total_lk_filtered > 0) {
+        
+        lk_perc <- (total_lk_filtered* 100) / nrow(link_df2)    
+        lk_perc_label <- paste0(lk_perc, "%")
+        message(lk_perc_label, " percent of links passing threshold.\nSaved ", nrow(filtered_links), " putative links")
+        
+        # save filtered links
+        suffix = paste0("FDR", FDR_thresh, "_score", score_thresh)
+        f_name <- here(csvDir, paste0(resolution_level, "_", ct_name,
+                                      "_links_FDR", suffix, ".csv"))
+        write.csv(filtered_links, f_name, row.names = FALSE)
+        
+        
+        # make exploratory of filtered links
+        make_exploratory_plots(filtered_links, resolution_level, ct_name, plotDir, suffix)
+        
+    } else {
+        message("No links passing threshold found!")
+    }
+        
     
-    make_exploratory_plots(filtered_links, resolution_level, ct_name, plotDir, suffix)
+    
     
     
 }
