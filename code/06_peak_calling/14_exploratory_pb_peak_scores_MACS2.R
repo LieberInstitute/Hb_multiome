@@ -250,18 +250,19 @@ make_exploratory_plots <- function(
             score >= 0.3 ~ "High (>=0.3)",
             score >= 0.2 ~ "Moderate (0.2–0.3)",
             score >= 0.1 ~ "Exploratory (0.1–0.2)",
+            score <= 0.3 ~ "Negative Expl (=<0.2)",
             TRUE ~ "Discarded"
         ))
-    # use plain ASCII hyphens
-    # link_df$tier <- gsub("\u2013", "-", link_df2$tier)
+    # inspect data
     table(link_df2$tier)
     df_plot <- link_df2  
     
     # Count total peaks and how many are below 0.1 to plot on discarted zone
-    count_below_01 <- sum(df_plot$score < 0.1, na.rm = TRUE)
-    count_below_02 <- sum((df_plot$score < 0.2 & df_plot$score > 0.1), na.rm = TRUE)
-    count_below_03 <- sum((df_plot$score < 0.3 & df_plot$score > 0.2), na.rm = TRUE)
-    count_above_03 <- sum((df_plot$score > 0.3), na.rm = TRUE)
+    count_below_01 <- sum(df_plot$score <= 0.1, na.rm = TRUE)
+    count_below_02 <- sum((df_plot$score <= 0.2 & df_plot$score >= 0.1), na.rm = TRUE)
+    count_below_03 <- sum((df_plot$score <= 0.3 & df_plot$score >= 0.2), na.rm = TRUE)
+    count_above_03 <- sum((df_plot$score >= 0.3), na.rm = TRUE)
+    count_neg_below_03 <- sum(df_plot$score <= 0.3, na.rm = TRUE)
     
     g1 <- ggplot(df_plot, 
                  aes(x = signed_by_strand/1000, y = score, color = tier),
@@ -271,6 +272,7 @@ make_exploratory_plots <- function(
         geom_hline(yintercept = 0.3, linetype = "dashed", color = "red") +
         geom_hline(yintercept = 0.2, linetype = "dashed", color = "darkorange") +
         geom_hline(yintercept = 0.1, linetype = "dashed", color = "grey50") +
+        geom_hline(yintercept = -0.3, linetype = "dashed", color = "darkgreen") +
         # Labels for thresholds
         annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.4, 
                  label = paste(">0.3 (", count_above_03, " links)"), 
@@ -284,13 +286,17 @@ make_exploratory_plots <- function(
         annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.1, 
                  label = paste("<0.1 (", count_below_01, " links)"), 
                  size=3, hjust = 0.8, vjust = +1, color = "black", fill = "white") +
+        annotate("label", x = max(df_plot$distance/1000)*1.02, y = -0.3, 
+                 label = paste("< -0.3 (", count_neg_below_03, " links)"), 
+                 size = 3, hjust = 0.8, vjust = 1, color = "black", fill = "white")+
         # Custom legend with count
         scale_color_manual(
             values = c(
                 "High (>=0.3)" = "red",
                 "Moderate (0.2–0.3)" = "deeppink4",
                 "Exploratory (0.1–0.2)" = "darkorange",
-                "Discarded" = "grey50"
+                "Discarded" = "grey50",
+                "Negative Expl (=<0.2)" = "darkgreen"
             ) 
         )  +
         labs(
@@ -467,8 +473,8 @@ for (ct in lst_peak_files) {
     
     ## filter pRE links
     filtered_links <- link_df2 |>
-        dplyr::filter(FDR <= FDR_thresh, score >= score_thresh)
-        #dplyr::filter(FDR <= 0.1, abs(score) >= 0.3)
+        #dplyr::filter(FDR <= FDR_thresh, score >= score_thresh)
+        dplyr::filter(FDR <= FDR_thresh, abs(score) >= score_thresh)
     nrow(filtered_links)    
     head(filtered_links)    
     
