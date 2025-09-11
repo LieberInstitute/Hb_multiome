@@ -21,6 +21,8 @@ library("here")
 resolution_level = "Mid"
 p_met = "spearman"
 w_size = "5e5"
+FDR_thresh = 0.2
+score_thresh = 0.2
 
 if (length(resolution_level)) {
     message("Processing job for peak-method:\n",
@@ -222,7 +224,8 @@ make_exploratory_plots <- function(
         link_df2,
         resolution_lev,
         ct_name,
-        plotDir        
+        plotDir,
+        suffix_name = ""
 ){
     
     # adding exploratory scores
@@ -271,16 +274,16 @@ make_exploratory_plots <- function(
         # Labels for thresholds
         annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.4, 
                  label = paste(">0.3 (", count_above_03, " links)"), 
-                 hjust = 0.8, vjust = +1, color = "black", fill = "white") +
+                 size=3, hjust = 0.8, vjust = +1, color = "black", fill = "white") +
         annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.3, 
                  label = paste(">0.2 and <0.3 (", count_below_03, " links)"), 
-                 hjust = 0.8, vjust = +1, color = "black", fill = "white") +
+                 size=3, hjust = 0.8, vjust = +1, color = "black", fill = "white") +
         annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.2, 
                  label = paste(">0.1 and <0.2 (", count_below_02, " links)"), 
-                 hjust = 0.8, vjust = +1, color = "black", fill = "white") +
+                 size=3, hjust = 0.8, vjust = +1, color = "black", fill = "white") +
         annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.1, 
                  label = paste("<0.1 (", count_below_01, " links)"), 
-                 hjust = 0.8, vjust = +1, color = "black", fill = "white") +
+                 size=3, hjust = 0.8, vjust = +1, color = "black", fill = "white") +
         # Custom legend with count
         scale_color_manual(
             values = c(
@@ -292,7 +295,7 @@ make_exploratory_plots <- function(
         )  +
         labs(
             title = "LinkPeak scores by tier",
-            subtitle = paste(suffix_subtitle, " - spearman at 1e5"),
+            subtitle = paste(suffix_subtitle, " - spearman at 1e5", suffix_name),
             x = "Distance from TSS (kb)",
             y = "Correlation score",
         ) +
@@ -304,7 +307,7 @@ make_exploratory_plots <- function(
     #       legend.title = element_text(size = 9)) +
     # guides(color = guide_legend(override.aes = list(size = 3)))
     
-    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_tier_scores.pdf")
+    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_tier_scores", suffix_name, ".pdf")
     ggsave(here(plotDir, f_name), g1, width = 8, height = 5, device = cairo_pdf)
     
     message("Exploratory plots for ", ct_name, " done!")
@@ -459,9 +462,23 @@ for (ct in lst_peak_files) {
     #=========================================
     
     make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir)
-    #make_peak_gene_histograms(link_df2, resolution_level, ct_name, plotDir)
-    #make_width_plots(link_df2, resolution_level, ct_name, plotDir)
+    make_peak_gene_histograms(link_df2, resolution_level, ct_name, plotDir)
+    make_width_plots(link_df2, resolution_level, ct_name, plotDir)
     
+    ## filter pRE links
+    filtered_links <- link_df2 |>
+        dplyr::filter(FDR <= FDR_thresh, score >= score_thresh)
+        #dplyr::filter(FDR <= 0.1, abs(score) >= 0.3)
+    nrow(filtered_links)    
+    head(filtered_links)    
+    
+    suffix = paste0("FDR", FDR_thresh, "_score", score_thresh)
+    f_name <- here(csvDir, paste0(resolution_level, "_", ct_name,
+                                           "_links_FDR", suffix, ".csv"))
+    write.csv(filtered_links, f_name, row.names = FALSE)
+    message("Links passing threshold saved: ", nrow(filtered_links))
+    
+    make_exploratory_plots(filtered_links, resolution_level, ct_name, plotDir, suffix)
     
     
 }
