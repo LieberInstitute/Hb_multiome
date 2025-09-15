@@ -4,11 +4,16 @@
 #SBATCH --job-name=16_pseudobulk_DARs_MACS2_reduced
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
-#SBATCH -o logs/16_pseudobulk_DARs_MACS2_reduced.txt
-#SBATCH -e logs/16_pseudobulk_DARs_MACS2_reduced.txt
-#SBATCH --mail-type=ALL
+#SBATCH -o /dev/null
+#SBATCH -e /dev/null
+# SBATCH --mail-type=ALL
 
-set -e
+set -eo pipefail
+
+#mkdir -p logs
+log_path="logs/16_pseudobulk_DARs_MACS2_reduced.log"
+
+{
 
 echo "**** Job starts ****"
 date
@@ -21,16 +26,24 @@ echo "Node name: ${HOSTNAME}"
 echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 
 ## Load the R module
-module load conda_R/4.4
+module load conda_R/4.3.x
 
 ## List current modules for reproducibility
 module list
 
 ## Edit with your job command
+set +e
 Rscript 16_pseudobulk_DARs_MACS2_reduced.R
+ret=$?
+set -e
 
 echo "**** Job ends ****"
 date
+echo "Exit code: $ret"
+exit $ret
+
+} > $log_path 2>&1
+
 
 ## This script was made using slurmjobs version 1.2.5
 ## available from http://research.libd.org/slurmjobs/
