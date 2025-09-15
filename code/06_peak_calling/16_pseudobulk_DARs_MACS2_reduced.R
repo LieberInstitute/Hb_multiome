@@ -99,11 +99,19 @@ colnames(meta)
 # [3] "nFeature_RNA"                      "nCount_ATAC_macs2_merged_pseudo"  
 # [5] "nFeature_ATAC_macs2_merged_pseudo"
 head(meta)
-Idents(SeuratOBJ_pb) <- "orig.ident"
+
+## Ensure we are contrasting by cell-type
+if (!"cell_type" %in% colnames(SeuratOBJ_pb@meta.data)) {
+    SeuratOBJ_pb$cell_type <- sub("^[^_]+_", "", SeuratOBJ_pb$orig.ident)  # keep part after first underscore
+}
+length(SeuratOBJ_pb$cell_type)
+# [1] 169
+
+Idents(SeuratOBJ_pb) <- "cell_type"
 cluster_ids <- levels(SeuratOBJ_pb)
 unique(Idents(SeuratOBJ_pb))
 
-message("Pseudobulk groups:")
+message("Pseudobulk groups (cell-types):")
 cluster_ids
 
 ## Define assay and metadata grouping
@@ -116,9 +124,10 @@ DefaultAssay(SeuratOBJ_pb) <- PSEUDO_ATAC_ASSAY
 ## Check total counts per pseudobulk sample
 col_sums <- colSums(GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, slot = "counts"))
 col_sums
-summary(col_sums)
+message("Library size summary:\n"); print(summary(col_sums))
 # Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
 # 4217    97388   623469  2605095  2827754 46470237 
+
 
 ## Find differentially accessible peaks between cell-types
 ## Loop over multiple identities
@@ -140,31 +149,49 @@ summary(col_sums)
 
 message("Starting DA across cell-types ...")
 
-all_da <- lapply(levels(SeuratOBJ_pb), function(ct) {
-    
-    res <- FindMarkers(
-        object = SeuratOBJ_pb,
-        ident.1 = ct,
-        ident.2 = NULL,      # group vs. all others
-        only.pos = TRUE,
-        # min.pct = 0.1,
-        min.diff.pct = 0.1,
-        test.use = "LR"      # suitable for binary accessibility
-    )
-    res$cluster <- ct
-    res$peak <- rownames(res)
-    res$FDR <- p.adjust(res$p_val, method = "BH")
-    
-    return(res)
-    
-})
+all_da <- setNames(vector("list", length(cluster_ids)), cluster_ids)
 
-da_results <- bind_rows(all_da)
+future::plan("multicore", workers = 4)
+
+for (ct in cluster_ids) {
+    message("[", ct, "]")
+    # Skip if this cell-type has very few samples
+    n_samples_ct <- sum(SeuratOBJ_pb$cell_type == ct)
+    if (n_samples_ct < 3) {
+        warning("Skipping ", ct, " (only ", n_samples_ct, " pseudobulk samples).")
+        next
+    }
+    res <- tryCatch(
+        {
+            tmp <- FindMarkers(
+                object   = SeuratOBJ_pb,
+                ident.1  = ct,
+                ident.2  = NULL,     # group vs. rest
+                only.pos = TRUE,
+                test.use = "LR"      # used for binary accessibility
+                #min.pct = 0.05, logfc.threshold = 0.25
+            )
+            tmp$cluster <- ct
+            tmp$peak    <- rownames(tmp)
+            tmp$FDR     <- p.adjust(tmp$p_val, method = "BH")
+            tmp
+        },
+        error = function(e) {
+            warning("FindMarkers failed for ", ct, ": ", conditionMessage(e))
+            NULL
+        }
+    )
+    all_da[[ct]] <- res
+}
+
+## Filter() keeps only elements of a list that return TRUE. Removes NULL entries
+da_results <- bind_rows(Filter(Negate(is.null), all_da))
 # Save combined
 write.csv(da_results, file.path(output_Dir, "DA_all_clusters.csv"), row.names = FALSE)
 
 # indiv. tests by cell-type
 for (cl in names(all_da)) {
+    if (is.null(all_da[[cl]])) next
     output_path <- here(output_Dir, paste0("DA_", cl, ".csv"))
     write.csv(all_da[[cl]], output_path, row.names = FALSE)
 }
