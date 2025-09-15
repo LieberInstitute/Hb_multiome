@@ -3,11 +3,10 @@
 ## - Peaks were computed with MACS2
 ##
 ## Authors. CSC
-## Date. Sep 11, 2025
+## Date. Sep 15, 2025
 ## Recommended resources mem=30GB
 ########################################################################
 
-# library("EnsDb.Hsapiens.v86")  # Gene annotation (GTF-style), gene names, positions, TSSs, chr locations, etc.
 # library("ggplot2")
 # library("patchwork")
 # library("tidyverse")
@@ -15,7 +14,6 @@
 library("Seurat")
 library("Signac")
 library("dplyr")
-# library("scales")
 library("here")
 
 
@@ -45,12 +43,12 @@ inputRDS_Dir <- here(
 output_Dir <- here(
     "processed-data",
     "06_peak_calling",
-    "16_pseudobulk_DARs_MACS2_reduced.R"
+    "16_pseudobulk_DARs_MACS2_reduced"
 )
 plotDir <- here(
     "plots",
     "06_peak_calling",
-    "16_pseudobulk_DARs_MACS2_reduced.R"
+    "16_pseudobulk_DARs_MACS2_reduced"
 )
 
 
@@ -85,7 +83,8 @@ lst_peak_files
 Seurat_base_name <- "Mid_pseudobulk.spearman.5e5_merged_peaks.rds"
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ_pb <- readRDS(here(inputRDS_Dir, Seurat_base_name))
-# check
+
+# check-ins
 SeuratOBJ_pb
 # An object of class Seurat 
 # 366933 features across 169 samples within 2 assays 
@@ -94,26 +93,32 @@ SeuratOBJ_pb
 # 1 other assay present: RNA
 # 1 dimensional reduction calculated: lsi
 
-colnames(SeuratOBJ_pb@meta.data)
+meta <- SeuratOBJ_pb@meta.data
+colnames(meta)
 # [1] "orig.ident"                        "nCount_RNA"                       
 # [3] "nFeature_RNA"                      "nCount_ATAC_macs2_merged_pseudo"  
 # [5] "nFeature_ATAC_macs2_merged_pseudo"
-head(SeuratOBJ_pb@meta.data)
-
-
-levels(SeuratOBJ_pb)
+head(meta)
+Idents(SeuratOBJ_pb) <- "orig.ident"
+cluster_ids <- levels(SeuratOBJ_pb)
 unique(Idents(SeuratOBJ_pb))
 
 message("Pseudobulk groups:")
-unique(SeuratOBJ_pb[["orig.ident"]])
+cluster_ids
 
 ## Define assay and metadata grouping
 PSEUDO_ATAC_ASSAY <- "ATAC_macs2_merged_pseudo"  
 grouping_var <- "orig.ident"    
-
 # Set default assay
 DefaultAssay(SeuratOBJ_pb) <- PSEUDO_ATAC_ASSAY
 
+## double-check depth differences between pseudobulk samples
+## Check total counts per pseudobulk sample
+col_sums <- colSums(GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, slot = "counts"))
+col_sums
+summary(col_sums)
+# Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+# 4217    97388   623469  2605095  2827754 46470237 
 
 ## Find differentially accessible peaks between cell-types
 ## Loop over multiple identities
@@ -130,28 +135,43 @@ DefaultAssay(SeuratOBJ_pb) <- PSEUDO_ATAC_ASSAY
 # )
 
 
-## provide as input reduced peaks, so, this set should be consistent across cells (important for DA)
+## provide as input reduced peaks, so, this set should be consistent DA across cell-types
+## function give per-cluster DA peaks vs all others: cluster marker accessibility
 
-cluster_ids <- levels(SeuratOBJ_pb)
+message("Starting DA across cell-types ...")
 
-message("Testing")
-cluster_ids
-
-all_da <- lapply(cluster_ids, function(ct) {
+all_da <- lapply(levels(SeuratOBJ_pb), function(ct) {
+    
     res <- FindMarkers(
-        seurat_obj,
+        object = SeuratOBJ_pb,
         ident.1 = ct,
+        ident.2 = NULL,      # group vs. all others
         only.pos = TRUE,
-        test.use = "LR"              # recommended for binary peak data in Signac / Opt. poisson and negbinom
+        # min.pct = 0.1,
+        min.diff.pct = 0.1,
+        test.use = "LR"      # suitable for binary accessibility
     )
     res$cluster <- ct
     res$peak <- rownames(res)
     res$FDR <- p.adjust(res$p_val, method = "BH")
+    
     return(res)
+    
 })
 
 da_results <- bind_rows(all_da)
-write.csv(da_results, "DA_all_clusters.csv", row.names = FALSE)
+# Save combined
+write.csv(da_results, file.path(output_Dir, "DA_all_clusters.csv"), row.names = FALSE)
+
+# indiv. tests by cell-type
+for (cl in names(all_da)) {
+    output_path <- here(output_Dir, paste0("DA_", cl, ".csv"))
+    write.csv(all_da[[cl]], output_path, row.names = FALSE)
+}
+
+message("Ends DA across cell-types!")
+
+
 
 # #------------------------------------------------------
 # # 5. Optional: Annotate peaks
