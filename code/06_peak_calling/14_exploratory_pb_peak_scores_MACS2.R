@@ -508,6 +508,7 @@ for (ct in lst_peak_files) {
     
     # plot exploratory over the full links set
     make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir_raw)
+    make_peak_gene_histograms(link_df2, resolution_level, ct_name, plotDir_raw)
     
     ## filter pRE links
     filtered_links <- link_df2 |>
