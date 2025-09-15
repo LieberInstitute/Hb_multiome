@@ -11,6 +11,8 @@
 # library("patchwork")
 # library("tidyverse")
 # library("stringr")
+library("future")
+library("future.apply")
 library("Seurat")
 library("Signac")
 library("dplyr")
@@ -151,6 +153,7 @@ message("Starting DA across cell-types ...")
 
 all_da <- setNames(vector("list", length(cluster_ids)), cluster_ids)
 
+# FindMarkers() internally supports parallelization
 future::plan("multicore", workers = 4)
 
 for (ct in cluster_ids) {
