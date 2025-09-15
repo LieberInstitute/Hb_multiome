@@ -202,6 +202,43 @@ for (cl in names(all_da)) {
 message("Ends DA across cell-types!")
 
 
+################################################################################
+## summarize per-cluster stats and extract top enriched peaks
+
+sig_thresh <- 0.2    # FDR cutoff
+lfc_thresh <- 0.25   # logFC cutoff
+
+da_sig <- da_results |>
+    filter(FDR < sig_thresh & abs(avg_log2FC) > lfc_thresh)
+
+# summary counts per cluster
+summary_table <- da_sig |>
+    group_by(cluster) |>
+    summarise(
+        n_sig_peaks = n(),
+        n_up   = sum(avg_log2FC > 0),
+        n_down = sum(avg_log2FC < 0),
+        top_peak = peak[which.max(abs(avg_log2FC))],
+        max_log2FC = max(abs(avg_log2FC))
+    ) |>
+    arrange(desc(n_sig_peaks))
+
+# save summary
+f_name <- here(output_Dir, "DA_summary_per_cluster.csv")
+write.csv(summary_table, f_name, row.names = FALSE)
+
+# extract top 10 enriched peaks per cluster
+top10_per_cluster <- da_sig |>
+    group_by(cluster) |>
+    arrange(desc(avg_log2FC)) |>
+    slice_head(n = 10)
+
+f_name <- here(output_Dir, "DA_top10_per_cluster.csv")
+write.csv(top10_per_cluster, f_name, row.names = FALSE)
+
+message("Summary and top10 tables saved in: ", output_Dir)
+
+
 
 # #------------------------------------------------------
 # # 5. Optional: Annotate peaks
