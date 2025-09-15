@@ -7,13 +7,31 @@
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
+#SBATCH --array=0-1%2   # 2 runs
 
 set -eo pipefail
 
-## Compute pseubobulk on multiome-seurat and performs LinkPeaks()
+## Compute pseubobulk on multiome-seurat: regular and merged peaks
+peak_ds=(regular merged)   # index 0..1
+i=${SLURM_ARRAY_TASK_ID}
+m=${#peak_ds[@]}
+
+# guard
+if (( i < 0 || i >= m )); then
+  echo "Invalid task index: $i (must be 0..$((m-1)))"
+  exit 1
+fi
+
+res="${peak_ds[$i]}"
+
+# skip Broad
+if [[ "$res" == "regular" ]]; then
+  echo "[$(date)] Skipping peak_ds='regular' for array task $i"
+  exit 0   # success so SLURM won’t retry
+fi
 
 #mkdir -p logs
-log_path="logs/12_pseudobulk_MACS2.log"
+log_path="logs/12_pseudobulk_MACS2_${res}_task${i}.log"
 
 {
 
@@ -34,7 +52,7 @@ module load conda_R/4.3.x
 module list
 
 ## Edit with your job command
-Rscript 12_pseudobulk_MACS2.R
+Rscript 12_pseudobulk_MACS2.R --peak_ds "${res}"
 ret=$?
 
 echo "**** Job ends ****"
