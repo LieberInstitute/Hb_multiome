@@ -7,7 +7,7 @@
 ## Recommended resources mem=30GB
 ########################################################################
 
-# library("ggplot2")
+library("ggplot2")
 # library("patchwork")
 # library("tidyverse")
 # library("stringr")
@@ -156,6 +156,7 @@ all_da <- setNames(vector("list", length(cluster_ids)), cluster_ids)
 # FindMarkers() internally supports parallelization
 future::plan("multicore", workers = 4)
 
+
 for (ct in cluster_ids) {
     message("[", ct, "]")
     # Skip if this cell-type has very few samples
@@ -205,7 +206,9 @@ message("Ends DA across cell-types!")
 ################################################################################
 ## summarize per-cluster stats and extract top enriched peaks
 
-sig_thresh <- 0.2    # FDR cutoff
+message("Starting summary ...")
+
+sig_thresh <- 0.1    # FDR cutoff
 lfc_thresh <- 0.25   # logFC cutoff
 
 da_sig <- da_results |>
@@ -238,6 +241,39 @@ write.csv(top10_per_cluster, f_name, row.names = FALSE)
 
 message("Summary and top10 tables saved in: ", output_Dir)
 
+
+########################################################################
+
+message("Starting summary Volcano plots per cluster")
+
+for (ct in unique(da_results$cluster)) {
+    df <- da_results |> filter(cluster == ct)
+    
+    # mark significant points
+    df$signif <- with(df, ifelse(FDR < sig_thresh & abs(avg_log2FC) > lfc_thresh, "significant", "not"))
+    
+    p <- ggplot(df, aes(x = avg_log2FC, y = -log10(FDR))) +
+        geom_point(aes(color = signif), alpha = 0.6, size = 1.2) +
+        scale_color_manual(values = c("significant" = "red", "not" = "grey70")) +
+        geom_vline(xintercept = c(-lfc_thresh, lfc_thresh), linetype = "dashed", color = "black") +
+        geom_hline(yintercept = -log10(sig_thresh), linetype = "dashed", color = "black") +
+        labs(
+            title = paste0("Volcano plot - ", ct),
+            x = "log2 Fold Change (cluster vs rest)",
+            y = "-log10(FDR)"
+        ) +
+        theme_bw() +
+        theme(legend.position = "bottom")
+    
+    # save per cluster
+    f_name <- here(plotDir, paste0("Volcano_", ct, ".png"))
+    ggsave(f_name, p,
+        width = 6, height = 5, dpi = 300
+    )
+}
+
+
+message("Plots done!")
 
 
 # #------------------------------------------------------
