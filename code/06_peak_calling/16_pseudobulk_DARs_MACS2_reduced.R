@@ -9,9 +9,6 @@
 
 library("ggplot2")
 library("ggrepel") 
-# library("patchwork")
-# library("tidyverse")
-# library("stringr")
 library("future")
 library("future.apply")
 library("Seurat")
@@ -154,7 +151,7 @@ message("Starting DA across cell-types ...")
 
 all_da <- setNames(vector("list", length(cluster_ids)), cluster_ids)
 
-# FindMarkers() internally supports parallelization
+# FindMarkers() internally supports parallelization / MAC
 future::plan("multicore", workers = 4)
 
 
@@ -247,6 +244,9 @@ message("Summary and top10 tables saved in: ", output_Dir)
 
 message("Starting summary Volcano plots per cluster")
 
+f_name <- here(plotDir, "Volcano_all_clusters")
+pdf(f_name, width = 7, height = 6)  
+
 for (ct in unique(da_results$cluster)) {
     df <- da_results |> filter(cluster == ct)
     
@@ -279,13 +279,31 @@ for (ct in unique(da_results$cluster)) {
         theme_bw() +
         theme(legend.position = "bottom")
     
-    # save per cluster
-    f_name <- here(plotDir, paste0("Volcano_", ct, ".png"))
-    ggsave(f_name, p,
-        width = 6, height = 5, dpi = 300
-    )
+    print(p) 
+    
 }
 
+dev.off()
 
 message("Plots done!")
 
+# library("slurmjobs")
+# job_single(
+#   "16_pseudobulk_DARs_MACS2_reduced",
+#   create_shell = TRUE,
+#   partition = "katun",
+#   memory = "30G",
+#   cores = 2,
+#   logdir = "logs",
+#   command = "Rscript 16_pseudobulk_DARs_MACS2_reduced.R",
+#   create_logdir = FALSE
+# )
+
+
+## Reproducibility information
+library("sessioninfo")
+print("Reproducibility information:")
+Sys.time()
+proc.time()
+options(width = 120)
+session_info()
