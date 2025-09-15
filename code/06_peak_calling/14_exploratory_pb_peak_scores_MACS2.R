@@ -23,6 +23,13 @@ p_met = "spearman"
 w_size = "5e5"
 FDR_thresh = 0.2
 score_thresh = 0.2
+# peaks_ds = "merged"
+
+## read input arguments
+args = commandArgs(trailingOnly = TRUE)
+peaks_ds <- args[2]
+# peak_ds=(regular merged) 
+if (is.na(peaks_ds) || !nzchar(peaks_ds)) stop("Missing peaks dataset argument")
 
 if (length(resolution_level)) {
     message("Processing job for peak-method:\n",
@@ -34,7 +41,6 @@ if (length(resolution_level)) {
     stop()
 }
 
-# Check/create directories
 input_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
@@ -49,17 +55,21 @@ csvDir <- here(
     "processed-data",
     "06_peak_calling",
     "14_exploratory_pb_peak_scores_MACS2"
-    
 )
 
+## set specific peaks pb dataset
+input_cvsDir <- here(input_cvsDir, paste0("links_ct_", peaks_ds))
+plotDir <- here(plotDir, paste0("links_ct_", peaks_ds))
+plotDir_raw <- here(plotDir, "raw_links")
+csvDir <- here(csvDir, paste0("links_ct_", peaks_ds))
+csvDir_raw <- here(csvDir, "raw_links")
 
 ## Check directories
-if (!dir.exists(plotDir)) {
-    dir.create(plotDir)
-}
-if (!dir.exists(csvDir)) {
-    dir.create(csvDir)
-}
+if (!dir.exists(plotDir)) {dir.create(plotDir)}
+if (!dir.exists(csvDir)) {dir.create(csvDir)}
+if (!dir.exists(plotDir_raw)) {dir.create(plotDir_raw)}
+if (!dir.exists(csvDir_raw)) {dir.create(csvDir_raw)}
+
 
 # List all files matching the specific clustering resolution level
 pattern = paste0("^", resolution_level, ".*\\.csv$")
@@ -296,7 +306,7 @@ make_exploratory_plots <- function(
         geom_hline(yintercept = 0.2, linetype = "dashed", color = "darkorange") +
         geom_hline(yintercept = 0.1, linetype = "dashed", color = "grey50") +
         geom_hline(yintercept = -0.2, linetype = "dashed", color = "black") +
-  
+        
         # Labels for thresholds
         threshold_labels +
         
@@ -319,7 +329,7 @@ make_exploratory_plots <- function(
                  size = 3, hjust = 1, label.size = NA) + 
         annotate("label", x = -110, y = 0.6, label = "Long-range (100–500 kb)",
                  size = 3, hjust = 1, label.size = NA) +
-    
+        
         # Custom legend with count
         scale_color_manual(
             values = c(
@@ -338,7 +348,7 @@ make_exploratory_plots <- function(
         ) +
         theme_minimal() + 
         theme(legend.position = "none")
-
+    
     f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_tier_scores", suffix_name, ".pdf")
     ggsave(here(plotDir, f_name), g1, width = 8, height = 5, device = cairo_pdf)
     
@@ -352,11 +362,11 @@ make_exploratory_plots <- function(
 ## Check number of linked peaks per gene and vice-verse
 # Number of linked peaks per gene
 make_peak_gene_histograms <- function(
-    link_df2,
-    resolution_lev,
-    ct_name,
-    plotDir, 
-    suffix =""
+        link_df2,
+        resolution_lev,
+        ct_name,
+        plotDir, 
+        suffix =""
 ){
     
     ## Histogram TSS Scores
@@ -479,7 +489,7 @@ for (ct in lst_peak_files) {
             distance_kb       = distance / 1000
         )
     head(link_df2, n=3)
-
+    
     message("Link gene-peak scores with TSS:")
     summary(link_df2)
     table(link_df2$gene_strand, useNA = "ifany")
@@ -489,7 +499,7 @@ for (ct in lst_peak_files) {
     #=========================================
     
     # save full links found 
-    f_name <- here(csvDir, paste0(resolution_level, "_", ct_name,  "_links_with_TSS_CC_FDR_spearman_5e5.csv"))
+    f_name <- here(csvDir_raw, paste0(resolution_level, "_", ct_name,  "_links_with_TSS_CC_FDR_spearman_5e5.csv"))
     write.csv(link_df2, file = f_name, row.names = FALSE)
     
     message("Link Gene-Peak table with TSS distances and CC scores saved!")
@@ -497,7 +507,7 @@ for (ct in lst_peak_files) {
     #=========================================
     
     # plot exploratory over the full links set
-    make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir)
+    make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir_raw)
     
     ## filter pRE links
     filtered_links <- link_df2 |>
@@ -528,7 +538,7 @@ for (ct in lst_peak_files) {
     } else {
         message("No links passing threshold found!")
     }
-   
+    
     
 }
 
