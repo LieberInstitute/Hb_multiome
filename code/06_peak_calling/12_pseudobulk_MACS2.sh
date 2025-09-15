@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=80G
+#SBATCH --mem=15G
 #SBATCH --job-name=12_pseudobulk_MACS2
 #SBATCH -c 4
 #SBATCH -t 3-00:00:00
