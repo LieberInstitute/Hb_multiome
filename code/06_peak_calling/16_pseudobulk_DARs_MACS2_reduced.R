@@ -123,7 +123,7 @@ DefaultAssay(SeuratOBJ_pb) <- PSEUDO_ATAC_ASSAY
 
 ## double-check depth differences between pseudobulk samples
 ## Check total counts per pseudobulk sample
-col_sums <- colSums(GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, slot = "counts"))
+col_sums <- colSums(GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer = "counts"))
 col_sums
 message("Library size summary:\n"); print(summary(col_sums))
 # Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
@@ -170,9 +170,8 @@ for (ct in cluster_ids) {
                 object   = SeuratOBJ_pb,
                 ident.1  = ct,
                 ident.2  = NULL,     # group vs. rest
-                only.pos = TRUE,
+                # only.pos = TRUE,
                 test.use = "LR"      # used for binary accessibility
-                #min.pct = 0.05, logfc.threshold = 0.25
             )
             tmp$cluster <- ct
             tmp$peak    <- rownames(tmp)
@@ -211,24 +210,32 @@ message("Ends DA across cell-types!")
 
 message("Starting summary ...")
 
+head(da_results)
+
+## Keeps all statistically significant peaks, whether up (positive log2FC) or down (negative log2FC).
 da_sig <- da_results |>
-    filter(FDR < sig_thresh & abs(avg_log2FC) > lfc_thresh)
+    filter(FDR < sig_thresh) #& abs(avg_log2FC) > lfc_thresh)
+    #filter(FDR < sig_thresh & abs(avg_log2FC) > lfc_thresh)
 nrow(da_sig)
-# Tue Sep 16 09:08:48 2025 ------------------------------
+# [1] 21849
+
 tail(da_sig)
 table(da_sig$cluster)
 
-# summary counts per cluster
+# summary counts per cluster / respect the fold-change cutoff when defining up vs down DARs
 summary_table <- da_sig |>
     group_by(cluster) |>
     summarise(
         n_sig_peaks = n(),
-        n_up   = sum(avg_log2FC > 0),
-        n_down = sum(avg_log2FC < 0),
-        top_peak = peak[which.max(abs(avg_log2FC))],
-        max_log2FC = max(abs(avg_log2FC))
+        n_up   = sum(avg_log2FC >  lfc_thresh),   # significantly up 0.25
+        n_down = sum(avg_log2FC < -lfc_thresh),   # significantly down 0.25
+        top_up_peak   = peak[which.max(avg_log2FC)],        # most upregulated
+        top_down_peak = peak[which.min(avg_log2FC)],        # most downregulated
+        max_log2FC = max(avg_log2FC),             # give the extreme values per cluster.
+        min_log2FC = min(avg_log2FC)
     ) |>
     arrange(desc(n_sig_peaks))
+
 
 # save summary
 f_name <- here(output_Dir, "DA_summary_per_cluster.csv")
@@ -255,13 +262,20 @@ message("Starting summary Volcano plots per cluster")
 f_name <- here(plotDir, "Volcano_all_clusters.pdf")
 pdf(f_name, width = 7, height = 6)  
 
+
 for (ct in unique(da_results$cluster)) {
     # ct = unique(da_results$cluster[1])
     df <- da_results |> filter(cluster == ct)
     
     # mark significant points
     df$signif <- with(df, ifelse(FDR < sig_thresh & abs(avg_log2FC) > lfc_thresh, "significant", "not"))
-    colnames(df)
+    
+    # classify as Up / Down / Not
+    df$signif <- case_when(
+        df$FDR < sig_thresh & df$avg_log2FC >  lfc_thresh  ~ "Up",
+        df$FDR < sig_thresh & df$avg_log2FC < -lfc_thresh  ~ "Down",
+        TRUE                                               ~ "Not"
+    )
     
     # select top 5 peaks by FDR
     top5 <- df |>
@@ -270,9 +284,9 @@ for (ct in unique(da_results$cluster)) {
     
     p <- ggplot(df, aes(x = avg_log2FC, y = -log10(FDR))) +
         geom_point(aes(color = signif), alpha = 0.6, size = 1.2) +
-        scale_color_manual(values = c("significant" = "red", "not" = "grey70")) +
-        geom_vline(xintercept = c(-lfc_thresh, lfc_thresh), linetype = "dashed", color = "black") +
-        geom_hline(yintercept = -log10(sig_thresh), linetype = "dashed", color = "black") +
+        scale_color_manual(values = c("Up" = "red", "Down" = "blue", "Not" = "grey70")) +
+        geom_vline(xintercept = c(-lfc_thresh, lfc_thresh), linetype = "dashed") +
+        geom_hline(yintercept = -log10(sig_thresh), linetype = "dashed") + 
         geom_text_repel(
             data = top5,
             aes(label = peak),
