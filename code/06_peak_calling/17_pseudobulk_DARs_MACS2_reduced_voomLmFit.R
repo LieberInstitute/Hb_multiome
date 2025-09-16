@@ -6,6 +6,12 @@
 ## Recommended resources mem=30GB
 ########################################################################
 
+suppressPackageStartupMessages({
+    library("edgeR")     # for DGEList, filterByExpr, voomLmFit
+    library("limma")     # for contrasts.fit, eBayes, topTable, plot helpers
+    library("Matrix")    # if counts are sparse; otherwise base matrix is fine
+    library("data.table")
+})
 library("ggplot2")
 library("ggrepel") 
 library("future")
@@ -33,6 +39,13 @@ if (length(resolution_level)) {
     message("Input arguments missed")
     stop()
 }
+
+# Inputs:
+# counts:   matrix of raw counts, rows = peaks, cols = pseudobulk samples
+#           (e.g., aggregated by cluster x donor)
+# coldata:  data.frame with sample metadata, nrow = ncol(counts)
+#           must include at least: sample_id, cluster_id, group, donor
+# peaks_df: data.frame/GRanges of peaks for annotation (optional)
 
 # Check/create directories
 inputRDS_Dir <- here(
@@ -94,12 +107,49 @@ SeuratOBJ_pb
 # 1 other assay present: RNA
 # 1 dimensional reduction calculated: lsi
 
+# ## get rna counts
+# DefaultAssay(SeuratOBJ_pb) <- "RNA"
+# rna_counts <- GetAssayData(SeuratOBJ_pb, assay="RNA", layer="data")
+# length(rownames(rna_counts)) # [1] 36601
+
+## =============================================================================
+
+## (1) get matrix of raw counts: rows = peaks, cols = pseudobulk samples
+PSEUDO_ATAC_ASSAY <- "ATAC_macs2_merged_pseudo"
+atac_counts <- GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, laye ="counts")
+length(rownames(atac_counts)) # [1] 351037
+head(atac_counts)
+
+## (2) get data.frame with sample metadata, nrow = ncol(counts)
+#  must include at least: sample_id, cluster_id, group, donor
 meta <- SeuratOBJ_pb@meta.data
 colnames(meta)
 # [1] "orig.ident"                        "nCount_RNA"                       
 # [3] "nFeature_RNA"                      "nCount_ATAC_macs2_merged_pseudo"  
 # [5] "nFeature_ATAC_macs2_merged_pseudo"
 head(meta)
+
+## add meta-data in the expected format
+meta$sample_id <- row.names(meta)
+meta$donor <- sapply(strsplit(row.names(meta), "_", fixed = TRUE), 
+                "[[", 2)
+tail(meta)
+
+stopifnot(all(colnames(atac_counts) == meta$sample_id))
+dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+
+# Tweakables
+min_cpm        <- 1            # expression filter threshold (logical CPM rule)
+min_samples    <- 3            # require in >= this many samples overall or per-group
+use_block      <- TRUE         # TRUE = account for repeated measures (e.g., donor)
+use_samp_wts   <- TRUE         # TRUE = estimate sample quality weights
+trend_ebayes   <- TRUE         # TRUE = eBayes(trend=TRUE) often good for counts
+robust_ebayes  <- TRUE         # TRUE = robust empirical Bayes
+fdr_cutoff     <- 0.10
+
+## ============================================================================/
+
+
 
 ## Ensure we are contrasting by cell-type
 if (!"cell_type" %in% colnames(SeuratOBJ_pb@meta.data)) {
