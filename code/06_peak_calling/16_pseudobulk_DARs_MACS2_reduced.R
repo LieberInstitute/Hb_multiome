@@ -309,6 +309,50 @@ for (ct in unique(da_results$cluster)) {
 
 dev.off()
 
+
+## Barplot of Up vs Down DARs per cluster
+
+barplot_name <- here(plotDir, "DA_barplot_UpDown_per_cluster.pdf")
+
+# Prepare counts of Up and Down DARs
+up_down_counts <- da_sig |>
+    mutate(direction = case_when(
+        avg_log2FC >  lfc_thresh ~ "Up",
+        avg_log2FC < -lfc_thresh ~ "Down",
+        TRUE ~ "Not"
+    )) |>
+    filter(direction != "Not") |>    # keep only true Up/Down DARs
+    group_by(cluster, direction) |>
+    summarise(n = n(), .groups = "drop")
+
+# Order clusters by total number of DARs
+cluster_order <- up_down_counts |>
+    group_by(cluster) |>
+    summarise(total = sum(n), .groups = "drop") |>
+    arrange(desc(total)) |>
+    pull(cluster)
+
+up_down_counts$cluster <- factor(up_down_counts$cluster, levels = cluster_order)
+
+# Plot
+p1 <- ggplot(up_down_counts, aes(x = cluster, y = n, fill = direction)) +
+    geom_col(position = "dodge") +
+    scale_fill_manual(values = c("Up" = "red", "Down" = "blue")) +
+    labs(
+        title = "Number of Up and Down DARs per cluster",
+        x = "Cluster",
+        y = "Number of DARs",
+        fill = "Direction"
+    ) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave(barplot_name, p1, width = 8, height = 5, dpi = 300)
+
+message("Barplot saved to: ", barplot_file)
+
+
+
 message("Plots done!")
 
 # library("slurmjobs")
