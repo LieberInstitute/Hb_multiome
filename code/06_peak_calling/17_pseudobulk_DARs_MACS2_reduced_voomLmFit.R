@@ -1,9 +1,8 @@
 ########################################################################
-## Differential Accessibility (DA) using Seurat/Signac from pseudobulk assays on meged peaks
-## - Peaks were computed with MACS2
+## Differential Accessibility (DA) using voomLmFit / pseudobulk multiome assays with merged peaks
 ##
 ## Authors. CSC
-## Date. Sep 15, 2025
+## Date. Sep 16, 2025
 ## Recommended resources mem=30GB
 ########################################################################
 
@@ -41,15 +40,17 @@ inputRDS_Dir <- here(
     "06_peak_calling",
     "12_pseudobulk_MACS2"
 )
+Seurat_base_name <- "Mid_pseudobulk.spearman.5e5_merged_peaks.rds"
+
 output_Dir <- here(
     "processed-data",
     "06_peak_calling",
-    "16_pseudobulk_DARs_MACS2_reduced"
+    "17_pseudobulk_DARs_MACS2_reduced_voomLmFit"
 )
 plotDir <- here(
     "plots",
     "06_peak_calling",
-    "16_pseudobulk_DARs_MACS2_reduced"
+    "17_pseudobulk_DARs_MACS2_reduced_voomLmFit"
 )
 
 
@@ -74,14 +75,13 @@ lst_peak_files
 
 
 ########################################################################
-## Differential Accessibility Analysis in Seurat/Signac
-## Input: Seurat object with pseudobulk RNA+ATAC assay and reduced peaks
+## Differential Accessibility Analysis using voomLmFit
+## Input: Seurat object with pseudobulk RNA+ATAC assay with merged peaks
 ########################################################################
 
 ##==============================================================================
 ## Load Seurat / macs peaks / filtered genes. And make verification
 
-Seurat_base_name <- "Mid_pseudobulk.spearman.5e5_merged_peaks.rds"
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
 SeuratOBJ_pb <- readRDS(here(inputRDS_Dir, Seurat_base_name))
 
@@ -110,12 +110,11 @@ length(SeuratOBJ_pb$cell_type)
 
 Idents(SeuratOBJ_pb) <- "cell_type"
 cluster_ids <- levels(SeuratOBJ_pb)
-unique(Idents(SeuratOBJ_pb))
 
 message("Pseudobulk groups (cell-types):")
 cluster_ids
 
-## Define assay and metadata grouping
+## Define ATAC assay and metadata grouping
 PSEUDO_ATAC_ASSAY <- "ATAC_macs2_merged_pseudo"  
 grouping_var <- "orig.ident"    
 # Set default assay
@@ -123,179 +122,167 @@ DefaultAssay(SeuratOBJ_pb) <- PSEUDO_ATAC_ASSAY
 
 ## double-check depth differences between pseudobulk samples
 ## Check total counts per pseudobulk sample
-col_sums <- colSums(GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, slot = "counts"))
+col_sums <- colSums(GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer = "counts"))
 col_sums
+# Astrocyte_S03-Hb-r  Astrocyte_S04-Hb-r  Astrocyte_S05-Hb-r  Astrocyte_S06-Hb-r 
+# 2254001              420381             1300877              507894 
+# Astrocyte_S07-Hb-r  Astrocyte_S08-Hb-r  Astrocyte_S09-Hb-r  Astrocyte_S10-Hb-r 
+# 2123583             1832793              830177             1654334 
 message("Library size summary:\n"); print(summary(col_sums))
 # Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
 # 4217    97388   623469  2605095  2827754 46470237 
 
-
-## Find differentially accessible peaks between cell-types
-## Loop over multiple identities
-
-# testing 
-# da_res <- FindMarkers(
-#     object = SeuratOBJ_pb,
-#     ident.1 = "LHb.1",
-#     ident.2 = NULL,              # NULL = rest of cells
-#     only.pos = FALSE,            # get both up and down
-#     min.pct = 0.1,               # require peak present in 10% of cells
-#     test.use = "LR"              # likelihood ratio test (works well for binary peak presence)
-#     # latent.vars = "nCount_ATAC"  # correct for sequencing depth if needed => this is pb data
-# )
-
-
-## provide as input reduced peaks, so, this set should be consistent DA across cell-types
-## function give per-cluster DA peaks vs all others: cluster marker accessibility
-
-message("Starting DA across cell-types ...")
-
-all_da <- setNames(vector("list", length(cluster_ids)), cluster_ids)
-
-# FindMarkers() internally supports parallelization / MAC
-future::plan("multicore", workers = 4)
-
-
-for (ct in cluster_ids) {
-    message("[", ct, "]")
-    # Skip if this cell-type has very few samples
-    n_samples_ct <- sum(SeuratOBJ_pb$cell_type == ct)
-    if (n_samples_ct < 3) {
-        warning("Skipping ", ct, " (only ", n_samples_ct, " pseudobulk samples).")
-        next
-    }
-    res <- tryCatch(
-        {
-            tmp <- FindMarkers(
-                object   = SeuratOBJ_pb,
-                ident.1  = ct,
-                ident.2  = NULL,     # group vs. rest
-                only.pos = TRUE,
-                test.use = "LR"      # used for binary accessibility
-                #min.pct = 0.05, logfc.threshold = 0.25
-            )
-            tmp$cluster <- ct
-            tmp$peak    <- rownames(tmp)
-            tmp$FDR     <- p.adjust(tmp$p_val, method = "BH")
-            tmp
-        },
-        error = function(e) {
-            warning("FindMarkers failed for ", ct, ": ", conditionMessage(e))
-            NULL
-        }
-    )
-    all_da[[ct]] <- res
-}
-
-## Filter() keeps only elements of a list that return TRUE. Removes NULL entries
-da_results <- bind_rows(Filter(Negate(is.null), all_da))
-# Save combined
-write.csv(da_results, file.path(output_Dir, "DA_all_clusters.csv"), row.names = FALSE)
-# milestone
-# da_results <- read.csv(file.path(output_Dir, "DA_all_clusters.csv"))
-table(da_results$cluster)
-nrow(da_results)
-
-# indiv. tests by cell-type
-for (cl in names(all_da)) {
-    if (is.null(all_da[[cl]])) next
-    output_path <- here(output_Dir, paste0("DA_", cl, ".csv"))
-    write.csv(all_da[[cl]], output_path, row.names = FALSE)
-}
-
-message("Ends DA across cell-types!")
-
-
-################################################################################
-## summarize per-cluster stats and extract top enriched peaks
-
-message("Starting summary ...")
-
-da_sig <- da_results |>
-    filter(FDR < sig_thresh & abs(avg_log2FC) > lfc_thresh)
-nrow(da_sig)
-# Tue Sep 16 09:08:48 2025 ------------------------------
-tail(da_sig)
-table(da_sig$cluster)
-
-# summary counts per cluster
-summary_table <- da_sig |>
-    group_by(cluster) |>
-    summarise(
-        n_sig_peaks = n(),
-        n_up   = sum(avg_log2FC > 0),
-        n_down = sum(avg_log2FC < 0),
-        top_peak = peak[which.max(abs(avg_log2FC))],
-        max_log2FC = max(abs(avg_log2FC))
-    ) |>
-    arrange(desc(n_sig_peaks))
-
-# save summary
-f_name <- here(output_Dir, "DA_summary_per_cluster.csv")
-write.csv(summary_table, f_name, row.names = FALSE)
-
-# extract top 10 enriched peaks per cluster
-top10_per_cluster <- da_sig |>
-    group_by(cluster) |>
-    arrange(desc(avg_log2FC)) |>
-    slice_head(n = 10)
-
-table(top10_per_cluster$cluster)
-
-f_name <- here(output_Dir, "DA_top10_per_cluster.csv")
-write.csv(top10_per_cluster, f_name, row.names = FALSE)
-
-message("Summary and top10 tables saved in: ", output_Dir)
-
-
-########################################################################
-
-message("Starting summary Volcano plots per cluster")
-
-f_name <- here(plotDir, "Volcano_all_clusters.pdf")
-pdf(f_name, width = 7, height = 6)  
-
-for (ct in unique(da_results$cluster)) {
-    # ct = unique(da_results$cluster[1])
-    df <- da_results |> filter(cluster == ct)
-    
-    # mark significant points
-    df$signif <- with(df, ifelse(FDR < sig_thresh & abs(avg_log2FC) > lfc_thresh, "significant", "not"))
-    colnames(df)
-    
-    # select top 5 peaks by FDR
-    top5 <- df |>
-        arrange(FDR) |>
-        slice_head(n = 5)
-    
-    p <- ggplot(df, aes(x = avg_log2FC, y = -log10(FDR))) +
-        geom_point(aes(color = signif), alpha = 0.6, size = 1.2) +
-        scale_color_manual(values = c("significant" = "red", "not" = "grey70")) +
-        geom_vline(xintercept = c(-lfc_thresh, lfc_thresh), linetype = "dashed", color = "black") +
-        geom_hline(yintercept = -log10(sig_thresh), linetype = "dashed", color = "black") +
-        geom_text_repel(
-            data = top5,
-            aes(label = peak),
-            size = 3,
-            box.padding = 0.3,
-            point.padding = 0.2,
-            max.overlaps = 10
-        ) +
-        labs(
-            title = paste0("Volcano plot - ", ct),
-            x = "log2 Fold Change (1vsALL)",
-            y = "-log10(FDR)"
-        ) +
-        theme_bw() +
-        theme(legend.position = "bottom")
-    
-    print(p) 
-    
-}
-
-dev.off()
-
-message("Plots done!")
+# ## provide as input reduced peaks, so, this set should be consistent DA across cell-types
+# ## function give per-cluster DA peaks vs all others: cluster marker accessibility
+# 
+# message("Starting DA across cell-types ...")
+# 
+# all_da <- setNames(vector("list", length(cluster_ids)), cluster_ids)
+# 
+# # FindMarkers() internally supports parallelization / MAC
+# future::plan("multicore", workers = 4)
+# 
+# 
+# for (ct in cluster_ids) {
+#     message("[", ct, "]")
+#     # Skip if this cell-type has very few samples
+#     n_samples_ct <- sum(SeuratOBJ_pb$cell_type == ct)
+#     if (n_samples_ct < 3) {
+#         warning("Skipping ", ct, " (only ", n_samples_ct, " pseudobulk samples).")
+#         next
+#     }
+#     res <- tryCatch(
+#         {
+#             tmp <- FindMarkers(
+#                 object   = SeuratOBJ_pb,
+#                 ident.1  = ct,
+#                 ident.2  = NULL,     # group vs. rest
+#                 only.pos = TRUE,
+#                 test.use = "LR"      # used for binary accessibility
+#                 #min.pct = 0.05, logfc.threshold = 0.25
+#             )
+#             tmp$cluster <- ct
+#             tmp$peak    <- rownames(tmp)
+#             tmp$FDR     <- p.adjust(tmp$p_val, method = "BH")
+#             tmp
+#         },
+#         error = function(e) {
+#             warning("FindMarkers failed for ", ct, ": ", conditionMessage(e))
+#             NULL
+#         }
+#     )
+#     all_da[[ct]] <- res
+# }
+# 
+# ## Filter() keeps only elements of a list that return TRUE. Removes NULL entries
+# da_results <- bind_rows(Filter(Negate(is.null), all_da))
+# # Save combined
+# write.csv(da_results, file.path(output_Dir, "DA_all_clusters.csv"), row.names = FALSE)
+# # milestone
+# # da_results <- read.csv(file.path(output_Dir, "DA_all_clusters.csv"))
+# table(da_results$cluster)
+# nrow(da_results)
+# 
+# # indiv. tests by cell-type
+# for (cl in names(all_da)) {
+#     if (is.null(all_da[[cl]])) next
+#     output_path <- here(output_Dir, paste0("DA_", cl, ".csv"))
+#     write.csv(all_da[[cl]], output_path, row.names = FALSE)
+# }
+# 
+# message("Ends DA across cell-types!")
+# 
+# 
+# ################################################################################
+# ## summarize per-cluster stats and extract top enriched peaks
+# 
+# message("Starting summary ...")
+# 
+# da_sig <- da_results |>
+#     filter(FDR < sig_thresh & abs(avg_log2FC) > lfc_thresh)
+# nrow(da_sig)
+# # Tue Sep 16 09:08:48 2025 ------------------------------
+# tail(da_sig)
+# table(da_sig$cluster)
+# 
+# # summary counts per cluster
+# summary_table <- da_sig |>
+#     group_by(cluster) |>
+#     summarise(
+#         n_sig_peaks = n(),
+#         n_up   = sum(avg_log2FC > 0),
+#         n_down = sum(avg_log2FC < 0),
+#         top_peak = peak[which.max(abs(avg_log2FC))],
+#         max_log2FC = max(abs(avg_log2FC))
+#     ) |>
+#     arrange(desc(n_sig_peaks))
+# 
+# # save summary
+# f_name <- here(output_Dir, "DA_summary_per_cluster.csv")
+# write.csv(summary_table, f_name, row.names = FALSE)
+# 
+# # extract top 10 enriched peaks per cluster
+# top10_per_cluster <- da_sig |>
+#     group_by(cluster) |>
+#     arrange(desc(avg_log2FC)) |>
+#     slice_head(n = 10)
+# 
+# table(top10_per_cluster$cluster)
+# 
+# f_name <- here(output_Dir, "DA_top10_per_cluster.csv")
+# write.csv(top10_per_cluster, f_name, row.names = FALSE)
+# 
+# message("Summary and top10 tables saved in: ", output_Dir)
+# 
+# 
+# ########################################################################
+# 
+# message("Starting summary Volcano plots per cluster")
+# 
+# f_name <- here(plotDir, "Volcano_all_clusters.pdf")
+# pdf(f_name, width = 7, height = 6)  
+# 
+# for (ct in unique(da_results$cluster)) {
+#     # ct = unique(da_results$cluster[1])
+#     df <- da_results |> filter(cluster == ct)
+#     
+#     # mark significant points
+#     df$signif <- with(df, ifelse(FDR < sig_thresh & abs(avg_log2FC) > lfc_thresh, "significant", "not"))
+#     colnames(df)
+#     
+#     # select top 5 peaks by FDR
+#     top5 <- df |>
+#         arrange(FDR) |>
+#         slice_head(n = 5)
+#     
+#     p <- ggplot(df, aes(x = avg_log2FC, y = -log10(FDR))) +
+#         geom_point(aes(color = signif), alpha = 0.6, size = 1.2) +
+#         scale_color_manual(values = c("significant" = "red", "not" = "grey70")) +
+#         geom_vline(xintercept = c(-lfc_thresh, lfc_thresh), linetype = "dashed", color = "black") +
+#         geom_hline(yintercept = -log10(sig_thresh), linetype = "dashed", color = "black") +
+#         geom_text_repel(
+#             data = top5,
+#             aes(label = peak),
+#             size = 3,
+#             box.padding = 0.3,
+#             point.padding = 0.2,
+#             max.overlaps = 10
+#         ) +
+#         labs(
+#             title = paste0("Volcano plot - ", ct),
+#             x = "log2 Fold Change (1vsALL)",
+#             y = "-log10(FDR)"
+#         ) +
+#         theme_bw() +
+#         theme(legend.position = "bottom")
+#     
+#     print(p) 
+#     
+# }
+# 
+# dev.off()
+# 
+# message("Plots done!")
 
 # library("slurmjobs")
 # job_single(
