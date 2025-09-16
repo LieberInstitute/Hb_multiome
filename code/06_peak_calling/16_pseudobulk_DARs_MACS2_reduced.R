@@ -21,8 +21,9 @@ library("here")
 resolution_level = "Mid"
 p_met = "spearman"
 w_size = "5e5"
-# FDR_thresh = 0.2
-# score_thresh = 0.2
+sig_thresh <- 0.1    # FDR cutoff
+lfc_thresh <- 0.25   # logFC cutoff
+
 
 if (length(resolution_level)) {
     message("Processing job for peak-method:\n",
@@ -190,6 +191,10 @@ for (ct in cluster_ids) {
 da_results <- bind_rows(Filter(Negate(is.null), all_da))
 # Save combined
 write.csv(da_results, file.path(output_Dir, "DA_all_clusters.csv"), row.names = FALSE)
+# milestone
+# da_results <- read.csv(file.path(output_Dir, "DA_all_clusters.csv"))
+table(da_results$cluster)
+nrow(da_results)
 
 # indiv. tests by cell-type
 for (cl in names(all_da)) {
@@ -206,11 +211,12 @@ message("Ends DA across cell-types!")
 
 message("Starting summary ...")
 
-sig_thresh <- 0.1    # FDR cutoff
-lfc_thresh <- 0.25   # logFC cutoff
-
 da_sig <- da_results |>
     filter(FDR < sig_thresh & abs(avg_log2FC) > lfc_thresh)
+nrow(da_sig)
+# Tue Sep 16 09:08:48 2025 ------------------------------
+tail(da_sig)
+table(da_sig$cluster)
 
 # summary counts per cluster
 summary_table <- da_sig |>
@@ -234,6 +240,8 @@ top10_per_cluster <- da_sig |>
     arrange(desc(avg_log2FC)) |>
     slice_head(n = 10)
 
+table(top10_per_cluster$cluster)
+
 f_name <- here(output_Dir, "DA_top10_per_cluster.csv")
 write.csv(top10_per_cluster, f_name, row.names = FALSE)
 
@@ -244,14 +252,16 @@ message("Summary and top10 tables saved in: ", output_Dir)
 
 message("Starting summary Volcano plots per cluster")
 
-f_name <- here(plotDir, "Volcano_all_clusters")
+f_name <- here(plotDir, "Volcano_all_clusters.pdf")
 pdf(f_name, width = 7, height = 6)  
 
 for (ct in unique(da_results$cluster)) {
+    # ct = unique(da_results$cluster[1])
     df <- da_results |> filter(cluster == ct)
     
     # mark significant points
     df$signif <- with(df, ifelse(FDR < sig_thresh & abs(avg_log2FC) > lfc_thresh, "significant", "not"))
+    colnames(df)
     
     # select top 5 peaks by FDR
     top5 <- df |>
@@ -273,7 +283,7 @@ for (ct in unique(da_results$cluster)) {
         ) +
         labs(
             title = paste0("Volcano plot - ", ct),
-            x = "log2 Fold Change (cluster vs rest)",
+            x = "log2 Fold Change (1vsALL)",
             y = "-log10(FDR)"
         ) +
         theme_bw() +
