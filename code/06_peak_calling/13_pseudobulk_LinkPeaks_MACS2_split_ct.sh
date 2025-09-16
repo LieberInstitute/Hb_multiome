@@ -31,7 +31,7 @@ fi
 res="${clust[$i]}"
 
 mkdir -p logs
-log_path="logs/13_pseudobulk_LinkPeaks_MACS2_split_ct_${res}.log"
+log_path="logs/13_pseudobulk_LinkPeaks_MACS2_split_ct${res}.log"
 
 {
   echo "**** Job starts ****"
