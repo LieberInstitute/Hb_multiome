@@ -155,25 +155,95 @@ head(meta)
 
 # ====/
 
-
-
-
 stopifnot(all(colnames(atac_counts) == meta$sample_id))
-dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
 # Tweakables
 min_cpm        <- 1            # expression filter threshold (logical CPM rule)
 min_samples    <- 3            # require in >= this many samples overall or per-group
 use_block      <- TRUE         # TRUE = account for repeated measures (e.g., donor)
-use_samp_wts   <- TRUE         # TRUE = estimate sample quality weights
-trend_ebayes   <- TRUE         # TRUE = eBayes(trend=TRUE) often good for counts
-robust_ebayes  <- TRUE         # TRUE = robust empirical Bayes
+# use_samp_wts   <- TRUE         # TRUE = estimate sample quality weights
+# trend_ebayes   <- TRUE         # TRUE = eBayes(trend=TRUE) often good for counts
+# robust_ebayes  <- TRUE         # TRUE = robust empirical Bayes
 fdr_cutoff     <- 0.10
 
+## ============================================================================/
 
+dim(sce_pb)
+table(sce_pb$registration_variable)
 
+clusters <- levels(sce_pb$registration_variable)
+names(clusters) <- clusters
+
+message(Sys.time(), " - Loop voomlmFit by cluster")
+
+lmf_summary <- map_dfr(clusters, function(clus){
+    
+    dge <- sce_pb[,sce_pb$registration_variable ==clus]
+    
+    des <- model.matrix(~0 + APOE_syn + Sex + Age + Anc_Afr + pseudo_expr_chrM_ratio, data = colData(dge))
+    des <- as.data.frame(des)
+    
+    # filter low expression genes
+    dge <- edgeR::calcNormFactors(dge)
+    keep <- edgeR::filterByExpr.DGEList(dge,design=des)
+    dge <- dge[keep,,keep.lib.sizes=FALSE]
+    dge <- edgeR::calcNormFactors(dge)
+    
+    message(Sys.time(), sprintf(" - voomLmFit - cluster: %s, block= '%s', ncol: %s, ngene: %i", clus, batch, ncol(dge), nrow(dge$genes)))
+    
+    # make these more readable
+    colnames(des) <- gsub(colnames(des),pattern="_syn",replacement="_")
+    
+    ## run voomLmFit for the pseudobulked data, referring donor to duplicateCorrelation; 
+    ## using an adaptive span (number of genes, based on the number of genes in the dge) for smoothing the mean-variance trend
+    v.swt <- voomLmFit(dge,design = des,block = as.factor(dge$samples[[batch]]),adaptive.span = T,sample.weights = T)
+    
+    cont <- makeContrasts(
+        ## main
+        carrier = "-0.5*(APOE_E2.E2 + APOE_E2.E3) + 0.5*(APOE_E3.E4 + APOE_E4.E4)",
+        E4E4 = "-APOE_E4.E4 + (APOE_E2.E2 + APOE_E2.E3 + APOE_E3.E4)/3",
+        ## apoe pairwise
+        apoe_E2E2_E4E4 = "-APOE_E2.E2 + APOE_E4.E4",
+        apoe_E3E4_E4E4 = "-APOE_E3.E4 + APOE_E4.E4",
+        apoe_E2E3_E4E4 = "-APOE_E2.E3 + APOE_E4.E4",
+        apoe_E2E2_E3E4 = "-APOE_E2.E2 + APOE_E3.E4",
+        apoe_E2E2_E2E3 = "-APOE_E2.E2 + APOE_E2.E3",
+        apoe_E2E3_E3E4 = "-APOE_E2.E3 + APOE_E3.E4",
+        # heterozygous vs. homozygous
+        anyE2_E4E4 = "- 0.5*(APOE_E2.E3 + APOE_E2.E2) + APOE_E4.E4",
+        E2E2_anyE4 = "-APOE_E2.E2 + 0.5*(APOE_E3.E4 + APOE_E4.E4)",
+        E2E3_anyE4 = "-APOE_E2.E3 + 0.5*(APOE_E3.E4 + APOE_E4.E4)",
+        ## other
+        Sex="SexM",
+        Anc="Anc_Afr",
+        levels=des
+    )
+    
+    v.swt.fit <- contrasts.fit(v.swt,contrasts=cont)
+    v.swt.fit.e <- eBayes(v.swt.fit)
+    
+    ## run top table over contrasts
+    v.swt.e.tt <- purrr::map(colnames(cont), ~topTable(v.swt.fit.e,coef = .x, number=Inf, adjust.method = "BH") |>
+                                 mutate(data_type = opt$datatype, 
+                                        cluster = clus,
+                                        contrast = .x, 
+                                        .before = 1) |>
+                                 arrange(adj.P.Val)) 
+    
+    names(v.swt.e.tt) <- colnames(cont)
+    
+    message("Done - Save data")
+    saveRDS(v.swt.e.tt, file = here(data_dir, sprintf("voomLmFit_%s_%s.rds", opt$datatype, clus)))
+    return(purrr::map_int(v.swt.e.tt, ~sum(.x$adj.P.Val < 0.05)))
+})
+
+lmf_summary <- lmf_summary |>
+    add_column(cluster = clusters, .before=1)
+
+write.csv(lmf_summary, file = here(data_dir, sprintf("vlmf_FDR05_summary-%s.csv", opt$datatype)), row.names = FALSE)
 
 ## ============================================================================/
+
 
 Idents(SeuratOBJ_pb) <- "cell_type"
 cluster_ids <- levels(SeuratOBJ_pb)
