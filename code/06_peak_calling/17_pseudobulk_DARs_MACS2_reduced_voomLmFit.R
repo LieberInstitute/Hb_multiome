@@ -154,9 +154,6 @@ meta$sex[!grepl("S03|S08|S11", meta$donor)] <- "M"
 meta$ethnicity[grepl("S06", meta$donor)] <- "AA"
 meta$age[grepl("S12", meta$donor)] <- 57.5
 
-# Now build the model.matrix
-design <- model.matrix(~0 + sex + ethnicity + age, data = colData(dge))
-
 SeuratOBJ_pb@meta.data <- meta
 head(meta)
 
@@ -194,6 +191,8 @@ sce_pb$registration_variable <- sce_pb$orig.ident
 clusters <- levels(sce_pb$registration_variable)
 names(clusters) <- clusters
 
+# batch ? 
+
 message(Sys.time(), " - Loop voomlmFit by cluster")
 
 lmf_summary <- map_dfr(clusters, function(clus){
@@ -210,20 +209,29 @@ lmf_summary <- map_dfr(clusters, function(clus){
     #des <- model.matrix(~0 + APOE_syn + Sex + Age + Anc_Afr + pseudo_expr_chrM_ratio, data = colData(dge))
     des <- model.matrix(~0 + sex + ethnicity, data = colData(dge))
     des <- as.data.frame(des)
+    #               sexF    sexM    ethnicityEA/CAUC
+    # Endo_S03-Hb-r    1    0                1
+    # Endo_S04-Hb-r    0    1                1
+    # Endo_S05-Hb-r    0    1                1
+    # Endo_S06-Hb-r    0    1                0
+    # Endo_S07-Hb-r    0    1                1
     
     # filter low expression genes
     dge <- edgeR::calcNormFactors(dge)
     keep <- edgeR::filterByExpr.DGEList(dge,design=des)
     dge <- dge[keep,,keep.lib.sizes=FALSE]
     dge <- edgeR::calcNormFactors(dge)
+    head(dge)
     
-    message(Sys.time(), sprintf(" - voomLmFit - cluster: %s, block= '%s', ncol: %s, ngene: %i", clus, batch, ncol(dge), nrow(dge$genes)))
+    #message(Sys.time(), sprintf(" - voomLmFit - cluster: %s, block= '%s', ncol: %s, ngene: %i", clus, batch, ncol(dge), nrow(dge$genes)))
     
     # make these more readable
-    colnames(des) <- gsub(colnames(des),pattern="_syn",replacement="_")
+    #colnames(des) <- gsub(colnames(des),pattern="_syn",replacement="_")
     
     ## run voomLmFit for the pseudobulked data, referring donor to duplicateCorrelation; 
     ## using an adaptive span (number of genes, based on the number of genes in the dge) for smoothing the mean-variance trend
+    #v.swt <- voomLmFit(dge,design = des,block = as.factor(dge$samples[[batch]]),adaptive.span = T,sample.weights = T)
+    
     v.swt <- voomLmFit(dge,design = des,block = as.factor(dge$samples[[batch]]),adaptive.span = T,sample.weights = T)
     
     cont <- makeContrasts(
