@@ -151,6 +151,7 @@ meta$sex[grepl("S03|S08|S11", meta$donor)] <- "F"
 meta$sex[!grepl("S03|S08|S11", meta$donor)] <- "M"
 #meta$ethnicity[grepl("S03|S12", meta$donor)] <- "EA/CAUC"
 
+SeuratOBJ_pb@meta.data <- meta
 head(meta)
 
 # ====/
@@ -166,11 +167,24 @@ use_block      <- TRUE         # TRUE = account for repeated measures (e.g., don
 # robust_ebayes  <- TRUE         # TRUE = robust empirical Bayes
 fdr_cutoff     <- 0.10
 
+
 ## ============================================================================/
 
-dim(sce_pb)
-table(sce_pb$registration_variable)
 
+## convert Seurat object into sce
+sce_pb <- as.SingleCellExperiment(SeuratOBJ_pb,
+                                  layer = PSEUDO_ATAC_ASSAY)
+dim(sce_pb)
+sce_pb
+table(sce_pb$orig.ident)
+# Astrocyte       Endo Excit.Thal Inhib.Thal      LHb.1    LHb.1.3  LHb.1.3.4 
+#   10         10         10         10         10          7         10 
+# LHb.2.7      LHb.4      LHb.7      MHb.1    MHb.1.2      MHb.2      MHb.3 
+#   10         10          6         10         10         10         10 
+# Microglia      Oligo        OPC       Thal 
+#   10          10         10          6 
+
+sce_pb$registration_variable <- sce_pb$orig.ident
 clusters <- levels(sce_pb$registration_variable)
 names(clusters) <- clusters
 
