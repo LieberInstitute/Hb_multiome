@@ -12,6 +12,7 @@ suppressPackageStartupMessages({
     library("Matrix")    # if counts are sparse; otherwise base matrix is fine
     library("data.table")
 })
+library("SingleCellExperiment")
 library("ggplot2")
 library("ggrepel") 
 library("future")
@@ -145,11 +146,16 @@ tail(meta)
 ## add additional meta-data
 ## create new columna and initialize all values
 meta$sex <- NA
-meta$ethnicity <- "EA/CAUC" # waiting confirmation
+meta$ethnicity <- "EA/CAUC" # waiting confirmation KDM
+meta$age <- 41.3  # waiting confirmation KDM
 
 meta$sex[grepl("S03|S08|S11", meta$donor)] <- "F"
 meta$sex[!grepl("S03|S08|S11", meta$donor)] <- "M"
-#meta$ethnicity[grepl("S03|S12", meta$donor)] <- "EA/CAUC"
+meta$ethnicity[grepl("S06", meta$donor)] <- "AA"
+meta$age[grepl("S12", meta$donor)] <- 57.5
+
+# Now build the model.matrix
+design <- model.matrix(~0 + sex + ethnicity + age, data = colData(dge))
 
 SeuratOBJ_pb@meta.data <- meta
 head(meta)
@@ -191,10 +197,18 @@ names(clusters) <- clusters
 message(Sys.time(), " - Loop voomlmFit by cluster")
 
 lmf_summary <- map_dfr(clusters, function(clus){
+    # clus = "Endo"
+    dge <- sce_pb[,sce_pb$registration_variable == clus]
     
-    dge <- sce_pb[,sce_pb$registration_variable ==clus]
+    ## set up the variables
+    colData(dge)$sex <- as.factor(colData(dge)$sex)
+    levels(dge$sex)
+    colData(dge)$ethnicity <- as.factor(colData(dge)$ethnicity)
+    levels(dge$ethnicity)
+    colData(dge)$age <- as.numeric(colData(dge)$age)
     
-    des <- model.matrix(~0 + APOE_syn + Sex + Age + Anc_Afr + pseudo_expr_chrM_ratio, data = colData(dge))
+    #des <- model.matrix(~0 + APOE_syn + Sex + Age + Anc_Afr + pseudo_expr_chrM_ratio, data = colData(dge))
+    des <- model.matrix(~0 + sex + ethnicity, data = colData(dge))
     des <- as.data.frame(des)
     
     # filter low expression genes
