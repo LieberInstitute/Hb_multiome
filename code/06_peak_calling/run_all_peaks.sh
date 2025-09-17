@@ -8,18 +8,11 @@
 #SBATCH -e /dev/null
 # SBATCH --mail-type=ALL
 
-00_link_peaks.sh
-06_exploratory_peak_scores.sh
-
-
-set -e
-
+## Run all for LinkPeaks and DARs in pseudobulk multiome assays
+## - Peaks from macs2 --> reduce() 
 
 echo "**** Job starts ****"
-
-
 echo "Run run_all_peaks"
-
 
 date
 
@@ -40,25 +33,47 @@ SUBDIR="06_peak_calling"
 cd ${CODEDIR}/${SUBDIR}
 pwd
 
-echo "===== Make Coverage Plots for cannonical genes and top5 DEG ................."
+echo "===== Call macs2  ................."
+
 ## rm previous log files and output files
-rm -f ${CODEDIR}/${SUBDIR}/logs/01_coverage_basic.txt
-rm -f ${PLOTDIR}/${SUBDIR}/*.png
-rm -f ${PLOTDIR}/${SUBDIR}/*.pdf
-sbatch 01_coverage_basic.sh
+# rm -f ${CODEDIR}/${SUBDIR}/logs/01_coverage_basic.txt
+# rm -f ${PLOTDIR}/${SUBDIR}/*.png
+# rm -f ${PLOTDIR}/${SUBDIR}/*.pdf
+
+id1=$(sbatch --parsable 01_call_peaks_MACS2.sh)    
+echo $id1
+
+echo "===== Merge macs2 peaks  ................."
+
+id2=$(sbatch --parsable --dependency=afterok:$id1 11_peaks_merge_MACS2.sh)
+echo $id2
+
+echo "===== Pseudobulk Merge macs2 peaks  ................."
+
+id3=$(sbatch --parsable --dependency=afterok:$id2 12_pseudobulk_MACS2.sh)
+echo $id3
+
+echo "===== LinkPeaks in pb assays with merge macs2 peaks / by cell-type  ................."
+
+id4=$(sbatch --parsable --dependency=afterok:$id3 13_pseudobulk_LinkPeaks_MACS2_split_ct.sh)
+## Make distribution plots to evaluate Peak scores
+sbatch --dependency=afterok:$id4 14_exploratory_pb_peak_scores_MACS2.sh
+
+
+echo "===== DARs (search markers) in pb assays with merge macs2 peaks / by cell-type  ................."
+
+id5=$(sbatch --parsable --dependency=afterok:$id3 16_pseudobulk_DARs_MACS2_reduced.sh)
+
+
+echo "===== DARs (voomLmFit) in pb assays with merge macs2 peaks / by cell-type  ................."
+
+id6=$(sbatch --parsable --dependency=afterok:$id3 17_pseudobulk_DARs_MACS2_reduced_voomLmFit.R)
+
+
+
 echo "Done!!-------------------------------------------------------------------"
-
-echo "===== Call Peaks - 01_coverage_basic.R .................................."
-
-# id1=$(sbatch --parsable 01_clustering_std_method_v2.sh)
-# echo $id1
-echo "Done!!-------------------------------------------------------------------"
-
-
-
 
 echo "**** Job ends ****"
-
 
 date
 
