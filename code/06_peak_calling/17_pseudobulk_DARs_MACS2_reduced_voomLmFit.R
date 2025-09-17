@@ -92,7 +92,6 @@ lst_peak_files
 ## Input: Seurat object with pseudobulk RNA+ATAC assay with merged peaks
 ########################################################################
 
-##==============================================================================
 ## Load Seurat / macs peaks / filtered genes. And make verification
 
 seurat_name <- here(inputRDS_Dir, Seurat_base_name)
@@ -111,6 +110,14 @@ SeuratOBJ_pb
 # DefaultAssay(SeuratOBJ_pb) <- "RNA"
 # rna_counts <- GetAssayData(SeuratOBJ_pb, assay="RNA", layer="data")
 # length(rownames(rna_counts)) # [1] 36601
+
+#Idents(SeuratOBJ_pb) <- "cell_type"
+SeuratOBJ_pb@meta.data["orig.ident"]
+cluster_ids <- levels(SeuratOBJ_pb)
+
+message("Pseudobulk groups (cell-types):")
+cluster_ids
+
 
 ## =============================================================================
 
@@ -135,6 +142,22 @@ meta$donor <- sapply(strsplit(row.names(meta), "_", fixed = TRUE),
                 "[[", 2)
 tail(meta)
 
+## add additional meta-data
+## create new columna and initialize all values
+meta$sex <- NA
+meta$ethnicity <- "EA/CAUC" # waiting confirmation
+
+meta$sex[grepl("S03|S08|S11", meta$donor)] <- "F"
+meta$sex[!grepl("S03|S08|S11", meta$donor)] <- "M"
+#meta$ethnicity[grepl("S03|S12", meta$donor)] <- "EA/CAUC"
+
+head(meta)
+
+# ====/
+
+
+
+
 stopifnot(all(colnames(atac_counts) == meta$sample_id))
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
@@ -147,16 +170,10 @@ trend_ebayes   <- TRUE         # TRUE = eBayes(trend=TRUE) often good for counts
 robust_ebayes  <- TRUE         # TRUE = robust empirical Bayes
 fdr_cutoff     <- 0.10
 
+
+
+
 ## ============================================================================/
-
-
-
-## Ensure we are contrasting by cell-type
-if (!"cell_type" %in% colnames(SeuratOBJ_pb@meta.data)) {
-    SeuratOBJ_pb$cell_type <- sub("^[^_]+_", "", SeuratOBJ_pb$orig.ident)  # keep part after first underscore
-}
-length(SeuratOBJ_pb$cell_type)
-# [1] 169
 
 Idents(SeuratOBJ_pb) <- "cell_type"
 cluster_ids <- levels(SeuratOBJ_pb)
@@ -164,11 +181,11 @@ cluster_ids <- levels(SeuratOBJ_pb)
 message("Pseudobulk groups (cell-types):")
 cluster_ids
 
-## Define ATAC assay and metadata grouping
-PSEUDO_ATAC_ASSAY <- "ATAC_macs2_merged_pseudo"  
-grouping_var <- "orig.ident"    
-# Set default assay
-DefaultAssay(SeuratOBJ_pb) <- PSEUDO_ATAC_ASSAY
+# ## Define ATAC assay and metadata grouping
+# PSEUDO_ATAC_ASSAY <- "ATAC_macs2_merged_pseudo"  
+# grouping_var <- "orig.ident"    
+# # Set default assay
+# DefaultAssay(SeuratOBJ_pb) <- PSEUDO_ATAC_ASSAY
 
 ## double-check depth differences between pseudobulk samples
 ## Check total counts per pseudobulk sample
