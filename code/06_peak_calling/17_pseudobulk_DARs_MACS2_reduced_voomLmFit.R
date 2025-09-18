@@ -12,7 +12,7 @@ suppressPackageStartupMessages({
     library("Matrix")    # if counts are sparse; otherwise base matrix is fine
     library("data.table")
 })
-library("SingleCellExperiment")
+library("spatialLIBD")
 library("ggplot2")
 library("ggrepel") 
 library("future")
@@ -138,24 +138,24 @@ meta$donor <- sapply(strsplit(row.names(meta), "_", fixed = TRUE),
 tail(meta)
 
 ## add additional meta-data
-## create new columna and initialize all values
 meta$sex <- "M"
-meta$ethnicity <- "EA/CAUC" # waiting confirmation KDM
+meta$ethnicity <- "EA.CAUC" # waiting confirmation KDM
 meta$sex[grepl("S03|S08|S11", meta$donor)] <- "F"
 meta$ethnicity[grepl("S04|S05", meta$donor)] <- "AA"
-meta$sex[grepl("S03", meta$donor)] <- 41.3
-meta$sex[grepl("S04", meta$donor)] <- 40.57
-meta$sex[grepl("S05", meta$donor)] <- 46.72
-meta$sex[grepl("S06", meta$donor)] <- 33.39
-meta$sex[grepl("S07", meta$donor)] <- 48.88
-meta$sex[grepl("S08", meta$donor)] <- 37.33
-meta$sex[grepl("S09", meta$donor)] <- 39.98
-meta$sex[grepl("S10", meta$donor)] <- 47.95
-meta$sex[grepl("S11", meta$donor)] <- 65
-meta$sex[grepl("S12", meta$donor)] <- 57.7
+meta$age[grepl("S03", meta$donor)] <- 41.3
+meta$age[grepl("S04", meta$donor)] <- 40.57
+meta$age[grepl("S05", meta$donor)] <- 46.72
+meta$age[grepl("S06", meta$donor)] <- 33.39
+meta$age[grepl("S07", meta$donor)] <- 48.88
+meta$age[grepl("S08", meta$donor)] <- 37.33
+meta$age[grepl("S09", meta$donor)] <- 39.98
+meta$age[grepl("S10", meta$donor)] <- 47.95
+meta$age[grepl("S11", meta$donor)] <- 65
+meta$age[grepl("S12", meta$donor)] <- 57.7
 
 SeuratOBJ_pb@meta.data <- meta
 head(meta)
+
 
 ## Ensure we are contrasting by cell-type
 if (!"cell_type" %in% colnames(SeuratOBJ_pb@meta.data)) {
@@ -198,7 +198,7 @@ colData(sce_pb)
 ## SingleCellExperiment() attempts to transfer data from the Seurat object's feature metadata to the SCE object's rowData. 
 ## - But Seurat meta.data are saved in Seurat@meta.data, thus feature-level metadata need to be added directly to Seurat
 rowData(sce_pb)
-# meta
+# DataFrame with 351037 rows and 0 columns
 table(sce_pb$cell_type)
 # Astrocyte       Endo Excit.Thal Inhib.Thal      LHb.1    LHb.1.3  LHb.1.3.4 
 #   10         10         10         10         10          7         10 
@@ -212,278 +212,260 @@ table(sce_pb$donor)
 # S11-Hb-r S12-Hb-r 
 # 17       16 
 
-sce_pb$registration_variable <- as.factor(sce_pb$cell_type)
-unique(sce_pb$registration_variable)
-clusters <- levels(sce_pb$registration_variable)
-names(clusters) <- clusters
+## required columns
+sce_pb$registration_variable <- factor(sce_pb$cell_type)          # group to test
+sce_pb$registration_sample_id <- factor(sce_pb$donor)             # block by donor
+sce_pb$ethnicity <- factor(sce_pb$ethnicity, levels = c("AA", "EA.CAUC"))
+sce_pb$sex <- factor(sce_pb$sex, levels = c("F", "M"))
+sce_pb$age <- as.numeric(sce_pb$age)
 
-# batch ? 
-batch <- "donor" 
+## Provide logcounts for ATAC pseudobulk
+dge <- DGEList(counts = assay(sce_pb, "counts"))
+dge <- calcNormFactors(dge, method = "TMM")
+sizeFactors(sce_pb) <- dge$samples$norm.factors * dge$samples$lib.size / exp(mean(log(dge$samples$lib.size)))
+
+# Compute CPM normalized counts, then log-transform
+lcpm <- scuttle::calculateCPM(sce_pb, size.factors = sizeFactors(sce_pb))
+logcounts(sce_pb) <- log2(lcpm + 1)
+
+## annotate rows
+rowData(sce_pb)$peak_id <- rownames(sce_pb)
+
+# Inspect the registration model
+covars_vec <- c("age", "sex", "ethnicity")
+reg_mod <- registration_model(
+    sce_pseudo = sce_pb,
+    covars = covars_vec,
+    var_registration = "registration_variable"
+)
+head(reg_mod)  # inspect column names / coding
+
+
+
+
 
 message(Sys.time(), " - Loop voomlmFit by cluster")
 
-lmf_summary <- map_dfr(clusters, function(clus){
-    # clus = "Endo"
-    dge <- sce_pb[,sce_pb$registration_variable == clus]
-    
-    ## set up the variables
-    colData(dge)$sex <- as.factor(colData(dge)$sex)
-    levels(dge$sex)
-    colData(dge)$ethnicity <- as.factor(colData(dge)$ethnicity)
-    levels(dge$ethnicity)
-    colData(dge)$age <- as.numeric(colData(dge)$age)
-    
-    #des <- model.matrix(~0 + APOE_syn + Sex + Age + Anc_Afr + pseudo_expr_chrM_ratio, data = colData(dge))
-    des <- model.matrix(~0 + sex + ethnicity, data = colData(dge))
-    des <- as.data.frame(des)
-    des
-    #               sexF    sexM    ethnicityEA/CAUC
-    # Endo_S03-Hb-r    1    0                1
-    # Endo_S04-Hb-r    0    1                1
-    # Endo_S05-Hb-r    0    1                1
-    # Endo_S06-Hb-r    0    1                0
-    # Endo_S07-Hb-r    0    1                1
-    
-    # filter low expression genes
-    dge <- edgeR::calcNormFactors(dge)
-    keep <- edgeR::filterByExpr.DGEList(dge,design=des)
-    dge <- dge[keep,,keep.lib.sizes=FALSE]
-    dge <- edgeR::calcNormFactors(dge)
-    head(dge)
-    
-    #message(Sys.time(), sprintf(" - voomLmFit - cluster: %s, block= '%s', ncol: %s, ngene: %i", clus, batch, ncol(dge), nrow(dge$genes)))
-    
-    # make these more readable
-    #colnames(des) <- gsub(colnames(des),pattern="_syn",replacement="_")
-    
-    ## run voomLmFit for the pseudobulked data, referring donor to duplicateCorrelation; 
-    ## using an adaptive span (number of genes, based on the number of genes in the dge) for smoothing the mean-variance trend
-    #v.swt <- voomLmFit(dge,design = des,block = as.factor(dge$samples[[batch]]),adaptive.span = T,sample.weights = T)
-    
-    v.swt <- voomLmFit(dge,design = des,block = as.factor(dge$samples[[batch]]),adaptive.span = T,sample.weights = T)
-    
-    cont <- makeContrasts(
-        ## main
-        carrier = "-0.5*(APOE_E2.E2 + APOE_E2.E3) + 0.5*(APOE_E3.E4 + APOE_E4.E4)",
-        E4E4 = "-APOE_E4.E4 + (APOE_E2.E2 + APOE_E2.E3 + APOE_E3.E4)/3",
-        ## apoe pairwise
-        apoe_E2E2_E4E4 = "-APOE_E2.E2 + APOE_E4.E4",
-        apoe_E3E4_E4E4 = "-APOE_E3.E4 + APOE_E4.E4",
-        apoe_E2E3_E4E4 = "-APOE_E2.E3 + APOE_E4.E4",
-        apoe_E2E2_E3E4 = "-APOE_E2.E2 + APOE_E3.E4",
-        apoe_E2E2_E2E3 = "-APOE_E2.E2 + APOE_E2.E3",
-        apoe_E2E3_E3E4 = "-APOE_E2.E3 + APOE_E3.E4",
-        # heterozygous vs. homozygous
-        anyE2_E4E4 = "- 0.5*(APOE_E2.E3 + APOE_E2.E2) + APOE_E4.E4",
-        E2E2_anyE4 = "-APOE_E2.E2 + 0.5*(APOE_E3.E4 + APOE_E4.E4)",
-        E2E3_anyE4 = "-APOE_E2.E3 + 0.5*(APOE_E3.E4 + APOE_E4.E4)",
-        ## other
-        Sex="SexM",
-        Anc="Anc_Afr",
-        levels=des
-    )
-    
-    v.swt.fit <- contrasts.fit(v.swt,contrasts=cont)
-    v.swt.fit.e <- eBayes(v.swt.fit)
-    
-    ## run top table over contrasts
-    v.swt.e.tt <- purrr::map(colnames(cont), ~topTable(v.swt.fit.e,coef = .x, number=Inf, adjust.method = "BH") |>
-                                 mutate(data_type = opt$datatype, 
-                                        cluster = clus,
-                                        contrast = .x, 
-                                        .before = 1) |>
-                                 arrange(adj.P.Val)) 
-    
-    names(v.swt.e.tt) <- colnames(cont)
-    
-    message("Done - Save data")
-    saveRDS(v.swt.e.tt, file = here(data_dir, sprintf("voomLmFit_%s_%s.rds", opt$datatype, clus)))
-    return(purrr::map_int(v.swt.e.tt, ~sum(.x$adj.P.Val < 0.05)))
-})
+## run voomLmFit: Transform count data to log2-counts per million (logCPM), estimate voom precision weights and fit limma linear models while allowing for loss of residual degrees of freedom due to exact zeros
 
-lmf_summary <- lmf_summary |>
-    add_column(cluster = clusters, .before=1)
+## ============================================================================/
+## version adapter from https://github.com/LieberInstitute/DeconvoBuddies/blob/d128d498c18318d05528bf75c6fa8436f1bab8c6/R/findMarkers_1vAll.R
+## And from my previous implementation: https://github.com/LieberInstitute/Habenula_Visium/blob/2d21e39f51c9e46ebddbcf57f959f70c27d78678/code/05_brain_area_differential_expression/05_pseudobulk_DEG_contrast.R#L176-L255 
 
-write.csv(lmf_summary, file = here(data_dir, sprintf("vlmf_FDR05_summary-%s.csv", opt$datatype)), row.names = FALSE)
+# Input
+# logcounts(sce_pseudo) peaks (it fits limma on log-scale data)
+# var_registration: in my case cellType
+# var_sample_id: blocking by donor factor
+# covars:age, sex and ethnicity
 
+
+
+
+
+
+
+
+
+
+
+
+
+## ============================================================================/
+## version from LFF_sspatial_ERC project (Louise)
+## https://github.com/LieberInstitute/LFF_spatial_ERC/blob/b0b174759f0f539d7d6e7362df9205d7daebbf22/code/12_voomLmFit/01_Clusterwise_voomLmFit.R
+# 
+# lmf_summary <- map_dfr(clusters, function(clus){
+#     # clus = "Endo"
+#     
+#     dge <- sce_pb[,sce_pb$registration_variable == clus]
+#     # class: SingleCellExperiment 
+#     # dim: 351037 10 
+#     # metadata(0):
+#     #     assays(2): counts logcounts
+#     # rownames(351037): chr1-181329-181534 chr1-191217-191619 ...
+#     # KI270728.1-1791302-1791701 KI270728.1-1792066-1792310
+#     # rowData names(0):
+#     #     colnames(10): Endo_S03-Hb-r Endo_S04-Hb-r ... Endo_S11-Hb-r
+#     # Endo_S12-Hb-r
+#     # colData names(13): orig.ident nCount_RNA ... ident
+#     # registration_variable
+#     # reducedDimNames(1): LSI
+#     # mainExpName: ATAC_macs2_merged_pseudo
+#     # altExpNames(1): RNA
+#     
+#     ## set up the variables
+#     colData(dge)$sex <- as.factor(colData(dge)$sex)
+#     levels(dge$sex) # [1] "F" "M"
+#     colData(dge)$ethnicity <- as.factor(colData(dge)$ethnicity)
+#     levels(dge$ethnicity) # [1] "AA"      "EA.CAUC"
+#     colData(dge)$age <- as.numeric(colData(dge)$age)
+#     
+#     #des <- model.matrix(~0 + APOE_syn + Sex + Age + Anc_Afr + pseudo_expr_chrM_ratio, data = colData(dge))
+#     des <- model.matrix(~0 + sex + ethnicity + age , data = colData(dge))
+#     # sexF, sexM, ethnicityAA, ethnicityEA.CAUC, age
+#     colnames(des) <- make.names(colnames(des))
+#     # ~0 + → no intercept
+#     # sex (2 levels: F, M) → 2 columns: sexF, sexM
+#     # ethnicity (2 levels: "AA", "EA/CAUC") → 2 columns: ethnicityAA, ethnicityEA.CAUC
+#     # age (numeric) → 1 column: age
+#     
+#     des_df <- as.data.frame(des)
+#     des_df
+#     # sexF sexM ethnicityEA.CAUC   age
+#     # Endo_S03-Hb-r    1    0                1 41.30
+#     # Endo_S04-Hb-r    0    1                0 40.57
+#     # Endo_S05-Hb-r    0    1                0 46.72
+#     # Endo_S06-Hb-r    0    1                1 33.39
+#     # Endo_S07-Hb-r    0    1                1 48.88
+#     # Endo_S08-Hb-r    1    0                1 37.33
+#     # Endo_S09-Hb-r    0    1                1 39.98
+#     # Endo_S10-Hb-r    0    1                1 47.95
+#     # Endo_S11-Hb-r    1    0                1 65.00
+#     # Endo_S12-Hb-r    0    1                1 57.70
+#     
+#     # filter low expression genes
+#     dge <- edgeR::calcNormFactors(dge)
+#     keep <- edgeR::filterByExpr.DGEList(dge,design=des)
+#     dge <- dge[keep,,keep.lib.sizes=FALSE]
+#     dge <- edgeR::calcNormFactors(dge)
+#     head(dge, n=2)
+#     
+#     # >     head(dge, n=2)
+#     # An object of class "DGEList"
+#     # $counts
+#     # Endo_S03-Hb-r Endo_S04-Hb-r Endo_S05-Hb-r Endo_S06-Hb-r
+#     # chr1-629811-630032             9             9            27            28
+#     # chr1-633694-634122            31            68           135           157
+#     # Endo_S07-Hb-r Endo_S08-Hb-r Endo_S09-Hb-r Endo_S10-Hb-r
+#     # chr1-629811-630032            17            29            22            23
+#     # chr1-633694-634122           105           129           105           134
+#     # Endo_S11-Hb-r Endo_S12-Hb-r
+#     # chr1-629811-630032             7             4
+#     # chr1-633694-634122            15             8
+#     # 
+#     # $samples
+#     # group lib.size norm.factors orig.ident nCount_RNA nFeature_RNA
+#     # Endo_S03-Hb-r     1      910    0.9578798       Endo     104052        10740
+#     # Endo_S04-Hb-r     1     2478    1.3085681       Endo     208249        14020
+#     # Endo_S05-Hb-r     1     5381    0.3267022       Endo     102209        12480
+#     # Endo_S06-Hb-r     1     4926    1.2079846       Endo     275224        14319
+#     # Endo_S07-Hb-r     1     1619    0.9246938       Endo     180751        13337
+#     # Endo_S08-Hb-r     1     1239    0.9702263       Endo      97452        11324
+#     # Endo_S09-Hb-r     1     4095    1.3104865       Endo     222285        13848
+#     # Endo_S10-Hb-r     1     2434    1.1383460       Endo     135145        12464
+#     # Endo_S11-Hb-r     1      365    1.3083337       Endo      48230         9096
+#     # Endo_S12-Hb-r     1      404    1.1544705       Endo      20285         6345
+#     # nCount_ATAC_macs2_merged_pseudo nFeature_ATAC_macs2_merged_pseudo
+#     # Endo_S03-Hb-r                           71264                             56601
+#     # Endo_S04-Hb-r                          201904                            121829
+#     # Endo_S05-Hb-r                          186304                            123898
+#     # Endo_S06-Hb-r                          347620                            171788
+#     # Endo_S07-Hb-r                           83383                             62606
+#     # Endo_S08-Hb-r                           63774                             47724
+#     # Endo_S09-Hb-r                          227054                            123037
+#     # Endo_S10-Hb-r                          121119                             75853
+#     # Endo_S11-Hb-r                           27142                             24644
+#     # Endo_S12-Hb-r                           10583                              9726
+#     # sample_id    donor sex ethnicity   age cell_type ident
+#     # Endo_S03-Hb-r Endo_S03-Hb-r S03-Hb-r   F   EA/CAUC 41.30      Endo  Endo
+#     # Endo_S04-Hb-r Endo_S04-Hb-r S04-Hb-r   M        AA 40.57      Endo  Endo
+#     # Endo_S05-Hb-r Endo_S05-Hb-r S05-Hb-r   M        AA 46.72      Endo  Endo
+#     # Endo_S06-Hb-r Endo_S06-Hb-r S06-Hb-r   M   EA/CAUC 33.39      Endo  Endo
+#     # Endo_S07-Hb-r Endo_S07-Hb-r S07-Hb-r   M   EA/CAUC 48.88      Endo  Endo
+#     # Endo_S08-Hb-r Endo_S08-Hb-r S08-Hb-r   F   EA/CAUC 37.33      Endo  Endo
+#     # Endo_S09-Hb-r Endo_S09-Hb-r S09-Hb-r   M   EA/CAUC 39.98      Endo  Endo
+#     # Endo_S10-Hb-r Endo_S10-Hb-r S10-Hb-r   M   EA/CAUC 47.95      Endo  Endo
+#     # Endo_S11-Hb-r Endo_S11-Hb-r S11-Hb-r   F   EA/CAUC 65.00      Endo  Endo
+#     # Endo_S12-Hb-r Endo_S12-Hb-r S12-Hb-r   M   EA/CAUC 57.70      Endo  Endo
+#     # registration_variable
+#     # Endo_S03-Hb-r                  Endo
+#     # Endo_S04-Hb-r                  Endo
+#     # Endo_S05-Hb-r                  Endo
+#     # Endo_S06-Hb-r                  Endo
+#     # Endo_S07-Hb-r                  Endo
+#     # Endo_S08-Hb-r                  Endo
+#     # Endo_S09-Hb-r                  Endo
+#     # Endo_S10-Hb-r                  Endo
+#     # Endo_S11-Hb-r                  Endo
+#     # Endo_S12-Hb-r                  Endo
+#     
+#     #message(Sys.time(), sprintf(" - voomLmFit - cluster: %s, block= '%s', ncol: %s, ngene: %i", clus, batch, ncol(dge), nrow(dge$genes)))
+#     message(Sys.time(), sprintf(" - voomLmFit - cluster: %s, block= '%s', ncol: %s, nATAC: %i", clus, batch, ncol(dge), nrow(dge$counts)))
+#     
+#     
+#     ## run voomLmFit for the pseudobulked data, referring donor to duplicateCorrelation; 
+#     ## using an adaptive span (number of genes, based on the number of genes in the dge) for smoothing the mean-variance trend
+#     #v.swt <- voomLmFit(dge,design = des,block = as.factor(dge$samples[[batch]]),adaptive.span = T,sample.weights = T)
+#     
+#     v.swt <- voomLmFit(dge$counts,                               # numeric matrix containing raw counts
+#                        design = des,                             # rows corresponding to samples and columns to coefficients to be estimated
+#                        block = as.factor(dge$samples[[batch]]),  # blocking variable on the samples / donor
+#                        #adaptive.span = T,                        # width of smoothing window for the lowess mean-variance trend. Proportion between 0 and 1
+#                        sample.weights = T)                       # if TRUE then empirical sample quality weights will be estimated
+#     
+#     # First sample weights (min/max) 0.2176917/1.8742648
+#     # First intra-block correlation  0
+#     # Final sample weights (min/max) 0.2533203/1.9176781
+#     # Final intra-block correlation  0
+#     
+#     # This function returns df.residual values that are less than or equal to those from lmFit 
+#     # - and sigma values that are greater than or equal to those from lmFit
+#     v.swt
+#     
+#     # make these more readable
+#     cont <- makeContrasts(
+#         MaleVsFemale = sexM - sexF,
+#         #AfrVsCauc    = ethnicityAA - ethnicityEA.CAUC,
+#         levels = des
+#     )
+#     
+#     # cont <- makeContrasts(
+#     #     # main
+#     #     carrier = "-0.5*(APOE_E2.E2 + APOE_E2.E3) + 0.5*(APOE_E3.E4 + APOE_E4.E4)",
+#     #     E4E4 = "-APOE_E4.E4 + (APOE_E2.E2 + APOE_E2.E3 + APOE_E3.E4)/3",
+#     #     ## apoe pairwise
+#     #     apoe_E2E2_E4E4 = "-APOE_E2.E2 + APOE_E4.E4",
+#     #     apoe_E3E4_E4E4 = "-APOE_E3.E4 + APOE_E4.E4",
+#     #     apoe_E2E3_E4E4 = "-APOE_E2.E3 + APOE_E4.E4",
+#     #     apoe_E2E2_E3E4 = "-APOE_E2.E2 + APOE_E3.E4",
+#     #     apoe_E2E2_E2E3 = "-APOE_E2.E2 + APOE_E2.E3",
+#     #     apoe_E2E3_E3E4 = "-APOE_E2.E3 + APOE_E3.E4",
+#     #     # heterozygous vs. homozygous
+#     #     anyE2_E4E4 = "- 0.5*(APOE_E2.E3 + APOE_E2.E2) + APOE_E4.E4",
+#     #     E2E2_anyE4 = "-APOE_E2.E2 + 0.5*(APOE_E3.E4 + APOE_E4.E4)",
+#     #     E2E3_anyE4 = "-APOE_E2.E3 + 0.5*(APOE_E3.E4 + APOE_E4.E4)",
+#     #     # other
+#     #     Sex="SexM",
+#     #     Anc="Anc_Afr",
+#     #     levels=des
+#     # )
+# 
+#     v.swt.fit <- contrasts.fit(v.swt,contrasts=cont)
+#     v.swt.fit.e <- eBayes(v.swt.fit)
+#     
+#     ## run top table over contrasts
+#     v.swt.e.tt <- purrr::map(colnames(cont), ~topTable(v.swt.fit.e,coef = .x, number=Inf, adjust.method = "BH") |>
+#                                  mutate(data_type = opt$datatype, 
+#                                         cluster = clus,
+#                                         contrast = .x, 
+#                                         .before = 1) |>
+#                                  arrange(adj.P.Val)) 
+#     
+#     names(v.swt.e.tt) <- colnames(cont)
+#     
+#     message("Done - Save data")
+#     saveRDS(v.swt.e.tt, file = here(data_dir, sprintf("voomLmFit_%s_%s.rds", opt$datatype, clus)))
+#     return(purrr::map_int(v.swt.e.tt, ~sum(.x$adj.P.Val < 0.05)))
+# })
+#
+# lmf_summary <- lmf_summary |>
+#     add_column(cluster = clusters, .before=1)
+#
+#write.csv(lmf_summary, file = here(data_dir, sprintf("vlmf_FDR05_summary-%s.csv", opt$datatype)), row.names = FALSE)
+#
 ## ============================================================================/
 
 
-Idents(SeuratOBJ_pb) <- "cell_type"
-cluster_ids <- levels(SeuratOBJ_pb)
-
-message("Pseudobulk groups (cell-types):")
-cluster_ids
-
-# ## Define ATAC assay and metadata grouping
-# PSEUDO_ATAC_ASSAY <- "ATAC_macs2_merged_pseudo"  
-# grouping_var <- "orig.ident"    
-# # Set default assay
-# DefaultAssay(SeuratOBJ_pb) <- PSEUDO_ATAC_ASSAY
-
-## double-check depth differences between pseudobulk samples
-## Check total counts per pseudobulk sample
-col_sums <- colSums(GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer = "counts"))
-col_sums
-# Astrocyte_S03-Hb-r  Astrocyte_S04-Hb-r  Astrocyte_S05-Hb-r  Astrocyte_S06-Hb-r 
-# 2254001              420381             1300877              507894 
-# Astrocyte_S07-Hb-r  Astrocyte_S08-Hb-r  Astrocyte_S09-Hb-r  Astrocyte_S10-Hb-r 
-# 2123583             1832793              830177             1654334 
-message("Library size summary:\n"); print(summary(col_sums))
-# Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
-# 4217    97388   623469  2605095  2827754 46470237 
-
-# ## provide as input reduced peaks, so, this set should be consistent DA across cell-types
-# ## function give per-cluster DA peaks vs all others: cluster marker accessibility
-# 
-# message("Starting DA across cell-types ...")
-# 
-# all_da <- setNames(vector("list", length(cluster_ids)), cluster_ids)
-# 
-# # FindMarkers() internally supports parallelization / MAC
-# future::plan("multicore", workers = 4)
-# 
-# 
-# for (ct in cluster_ids) {
-#     message("[", ct, "]")
-#     # Skip if this cell-type has very few samples
-#     n_samples_ct <- sum(SeuratOBJ_pb$cell_type == ct)
-#     if (n_samples_ct < 3) {
-#         warning("Skipping ", ct, " (only ", n_samples_ct, " pseudobulk samples).")
-#         next
-#     }
-#     res <- tryCatch(
-#         {
-#             tmp <- FindMarkers(
-#                 object   = SeuratOBJ_pb,
-#                 ident.1  = ct,
-#                 ident.2  = NULL,     # group vs. rest
-#                 only.pos = TRUE,
-#                 test.use = "LR"      # used for binary accessibility
-#                 #min.pct = 0.05, logfc.threshold = 0.25
-#             )
-#             tmp$cluster <- ct
-#             tmp$peak    <- rownames(tmp)
-#             tmp$FDR     <- p.adjust(tmp$p_val, method = "BH")
-#             tmp
-#         },
-#         error = function(e) {
-#             warning("FindMarkers failed for ", ct, ": ", conditionMessage(e))
-#             NULL
-#         }
-#     )
-#     all_da[[ct]] <- res
-# }
-# 
-# ## Filter() keeps only elements of a list that return TRUE. Removes NULL entries
-# da_results <- bind_rows(Filter(Negate(is.null), all_da))
-# # Save combined
-# write.csv(da_results, file.path(output_Dir, "DA_all_clusters.csv"), row.names = FALSE)
-# # milestone
-# # da_results <- read.csv(file.path(output_Dir, "DA_all_clusters.csv"))
-# table(da_results$cluster)
-# nrow(da_results)
-# 
-# # indiv. tests by cell-type
-# for (cl in names(all_da)) {
-#     if (is.null(all_da[[cl]])) next
-#     output_path <- here(output_Dir, paste0("DA_", cl, ".csv"))
-#     write.csv(all_da[[cl]], output_path, row.names = FALSE)
-# }
-# 
-# message("Ends DA across cell-types!")
-# 
-# 
-# ################################################################################
-# ## summarize per-cluster stats and extract top enriched peaks
-# 
-# message("Starting summary ...")
-# 
-# da_sig <- da_results |>
-#     filter(FDR < sig_thresh & abs(avg_log2FC) > lfc_thresh)
-# nrow(da_sig)
-# # Tue Sep 16 09:08:48 2025 ------------------------------
-# tail(da_sig)
-# table(da_sig$cluster)
-# 
-# # summary counts per cluster
-# summary_table <- da_sig |>
-#     group_by(cluster) |>
-#     summarise(
-#         n_sig_peaks = n(),
-#         n_up   = sum(avg_log2FC > 0),
-#         n_down = sum(avg_log2FC < 0),
-#         top_peak = peak[which.max(abs(avg_log2FC))],
-#         max_log2FC = max(abs(avg_log2FC))
-#     ) |>
-#     arrange(desc(n_sig_peaks))
-# 
-# # save summary
-# f_name <- here(output_Dir, "DA_summary_per_cluster.csv")
-# write.csv(summary_table, f_name, row.names = FALSE)
-# 
-# # extract top 10 enriched peaks per cluster
-# top10_per_cluster <- da_sig |>
-#     group_by(cluster) |>
-#     arrange(desc(avg_log2FC)) |>
-#     slice_head(n = 10)
-# 
-# table(top10_per_cluster$cluster)
-# 
-# f_name <- here(output_Dir, "DA_top10_per_cluster.csv")
-# write.csv(top10_per_cluster, f_name, row.names = FALSE)
-# 
-# message("Summary and top10 tables saved in: ", output_Dir)
-# 
-# 
-# ########################################################################
-# 
-# message("Starting summary Volcano plots per cluster")
-# 
-# f_name <- here(plotDir, "Volcano_all_clusters.pdf")
-# pdf(f_name, width = 7, height = 6)  
-# 
-# for (ct in unique(da_results$cluster)) {
-#     # ct = unique(da_results$cluster[1])
-#     df <- da_results |> filter(cluster == ct)
-#     
-#     # mark significant points
-#     df$signif <- with(df, ifelse(FDR < sig_thresh & abs(avg_log2FC) > lfc_thresh, "significant", "not"))
-#     colnames(df)
-#     
-#     # select top 5 peaks by FDR
-#     top5 <- df |>
-#         arrange(FDR) |>
-#         slice_head(n = 5)
-#     
-#     p <- ggplot(df, aes(x = avg_log2FC, y = -log10(FDR))) +
-#         geom_point(aes(color = signif), alpha = 0.6, size = 1.2) +
-#         scale_color_manual(values = c("significant" = "red", "not" = "grey70")) +
-#         geom_vline(xintercept = c(-lfc_thresh, lfc_thresh), linetype = "dashed", color = "black") +
-#         geom_hline(yintercept = -log10(sig_thresh), linetype = "dashed", color = "black") +
-#         geom_text_repel(
-#             data = top5,
-#             aes(label = peak),
-#             size = 3,
-#             box.padding = 0.3,
-#             point.padding = 0.2,
-#             max.overlaps = 10
-#         ) +
-#         labs(
-#             title = paste0("Volcano plot - ", ct),
-#             x = "log2 Fold Change (1vsALL)",
-#             y = "-log10(FDR)"
-#         ) +
-#         theme_bw() +
-#         theme(legend.position = "bottom")
-#     
-#     print(p) 
-#     
-# }
-# 
-# dev.off()
-# 
-# message("Plots done!")
 
 # library("slurmjobs")
 # job_single(
