@@ -28,7 +28,7 @@ resolution_level = "Mid"
 p_met = "spearman"
 w_size = "5e5"
 sig_thresh <- 0.1    # FDR cutoff
-lfc_thresh <- 0.25   # logFC cutoff
+lfc_thresh <- 0.25   # logFC cutoff / log2
 
 
 if (length(resolution_level)) {
@@ -112,19 +112,13 @@ SeuratOBJ_pb
 # rna_counts <- GetAssayData(SeuratOBJ_pb, assay="RNA", layer="data")
 # length(rownames(rna_counts)) # [1] 36601
 
-#Idents(SeuratOBJ_pb) <- "cell_type"
-SeuratOBJ_pb@meta.data["orig.ident"]
-cluster_ids <- levels(SeuratOBJ_pb)
-
-message("Pseudobulk groups (cell-types):")
-cluster_ids
 
 
 ## =============================================================================
 
-## (1) get matrix of raw counts: rows = peaks, cols = pseudobulk samples
+## (1) get matrix of raw peaks: rows = peaks, cols = pseudobulk samples
 PSEUDO_ATAC_ASSAY <- "ATAC_macs2_merged_pseudo"
-atac_counts <- GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, laye ="counts")
+atac_counts <- GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer ="counts")
 length(rownames(atac_counts)) # [1] 351037
 head(atac_counts)
 
@@ -145,30 +139,51 @@ tail(meta)
 
 ## add additional meta-data
 ## create new columna and initialize all values
-meta$sex <- NA
+meta$sex <- "M"
 meta$ethnicity <- "EA/CAUC" # waiting confirmation KDM
-meta$age <- 41.3  # waiting confirmation KDM
-
 meta$sex[grepl("S03|S08|S11", meta$donor)] <- "F"
-meta$sex[!grepl("S03|S08|S11", meta$donor)] <- "M"
-meta$ethnicity[grepl("S06", meta$donor)] <- "AA"
-meta$age[grepl("S12", meta$donor)] <- 57.5
+meta$ethnicity[grepl("S04|S05", meta$donor)] <- "AA"
+meta$sex[grepl("S03", meta$donor)] <- 41.3
+meta$sex[grepl("S04", meta$donor)] <- 40.57
+meta$sex[grepl("S05", meta$donor)] <- 46.72
+meta$sex[grepl("S06", meta$donor)] <- 33.39
+meta$sex[grepl("S07", meta$donor)] <- 48.88
+meta$sex[grepl("S08", meta$donor)] <- 37.33
+meta$sex[grepl("S09", meta$donor)] <- 39.98
+meta$sex[grepl("S10", meta$donor)] <- 47.95
+meta$sex[grepl("S11", meta$donor)] <- 65
+meta$sex[grepl("S12", meta$donor)] <- 57.7
 
 SeuratOBJ_pb@meta.data <- meta
 head(meta)
+
+## Ensure we are contrasting by cell-type
+if (!"cell_type" %in% colnames(SeuratOBJ_pb@meta.data)) {
+    SeuratOBJ_pb$cell_type <- sub("^[^_]+_", "", SeuratOBJ_pb$orig.ident)  # keep part after first underscore
+}
+length(SeuratOBJ_pb$cell_type)
+# [1] 169
+
+Idents(SeuratOBJ_pb) <- "cell_type"
+cluster_ids <- levels(SeuratOBJ_pb)
+unique(Idents(SeuratOBJ_pb))
+
+message("Pseudobulk groups (cell-types):")
+cluster_ids
+
 
 # ====/
 
 stopifnot(all(colnames(atac_counts) == meta$sample_id))
 
-# Tweakables
-min_cpm        <- 1            # expression filter threshold (logical CPM rule)
-min_samples    <- 3            # require in >= this many samples overall or per-group
-use_block      <- TRUE         # TRUE = account for repeated measures (e.g., donor)
-# use_samp_wts   <- TRUE         # TRUE = estimate sample quality weights
-# trend_ebayes   <- TRUE         # TRUE = eBayes(trend=TRUE) often good for counts
-# robust_ebayes  <- TRUE         # TRUE = robust empirical Bayes
-fdr_cutoff     <- 0.10
+# # Tweakables
+# min_cpm        <- 1            # expression filter threshold (logical CPM rule)
+# min_samples    <- 3            # require in >= this many samples overall or per-group
+# use_block      <- TRUE         # TRUE = account for repeated measures (e.g., donor)
+# # use_samp_wts   <- TRUE         # TRUE = estimate sample quality weights
+# # trend_ebayes   <- TRUE         # TRUE = eBayes(trend=TRUE) often good for counts
+# # robust_ebayes  <- TRUE         # TRUE = robust empirical Bayes
+# fdr_cutoff     <- 0.10
 
 
 ## ============================================================================/
@@ -177,21 +192,33 @@ fdr_cutoff     <- 0.10
 ## convert Seurat object into sce
 sce_pb <- as.SingleCellExperiment(SeuratOBJ_pb,
                                   layer = PSEUDO_ATAC_ASSAY)
-dim(sce_pb)
 sce_pb
-table(sce_pb$orig.ident)
+dim(sce_pb)
+colData(sce_pb)
+## SingleCellExperiment() attempts to transfer data from the Seurat object's feature metadata to the SCE object's rowData. 
+## - But Seurat meta.data are saved in Seurat@meta.data, thus feature-level metadata need to be added directly to Seurat
+rowData(sce_pb)
+# meta
+table(sce_pb$cell_type)
 # Astrocyte       Endo Excit.Thal Inhib.Thal      LHb.1    LHb.1.3  LHb.1.3.4 
 #   10         10         10         10         10          7         10 
 # LHb.2.7      LHb.4      LHb.7      MHb.1    MHb.1.2      MHb.2      MHb.3 
 #   10         10          6         10         10         10         10 
 # Microglia      Oligo        OPC       Thal 
 #   10          10         10          6 
+table(sce_pb$donor)
+# S03-Hb-r S04-Hb-r S05-Hb-r S06-Hb-r S07-Hb-r S08-Hb-r S09-Hb-r S10-Hb-r 
+# 17       15       16       18       18       17       17       18 
+# S11-Hb-r S12-Hb-r 
+# 17       16 
 
-sce_pb$registration_variable <- sce_pb$orig.ident
+sce_pb$registration_variable <- as.factor(sce_pb$cell_type)
+unique(sce_pb$registration_variable)
 clusters <- levels(sce_pb$registration_variable)
 names(clusters) <- clusters
 
 # batch ? 
+batch <- "donor" 
 
 message(Sys.time(), " - Loop voomlmFit by cluster")
 
@@ -209,6 +236,7 @@ lmf_summary <- map_dfr(clusters, function(clus){
     #des <- model.matrix(~0 + APOE_syn + Sex + Age + Anc_Afr + pseudo_expr_chrM_ratio, data = colData(dge))
     des <- model.matrix(~0 + sex + ethnicity, data = colData(dge))
     des <- as.data.frame(des)
+    des
     #               sexF    sexM    ethnicityEA/CAUC
     # Endo_S03-Hb-r    1    0                1
     # Endo_S04-Hb-r    0    1                1
