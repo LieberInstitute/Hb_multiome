@@ -273,10 +273,12 @@ res_enrich <- registration_stats_enrichment(
 head(res_enrich)
 # save summary
 f_name <- here(output_Dir, "stats_enrichment_lmFit_atac_peaks_by_cluster.csv")
-write.csv(summary_table, f_name, row.names = FALSE)
+write.csv(res_enrich, f_name, row.names = FALSE)
+
+message("Enrichment statistics done!")
 
 
-message(Sys.time(), " - Loop voomlmFit by cluster")
+# message(Sys.time(), " - Loop voomlmFit by cluster")
 
 
 
@@ -481,13 +483,13 @@ message(Sys.time(), " - Loop voomlmFit by cluster")
 
 # library("slurmjobs")
 # job_single(
-#   "16_pseudobulk_DARs_MACS2_reduced",
+#   "17_pseudobulk_DARs_MACS2_reduced_voomLmFit",
 #   create_shell = TRUE,
 #   partition = "katun",
 #   memory = "30G",
 #   cores = 2,
 #   logdir = "logs",
-#   command = "Rscript 16_pseudobulk_DARs_MACS2_reduced.R",
+#   command = "Rscript 17_pseudobulk_DARs_MACS2_reduced_voomLmFit.R",
 #   create_logdir = FALSE
 # )
 
