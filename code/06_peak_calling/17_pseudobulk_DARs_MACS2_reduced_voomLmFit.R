@@ -158,13 +158,13 @@ head(meta)
 
 
 ## Ensure we are contrasting by cell-type
-if (!"cell_type" %in% colnames(SeuratOBJ_pb@meta.data)) {
-    SeuratOBJ_pb$cell_type <- sub("^[^_]+_", "", SeuratOBJ_pb$orig.ident)  # keep part after first underscore
+if (!"cellType" %in% colnames(SeuratOBJ_pb@meta.data)) {
+    SeuratOBJ_pb$cellType <- sub("^[^_]+_", "", SeuratOBJ_pb$orig.ident)  # keep part after first underscore
 }
-length(SeuratOBJ_pb$cell_type)
+length(SeuratOBJ_pb$cellType)
 # [1] 169
 
-Idents(SeuratOBJ_pb) <- "cell_type"
+Idents(SeuratOBJ_pb) <- "cellType"
 cluster_ids <- levels(SeuratOBJ_pb)
 unique(Idents(SeuratOBJ_pb))
 
@@ -186,7 +186,16 @@ stopifnot(all(colnames(atac_counts) == meta$sample_id))
 # fdr_cutoff     <- 0.10
 
 
-## ============================================================================/
+## ============================================================================
+## refs:
+## current version https://github.com/LieberInstitute/spatialLIBD/blob/40da043d0235e01a12a7f52a0b367d3850bad9e8/R/registration_stats_enrichment.R#L40
+## My previous manual implementation: https://github.com/LieberInstitute/Habenula_Visium/blob/2d21e39f51c9e46ebddbcf57f959f70c27d78678/code/05_brain_area_differential_expression/05_pseudobulk_DEG_contrast.R#L176-L255 
+
+# Inputs for atac
+# logcounts(sce_pseudo) peaks (it fits limma on log-scale data)
+# var_registration: in my case cellType
+# var_sample_id: blocking by donor factor
+# covars:age, sex and ethnicity
 
 
 ## convert Seurat object into sce
@@ -199,7 +208,7 @@ colData(sce_pb)
 ## - But Seurat meta.data are saved in Seurat@meta.data, thus feature-level metadata need to be added directly to Seurat
 rowData(sce_pb)
 # DataFrame with 351037 rows and 0 columns
-table(sce_pb$cell_type)
+table(sce_pb$cellType)
 # Astrocyte       Endo Excit.Thal Inhib.Thal      LHb.1    LHb.1.3  LHb.1.3.4 
 #   10         10         10         10         10          7         10 
 # LHb.2.7      LHb.4      LHb.7      MHb.1    MHb.1.2      MHb.2      MHb.3 
@@ -213,7 +222,7 @@ table(sce_pb$donor)
 # 17       16 
 
 ## required columns
-sce_pb$registration_variable <- factor(sce_pb$cell_type)          # group to test
+sce_pb$registration_variable <- factor(sce_pb$cellType)          # group to test
 sce_pb$registration_sample_id <- factor(sce_pb$donor)             # block by donor
 sce_pb$ethnicity <- factor(sce_pb$ethnicity, levels = c("AA", "EA.CAUC"))
 sce_pb$sex <- factor(sce_pb$sex, levels = c("F", "M"))
@@ -241,30 +250,33 @@ reg_mod <- registration_model(
 head(reg_mod)  # inspect column names / coding
 
 
+## estimate donor-level block correlation
+block_cor <- registration_block_cor(
+    sce_pseudo = sce_pb,
+    registration_model = reg_mod,
+    var_sample_id = "registration_sample_id"
+)
+# 2025-09-18 16:00:05.635304 run duplicateCorrelation()
+# 2025-09-18 16:07:59.024504 The estimated correlation is: 0.0259710191924901
 
+## Run enrichment t-stats (1-vs-all for each cell type)
+res_enrich <- registration_stats_enrichment(
+    sce_pseudo = sce_pb,
+    block_cor = block_cor,
+    covars = covars_vec,
+    var_registration = "registration_variable",
+    var_sample_id = "registration_sample_id",
+    gene_ensembl = NULL,              # not genes here
+    gene_name = "peak_id"             # carry peak IDs into the output
+)
+
+head(res_enrich)
+# save summary
+f_name <- here(output_Dir, "stats_enrichment_lmFit_atac_peaks_by_cluster.csv")
+write.csv(summary_table, f_name, row.names = FALSE)
 
 
 message(Sys.time(), " - Loop voomlmFit by cluster")
-
-## run voomLmFit: Transform count data to log2-counts per million (logCPM), estimate voom precision weights and fit limma linear models while allowing for loss of residual degrees of freedom due to exact zeros
-
-## ============================================================================/
-## version adapter from https://github.com/LieberInstitute/DeconvoBuddies/blob/d128d498c18318d05528bf75c6fa8436f1bab8c6/R/findMarkers_1vAll.R
-## And from my previous implementation: https://github.com/LieberInstitute/Habenula_Visium/blob/2d21e39f51c9e46ebddbcf57f959f70c27d78678/code/05_brain_area_differential_expression/05_pseudobulk_DEG_contrast.R#L176-L255 
-
-# Input
-# logcounts(sce_pseudo) peaks (it fits limma on log-scale data)
-# var_registration: in my case cellType
-# var_sample_id: blocking by donor factor
-# covars:age, sex and ethnicity
-
-
-
-
-
-
-
-
 
 
 
@@ -366,7 +378,7 @@ message(Sys.time(), " - Loop voomlmFit by cluster")
 #     # Endo_S10-Hb-r                          121119                             75853
 #     # Endo_S11-Hb-r                           27142                             24644
 #     # Endo_S12-Hb-r                           10583                              9726
-#     # sample_id    donor sex ethnicity   age cell_type ident
+#     # sample_id    donor sex ethnicity   age cellType ident
 #     # Endo_S03-Hb-r Endo_S03-Hb-r S03-Hb-r   F   EA/CAUC 41.30      Endo  Endo
 #     # Endo_S04-Hb-r Endo_S04-Hb-r S04-Hb-r   M        AA 40.57      Endo  Endo
 #     # Endo_S05-Hb-r Endo_S05-Hb-r S05-Hb-r   M        AA 46.72      Endo  Endo
