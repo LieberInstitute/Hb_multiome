@@ -222,30 +222,54 @@ table(sce_pb$donor)
 # 17       16 
 
 ## required columns
+
+##=======
+# added this chunck to patch: registration_stats_enrichment() tries to pull row annotations via rowData(sce_pseudo)[[gene_ensembl]] and/or [[gene_name]]. 
+# - If none of those arguments is provided, it resolves to NULL in rowData, and gets error
+
+# Give rowData (peak ranges) to explicit ID columns
+if (!"peak_id" %in% colnames(rowData(sce_pb))) {
+    rowData(sce_pb)$peak_id <- rownames(sce_pb)
+}
+# Provide a second column for 'gene_ensembl' argument (duplicate peak_id)
+if (!"peak_ensembl" %in% colnames(rowData(sce_pb))) {
+    rowData(sce_pb)$peak_ensembl <- rownames(sce_pb)
+}
+##=======/
+
 sce_pb$registration_variable <- factor(sce_pb$cellType)          # group to test
-sce_pb$registration_sample_id <- factor(sce_pb$donor)             # block by donor
+sce_pb$registration_sample_id <- factor(sce_pb$donor)            # block by donor
 sce_pb$ethnicity <- factor(sce_pb$ethnicity, levels = c("AA", "EA.CAUC"))
 sce_pb$sex <- factor(sce_pb$sex, levels = c("F", "M"))
 sce_pb$age <- as.numeric(sce_pb$age)
 
-## Provide logcounts for ATAC pseudobulk
-dge <- DGEList(counts = assay(sce_pb, "counts"))
-dge <- calcNormFactors(dge, method = "TMM")
-sizeFactors(sce_pb) <- dge$samples$norm.factors * dge$samples$lib.size / exp(mean(log(dge$samples$lib.size)))
+## extract/transform peak logcounts 
 
-# Compute CPM normalized counts, then log-transform
-lcpm <- scuttle::calculateCPM(sce_pb, size.factors = sizeFactors(sce_pb))
-logcounts(sce_pb) <- log2(lcpm + 1)
+if (!"logcounts" %in% assayNames(sce_pb)) {
+    # create logcounts from raw counts
+    dge <- DGEList(counts = assay(sce_pb, "counts"))
+    dge <- calcNormFactors(dge, method = "TMM")
+    sizeFactors(sce_pb) <- dge$samples$norm.factors *
+        dge$samples$lib.size /
+        exp(mean(log(dge$samples$lib.size)))
+    
+    # CPM normalize then log-transform
+    lcpm <- edgeR::cpm(dge, log = FALSE, prior.count = 0, normalized.lib.sizes = TRUE)
+    logcounts(sce_pb) <- log2(lcpm + 1)
+    
+} else {
 
-## annotate rows
-rowData(sce_pb)$peak_id <- rownames(sce_pb)
+    message("logcounts already present, skipping normalization")
+    
+}
 
+    
 # Inspect the registration model
 covars_vec <- c("age", "sex", "ethnicity")
 reg_mod <- registration_model(
     sce_pseudo = sce_pb,
     covars = covars_vec,
-    var_registration = "registration_variable"
+    var_registration = "registration_variable" #cellType
 )
 head(reg_mod)  # inspect column names / coding
 
@@ -254,19 +278,35 @@ head(reg_mod)  # inspect column names / coding
 block_cor <- registration_block_cor(
     sce_pseudo = sce_pb,
     registration_model = reg_mod,
-    var_sample_id = "registration_sample_id"
+    var_sample_id = "registration_sample_id"  ##cellType
 )
 # 2025-09-18 16:00:05.635304 run duplicateCorrelation()
 # 2025-09-18 16:07:59.024504 The estimated correlation is: 0.0259710191924901
 
 ## Run enrichment t-stats (1-vs-all for each cell type)
+
+# Add column with peak IDs
+rowData(sce_pb)
+rowData(sce_pb)$peak_id <- rownames(sce_pb)
+head(rowData(sce_pb))
+# DataFrame with 6 rows and 1 column
+# peak_id
+# <character>
+#     chr1-181329-181534 chr1-181329-181534
+# chr1-191217-191619 chr1-191217-191619
+# chr1-629146-629354 chr1-629146-629354
+# chr1-629811-630032 chr1-629811-630032
+# chr1-630189-630389 chr1-630189-630389
+# chr1-632189-632410 chr1-632189-632410
+
 res_enrich <- registration_stats_enrichment(
     sce_pseudo = sce_pb,
     block_cor = block_cor,
     covars = covars_vec,
     var_registration = "registration_variable",
     var_sample_id = "registration_sample_id",
-    gene_ensembl = NULL,              # not genes here
+    #gene_ensembl = NULL,              # not genes here
+    gene_ensembl = "peak_ensembl",     # must exist in rowData(sce_pb)
     gene_name = "peak_id"             # carry peak IDs into the output
 )
 
