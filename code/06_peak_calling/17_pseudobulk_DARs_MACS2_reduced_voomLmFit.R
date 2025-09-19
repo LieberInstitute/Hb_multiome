@@ -430,6 +430,7 @@ DefaultAssay(SeuratOBJ_pb) <- PSEUDO_ATAC_ASSAY
 # Get all peaks in the assay
 all_peaks <- granges(SeuratOBJ_pb)
 length(all_peaks) # [1] 351037
+FDR_thr = 0.20
 
 for (clus in cluster_ids) {
     # test: 
@@ -561,16 +562,35 @@ for (clus in cluster_ids) {
             peak_id    = gene
         )
     
-    # save summary
-    f_name <- here(output_Dir, paste0("enrichment_voomlmFit_DAR_peaks_", clus, ".csv"))
+    # save enrichment stats
+    f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_ALL_in_", clus, ".csv"))
     write.csv(res_enrich, f_name, row.names = FALSE)
-
-    # Identify top up/down genes based on logFC direction and significance
-    #top_genes <- head(res_cluster$gene_name[order(res_cluster$FDR)], 20)
-    mhb_up_genes <- res_filtered$gene_name[res_filtered$logFC > 0 & res_filtered$FDR < FDR_thr]
-    lhb_up_genes <- res_filtered$gene_name[res_filtered$logFC < 0 & res_filtered$FDR < FDR_thr]
     
-    message("Enrichment statistics saved [", clus, "]")
+    # Identify top up/down peaks based on FDR
+    fdr_cols <- grep("^fdr_", colnames(res_enrich), value = TRUE)
+    
+    # cluster-specific significant peaks
+    res_sig_ct <- res_enrich |>
+        filter(.data[[paste0("fdr_", clus)]] < FDR_thr) |>
+        mutate(
+            logFC_ct = .data[[paste0("logFC_", clus)]],
+            direction = case_when(
+                logFC_ct >  0 ~ "Up",    # opening
+                logFC_ct <  0 ~ "Down",  # closing
+                TRUE ~ "NS"              # should not occur if you filtered
+            )
+        )
+    
+    dim(res_sig_ct)
+    head(res_sig_ct[, c("peak_id", paste0("fdr_", clus), "logFC_ct", "direction")])
+    
+    if (nrow(res_sig_ct) > 0) { 
+        f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_", clus, ".csv"))
+        write.csv(res_sig_ct, f_name, row.names = FALSE)
+        message("Enrichment statistics saved [", clus, "]")    
+    } else { 
+        next 
+    }
 
 }
 
