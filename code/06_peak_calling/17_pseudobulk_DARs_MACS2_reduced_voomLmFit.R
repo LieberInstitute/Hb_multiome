@@ -203,6 +203,24 @@ convert_atac_subset_to_sce <- function(
         logcounts(sce_pb) <- GetAssayData(Seurat_subset2, assay = PSEUDO_ATAC_ASSAY, layer = "logcounts")
     }
     
+    # if (!"logcounts" %in% assayNames(sce_pb)) {
+    #     # create logcounts from raw counts
+    #     dge <- DGEList(counts = assay(sce_pb, "counts"))
+    #     dge <- calcNormFactors(dge, method = "TMM")
+    #     sizeFactors(sce_pb) <- dge$samples$norm.factors *
+    #         dge$samples$lib.size /
+    #         exp(mean(log(dge$samples$lib.size)))
+    # 
+    #     # CPM normalize then log-transform
+    #     lcpm <- edgeR::cpm(dge, log = FALSE, prior.count = 0, normalized.lib.sizes = TRUE)
+    #     logcounts(sce_pb) <- log2(lcpm + 1)
+    # 
+    # } else {
+    # 
+    #     message("logcounts already present, skipping normalization")
+    # 
+    # }
+    
     sce_pb
     dim(sce_pb)
     colData(sce_pb) #Endo test: [1] 5224  169
@@ -391,80 +409,12 @@ unique(Idents(SeuratOBJ_pb))
 message("Pseudobulk groups (cell-types):")
 cluster_ids
 
+stopifnot(all(colnames(atac_counts) == meta$sample_id))
 
 # ====/
 
-message("Subset peaks for specific cellType ... ")
 
-stopifnot(all(colnames(atac_counts) == meta$sample_id))
-
-DefaultAssay(SeuratOBJ_pb) <- PSEUDO_ATAC_ASSAY
-
-# Get all peaks in the assay
-all_peaks <- granges(SeuratOBJ_pb)
-length(all_peaks) # [1] 351037
-
-# Get peaks cellType specific
-peak_ranges_ct <- peaks_ranges_cellType(
-    SeuratOBJ_pb,
-    PSEUDO_ATAC_ASSAY,
-    cluster_name = "Endo"
-) 
-length(peak_ranges_ct) # 5224
-
-# Get the assay’s ranges and rownames
-ap_gr   <- granges(SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]])
-# GRanges object with 351037 ranges and 2 metadata columns:
-# seqnames          ranges strand |        revmap
-# <Rle>       <IRanges>  <Rle> | <IntegerList>
-# [1]       chr1   181329-181534      * |             1
-# [2]       chr1   191217-191619      * |             2
-# [3]       chr1   629146-629354      * |             3
-
-ap_rows <- rownames(SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]])
-# [1] "chr1-181329-181534"   "chr1-191217-191619"   "chr1-629146-629354"  
-# [4] "chr1-629811-630032"   "chr1-630189-630389"   "chr1-632189-632410"  
-# [7] "chr1-633694-634122"   "chr1-777714-777962"   "chr1-778314-779308"  
-
-# Find exact matches by genomic coordinates
-#    (use type="any" for overlaps instead of exact start/end equality)
-hits <- findOverlaps(ap_gr, peak_ranges_ct, type = "equal")
-idx  <- queryHits(hits)
-# [1]      4      5      7     53     60     73    116    168    189    226
-# [11]    288    290    293    324    340    353    361    503    535    557
-# [21]    919    989    994   1018   1222   1234   1258   1259   1267   1428
-
-# Map hits to peaks IDs actually present in the assay
-peaks_to_keep <- ap_rows[idx]
-peaks_to_keep <- unique(as.character(peaks_to_keep))
-# [1495] "chr5-72307684-72308762"   "chr5-72319550-72320868"  
-# [1497] "chr5-72815810-72817418"   "chr5-73119548-73120878"  
-# [1499] "chr5-73564688-73566247"   "chr5-75236269-75237381"  
-
-# checks before subsetting
-stopifnot(length(peaks_to_keep) > 0)
-stopifnot(all(peaks_to_keep %in% ap_rows))
-stopifnot(sum(peaks_to_keep %in% rownames(
-    GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer = "counts")
-)) == length(peaks_to_keep))
-
-# cat("Assay: ", DefaultAssay(SeuratOBJ_pb), "\n")
-# cat("Duplicates in assay rownames: ", anyDuplicated(rownames(SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]])) > 0, "\n")
-# cat("Overlaps found: ", length(idx), "\n")
-# cat("Example peaks_to_keep:\n"); print(utils::head(peaks_to_keep))
-# cat("Present in counts rows: ",
-#     sum(peaks_to_keep %in% rownames(GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer = "counts"))),
-#     "/", length(peaks_to_keep), "\n")
-
-sce_pb <- convert_atac_subset_to_sce(
-        SeuratOBJ_pb, 
-        PSEUDO_ATAC_ASSAY, 
-        peaks_to_keep, 
-        SeuratOBJ_pb@meta.data
-        )
-assayNames(sce_pb)
-
-##=======
+message("Starting registration_stats_enrichment_voomLmFit ... ")
 
 ## refs:
 ## current version https://github.com/LieberInstitute/spatialLIBD/blob/40da043d0235e01a12a7f52a0b367d3850bad9e8/R/registration_stats_enrichment.R#L40
@@ -476,95 +426,136 @@ assayNames(sce_pb)
 # var_sample_id: blocking by donor factor
 # covars:age, sex and ethnicity
 
-# added this chunck to patch: registration_stats_enrichment() tries to pull row annotations via rowData(sce_pseudo)[[gene_ensembl]] and/or [[gene_name]]. 
-# - If none of those arguments is provided, it resolves to NULL in rowData, and gets error
+DefaultAssay(SeuratOBJ_pb) <- PSEUDO_ATAC_ASSAY
+# Get all peaks in the assay
+all_peaks <- granges(SeuratOBJ_pb)
+length(all_peaks) # [1] 351037
 
-# Give rowData (peak ranges) to explicit ID columns
-if (!"peak_id" %in% colnames(rowData(sce_pb))) {
-    rowData(sce_pb)$peak_id <- rownames(sce_pb)
-}
-# Provide a second column for 'gene_ensembl' argument (duplicate peak_id)
-if (!"peak_ensembl" %in% colnames(rowData(sce_pb))) {
-    rowData(sce_pb)$peak_ensembl <- rownames(sce_pb)
-}
-
-## required columns
-sce_pb$registration_variable <- factor(sce_pb$cellType)          # group to test
-sce_pb$registration_sample_id <- factor(sce_pb$donor)            # block by donor
-sce_pb$ethnicity <- factor(sce_pb$ethnicity, levels = c("AA", "EA.CAUC"))
-sce_pb$sex <- factor(sce_pb$sex, levels = c("F", "M"))
-sce_pb$age <- as.numeric(sce_pb$age)
-
-# ## extract/transform peak logcounts 
-
-# if (!"logcounts" %in% assayNames(sce_pb)) {
-#     # create logcounts from raw counts
-#     dge <- DGEList(counts = assay(sce_pb, "counts"))
-#     dge <- calcNormFactors(dge, method = "TMM")
-#     sizeFactors(sce_pb) <- dge$samples$norm.factors *
-#         dge$samples$lib.size /
-#         exp(mean(log(dge$samples$lib.size)))
-# 
-#     # CPM normalize then log-transform
-#     lcpm <- edgeR::cpm(dge, log = FALSE, prior.count = 0, normalized.lib.sizes = TRUE)
-#     logcounts(sce_pb) <- log2(lcpm + 1)
-# 
-# } else {
-# 
-#     message("logcounts already present, skipping normalization")
-# 
-# }
-
+for (clus in cluster_ids) {
+    # test: 
+    # clus = "Endo"
+    message("Subset peaks for [", clus, "] cellType")
     
-# Inspect the registration model
-covars_vec <- c("age", "sex", "ethnicity")
-reg_mod <- registration_model(
-    sce_pseudo = sce_pb,
-    covars = covars_vec,
-    var_registration = "registration_variable" #cellType
-)
-head(reg_mod)  # inspect column names / coding
+    # Get peaks cellType specific
+    peak_ranges_ct <- peaks_ranges_cellType(
+        SeuratOBJ_pb,
+        PSEUDO_ATAC_ASSAY,
+        cluster_name = "Endo"
+    ) 
+    length(peak_ranges_ct) # 5224
+    
+    # Get the assay’s ranges and rownames
+    ap_gr   <- granges(SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]])
+    # GRanges object with 351037 ranges and 2 metadata columns:
+    # seqnames          ranges strand |        revmap
+    # <Rle>       <IRanges>  <Rle> | <IntegerList>
+    # [1]       chr1   181329-181534      * |             1
 
+    ap_rows <- rownames(SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]])
+    # [1] "chr1-181329-181534"   "chr1-191217-191619"   "chr1-629146-629354"  
+    # [4] "chr1-629811-630032"   "chr1-630189-630389"   "chr1-632189-632410"  
 
-## estimate donor-level block correlation
-nrow(assay(sce_pb, "counts"))
-# [1] 5224
+    # Find exact matches by genomic coordinates (use type="any" for overlaps)
+    hits <- findOverlaps(ap_gr, peak_ranges_ct, type = "equal")
+    idx  <- queryHits(hits)
+    # [1]      4      5      7     53     60     73    116    168    189    226
+    
+    # Map hits to peaks IDs actually present in the assay
+    peaks_to_keep <- ap_rows[idx]
+    peaks_to_keep <- unique(as.character(peaks_to_keep))
+    # [1495] "chr5-72307684-72308762"   "chr5-72319550-72320868"  
+    # [1497] "chr5-72815810-72817418"   "chr5-73119548-73120878"  
+    
+    # checks before subsetting seurat
+    stopifnot(length(peaks_to_keep) > 0)
+    stopifnot(all(peaks_to_keep %in% ap_rows))
+    stopifnot(sum(peaks_to_keep %in% rownames(
+        GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer = "counts")
+    )) == length(peaks_to_keep))
+    
+    # cat("Assay: ", DefaultAssay(SeuratOBJ_pb), "\n")
+    # cat("Duplicates in assay rownames: ", anyDuplicated(rownames(SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]])) > 0, "\n")
+    # cat("Overlaps found: ", length(idx), "\n")
+    # cat("Example peaks_to_keep:\n"); print(utils::head(peaks_to_keep))
+    # cat("Present in counts rows: ",
+    #     sum(peaks_to_keep %in% rownames(GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer = "counts"))),
+    #     "/", length(peaks_to_keep), "\n")
+    
+    ## subset seurat and convert to sce
+    sce_pb <- convert_atac_subset_to_sce(
+            SeuratOBJ_pb, 
+            PSEUDO_ATAC_ASSAY, 
+            peaks_to_keep, 
+            SeuratOBJ_pb@meta.data
+            )
+    assayNames(sce_pb)
+    
+    # added this chunk to patch: registration_stats_enrichment() tries to pull row annotations via rowData(sce_pseudo)[[gene_ensembl]] and/or [[gene_name]]. 
+    # - If none of those arguments is provided, it resolves to NULL in rowData, and gets error
+    # Give rowData (peak ranges) to explicit ID columns
+    if (!"peak_id" %in% colnames(rowData(sce_pb))) {
+        rowData(sce_pb)$peak_id <- rownames(sce_pb)
+    }
+    # Provide a second column for 'gene_ensembl' argument (duplicate peak_id)
+    if (!"peak_ensembl" %in% colnames(rowData(sce_pb))) {
+        rowData(sce_pb)$peak_ensembl <- rownames(sce_pb)
+    }
+    
+    ## required columns
+    sce_pb$registration_variable <- factor(sce_pb$cellType)          # group to test
+    sce_pb$registration_sample_id <- factor(sce_pb$donor)            # block by donor
+    sce_pb$ethnicity <- factor(sce_pb$ethnicity, levels = c("AA", "EA.CAUC"))
+    sce_pb$sex <- factor(sce_pb$sex, levels = c("F", "M"))
+    sce_pb$age <- as.numeric(sce_pb$age)
+    
+    # Inspect the registration model
+    covars_vec <- c("age", "sex", "ethnicity")
+    reg_mod <- registration_model(
+        sce_pseudo = sce_pb,
+        covars = covars_vec,
+        var_registration = "registration_variable" #cellType
+    )
+    #head(reg_mod)  # inspect column names / coding
+    
+    ## estimate donor-level block correlation
+    nrow(assay(sce_pb, "counts")) # [1] 5224
+    
+    block_cor <- registration_block_cor(
+        sce_pseudo = sce_pb,
+        registration_model = reg_mod,
+        var_sample_id = "registration_sample_id"  ##cellType
+    )
+    # Endo ct test:
+    # 2025-09-19 13:06:16.032861 run duplicateCorrelation()
+    # 2025-09-19 13:06:22.540479 The estimated correlation is: 0.00931803725048961
+    
+    ## Run enrichment t-stats (1-vs-all for each cell type)
+    rowData(sce_pb)
+    head(rowData(sce_pb))
+    # DataFrame with 6 rows and 2 columns
+    #                     peak_id         peak_ensembl
+    #                     <character>          <character>
+    # chr1-629811-630032     chr1-629811-630032   chr1-629811-630032
+    # chr1-630189-630389     chr1-630189-630389   chr1-630189-630389
 
-block_cor <- registration_block_cor(
-    sce_pseudo = sce_pb,
-    registration_model = reg_mod,
-    var_sample_id = "registration_sample_id"  ##cellType
-)
-# Endo ct test:
-# 2025-09-19 13:06:16.032861 run duplicateCorrelation()
-# 2025-09-19 13:06:22.540479 The estimated correlation is: 0.00931803725048961
+    res_enrich <- registration_stats_enrichment_voomLmFit(
+        sce_pseudo = sce_pb,
+        block_cor = block_cor,
+        covars = covars_vec,
+        var_registration = "registration_variable",
+        var_sample_id = "registration_sample_id",
+        gene_ensembl = "peak_ensembl",     # must exist in rowData(sce_pb)
+        gene_name = "peak_id"             # carry peak IDs into the output
+    )
+    
+    head(res_enrich)
+    # save summary
+    f_name <- here(output_Dir, "enrichment_voomlmFit_DAR_peaks_", , ".csv")
+    write.csv(res_enrich, f_name, row.names = FALSE)
 
-## Run enrichment t-stats (1-vs-all for each cell type)
+    message("Enrichment statistics saved [", clus, "]")
 
-# Add column with peak IDs
-rowData(sce_pb)
-head(rowData(sce_pb))
-# DataFrame with 6 rows and 2 columns
-#                     peak_id         peak_ensembl
-#                     <character>          <character>
-# chr1-629811-630032     chr1-629811-630032   chr1-629811-630032
-# chr1-630189-630389     chr1-630189-630389   chr1-630189-630389
-# chr1-633694-634122     chr1-633694-634122   chr1-633694-634122
-
-res_enrich <- registration_stats_enrichment_voomLmFit(
-    sce_pseudo = sce_pb,
-    block_cor = block_cor,
-    covars = covars_vec,
-    var_registration = "registration_variable",
-    var_sample_id = "registration_sample_id",
-    gene_ensembl = "peak_ensembl",     # must exist in rowData(sce_pb)
-    gene_name = "peak_id"             # carry peak IDs into the output
-)
-
-head(res_enrich)
-# save summary
-f_name <- here(output_Dir, "stats_enrichment_voomlmFit_DAR_peaks_", , ".csv")
-write.csv(res_enrich, f_name, row.names = FALSE)
+}
 
 message("Enrichment statistics done!")
 
