@@ -545,14 +545,31 @@ for (clus in cluster_ids) {
         var_registration = "registration_variable",
         var_sample_id = "registration_sample_id",
         gene_ensembl = "peak_ensembl",     # must exist in rowData(sce_pb)
-        gene_name = "peak_id"             # carry peak IDs into the output
+        gene_name = "peak_id"              # carry peak IDs into the output
     )
     
     head(res_enrich)
+    #                       t_stat_Astrocyte t_stat_Endo t_stat_Excit.Thal
+    # chr1-629811-630032          -2.233975   -1.980414          3.315414
+    # chr1-630189-630389          -2.287579   -1.959382          3.321134
+    # chr1-633694-634122          -2.257702   -2.094713          3.321954
+
+    ## rename columns 
+    res_enrich <- res_enrich |>
+        rename(
+            peak_macs2 = ensembl,
+            peak_id    = gene
+        )
+    
     # save summary
-    f_name <- here(output_Dir, "enrichment_voomlmFit_DAR_peaks_", , ".csv")
+    f_name <- here(output_Dir, paste0("enrichment_voomlmFit_DAR_peaks_", clus, ".csv"))
     write.csv(res_enrich, f_name, row.names = FALSE)
 
+    # Identify top up/down genes based on logFC direction and significance
+    #top_genes <- head(res_cluster$gene_name[order(res_cluster$FDR)], 20)
+    mhb_up_genes <- res_filtered$gene_name[res_filtered$logFC > 0 & res_filtered$FDR < FDR_thr]
+    lhb_up_genes <- res_filtered$gene_name[res_filtered$logFC < 0 & res_filtered$FDR < FDR_thr]
+    
     message("Enrichment statistics saved [", clus, "]")
 
 }
