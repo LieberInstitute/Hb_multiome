@@ -26,23 +26,23 @@ library("here")
 
 # Testing spearman at 5e4 on macs2 peaks 
 resolution_level = "Mid"
-p_met = "spearman"
-w_size = "5e5"
+# p_met = "spearman"
+# w_size = "5e5"
 sig_thresh <- 0.1    # FDR cutoff
 lfc_thresh <- 0.25   # logFC cutoff / log2
 
 ## ATAC function's helper used globally
 source(here("code", "06_peak_calling", "multiome_custom_functions", "multiome_idents_normalization_helper.R"))
 
-if (length(resolution_level)) {
-    message("Processing job for peak-method:\n",
-            p_met,
-            "\nWindow-size\n",
-            w_size)
-} else {
-    message("Input arguments missed")
-    stop()
-}
+# if (length(resolution_level)) {
+#     message("Processing job for peak-method:\n",
+#             p_met,
+#             "\nWindow-size\n",
+#             w_size)
+# } else {
+#     message("Input arguments missed")
+#     stop()
+# }
 
 # Inputs:
 # counts:   matrix of raw counts, rows = peaks, cols = pseudobulk samples
@@ -153,6 +153,163 @@ peaks_ranges_cellType <- function(
     return(peak_ranges)
 
 }
+
+
+convert_atac_subset_to_sce <- function(
+        SeuratOBJ_pb, 
+        PSEUDO_ATAC_ASSAY, 
+        peaks_to_keep, 
+        meta
+    ) {
+    
+    # subset by peaks
+    Seurat_subset <- subset(
+        SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]],
+        features = peaks_to_keep
+    )
+    Seurat_subset
+    
+    ## convert object into sce with meta.data
+    counts_mat <- GetAssayData(Seurat_subset, layer = "counts")
+    logcounts_mat <- GetAssayData(Seurat_subset, layer = "data")
+    
+    Seurat_subset2 <- CreateSeuratObject(
+        counts = counts_mat,
+        assay = PSEUDO_ATAC_ASSAY,
+        meta.data = meta
+    )
+    Seurat_subset2
+    # > Seurat_subset2
+    # An object of class Seurat 
+    # 5224 features across 169 samples within 1 assay 
+    # Active assay: ATAC_macs2_merged_pseudo (5224 features, 0 variable features)
+    # 1 layer present: counts
+    
+    # Add logcounts back
+    Seurat_subset2[[PSEUDO_ATAC_ASSAY]] <- SetAssayData(
+        Seurat_subset2[[PSEUDO_ATAC_ASSAY]],
+        layer = "logcounts",
+        new.data = logcounts_mat
+    )
+    #Seurat_subset2
+    
+    sce_pb <- as.SingleCellExperiment(
+        Seurat_subset2,
+        assay = PSEUDO_ATAC_ASSAY
+    )
+    
+    # copy Seurat's "logcounts" layer (if it existed) into SCE
+    if ("logcounts" %in% Layers(Seurat_subset2[[PSEUDO_ATAC_ASSAY]])) {
+        logcounts(sce_pb) <- GetAssayData(Seurat_subset2, assay = PSEUDO_ATAC_ASSAY, layer = "logcounts")
+    }
+    
+    sce_pb
+    dim(sce_pb)
+    colData(sce_pb) #Endo test: [1] 5224  169
+    ## SingleCellExperiment() attempts to transfer data from the Seurat object's feature metadata to the SCE object's rowData. 
+    ## - But Seurat meta.data are saved in Seurat@meta.data, thus feature-level metadata need to be added directly to Seurat
+    rowData(sce_pb)
+    # DataFrame with 5224 rows and 2 columns
+    #table(sce_pb$cellType)
+    #table(sce_pb$donor)
+    
+    return(sce_pb)
+}
+
+
+registration_stats_enrichment_voomLmFit <-
+    function(
+        sce_pseudo,
+        block_cor,
+        covars = NULL,
+        var_registration = "registration_variable",
+        var_sample_id = "registration_sample_id",
+        gene_ensembl = NULL,
+        gene_name = NULL
+    ) {
+        ## For each cluster, test it against the rest
+        cluster_idx <- split(
+            seq(along = sce_pseudo[[var_registration]]),
+            sce_pseudo[[var_registration]]
+        )
+        
+        message(Sys.time(), " computing enrichment statistics")
+        eb0_list_cluster <- lapply(cluster_idx, function(x) {
+            res <- rep(0, ncol(sce_pseudo))
+            res[x] <- 1
+            if (!is.null(covars)) {
+                res_formula <-
+                    eval(str2expression(paste(
+                        "~",
+                        "res",
+                        "+",
+                        paste(covars, collapse = " + ")
+                    )))
+            } else {
+                res_formula <- eval(str2expression(paste("~", "res")))
+            }
+            m <- model.matrix(res_formula, data = colData(sce_pseudo))
+            
+            if (is.finite(block_cor)) {
+                #res <- limma::eBayes(limma::lmFit(
+                res <- limma::eBayes(edgeR::voomLmFit(
+                    logcounts(sce_pseudo),
+                    design = m,
+                    block = sce_pseudo[[var_sample_id]],
+                    # correlation = block_cor
+                ))
+            } else {
+                res <- limma::eBayes(edgeR::voomLmFit(
+                # res <- limma::eBayes(limma::lmFit(
+                    logcounts(sce_pseudo),
+                    design = m
+                ))
+            }
+            return(res)
+        })
+        
+        message(Sys.time(), " extract and reformat enrichment results")
+        
+        ## Extract the p-values
+        pvals0_contrasts_cluster <-
+            sapply(eb0_list_cluster, function(x) {
+                x$p.value[, 2, drop = FALSE]
+            })
+        rownames(pvals0_contrasts_cluster) <- rownames(sce_pseudo)
+        
+        ## Extract t-statistics
+        t0_contrasts_cluster <- sapply(eb0_list_cluster, function(x) {
+            x$t[, 2, drop = FALSE]
+        })
+        rownames(t0_contrasts_cluster) <- rownames(sce_pseudo)
+        
+        ## Extract logFC
+        logFC_contrasts_cluster <- sapply(eb0_list_cluster, function(x) {
+            x$coefficients[, 2, drop = FALSE]
+        })
+        rownames(logFC_contrasts_cluster) <- rownames(sce_pseudo)
+        
+        ## Compute FDRs
+        fdrs0_contrasts_cluster <-
+            apply(pvals0_contrasts_cluster, 2, p.adjust, "fdr")
+        
+        ## Merge into one data.frame
+        results_specificity <-
+            spatialLIBD:::f_merge(
+                p = pvals0_contrasts_cluster,
+                fdr = fdrs0_contrasts_cluster,
+                t = t0_contrasts_cluster,
+                logFC = logFC_contrasts_cluster
+            )
+        
+        ## Add gene info
+        results_specificity$ensembl <-
+            rowData(sce_pseudo)[[gene_ensembl]]
+        results_specificity$gene <- rowData(sce_pseudo)[[gene_name]]
+        
+        ## Done!
+        return(results_specificity)
+    }
 
 
 ########################################################################
@@ -291,7 +448,6 @@ stopifnot(sum(peaks_to_keep %in% rownames(
     GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer = "counts")
 )) == length(peaks_to_keep))
 
-
 # cat("Assay: ", DefaultAssay(SeuratOBJ_pb), "\n")
 # cat("Duplicates in assay rownames: ", anyDuplicated(rownames(SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]])) > 0, "\n")
 # cat("Overlaps found: ", length(idx), "\n")
@@ -300,71 +456,13 @@ stopifnot(sum(peaks_to_keep %in% rownames(
 #     sum(peaks_to_keep %in% rownames(GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer = "counts"))),
 #     "/", length(peaks_to_keep), "\n")
 
-
-# subset by peaks
-Seurat_subset <- subset(
-    SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]],
-    features = peaks_to_keep
-)
-Seurat_subset
-# ChromatinAssay data with 5224 features for 169 cells
-# Variable features: 5216 
-# ...
-
-## convert object into sce with meta.data
-class(Seurat_subset)
-counts_mat <- GetAssayData(Seurat_subset, layer = "counts")
-logcounts_mat <- GetAssayData(Seurat_subset, layer = "data")  # “data” in Seurat usually holds lognorm values
-
-Seurat_subset2 <- CreateSeuratObject(
-    counts = counts_mat,
-    assay = PSEUDO_ATAC_ASSAY,
-    meta.data = SeuratOBJ_pb@meta.data
-)
-Seurat_subset2
-# > Seurat_subset2
-# An object of class Seurat 
-# 5224 features across 169 samples within 1 assay 
-# Active assay: ATAC_macs2_merged_pseudo (5224 features, 0 variable features)
-# 1 layer present: counts
-
-# Add logcounts back
-Seurat_subset2[[PSEUDO_ATAC_ASSAY]] <- SetAssayData(
-    Seurat_subset2[[PSEUDO_ATAC_ASSAY]],
-    layer = "logcounts",
-    new.data = logcounts_mat
-)
-Seurat_subset2
-# An object of class Seurat 
-# 5224 features across 169 samples within 1 assay 
-# Active assay: ATAC_macs2_merged_pseudo (5224 features, 0 variable features)
-# 2 layers present: counts, logcounts
-
-sce_pb <- as.SingleCellExperiment(
-    Seurat_subset2,
-    assay = PSEUDO_ATAC_ASSAY
-)
-
-sce_pb
-dim(sce_pb)
-colData(sce_pb)
-## SingleCellExperiment() attempts to transfer data from the Seurat object's feature metadata to the SCE object's rowData. 
-## - But Seurat meta.data are saved in Seurat@meta.data, thus feature-level metadata need to be added directly to Seurat
-rowData(sce_pb)
-# DataFrame with 351037 rows and 0 columns
-table(sce_pb$cellType)
-# Astrocyte       Endo Excit.Thal Inhib.Thal      LHb.1    LHb.1.3  LHb.1.3.4 
-#   10         10         10         10         10          7         10 
-# LHb.2.7      LHb.4      LHb.7      MHb.1    MHb.1.2      MHb.2      MHb.3 
-#   10         10          6         10         10         10         10 
-# Microglia      Oligo        OPC       Thal 
-#   10          10         10          6 
-table(sce_pb$donor)
-# S03-Hb-r S04-Hb-r S05-Hb-r S06-Hb-r S07-Hb-r S08-Hb-r S09-Hb-r S10-Hb-r 
-# 17       15       16       18       18       17       17       18 
-# S11-Hb-r S12-Hb-r 
-# 17       16 
-
+sce_pb <- convert_atac_subset_to_sce(
+        SeuratOBJ_pb, 
+        PSEUDO_ATAC_ASSAY, 
+        peaks_to_keep, 
+        SeuratOBJ_pb@meta.data
+        )
+assayNames(sce_pb)
 
 ##=======
 
@@ -397,25 +495,25 @@ sce_pb$ethnicity <- factor(sce_pb$ethnicity, levels = c("AA", "EA.CAUC"))
 sce_pb$sex <- factor(sce_pb$sex, levels = c("F", "M"))
 sce_pb$age <- as.numeric(sce_pb$age)
 
-## extract/transform peak logcounts 
+# ## extract/transform peak logcounts 
 
-if (!"logcounts" %in% assayNames(sce_pb)) {
-    # create logcounts from raw counts
-    dge <- DGEList(counts = assay(sce_pb, "counts"))
-    dge <- calcNormFactors(dge, method = "TMM")
-    sizeFactors(sce_pb) <- dge$samples$norm.factors *
-        dge$samples$lib.size /
-        exp(mean(log(dge$samples$lib.size)))
-    
-    # CPM normalize then log-transform
-    lcpm <- edgeR::cpm(dge, log = FALSE, prior.count = 0, normalized.lib.sizes = TRUE)
-    logcounts(sce_pb) <- log2(lcpm + 1)
-    
-} else {
-
-    message("logcounts already present, skipping normalization")
-    
-}
+# if (!"logcounts" %in% assayNames(sce_pb)) {
+#     # create logcounts from raw counts
+#     dge <- DGEList(counts = assay(sce_pb, "counts"))
+#     dge <- calcNormFactors(dge, method = "TMM")
+#     sizeFactors(sce_pb) <- dge$samples$norm.factors *
+#         dge$samples$lib.size /
+#         exp(mean(log(dge$samples$lib.size)))
+# 
+#     # CPM normalize then log-transform
+#     lcpm <- edgeR::cpm(dge, log = FALSE, prior.count = 0, normalized.lib.sizes = TRUE)
+#     logcounts(sce_pb) <- log2(lcpm + 1)
+# 
+# } else {
+# 
+#     message("logcounts already present, skipping normalization")
+# 
+# }
 
     
 # Inspect the registration model
@@ -430,7 +528,7 @@ head(reg_mod)  # inspect column names / coding
 
 ## estimate donor-level block correlation
 nrow(assay(sce_pb, "counts"))
-# 351037
+# [1] 5224
 
 block_cor <- registration_block_cor(
     sce_pseudo = sce_pb,
@@ -445,25 +543,20 @@ block_cor <- registration_block_cor(
 
 # Add column with peak IDs
 rowData(sce_pb)
-#rowData(sce_pb)$peak_id <- rownames(sce_pb)
 head(rowData(sce_pb))
-# DataFrame with 6 rows and 1 column
-# peak_id
-# <character>
-#     chr1-181329-181534 chr1-181329-181534
-# chr1-191217-191619 chr1-191217-191619
-# chr1-629146-629354 chr1-629146-629354
-# chr1-629811-630032 chr1-629811-630032
-# chr1-630189-630389 chr1-630189-630389
-# chr1-632189-632410 chr1-632189-632410
+# DataFrame with 6 rows and 2 columns
+#                     peak_id         peak_ensembl
+#                     <character>          <character>
+# chr1-629811-630032     chr1-629811-630032   chr1-629811-630032
+# chr1-630189-630389     chr1-630189-630389   chr1-630189-630389
+# chr1-633694-634122     chr1-633694-634122   chr1-633694-634122
 
-res_enrich <- registration_stats_enrichment(
+res_enrich <- registration_stats_enrichment_voomLmFit(
     sce_pseudo = sce_pb,
     block_cor = block_cor,
     covars = covars_vec,
     var_registration = "registration_variable",
     var_sample_id = "registration_sample_id",
-    #gene_ensembl = NULL,              # not genes here
     gene_ensembl = "peak_ensembl",     # must exist in rowData(sce_pb)
     gene_name = "peak_id"             # carry peak IDs into the output
 )
