@@ -12,14 +12,15 @@ suppressPackageStartupMessages({
     library("Matrix")    # if counts are sparse; otherwise base matrix is fine
     library("data.table")
 })
+library("Seurat")
 library("spatialLIBD")
+library("GenomicRanges")
 library("ggplot2")
 library("ggrepel") 
-library("future")
-library("future.apply")
 library("Seurat")
 library("Signac")
 library("dplyr")
+library("stringr")
 library("here")
 
 
@@ -30,6 +31,8 @@ w_size = "5e5"
 sig_thresh <- 0.1    # FDR cutoff
 lfc_thresh <- 0.25   # logFC cutoff / log2
 
+## ATAC function's helper used globally
+source(here("code", "06_peak_calling", "multiome_custom_functions", "multiome_idents_normalization_helper.R"))
 
 if (length(resolution_level)) {
     message("Processing job for peak-method:\n",
@@ -66,7 +69,7 @@ plotDir <- here(
     "06_peak_calling",
     "17_pseudobulk_DARs_MACS2_reduced_voomLmFit"
 )
-
+PSEUDO_ATAC_ASSAY <- "ATAC_macs2_merged_pseudo"
 
 ## Check directories
 if (!dir.exists(plotDir)) {
@@ -86,6 +89,70 @@ message("Link peak-genes files found:")
 lst_peak_files
 # [1] "mtx_merged_peaks_cell_level_Mid_resolution.rds"   
 # [2] "Seurat_peaks_merged_cell_level_Mid_resolution.rds"
+
+
+
+##==============================================================================
+
+## extract peaks cell-type specific
+peaks_ranges_cellType <- function(
+        pb_obj = SeuratOBJ_pb,
+        atac_assay_name = PSEUDO_ATAC_ASSAY,
+        cluster_name #  = "Endo"
+    ) {
+    
+    # Use the pseudobulk ATAC assay that exists
+    #stopifnot(atac_assay_name %in% Assays(pb_obj))
+    DefaultAssay(pb_obj) <- atac_assay_name
+    
+    # subset to cluster
+    seurat_subset <- subset(pb_obj, idents = cluster_name)
+    n_samples <- ncol(seurat_subset)
+    message("Processing ", cluster_name, " (", n_samples, " pseudobulk samples)")
+    if (n_samples < 3) stop("Too few samples for cluster ", cluster_name, "")
+    
+    # peaks for assay
+    peaks_gr <- granges(seurat_subset[[atac_assay_name]])
+    peaks_gr$peak_id <- Signac::GRangesToString(peaks_gr)
+    
+    if (!"peak_called_in" %in% colnames(mcols(peaks_gr))) {
+        warning("No peak_called_in metadata; returning all peaks in subset")
+        return(peaks_gr)
+    }
+    
+    peaks_map <- as.data.frame(peaks_gr) |>
+        transmute(peak_id = peak_id,
+                  peak_called_in = as.character(peak_called_in)) |>
+        mutate(peak_called_in = str_split(peak_called_in, "\\s*,\\s*")) |>
+        tidyr::unnest(peak_called_in) |>
+        mutate(peak_called_in = trimws(peak_called_in)) |>
+        filter(!is.na(peak_called_in), peak_called_in != "") |>
+        distinct()
+    #head(peaks_map)
+
+    cluster_peaks <- peaks_map |> 
+        filter(peak_called_in == cluster_name) |> 
+        pull(peak_id) |> 
+        intersect(rownames(seurat_subset[[atac_assay_name]]))
+    
+    if (length(cluster_peaks) == 0) stop("No peaks for ", cluster_name)
+    
+    # drop ultra-sparse peaks in this cluster (improves stability)
+    counts_mat <- GetAssayData(
+        seurat_subset, 
+        assay = atac_assay_name, 
+        layer = "counts")[cluster_peaks, , drop = FALSE]
+    
+    min_cells_sub <- max(3, floor(0.05 * n_samples))   # ≥5% or at least 3
+    keep_peaks_sub <- rownames(counts_mat)[Matrix::rowSums(counts_mat > 0) >= min_cells_sub]
+    if (length(keep_peaks_sub) == 0) stop("No peaks pass support filter in ", cluster_name, ".")
+    
+    # preserves annotation
+    peak_ranges <- Signac::StringToGRanges(keep_peaks_sub)
+    
+    return(peak_ranges)
+
+}
 
 
 ########################################################################
@@ -113,22 +180,18 @@ SeuratOBJ_pb
 # length(rownames(rna_counts)) # [1] 36601
 
 
-
 ## =============================================================================
 
-## (1) get matrix of raw peaks: rows = peaks, cols = pseudobulk samples
-PSEUDO_ATAC_ASSAY <- "ATAC_macs2_merged_pseudo"
+## get matrix of peaks: rows = peaks, cols = pseudobulk samples
+
 atac_counts <- GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer ="counts")
 length(rownames(atac_counts)) # [1] 351037
 head(atac_counts)
 
-## (2) get data.frame with sample metadata, nrow = ncol(counts)
+## get data.frame with sample metadata, nrow = ncol(counts)
 #  must include at least: sample_id, cluster_id, group, donor
 meta <- SeuratOBJ_pb@meta.data
 colnames(meta)
-# [1] "orig.ident"                        "nCount_RNA"                       
-# [3] "nFeature_RNA"                      "nCount_ATAC_macs2_merged_pseudo"  
-# [5] "nFeature_ATAC_macs2_merged_pseudo"
 head(meta)
 
 ## add meta-data in the expected format
@@ -157,7 +220,7 @@ SeuratOBJ_pb@meta.data <- meta
 head(meta)
 
 
-## Ensure we are contrasting by cell-type
+## Ensure we are contrasting by cellType
 if (!"cellType" %in% colnames(SeuratOBJ_pb@meta.data)) {
     SeuratOBJ_pb$cellType <- sub("^[^_]+_", "", SeuratOBJ_pb$orig.ident)  # keep part after first underscore
 }
@@ -174,33 +237,114 @@ cluster_ids
 
 # ====/
 
+message("Subset peaks for specific cellType ... ")
+
 stopifnot(all(colnames(atac_counts) == meta$sample_id))
 
-# # Tweakables
-# min_cpm        <- 1            # expression filter threshold (logical CPM rule)
-# min_samples    <- 3            # require in >= this many samples overall or per-group
-# use_block      <- TRUE         # TRUE = account for repeated measures (e.g., donor)
-# # use_samp_wts   <- TRUE         # TRUE = estimate sample quality weights
-# # trend_ebayes   <- TRUE         # TRUE = eBayes(trend=TRUE) often good for counts
-# # robust_ebayes  <- TRUE         # TRUE = robust empirical Bayes
-# fdr_cutoff     <- 0.10
+DefaultAssay(SeuratOBJ_pb) <- PSEUDO_ATAC_ASSAY
+
+# Get all peaks in the assay
+all_peaks <- granges(SeuratOBJ_pb)
+length(all_peaks) # [1] 351037
+
+# Get peaks cellType specific
+peak_ranges_ct <- peaks_ranges_cellType(
+    SeuratOBJ_pb,
+    PSEUDO_ATAC_ASSAY,
+    cluster_name = "Endo"
+) 
+length(peak_ranges_ct) # 5224
+
+# Get the assay’s ranges and rownames
+ap_gr   <- granges(SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]])
+# GRanges object with 351037 ranges and 2 metadata columns:
+# seqnames          ranges strand |        revmap
+# <Rle>       <IRanges>  <Rle> | <IntegerList>
+# [1]       chr1   181329-181534      * |             1
+# [2]       chr1   191217-191619      * |             2
+# [3]       chr1   629146-629354      * |             3
+
+ap_rows <- rownames(SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]])
+# [1] "chr1-181329-181534"   "chr1-191217-191619"   "chr1-629146-629354"  
+# [4] "chr1-629811-630032"   "chr1-630189-630389"   "chr1-632189-632410"  
+# [7] "chr1-633694-634122"   "chr1-777714-777962"   "chr1-778314-779308"  
+
+# Find exact matches by genomic coordinates
+#    (use type="any" for overlaps instead of exact start/end equality)
+hits <- findOverlaps(ap_gr, peak_ranges_ct, type = "equal")
+idx  <- queryHits(hits)
+# [1]      4      5      7     53     60     73    116    168    189    226
+# [11]    288    290    293    324    340    353    361    503    535    557
+# [21]    919    989    994   1018   1222   1234   1258   1259   1267   1428
+
+# Map hits to peaks IDs actually present in the assay
+peaks_to_keep <- ap_rows[idx]
+peaks_to_keep <- unique(as.character(peaks_to_keep))
+# [1495] "chr5-72307684-72308762"   "chr5-72319550-72320868"  
+# [1497] "chr5-72815810-72817418"   "chr5-73119548-73120878"  
+# [1499] "chr5-73564688-73566247"   "chr5-75236269-75237381"  
+
+# checks before subsetting
+stopifnot(length(peaks_to_keep) > 0)
+stopifnot(all(peaks_to_keep %in% ap_rows))
+stopifnot(sum(peaks_to_keep %in% rownames(
+    GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer = "counts")
+)) == length(peaks_to_keep))
 
 
-## ============================================================================
-## refs:
-## current version https://github.com/LieberInstitute/spatialLIBD/blob/40da043d0235e01a12a7f52a0b367d3850bad9e8/R/registration_stats_enrichment.R#L40
-## My previous manual implementation: https://github.com/LieberInstitute/Habenula_Visium/blob/2d21e39f51c9e46ebddbcf57f959f70c27d78678/code/05_brain_area_differential_expression/05_pseudobulk_DEG_contrast.R#L176-L255 
-
-# Inputs for atac
-# logcounts(sce_pseudo) peaks (it fits limma on log-scale data)
-# var_registration: in my case cellType
-# var_sample_id: blocking by donor factor
-# covars:age, sex and ethnicity
+# cat("Assay: ", DefaultAssay(SeuratOBJ_pb), "\n")
+# cat("Duplicates in assay rownames: ", anyDuplicated(rownames(SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]])) > 0, "\n")
+# cat("Overlaps found: ", length(idx), "\n")
+# cat("Example peaks_to_keep:\n"); print(utils::head(peaks_to_keep))
+# cat("Present in counts rows: ",
+#     sum(peaks_to_keep %in% rownames(GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer = "counts"))),
+#     "/", length(peaks_to_keep), "\n")
 
 
-## convert Seurat object into sce
-sce_pb <- as.SingleCellExperiment(SeuratOBJ_pb,
-                                  layer = PSEUDO_ATAC_ASSAY)
+# subset by peaks
+Seurat_subset <- subset(
+    SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]],
+    features = peaks_to_keep
+)
+Seurat_subset
+# ChromatinAssay data with 5224 features for 169 cells
+# Variable features: 5216 
+# ...
+
+## convert object into sce with meta.data
+class(Seurat_subset)
+counts_mat <- GetAssayData(Seurat_subset, layer = "counts")
+logcounts_mat <- GetAssayData(Seurat_subset, layer = "data")  # “data” in Seurat usually holds lognorm values
+
+Seurat_subset2 <- CreateSeuratObject(
+    counts = counts_mat,
+    assay = PSEUDO_ATAC_ASSAY,
+    meta.data = SeuratOBJ_pb@meta.data
+)
+Seurat_subset2
+# > Seurat_subset2
+# An object of class Seurat 
+# 5224 features across 169 samples within 1 assay 
+# Active assay: ATAC_macs2_merged_pseudo (5224 features, 0 variable features)
+# 1 layer present: counts
+
+# Add logcounts back
+Seurat_subset2[[PSEUDO_ATAC_ASSAY]] <- SetAssayData(
+    Seurat_subset2[[PSEUDO_ATAC_ASSAY]],
+    layer = "logcounts",
+    new.data = logcounts_mat
+)
+Seurat_subset2
+# An object of class Seurat 
+# 5224 features across 169 samples within 1 assay 
+# Active assay: ATAC_macs2_merged_pseudo (5224 features, 0 variable features)
+# 2 layers present: counts, logcounts
+
+sce_pb <- as.SingleCellExperiment(
+    Seurat_subset2,
+    assay = PSEUDO_ATAC_ASSAY
+)
+
 sce_pb
 dim(sce_pb)
 colData(sce_pb)
@@ -221,9 +365,19 @@ table(sce_pb$donor)
 # S11-Hb-r S12-Hb-r 
 # 17       16 
 
-## required columns
 
 ##=======
+
+## refs:
+## current version https://github.com/LieberInstitute/spatialLIBD/blob/40da043d0235e01a12a7f52a0b367d3850bad9e8/R/registration_stats_enrichment.R#L40
+## My previous manual implementation: https://github.com/LieberInstitute/Habenula_Visium/blob/2d21e39f51c9e46ebddbcf57f959f70c27d78678/code/05_brain_area_differential_expression/05_pseudobulk_DEG_contrast.R#L176-L255 
+
+# Inputs for atac
+# logcounts(sce_pseudo) peaks (it fits limma on log-scale data)
+# var_registration: in my case cellType
+# var_sample_id: blocking by donor factor
+# covars:age, sex and ethnicity
+
 # added this chunck to patch: registration_stats_enrichment() tries to pull row annotations via rowData(sce_pseudo)[[gene_ensembl]] and/or [[gene_name]]. 
 # - If none of those arguments is provided, it resolves to NULL in rowData, and gets error
 
@@ -235,8 +389,8 @@ if (!"peak_id" %in% colnames(rowData(sce_pb))) {
 if (!"peak_ensembl" %in% colnames(rowData(sce_pb))) {
     rowData(sce_pb)$peak_ensembl <- rownames(sce_pb)
 }
-##=======/
 
+## required columns
 sce_pb$registration_variable <- factor(sce_pb$cellType)          # group to test
 sce_pb$registration_sample_id <- factor(sce_pb$donor)            # block by donor
 sce_pb$ethnicity <- factor(sce_pb$ethnicity, levels = c("AA", "EA.CAUC"))
@@ -275,19 +429,23 @@ head(reg_mod)  # inspect column names / coding
 
 
 ## estimate donor-level block correlation
+nrow(assay(sce_pb, "counts"))
+# 351037
+
 block_cor <- registration_block_cor(
     sce_pseudo = sce_pb,
     registration_model = reg_mod,
     var_sample_id = "registration_sample_id"  ##cellType
 )
-# 2025-09-18 16:00:05.635304 run duplicateCorrelation()
-# 2025-09-18 16:07:59.024504 The estimated correlation is: 0.0259710191924901
+# Endo ct test:
+# 2025-09-19 13:06:16.032861 run duplicateCorrelation()
+# 2025-09-19 13:06:22.540479 The estimated correlation is: 0.00931803725048961
 
 ## Run enrichment t-stats (1-vs-all for each cell type)
 
 # Add column with peak IDs
 rowData(sce_pb)
-rowData(sce_pb)$peak_id <- rownames(sce_pb)
+#rowData(sce_pb)$peak_id <- rownames(sce_pb)
 head(rowData(sce_pb))
 # DataFrame with 6 rows and 1 column
 # peak_id
