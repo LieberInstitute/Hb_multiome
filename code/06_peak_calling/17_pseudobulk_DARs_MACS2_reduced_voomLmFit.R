@@ -285,6 +285,53 @@ registration_stats_enrichment_voomLmFit <- function(
 }
 
 
+create_volcano <- function(
+        res_enrich = res_enrich,
+        clus = clus,
+        FDR_thr = FDR_thr,
+        lfc_thresh = lfc_thresh,
+        plotDir
+    ) {
+    
+    plot_data <- res_enrich |>
+        select(
+            peak_id,
+            logFC = paste0("logFC_", clus),
+            fdr = paste0("fdr_", clus)
+        ) |>
+        mutate(
+            is_significant = case_when(
+                fdr < FDR_thr & abs(logFC) > lfc_thresh ~ "Significant",
+                TRUE ~ "Not Significant"
+            )
+        )
+    
+    plot_title <- paste0("Volcano Plot for DARs in ", clus)
+    
+    f_name <- here(plotDir, paste0("Volcano_", clus, "_voomLmFit.pdf"))
+    pdf(f_name, width = 7, height = 6)  
+    
+    g1 <- ggplot(plot_data, aes(x = logFC, y = -log10(fdr), color = is_significant)) +
+        geom_point(alpha = 0.5, size = 1) +
+        scale_color_manual(values = c("Significant" = "red", "Not Significant" = "grey")) +
+        geom_hline(yintercept = -log10(FDR_thr), linetype = "dashed", color = "blue") +
+        geom_vline(xintercept = c(-lfc_thresh, lfc_thresh), linetype = "dashed", color = "blue") +
+        labs(
+            title = plot_title,
+            x = "Log2 Fold Change (logFC)",
+            y = "-Log10(FDR)",
+            color = "Significance"
+        ) +
+        theme_minimal() +
+        theme(plot.title = element_text(hjust = 0.5))
+    
+    print(g1)
+    dev.off()
+    message("Volcano done!")
+
+}
+
+
 ########################################################################
 ## Differential Accessibility Analysis using voomLmFit
 ## Input: Seurat object with pseudobulk RNA+ATAC assay with merged peaks
@@ -300,14 +347,6 @@ SeuratOBJ_pb
 # An object of class Seurat 
 # 366933 features across 169 samples within 2 assays 
 # Active assay: ATAC_macs2_merged_pseudo (351037 features, 333643 variable features)
-# 2 layers present: counts, data
-# 1 other assay present: RNA
-# 1 dimensional reduction calculated: lsi
-
-# ## get rna counts
-# DefaultAssay(SeuratOBJ_pb) <- "RNA"
-# rna_counts <- GetAssayData(SeuratOBJ_pb, assay="RNA", layer="data")
-# length(rownames(rna_counts)) # [1] 36601
 
 
 ## =============================================================================
@@ -509,6 +548,8 @@ for (clus in cluster_ids) {
             peak_id    = gene
         )
     
+    create_volcano(res_enrich, clus, FDR_thr, lfc_thresh, plotDir)
+    
     # save enrichment stats
     f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_ALL_in_", clus, ".csv"))
     write.csv(res_enrich, f_name, row.names = FALSE)
@@ -518,7 +559,9 @@ for (clus in cluster_ids) {
     
     # cluster-specific significant peaks
     res_sig_ct <- res_enrich |>
-        filter(.data[[paste0("fdr_", clus)]] < FDR_thr) |>
+        # filter(.data[[paste0("fdr_", clus)]] < FDR_thr) |>
+        filter(.data[[paste0("fdr_", clus)]] < FDR_thr,
+               abs(.data[[paste0("logFC_", clus)]]) > lfc_thresh) |>
         mutate(
             logFC_ct = .data[[paste0("logFC_", clus)]],
             direction = case_when(
@@ -527,9 +570,6 @@ for (clus in cluster_ids) {
                 TRUE ~ "NS"              # should not occur if you filtered
             )
         )
-    
-    dim(res_sig_ct)
-    head(res_sig_ct[, c("peak_id", paste0("fdr_", clus), "logFC_ct", "direction")])
     
     if (nrow(res_sig_ct) > 0) { 
         f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_", clus, ".csv"))
