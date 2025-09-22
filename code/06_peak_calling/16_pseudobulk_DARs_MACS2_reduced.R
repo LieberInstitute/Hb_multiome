@@ -22,7 +22,7 @@ resolution_level = "Mid"
 p_met = "spearman"
 w_size = "5e5"
 sig_thresh <- 0.1    # FDR cutoff
-lfc_thresh <- 0.25   # logFC cutoff
+lfc_thresh <- 0.1    # Default
 
 
 if (length(resolution_level)) {
@@ -101,27 +101,26 @@ colnames(meta)
 # [5] "nFeature_ATAC_macs2_merged_pseudo"
 head(meta)
 
-## Ensure we are contrasting by cell-type
-if (!"cell_type" %in% colnames(SeuratOBJ_pb@meta.data)) {
-    SeuratOBJ_pb$cell_type <- sub("^[^_]+_", "", SeuratOBJ_pb$orig.ident)  # keep part after first underscore
+## Ensure we are testing by cell-type
+if (!"cellType" %in% colnames(SeuratOBJ_pb@meta.data)) {
+    SeuratOBJ_pb$cellType <-  sub("_.*$", "", colnames(SeuratOBJ_pb)) # keep part after first underscore
 }
-length(SeuratOBJ_pb$cell_type)
-# [1] 169
 
-Idents(SeuratOBJ_pb) <- "cell_type"
-cluster_ids <- levels(SeuratOBJ_pb)
-unique(Idents(SeuratOBJ_pb))
 
+Idents(SeuratOBJ_pb) <- "cellType"
+cluster_ids <-levels(Idents(SeuratOBJ_pb))
+#unique(Idents(SeuratOBJ_pb))
 message("Pseudobulk groups (cell-types):")
 cluster_ids
 
 ## Define assay and metadata grouping
 PSEUDO_ATAC_ASSAY <- "ATAC_macs2_merged_pseudo"  
-grouping_var <- "orig.ident"    
-# Set default assay
 DefaultAssay(SeuratOBJ_pb) <- PSEUDO_ATAC_ASSAY
 
-## double-check depth differences between pseudobulk samples
+## add a library-size covariate for LR
+covar_col <- paste0("nCount_", PSEUDO_ATAC_ASSAY)
+stopifnot(covar_col %in% colnames(SeuratOBJ_pb@meta.data))
+
 ## Check total counts per pseudobulk sample
 col_sums <- colSums(GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer = "counts"))
 col_sums
@@ -130,36 +129,29 @@ message("Library size summary:\n"); print(summary(col_sums))
 # 4217    97388   623469  2605095  2827754 46470237 
 
 
-## Find differentially accessible peaks between cell-types
-## Loop over multiple identities
+## Find differential peaks (markers) between cell-types
 
-# testing 
-# da_res <- FindMarkers(
-#     object = SeuratOBJ_pb,
-#     ident.1 = "LHb.1",
-#     ident.2 = NULL,              # NULL = rest of cells
-#     only.pos = FALSE,            # get both up and down
-#     min.pct = 0.1,               # require peak present in 10% of cells
-#     test.use = "LR"              # likelihood ratio test (works well for binary peak presence)
-#     # latent.vars = "nCount_ATAC"  # correct for sequencing depth if needed => this is pb data
-# )
-
-
-## provide as input reduced peaks, so, this set should be consistent DA across cell-types
+## provide as input peaks merged, so, this set should be consistent DA across cell-types
 ## function give per-cluster DA peaks vs all others: cluster marker accessibility
 
 message("Starting DA across cell-types ...")
 
+## Confirm peaks layer is non-empty
+table(Idents(SeuratOBJ_pb)) |> print()
+m <- GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer = "counts") 
+cat("nz features:", sum(Matrix::rowSums(m) > 0), " / ", nrow(m), "\n")
+
 all_da <- setNames(vector("list", length(cluster_ids)), cluster_ids)
 
-# FindMarkers() internally supports parallelization / MAC
-future::plan("multicore", workers = 4)
+# FindMarkers() internally supports parallelization / for local use: MAC
+# future::plan("multicore", workers = 16)
 
 
 for (ct in cluster_ids) {
-    message("[", ct, "]")
-    # Skip if this cell-type has very few samples
-    n_samples_ct <- sum(SeuratOBJ_pb$cell_type == ct)
+    # ct = "Endo"
+    
+    message("Processing [", ct, "]")
+    n_samples_ct <- sum(SeuratOBJ_pb$cellType == ct)
     if (n_samples_ct < 3) {
         warning("Skipping ", ct, " (only ", n_samples_ct, " pseudobulk samples).")
         next
@@ -169,14 +161,18 @@ for (ct in cluster_ids) {
             tmp <- FindMarkers(
                 object   = SeuratOBJ_pb,
                 ident.1  = ct,
-                ident.2  = NULL,     # group vs. rest
-                # only.pos = TRUE,
-                test.use = "LR"      # used for binary accessibility
+                ident.2  = NULL,            # group vs. rest
+                only.pos = FALSE,
+                test.use = "LR",            # used for binary accessibility
+                layer = "counts", 
+                latent.vars = covar_col,    # control for library size
+                min.pct = 0,                # turn off detection filtering while debugging
+                logfc.threshold = 0         # no FC pre-filter; filter later by FDR
             )
             tmp$cluster <- ct
             tmp$peak    <- rownames(tmp)
-            tmp$FDR     <- p.adjust(tmp$p_val, method = "BH")
-            tmp
+            #tmp$FDR     <- p.adjust(tmp$p_val, method = "BH")
+            dim(tmp); head(tmp)
         },
         error = function(e) {
             warning("FindMarkers failed for ", ct, ": ", conditionMessage(e))
@@ -186,16 +182,21 @@ for (ct in cluster_ids) {
     all_da[[ct]] <- res
 }
 
+message("Ends DA!")
+
+
 ## Filter() keeps only elements of a list that return TRUE. Removes NULL entries
 da_results <- bind_rows(Filter(Negate(is.null), all_da))
+
+if (nrow(da_results) == 0) {
+    message("No DA results produced. Check identities and FindMarkers settings.")
+    q(save="no", status = 0)  # or stop("No DA results")
+}
+
 # Save combined
 write.csv(da_results, file.path(output_Dir, "DA_all_clusters.csv"), row.names = FALSE)
-# milestone
-# da_results <- read.csv(file.path(output_Dir, "DA_all_clusters.csv"))
-table(da_results$cluster)
-nrow(da_results)
 
-# indiv. tests by cell-type
+# Save combinedper cellType
 for (cl in names(all_da)) {
     if (is.null(all_da[[cl]])) next
     output_path <- here(output_Dir, paste0("DA_", cl, ".csv"))
@@ -214,8 +215,7 @@ head(da_results)
 
 ## Keeps all statistically significant peaks, whether up (positive log2FC) or down (negative log2FC).
 da_sig <- da_results |>
-    filter(FDR < sig_thresh) #& abs(avg_log2FC) > lfc_thresh)
-    #filter(FDR < sig_thresh & abs(avg_log2FC) > lfc_thresh)
+    filter(p_val_adj < sig_thresh & avg_log2FC > lfc_thresh)
 nrow(da_sig)
 # [1] 21849
 
@@ -247,7 +247,7 @@ top10_per_cluster <- da_sig |>
     arrange(desc(avg_log2FC)) |>
     slice_head(n = 10)
 
-table(top10_per_cluster$cluster)
+# table(top10_per_cluster$cluster)
 
 f_name <- here(output_Dir, "DA_top10_per_cluster.csv")
 write.csv(top10_per_cluster, f_name, row.names = FALSE)
@@ -257,7 +257,7 @@ message("Summary and top10 tables saved in: ", output_Dir)
 
 ########################################################################
 
-message("Starting summary Volcano plots per cluster")
+message("Starting Volcano plots per cluster ...")
 
 f_name <- here(plotDir, "Volcano_all_clusters.pdf")
 pdf(f_name, width = 7, height = 6)  
@@ -265,24 +265,22 @@ pdf(f_name, width = 7, height = 6)
 
 for (ct in unique(da_results$cluster)) {
     # ct = unique(da_results$cluster[1])
+    
     df <- da_results |> filter(cluster == ct)
-    
-    # mark significant points
-    df$signif <- with(df, ifelse(FDR < sig_thresh & abs(avg_log2FC) > lfc_thresh, "significant", "not"))
-    
+    if (nrow(df) == 0) next
     # classify as Up / Down / Not
     df$signif <- case_when(
-        df$FDR < sig_thresh & df$avg_log2FC >  lfc_thresh  ~ "Up",
-        df$FDR < sig_thresh & df$avg_log2FC < -lfc_thresh  ~ "Down",
-        TRUE                                               ~ "Not"
+        df$p_val_adj < sig_thresh & df$avg_log2FC >  lfc_thresh  ~ "Up",
+        df$p_val_adj < sig_thresh & df$avg_log2FC < -lfc_thresh  ~ "Down",
+        TRUE ~ "Not"
     )
     
     # select top 5 peaks by FDR
     top5 <- df |>
-        arrange(FDR) |>
+        arrange(p_val_adj) |>
         slice_head(n = 5)
     
-    p <- ggplot(df, aes(x = avg_log2FC, y = -log10(FDR))) +
+    p <- ggplot(df, aes(x = avg_log2FC, y = -log10(p_val_adj))) +
         geom_point(aes(color = signif), alpha = 0.6, size = 1.2) +
         scale_color_manual(values = c("Up" = "red", "Down" = "blue", "Not" = "grey70")) +
         geom_vline(xintercept = c(-lfc_thresh, lfc_thresh), linetype = "dashed") +
@@ -309,10 +307,14 @@ for (ct in unique(da_results$cluster)) {
 
 dev.off()
 
+message("Volcano saved to: ", f_name)
+
 
 ## Barplot of Up vs Down DARs per cluster
 
-barplot_name <- here(plotDir, "DA_barplot_UpDown_per_cluster.pdf")
+message("Starting Barplot per cluster ...")
+
+f_name <- here(plotDir, "DA_barplot_UpDown_per_cluster.pdf")
 
 # Prepare counts of Up and Down DARs
 up_down_counts <- da_sig |>
@@ -347,9 +349,9 @@ p1 <- ggplot(up_down_counts, aes(x = cluster, y = n, fill = direction)) +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave(barplot_name, p1, width = 8, height = 5, dpi = 300)
+ggsave(f_name, p1, width = 8, height = 5, dpi = 300)
 
-message("Barplot saved to: ", barplot_file)
+message("Barplot saved to: ", f_name)
 
 
 
