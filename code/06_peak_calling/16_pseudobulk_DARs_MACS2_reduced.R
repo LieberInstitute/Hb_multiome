@@ -215,7 +215,7 @@ head(da_results)
 
 ## Keeps all statistically significant peaks, whether up (positive log2FC) or down (negative log2FC).
 da_sig <- da_results |>
-    filter(p_val_adj < sig_thresh & avg_log2FC > lfc_thresh)
+    filter(p_val_adj < sig_thresh & abs(avg_log2FC) > lfc_thresh)
 nrow(da_sig)
 # [1] 21849
 
@@ -241,18 +241,26 @@ summary_table <- da_sig |>
 f_name <- here(output_Dir, "DA_summary_per_cluster.csv")
 write.csv(summary_table, f_name, row.names = FALSE)
 
-# extract top 10 enriched peaks per cluster
-top10_per_cluster <- da_sig |>
+# extract top upregulated per cluster
+top10_up <- da_sig |>
     group_by(cluster) |>
     arrange(desc(avg_log2FC)) |>
-    slice_head(n = 10)
+    slice_head(n = 10)  |>
+    mutate(direction = "Up")
+# top 10 downregulated per cluster
+top10_down <- da_sig |>
+    group_by(cluster) |>
+    arrange(avg_log2FC) |>
+    slice_head(n = 10) |>
+    mutate(direction = "Down")
 
-# table(top10_per_cluster$cluster)
+top10_per_cluster <- bind_rows(top10_up, top10_down) |>
+    arrange(cluster, desc(direction), desc(abs(avg_log2FC)))
 
-f_name <- here(output_Dir, "DA_top10_per_cluster.csv")
+f_name <- here(output_Dir, "DA_top10_up_down_per_cluster.csv")
 write.csv(top10_per_cluster, f_name, row.names = FALSE)
 
-message("Summary and top10 tables saved in: ", output_Dir)
+message("Saved top 10 Up and Down DARs per cluster: ", output_Dir)
 
 
 ########################################################################
