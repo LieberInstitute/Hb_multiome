@@ -31,6 +31,11 @@ resolution_level = "Mid"
 lfc_thresh <- 0.25 # 2^0.25 ≈1.189
 FDR_thr = 0.20
 
+## read input arguments
+args = commandArgs(trailingOnly = TRUE)
+clus <- args[1]
+if (is.na(clus) || !nzchar(clus)) stop("Missing cluster_name argument")
+
 ## ATAC function's helper used globally
 source(here("code", "06_peak_calling", "multiome_custom_functions", "multiome_idents_normalization_helper.R"))
 
@@ -78,7 +83,7 @@ if (!dir.exists(output_Dir)) {
 peaks_ranges_cellType <- function(
         pb_obj = SeuratOBJ_pb,
         atac_assay_name = PSEUDO_ATAC_ASSAY,
-        cluster_name #  = "Endo"
+        cluster_name
     ) {
     
     # Use the pseudobulk ATAC assay that exists
@@ -284,14 +289,8 @@ registration_stats_enrichment_voomLmFit <- function(
         return(results_specificity)
 }
 
-
-create_volcano <- function(
-        res_enrich = res_enrich,
-        clus = clus,
-        FDR_thr = FDR_thr,
-        lfc_thresh = lfc_thresh,
-        plotDir
-    ) {
+## create volcanos
+create_volcano <- function(res_enrich, clus,FDR_thr, lfc_thresh,plotDir) {
     
     plot_data <- res_enrich |>
         select(
@@ -416,7 +415,6 @@ cluster_ids
 
 stopifnot(all(colnames(atac_counts) == meta$sample_id))
 
-# ====/
 
 
 message("Starting registration_stats_enrichment_voomLmFit ... ")
@@ -432,8 +430,8 @@ all_peaks <- granges(SeuratOBJ_pb)
 length(all_peaks) # [1] 351037
 
 
-for (clus in cluster_ids) {
-    # clus = "Endo"
+# for (clus in cluster_ids) {
+#     # clus = "Endo"
     
     # Get peaks cellType specific
     peak_ranges_ct <- peaks_ranges_cellType(
@@ -575,11 +573,9 @@ for (clus in cluster_ids) {
         f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_", clus, ".csv"))
         write.csv(res_sig_ct, f_name, row.names = FALSE)
         message("Enrichment statistics saved [", clus, "]")    
-    } else { 
-        next 
     }
 
-}
+# }
 
 message("Enrichment statistics done!")
 
