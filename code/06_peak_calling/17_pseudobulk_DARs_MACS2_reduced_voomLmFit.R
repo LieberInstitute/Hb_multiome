@@ -34,16 +34,6 @@ lfc_thresh <- 0.25   # logFC cutoff / log2
 ## ATAC function's helper used globally
 source(here("code", "06_peak_calling", "multiome_custom_functions", "multiome_idents_normalization_helper.R"))
 
-# if (length(resolution_level)) {
-#     message("Processing job for peak-method:\n",
-#             p_met,
-#             "\nWindow-size\n",
-#             w_size)
-# } else {
-#     message("Input arguments missed")
-#     stop()
-# }
-
 # Inputs:
 # counts:   matrix of raw counts, rows = peaks, cols = pseudobulk samples
 #           (e.g., aggregated by cluster x donor)
@@ -57,6 +47,7 @@ inputRDS_Dir <- here(
     "06_peak_calling",
     "12_pseudobulk_MACS2"
 )
+# these are mac2 peaks merged and normalized 
 Seurat_base_name <- "Mid_pseudobulk.spearman.5e5_merged_peaks.rds"
 
 output_Dir <- here(
@@ -79,22 +70,11 @@ if (!dir.exists(output_Dir)) {
     dir.create(output_Dir)
 }
 
-# List all files matching the specific clustering resolution level
-lst_peak_files <- list.files(
-    path = inputRDS_Dir,
-    pattern = "*.rds",
-)
-#lst_peak_files = list.files(path = input_cvsDir)
-message("Link peak-genes files found:")
-lst_peak_files
-# [1] "mtx_merged_peaks_cell_level_Mid_resolution.rds"   
-# [2] "Seurat_peaks_merged_cell_level_Mid_resolution.rds"
-
-
 
 ##==============================================================================
 
 ## extract peaks cell-type specific
+## code assumes peak_called_in column exists and contains a comma-separated list of cell types
 peaks_ranges_cellType <- function(
         pb_obj = SeuratOBJ_pb,
         atac_assay_name = PSEUDO_ATAC_ASSAY,
@@ -155,6 +135,8 @@ peaks_ranges_cellType <- function(
 }
 
 
+## conversion from Seurat to SingleCellExperiment (SCE) is a standard and 
+## necessary step for using Bioconductor packages like edgeR and limma
 convert_atac_subset_to_sce <- function(
         SeuratOBJ_pb, 
         PSEUDO_ATAC_ASSAY, 
@@ -171,7 +153,6 @@ convert_atac_subset_to_sce <- function(
     
     ## convert object into sce with meta.data
     counts_mat <- GetAssayData(Seurat_subset, layer = "counts")
-    logcounts_mat <- GetAssayData(Seurat_subset, layer = "data")
     
     Seurat_subset2 <- CreateSeuratObject(
         counts = counts_mat,
@@ -185,49 +166,28 @@ convert_atac_subset_to_sce <- function(
     # Active assay: ATAC_macs2_merged_pseudo (5224 features, 0 variable features)
     # 1 layer present: counts
     
-    # Add logcounts back
-    Seurat_subset2[[PSEUDO_ATAC_ASSAY]] <- SetAssayData(
-        Seurat_subset2[[PSEUDO_ATAC_ASSAY]],
-        layer = "logcounts",
-        new.data = logcounts_mat
-    )
-    #Seurat_subset2
-    
     sce_pb <- as.SingleCellExperiment(
         Seurat_subset2,
         assay = PSEUDO_ATAC_ASSAY
     )
     
     # copy Seurat's "logcounts" layer (if it existed) into SCE
-    if ("logcounts" %in% Layers(Seurat_subset2[[PSEUDO_ATAC_ASSAY]])) {
-        logcounts(sce_pb) <- GetAssayData(Seurat_subset2, assay = PSEUDO_ATAC_ASSAY, layer = "logcounts")
-    }
-    
-    # if (!"logcounts" %in% assayNames(sce_pb)) {
-    #     # create logcounts from raw counts
-    #     dge <- DGEList(counts = assay(sce_pb, "counts"))
-    #     dge <- calcNormFactors(dge, method = "TMM")
-    #     sizeFactors(sce_pb) <- dge$samples$norm.factors *
-    #         dge$samples$lib.size /
-    #         exp(mean(log(dge$samples$lib.size)))
-    # 
-    #     # CPM normalize then log-transform
-    #     lcpm <- edgeR::cpm(dge, log = FALSE, prior.count = 0, normalized.lib.sizes = TRUE)
-    #     logcounts(sce_pb) <- log2(lcpm + 1)
-    # 
-    # } else {
-    # 
-    #     message("logcounts already present, skipping normalization")
-    # 
+    # if ("logcounts" %in% Layers(Seurat_subset2[[PSEUDO_ATAC_ASSAY]])) {
+    #     logcounts(sce_pb) <- GetAssayData(Seurat_subset2, assay = PSEUDO_ATAC_ASSAY, layer = "logcounts")
     # }
     
-    sce_pb
-    dim(sce_pb)
-    colData(sce_pb) #Endo test: [1] 5224  169
-    ## SingleCellExperiment() attempts to transfer data from the Seurat object's feature metadata to the SCE object's rowData. 
-    ## - But Seurat meta.data are saved in Seurat@meta.data, thus feature-level metadata need to be added directly to Seurat
-    rowData(sce_pb)
-    # DataFrame with 5224 rows and 2 columns
+    # Note. actual voomLmFit still use the raw counts - no need to compute logcounts / (for QC or visualization only)
+    if (!"logcounts" %in% assayNames(sce_pb)) {
+        # create logcounts from raw counts
+        dge <- DGEList(counts = assay(sce_pb, "counts"))
+        dge <- calcNormFactors(dge, method = "TMM") # gives scaling factors for library sizes
+        lcpm <- edgeR::cpm(dge, log = FALSE, prior.count = 0, normalized.lib.sizes = TRUE)
+        logcounts(sce_pb) <- log2(lcpm + 1)
+    }
+    
+    #dim(sce_pb)
+    #colData(sce_pb) #Endo test: [1] 5224  169
+    #rowData(sce_pb)
     #table(sce_pb$cellType)
     #table(sce_pb$donor)
     
@@ -239,11 +199,16 @@ registration_stats_enrichment_voomLmFit <-
     function(
         sce_pseudo,
         block_cor,
-        covars = NULL,
-        var_registration = "registration_variable",
-        var_sample_id = "registration_sample_id",
+        covars = NULL,                              # c("age", "sex", "ethnicity")
+        var_registration = "registration_variable", # cellType = 18 ct
+        var_sample_id = "registration_sample_id",   # donor = 169 samples
         gene_ensembl = NULL,
         gene_name = NULL
+        # sce_pseudo = sce_pb
+        # covars = covars_vec
+        # var_registration = "registration_variable"
+        # var_sample_id = "registration_sample_id"
+        # block_cor = block_cor
     ) {
         ## For each cluster, test it against the rest
         cluster_idx <- split(
@@ -266,23 +231,32 @@ registration_stats_enrichment_voomLmFit <-
             } else {
                 res_formula <- eval(str2expression(paste("~", "res")))
             }
+            # res_formula = ~res + age + sex + ethnicity
             m <- model.matrix(res_formula, data = colData(sce_pseudo))
             
-            if (is.finite(block_cor)) {
-                #res <- limma::eBayes(limma::lmFit(
-                res <- limma::eBayes(edgeR::voomLmFit(
-                    logcounts(sce_pseudo),
-                    design = m,
-                    block = sce_pseudo[[var_sample_id]],
-                    # correlation = block_cor
-                ))
-            } else {
-                res <- limma::eBayes(edgeR::voomLmFit(
-                # res <- limma::eBayes(limma::lmFit(
-                    logcounts(sce_pseudo),
-                    design = m
-                ))
-            }
+            ## voomLmFit, is a shorthand that includes: log2-counts per million (logCPM) -> Weighting -> Linear model fitting
+            ## run voomLmFit for the pseudobulked data, referring donor to duplicateCorrelation; 
+            ## using an adaptive span (number of genes, based on the number of genes in the dge) for smoothing the mean-variance trend
+            res <- limma::eBayes(edgeR::voomLmFit(
+                assay(sce_pseudo, "counts"),
+                design = m,
+                block = sce_pseudo[[var_sample_id]], # ge. donor
+                correlation = block_cor, # Use the estimated correlation
+                sample.weights = TRUE
+            ))
+            # if (is.finite(block_cor)) {
+            #     res <- limma::eBayes(edgeR::voomLmFit(
+            #         assay(sce_pseudo, "counts"),
+            #         design = m,
+            #         block = sce_pseudo[[var_sample_id]],
+            #         correlation = block_cor
+            #     ))
+            # } else {
+            #     res <- limma::eBayes(edgeR::voomLmFit(
+            #         assay(sce_pseudo, "counts"),
+            #         design = m
+            #     ))
+            # }
             return(res)
         })
         
@@ -356,24 +330,26 @@ SeuratOBJ_pb
 
 
 ## =============================================================================
+## add additional meta-data
 
-## get matrix of peaks: rows = peaks, cols = pseudobulk samples
-
+# get matrix of peaks: rows = peaks, cols = pseudobulk samples
 atac_counts <- GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer ="counts")
 length(rownames(atac_counts)) # [1] 351037
 head(atac_counts)
 
-## get data.frame with sample metadata, nrow = ncol(counts)
-#  must include at least: sample_id, cluster_id, group, donor
+## get metadata, include at least: sample_id, cluster_id, group, donor
 meta <- SeuratOBJ_pb@meta.data
 colnames(meta)
 head(meta)
 
 ## add meta-data in the expected format
-meta$sample_id <- row.names(meta)
-meta$donor <- sapply(strsplit(row.names(meta), "_", fixed = TRUE), 
-                "[[", 2)
-tail(meta)
+meta$sample_id <- row.names(meta) # ge. LHb.1_S05-Hb-r
+meta$donor <- sapply(strsplit(row.names(meta), "_", fixed = TRUE),  "[[", 2) # ge. S05-Hb-r
+table(meta$donor)
+# S03-Hb-r S04-Hb-r S05-Hb-r S06-Hb-r S07-Hb-r S08-Hb-r S09-Hb-r S10-Hb-r 
+# 17       15       16       18       18       17       17       18 
+# S11-Hb-r S12-Hb-r 
+# 17       16
 
 ## add additional meta-data
 meta$sex <- "M"
@@ -441,7 +417,7 @@ for (clus in cluster_ids) {
     peak_ranges_ct <- peaks_ranges_cellType(
         SeuratOBJ_pb,
         PSEUDO_ATAC_ASSAY,
-        cluster_name = "Endo"
+        cluster_name = clus
     ) 
     length(peak_ranges_ct) # 5224
     
@@ -491,7 +467,8 @@ for (clus in cluster_ids) {
             )
     assayNames(sce_pb)
     
-    # added this chunk to patch: registration_stats_enrichment() tries to pull row annotations via rowData(sce_pseudo)[[gene_ensembl]] and/or [[gene_name]]. 
+    # added this chunk to patch: registration_stats_enrichment() which tries to pull row annotations via 
+    # - rowData(sce_pseudo)[[gene_ensembl]] and/or [[gene_name]]. 
     # - If none of those arguments is provided, it resolves to NULL in rowData, and gets error
     # Give rowData (peak ranges) to explicit ID columns
     if (!"peak_id" %in% colnames(rowData(sce_pb))) {
@@ -532,12 +509,7 @@ for (clus in cluster_ids) {
     
     ## Run enrichment t-stats (1-vs-all for each cell type)
     rowData(sce_pb)
-    head(rowData(sce_pb))
-    # DataFrame with 6 rows and 2 columns
-    #                     peak_id         peak_ensembl
-    #                     <character>          <character>
-    # chr1-629811-630032     chr1-629811-630032   chr1-629811-630032
-    # chr1-630189-630389     chr1-630189-630389   chr1-630189-630389
+    head(rowData(sce_pb)) # have peak_id and peak_ensembl
 
     res_enrich <- registration_stats_enrichment_voomLmFit(
         sce_pseudo = sce_pb,
