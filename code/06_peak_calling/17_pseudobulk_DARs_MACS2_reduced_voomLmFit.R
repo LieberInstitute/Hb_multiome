@@ -1,5 +1,7 @@
 ########################################################################
 ## Differential Accessibility (DA) using voomLmFit / pseudobulk multiome assays with merged peaks
+## ## refs:
+## adapted from https://github.com/LieberInstitute/spatialLIBD/blob/40da043d0235e01a12a7f52a0b367d3850bad9e8/R/registration_stats_enrichment.R#L40
 ##
 ## Authors. CSC
 ## Date. Sep 16, 2025
@@ -26,10 +28,8 @@ library("here")
 
 # Testing spearman at 5e4 on macs2 peaks 
 resolution_level = "Mid"
-# p_met = "spearman"
-# w_size = "5e5"
-sig_thresh <- 0.1    # FDR cutoff
-lfc_thresh <- 0.25   # logFC cutoff / log2
+lfc_thresh <- 0.25 # 2^0.25 ≈1.189
+FDR_thr = 0.20
 
 ## ATAC function's helper used globally
 source(here("code", "06_peak_calling", "multiome_custom_functions", "multiome_idents_normalization_helper.R"))
@@ -195,20 +195,14 @@ convert_atac_subset_to_sce <- function(
 }
 
 
-registration_stats_enrichment_voomLmFit <-
-    function(
+registration_stats_enrichment_voomLmFit <- function(
         sce_pseudo,
-        block_cor,
+        # block_cor,                                  # 
         covars = NULL,                              # c("age", "sex", "ethnicity")
         var_registration = "registration_variable", # cellType = 18 ct
         var_sample_id = "registration_sample_id",   # donor = 169 samples
         gene_ensembl = NULL,
         gene_name = NULL
-        # sce_pseudo = sce_pb
-        # covars = covars_vec
-        # var_registration = "registration_variable"
-        # var_sample_id = "registration_sample_id"
-        # block_cor = block_cor
     ) {
         ## For each cluster, test it against the rest
         cluster_idx <- split(
@@ -241,22 +235,10 @@ registration_stats_enrichment_voomLmFit <-
                 assay(sce_pseudo, "counts"),
                 design = m,
                 block = sce_pseudo[[var_sample_id]], # ge. donor
-                correlation = block_cor, # Use the estimated correlation
+                # correlation = block_cor, #recent version of the edgeR package does not accept the correlation argument 
+                #  - it computes the inter-block correlation internally 
                 sample.weights = TRUE
             ))
-            # if (is.finite(block_cor)) {
-            #     res <- limma::eBayes(edgeR::voomLmFit(
-            #         assay(sce_pseudo, "counts"),
-            #         design = m,
-            #         block = sce_pseudo[[var_sample_id]],
-            #         correlation = block_cor
-            #     ))
-            # } else {
-            #     res <- limma::eBayes(edgeR::voomLmFit(
-            #         assay(sce_pseudo, "counts"),
-            #         design = m
-            #     ))
-            # }
             return(res)
         })
         
@@ -299,9 +281,8 @@ registration_stats_enrichment_voomLmFit <-
             rowData(sce_pseudo)[[gene_ensembl]]
         results_specificity$gene <- rowData(sce_pseudo)[[gene_name]]
         
-        ## Done!
         return(results_specificity)
-    }
+}
 
 
 ########################################################################
@@ -375,8 +356,13 @@ head(meta)
 if (!"cellType" %in% colnames(SeuratOBJ_pb@meta.data)) {
     SeuratOBJ_pb$cellType <- sub("^[^_]+_", "", SeuratOBJ_pb$orig.ident)  # keep part after first underscore
 }
-length(SeuratOBJ_pb$cellType)
-# [1] 169
+table(SeuratOBJ_pb$cellType)
+# Astrocyte       Endo Excit.Thal Inhib.Thal      LHb.1    LHb.1.3  LHb.1.3.4 
+# 10         10         10         10         10          7         10 
+# LHb.2.7      LHb.4      LHb.7      MHb.1    MHb.1.2      MHb.2      MHb.3 
+# 10         10          6         10         10         10         10 
+# Microglia      Oligo        OPC       Thal 
+# 10         10         10          6 
 
 Idents(SeuratOBJ_pb) <- "cellType"
 cluster_ids <- levels(SeuratOBJ_pb)
@@ -384,6 +370,10 @@ unique(Idents(SeuratOBJ_pb))
 
 message("Pseudobulk groups (cell-types):")
 cluster_ids
+# [1] "Astrocyte"  "Endo"       "Excit.Thal" "Inhib.Thal" "LHb.1"     
+# [6] "LHb.1.3"    "LHb.1.3.4"  "LHb.2.7"    "LHb.4"      "LHb.7"     
+# [11] "MHb.1"      "MHb.1.2"    "MHb.2"      "MHb.3"      "Microglia" 
+# [16] "Oligo"      "OPC"        "Thal"  
 
 stopifnot(all(colnames(atac_counts) == meta$sample_id))
 
@@ -392,26 +382,19 @@ stopifnot(all(colnames(atac_counts) == meta$sample_id))
 
 message("Starting registration_stats_enrichment_voomLmFit ... ")
 
-## refs:
-## current version https://github.com/LieberInstitute/spatialLIBD/blob/40da043d0235e01a12a7f52a0b367d3850bad9e8/R/registration_stats_enrichment.R#L40
-## My previous manual implementation: https://github.com/LieberInstitute/Habenula_Visium/blob/2d21e39f51c9e46ebddbcf57f959f70c27d78678/code/05_brain_area_differential_expression/05_pseudobulk_DEG_contrast.R#L176-L255 
-
-# Inputs for atac
-# logcounts(sce_pseudo) peaks (it fits limma on log-scale data)
-# var_registration: in my case cellType
-# var_sample_id: blocking by donor factor
-# covars:age, sex and ethnicity
+# Inputs for atac:
+#        var_registration: in my case cellType
+#        var_sample_id: blocking by donor factor
+#        covars:age, sex and ethnicity
 
 DefaultAssay(SeuratOBJ_pb) <- PSEUDO_ATAC_ASSAY
 # Get all peaks in the assay
 all_peaks <- granges(SeuratOBJ_pb)
 length(all_peaks) # [1] 351037
-FDR_thr = 0.20
+
 
 for (clus in cluster_ids) {
-    # test: 
     # clus = "Endo"
-    message("Subset peaks for [", clus, "] cellType")
     
     # Get peaks cellType specific
     peak_ranges_ct <- peaks_ranges_cellType(
@@ -419,30 +402,19 @@ for (clus in cluster_ids) {
         PSEUDO_ATAC_ASSAY,
         cluster_name = clus
     ) 
-    length(peak_ranges_ct) # 5224
+    message("Subset ", length(peak_ranges_ct), " peaks for [", clus, "] cellType") # ge. ENDO: 5224
     
     # Get the assay’s ranges and rownames
     ap_gr   <- granges(SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]])
-    # GRanges object with 351037 ranges and 2 metadata columns:
-    # seqnames          ranges strand |        revmap
-    # <Rle>       <IRanges>  <Rle> | <IntegerList>
-    # [1]       chr1   181329-181534      * |             1
-
     ap_rows <- rownames(SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]])
-    # [1] "chr1-181329-181534"   "chr1-191217-191619"   "chr1-629146-629354"  
-    # [4] "chr1-629811-630032"   "chr1-630189-630389"   "chr1-632189-632410"  
-
     # Find exact matches by genomic coordinates (use type="any" for overlaps)
     hits <- findOverlaps(ap_gr, peak_ranges_ct, type = "equal")
     idx  <- queryHits(hits)
-    # [1]      4      5      7     53     60     73    116    168    189    226
-    
     # Map hits to peaks IDs actually present in the assay
     peaks_to_keep <- ap_rows[idx]
     peaks_to_keep <- unique(as.character(peaks_to_keep))
-    # [1495] "chr5-72307684-72308762"   "chr5-72319550-72320868"  
-    # [1497] "chr5-72815810-72817418"   "chr5-73119548-73120878"  
-    
+    message( length(peak_ranges_ct), " / ", length(peaks_to_keep))
+
     # checks before subsetting seurat
     stopifnot(length(peaks_to_keep) > 0)
     stopifnot(all(peaks_to_keep %in% ap_rows))
@@ -458,7 +430,7 @@ for (clus in cluster_ids) {
     #     sum(peaks_to_keep %in% rownames(GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer = "counts"))),
     #     "/", length(peaks_to_keep), "\n")
     
-    ## subset seurat and convert to sce
+    ## convert seurat to sce
     sce_pb <- convert_atac_subset_to_sce(
             SeuratOBJ_pb, 
             PSEUDO_ATAC_ASSAY, 
@@ -467,7 +439,7 @@ for (clus in cluster_ids) {
             )
     assayNames(sce_pb)
     
-    # added this chunk to patch: registration_stats_enrichment() which tries to pull row annotations via 
+    # added chunk to patch registration_stats_enrichment() which tries to pull row annotations via 
     # - rowData(sce_pseudo)[[gene_ensembl]] and/or [[gene_name]]. 
     # - If none of those arguments is provided, it resolves to NULL in rowData, and gets error
     # Give rowData (peak ranges) to explicit ID columns
@@ -480,8 +452,8 @@ for (clus in cluster_ids) {
     }
     
     ## required columns
-    sce_pb$registration_variable <- factor(sce_pb$cellType)          # group to test
-    sce_pb$registration_sample_id <- factor(sce_pb$donor)            # block by donor
+    sce_pb$registration_variable <- factor(sce_pb$cellType)          # group to test / 18 ct
+    sce_pb$registration_sample_id <- factor(sce_pb$donor)            # block by donor / 10 donors
     sce_pb$ethnicity <- factor(sce_pb$ethnicity, levels = c("AA", "EA.CAUC"))
     sce_pb$sex <- factor(sce_pb$sex, levels = c("F", "M"))
     sce_pb$age <- as.numeric(sce_pb$age)
@@ -491,29 +463,32 @@ for (clus in cluster_ids) {
     reg_mod <- registration_model(
         sce_pseudo = sce_pb,
         covars = covars_vec,
-        var_registration = "registration_variable" #cellType
+        var_registration = "registration_variable"
     )
     #head(reg_mod)  # inspect column names / coding
     
     ## estimate donor-level block correlation
-    nrow(assay(sce_pb, "counts")) # [1] 5224
-    
-    block_cor <- registration_block_cor(
-        sce_pseudo = sce_pb,
-        registration_model = reg_mod,
-        var_sample_id = "registration_sample_id"  ##cellType
-    )
-    # Endo ct test:
-    # 2025-09-19 13:06:16.032861 run duplicateCorrelation()
-    # 2025-09-19 13:06:22.540479 The estimated correlation is: 0.00931803725048961
+    # recent version of the edgeR does not accept the correlation argument directly. Instead, 
+    # it computes the inter-block correlation internally when you provide a block argument
+    # block_cor <- registration_block_cor(
+    #     sce_pseudo = sce_pb,
+    #     registration_model = reg_mod,
+    #     var_sample_id = "registration_sample_id"
+    # )
     
     ## Run enrichment t-stats (1-vs-all for each cell type)
-    rowData(sce_pb)
+    rowData(sce_pb) # ge. 0.009318037
+    #                           DataFrame with 5224 rows and 2 columns
+    #                           peak_id           peak_ensembl
+    #                           <character>            <character>
+    # chr1-629811-630032             chr1-629811-630032     chr1-629811-630032
+    # chr1-630189-630389             chr1-630189-630389     chr1-630189-630389
+    # chr1-633694-634122             chr1-633694-634122     chr1-633694-634122
     head(rowData(sce_pb)) # have peak_id and peak_ensembl
 
     res_enrich <- registration_stats_enrichment_voomLmFit(
         sce_pseudo = sce_pb,
-        block_cor = block_cor,
+        # block_cor = block_cor,
         covars = covars_vec,
         var_registration = "registration_variable",
         var_sample_id = "registration_sample_id",
