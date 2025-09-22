@@ -283,10 +283,18 @@ for (ct in unique(da_results$cluster)) {
         TRUE ~ "Not"
     )
     
-    # select top 5 peaks by FDR
-    top5 <- df |>
-        arrange(p_val_adj) |>
-        slice_head(n = 5)
+    # select top 10 Up and Down per cluster (among significant peaks)
+    top_up <- df |>
+        filter(signif == "Up") |>
+        arrange(desc(avg_log2FC)) |>
+        slice_head(n = 10)
+    
+    top_down <- df |>
+        filter(signif == "Down") |>
+        arrange(avg_log2FC) |>
+        slice_head(n = 10)
+    
+    top10 <- bind_rows(top_up, top_down)
     
     p <- ggplot(df, aes(x = avg_log2FC, y = -log10(p_val_adj))) +
         geom_point(aes(color = signif), alpha = 0.6, size = 1.2) +
@@ -294,7 +302,7 @@ for (ct in unique(da_results$cluster)) {
         geom_vline(xintercept = c(-lfc_thresh, lfc_thresh), linetype = "dashed") +
         geom_hline(yintercept = -log10(sig_thresh), linetype = "dashed") + 
         geom_text_repel(
-            data = top5,
+            data = top10,
             aes(label = peak),
             size = 3,
             box.padding = 0.3,
@@ -303,7 +311,7 @@ for (ct in unique(da_results$cluster)) {
         ) +
         labs(
             title = paste0("Volcano plot - ", ct),
-            x = "log2 Fold Change (1vsALL)",
+            x = "log2 Fold Change (LR)",
             y = "-log10(FDR)"
         ) +
         theme_bw() +
