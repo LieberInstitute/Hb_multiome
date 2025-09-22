@@ -1,16 +1,37 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=30G
-#SBATCH --job-name=17_pseudobulk_DARs_MACS2_reduced_voomLmFit
-#SBATCH -c 2
+#SBATCH --job-name=17_pseudobulk_DARs_MACS2_reduced_voomLmFit_ct
+#SBATCH -c 4
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
+#SBATCH --array=0-17%20   # 18 clusters, max 4 running concurrently
 # SBATCH --mail-type=ALL
 
 set -eo pipefail
 
-log_path="logs/17_pseudobulk_DARs_MACS2_reduced_voomLmFit.log"
+# Bash array - WNN at Mid level
+clust=(
+  "Astrocyte" "Endo" "Excit.Thal" "Inhib.Thal" "LHb.1" "LHb.1.3" "LHb.1.3.4"
+  "LHb.2.7" "LHb.4" "LHb.7" "MHb.1" "MHb.1.2" "MHb.2" "MHb.3"
+  "Microglia" "Oligo" "OPC" "Thal"
+)
+
+# Allow local testing; SLURM sets this in the array
+i=${SLURM_ARRAY_TASK_ID:-0}
+m=${#clust[@]}
+
+# guard
+if (( i < 0 || i >= m )); then
+  echo "Invalid task index: $i (must be 0..$((m-1)))" >&2
+  exit 1
+fi
+
+res="${clust[$i]}"
+
+mkdir -p logs
+log_path="logs/17_pseudobulk_DARs_MACS2_reduced_voomLmFit_ct${res}.log"
 
 {
 
@@ -31,7 +52,7 @@ module load conda_R/4.3.x
 module list
 
 ## Edit with your job command
-Rscript 17_pseudobulk_DARs_MACS2_reduced_voomLmFit.R
+Rscript 17_pseudobulk_DARs_MACS2_reduced_voomLmFit.R "${res}"
 ret=$?
 
 echo "**** Job ends ****"
