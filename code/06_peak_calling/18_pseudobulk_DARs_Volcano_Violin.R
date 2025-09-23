@@ -84,7 +84,12 @@ create_volcano <- function(res_enrich, clus,FDR_thr, lfc_thresh, plot_Dir) {
             )
         )
     
-    plot_title <- paste0("Differentially Accessible Regions in ", clus)
+    # Calculate the number of all and significant DARs
+    n_all_dars <- nrow(plot_data)
+    n_significant_dars <- sum(plot_data$is_significant == "Significant")
+    
+    plot_title <- paste0("Differentially Accessible Regions (DARs) in ", clus)
+    plot_subtitle <- paste0("Total DARs: ", n_all_dars, " | Significant DARs: ", n_significant_dars)
     
     f_name <- here(plot_Dir, paste0("Volcano_", clus, "_voomLmFit.pdf"))
     pdf(f_name, width = 7, height = 6)  
@@ -96,12 +101,13 @@ create_volcano <- function(res_enrich, clus,FDR_thr, lfc_thresh, plot_Dir) {
         geom_vline(xintercept = c(-lfc_thresh, lfc_thresh), linetype = "dashed", color = "blue") +
         labs(
             title = plot_title,
+            subtitle = plot_subtitle,
             x = "Log2 Fold Change (logFC)",
             y = "-Log10(FDR)",
             color = "Significance"
         ) +
         theme_minimal() +
-        theme(plot.title = element_text(hjust = 0.5))
+        theme(plot.title = element_text(hjust = 0))
     
     print(g1)
     dev.off()
