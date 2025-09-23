@@ -1,12 +1,14 @@
 ########################################################################
-## Differential Accessibility (DA) using voomLmFit / pseudobulk multiome assays with merged peaks
-## ## refs:
+## Visualizations for DARs by cellType
+## - data computer with modified version for registration_stats_enrichment.R using voomLmFit
+## Refs:
 ## adapted from https://github.com/LieberInstitute/spatialLIBD/blob/40da043d0235e01a12a7f52a0b367d3850bad9e8/R/registration_stats_enrichment.R#L40
 ##
 ## Authors. CSC
-## Date. Sep 16, 2025
+## Date. Sep 23, 2025
 ## Recommended resources mem=30GB
 ########################################################################
+
 library("spatialLIBD")
 library("ggplot2")
 library("ggrepel") 
@@ -220,8 +222,6 @@ for (ct_DARs in lst_DARs_cvs) {
 
 }
 
-library(grid)
-library(gridExtra)
 
 # Plot barPlots
 if (length(barPlot_list) > 0) {
@@ -265,7 +265,7 @@ message("Plots done!")
 #   memory = "30G",
 #   cores = 2,
 #   logdir = "logs",
-#   command = "Rscript 18_pseudobulk_DARs_Volcano_Violin.R"
+#   command = "Rscript 18_pseudobulk_DARs_Volcano_Violin.R",
 #   create_logdir = FALSE
 # )
 
