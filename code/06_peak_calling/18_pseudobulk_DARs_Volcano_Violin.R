@@ -21,19 +21,12 @@ resolution_level = "Mid"
 lfc_thresh <- 0.25 # 2^0.25 ≈ 1.189 
 FDR_thr = 0.20
 
-# ## read input arguments
-# args = commandArgs(trailingOnly = TRUE)
-# clus <- args[1]
-# if (is.na(clus) || !nzchar(clus)) stop("Missing cluster_name argument")
-
 ## Check/create directories
 input_cvsDir <- here( 
     "processed-data",
     "06_peak_calling",
     "17_pseudobulk_DARs_MACS2_reduced_voomLmFit"
 )
-# these are mac2 peaks merged and normalized 
-# Seurat_base_name <- "Mid_pseudobulk.spearman.5e5_merged_peaks.rds"
 
 processed_Dir <- here(
     "processed-data",
@@ -53,6 +46,7 @@ if (!dir.exists(processed_Dir)) {
     dir.create(processed_Dir)
 }
 
+
 ##==============================================================================
 
 ## load DARs
@@ -68,12 +62,14 @@ lst_DARs_cvs
 
 ##==============================================================================
 
-create_barPlot_significant_DARs <- function(res_enrich, clus, FDR_thr, lfc_thresh, plot_Dir) {
+create_barPlot_significant_DARs <- function(res_enrich, clus, FDR_thr, lfc_thresh) {
     ## Barplot of Up vs Down DARs per cluster
+    # testing: 
+    # res_enrich = DARs_df
+    # clust_name = "Endo"
+    # FDR_thr = 0.2
     
     message("Starting Barplot per cluster ", clus)
-    
-    f_name <- here(plot_Dir, paste0("DA_barplot_UpDown_per_cluster_", clus ,".pdf"))
     
     # Prepare counts of Up and Down DARs for the specified cluster
     up_down_counts <- res_enrich |>
@@ -82,13 +78,15 @@ create_barPlot_significant_DARs <- function(res_enrich, clus, FDR_thr, lfc_thres
             fdr = .data[[paste0("fdr_", clus)]]      # Access column by dynamic name
         ) |>
         filter(
-            fdr < FDR_thr,                           # Filter for significant DARs
-            abs(logFC) > lfc_thresh                  # Filter by logFC threshold
+            fdr < FDR_thr                           # Filter for significant DARs
+            # abs(logFC) > lfc_thresh               # Filter by logFC threshold
         ) |>
         mutate(
             direction = case_when(
-                logFC > lfc_thresh ~ "Up",
-                logFC < -lfc_thresh ~ "Down",
+                # logFC > lfc_thresh ~ "Up",
+                # logFC < -lfc_thresh ~ "Down",
+                logFC > 0 ~ "Up", # Up/Down is now based on positive/negative logFC
+                logFC < 0 ~ "Down",
                 TRUE ~ "Not"
             )
         ) |>
@@ -96,13 +94,11 @@ create_barPlot_significant_DARs <- function(res_enrich, clus, FDR_thr, lfc_thres
         group_by(direction) |>
         summarise(n = n(), .groups = "drop")
     
-    # The original plot was for multiple clusters. We will adapt it to show
-    # a single bar plot for the requested cluster.
     g1 <- ggplot(up_down_counts, aes(x = "", y = n, fill = direction)) +
         geom_col(position = "dodge") +
         scale_fill_manual(values = c("Up" = "red", "Down" = "blue")) +
         labs(
-            title = paste0("Number of Up and Down Significant DARs in ", clus),
+            title = clus,
             x = "",
             y = "Number of DARs",
             fill = "Direction"
@@ -110,9 +106,7 @@ create_barPlot_significant_DARs <- function(res_enrich, clus, FDR_thr, lfc_thres
         theme_minimal() +
         geom_text(aes(label = n), position = position_dodge(width = 0.9), vjust = -0.5)
     
-    ggsave(f_name, g1, width = 4, height = 5, dpi = 300)
-    
-    message("Barplot saved to: ", f_name)
+    return(g1)
     
 }
 
@@ -151,7 +145,7 @@ create_volcano <- function(res_enrich, clus,FDR_thr, lfc_thresh, plot_Dir) {
         geom_point(alpha = 0.5, size = 1) +
         scale_color_manual(values = c("Significant" = "red", "Not Significant" = "grey")) +
         geom_hline(yintercept = -log10(FDR_thr), linetype = "dashed", color = "blue") +
-        geom_vline(xintercept = c(-lfc_thresh, lfc_thresh), linetype = "dashed", color = "blue") +
+        geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey") +
         labs(
             title = plot_title,
             subtitle = plot_subtitle,
@@ -176,6 +170,7 @@ barPlot_list <- list()
 
 for (ct_DARs in lst_DARs_cvs) {
     # ct_DARs = lst_DARs_cvs[2] # "Endo"
+    # ct_DARs = lst_DARs_cvs[18] 
     
     message("Processing:\n", ct_DARs)
     
@@ -194,7 +189,7 @@ for (ct_DARs in lst_DARs_cvs) {
         
     create_volcano(DARs_df, clust_name, FDR_thr, lfc_thresh, plot_Dir)
     
-    barPlot_list[[clust_name]] <- create_barPlot_significant_DARs(DARs_df, clust_name, FDR_thr, lfc_thresh, plot_Dir)
+    barPlot_list[[clust_name]] <- create_barPlot_significant_DARs(DARs_df, clust_name, FDR_thr, lfc_thresh)
     
     # # save enrichment stats
     # f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_ALL_in_", clus, ".csv"))
@@ -225,11 +220,39 @@ for (ct_DARs in lst_DARs_cvs) {
 
 }
 
+library(grid)
+library(gridExtra)
 
 # Plot barPlots
-pdf(here(plot_Dir, "BarPlots_ALL_cellTypes_voomLmFit.pdf"), width = 10, height = 8)
-wrap_plots(barPlot_list, ncol = 4)
-dev.off()
+if (length(barPlot_list) > 0) {
+    
+    pdf(here(plot_Dir, "BarPlots_ALL_cellTypes_voomLmFit.pdf"), width = 10, height = 6)
+    
+    # Remove redundant y-axis labels
+    barPlot_list_clean <- lapply(barPlot_list, function(p) {
+        p + ylab(NULL) + theme(legend.position = "none")
+    })
+    
+    combined_plot <- wrap_plots(barPlot_list_clean, ncol = 5)
+
+    title_name <- paste0("Number of Up/Down Enriched DARs by CellType (FDR < ", FDR_thr, ")") 
+    final_plot <- combined_plot +
+        plot_annotation(
+            title = title_name,
+            theme = theme(
+                plot.title = element_text(size = 14, hjust = 0.5),
+                axis.title.y = element_text(size = 12)
+            )
+        ) # +
+        #labs(tag = "Number of DARs") +
+        #theme(plot.tag = element_text(angle = 90), plot.tag.position = "left")
+
+    print(final_plot)
+    
+    dev.off()
+    
+}
+
 
 message("Plots done!")
 
@@ -242,7 +265,7 @@ message("Plots done!")
 #   memory = "30G",
 #   cores = 2,
 #   logdir = "logs",
-#   command = "Rscript 18_pseudobulk_DARs_Volcano_Violin.R",
+#   command = "Rscript 18_pseudobulk_DARs_Volcano_Violin.R"
 #   create_logdir = FALSE
 # )
 
