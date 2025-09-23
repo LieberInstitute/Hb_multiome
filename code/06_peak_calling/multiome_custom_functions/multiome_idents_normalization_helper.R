@@ -27,6 +27,127 @@ if (!requireNamespace("Seurat", quietly = TRUE)) {
 # based on:
 # https://github.com/LieberInstitute/Hb_multiome/blob/a87c3512395b0488af9413174796787412e99567/code/03_pseudobulking/08_harmony_CR_ARCr.R#L99-L105 
 
+## code assumes peak_called_in column exists and contains a comma-separated list of cell types
+global_peaks_ranges_cellType <- function(
+        pb_obj = SeuratOBJ_pb,
+        atac_assay_name = PSEUDO_ATAC_ASSAY,
+        cluster_name
+) {
+    
+    # Use the pseudobulk ATAC assay that exists
+    #stopifnot(atac_assay_name %in% Assays(pb_obj))
+    DefaultAssay(pb_obj) <- atac_assay_name
+    
+    # subset to cluster
+    seurat_subset <- subset(pb_obj, idents = cluster_name)
+    n_samples <- ncol(seurat_subset)
+    message("Processing ", cluster_name, " (", n_samples, " pseudobulk samples)")
+    if (n_samples < 3) stop("Too few samples for cluster ", cluster_name, "")
+    
+    # peaks for assay
+    peaks_gr <- granges(seurat_subset[[atac_assay_name]])
+    peaks_gr$peak_id <- Signac::GRangesToString(peaks_gr)
+    
+    if (!"peak_called_in" %in% colnames(mcols(peaks_gr))) {
+        warning("No peak_called_in metadata; returning all peaks in subset")
+        return(peaks_gr)
+    }
+    
+    peaks_map <- as.data.frame(peaks_gr) |>
+        transmute(peak_id = peak_id,
+                  peak_called_in = as.character(peak_called_in)) |>
+        mutate(peak_called_in = str_split(peak_called_in, "\\s*,\\s*")) |>
+        tidyr::unnest(peak_called_in) |>
+        mutate(peak_called_in = trimws(peak_called_in)) |>
+        filter(!is.na(peak_called_in), peak_called_in != "") |>
+        distinct()
+    #head(peaks_map)
+    
+    cluster_peaks <- peaks_map |> 
+        filter(peak_called_in == cluster_name) |> 
+        pull(peak_id) |> 
+        intersect(rownames(seurat_subset[[atac_assay_name]]))
+    
+    if (length(cluster_peaks) == 0) stop("No peaks for ", cluster_name)
+    
+    # drop ultra-sparse peaks in this cluster (improves stability)
+    counts_mat <- GetAssayData(
+        seurat_subset, 
+        assay = atac_assay_name, 
+        layer = "counts")[cluster_peaks, , drop = FALSE]
+    
+    min_cells_sub <- max(3, floor(0.05 * n_samples))   # ≥5% or at least 3
+    keep_peaks_sub <- rownames(counts_mat)[Matrix::rowSums(counts_mat > 0) >= min_cells_sub]
+    if (length(keep_peaks_sub) == 0) stop("No peaks pass support filter in ", cluster_name, ".")
+    
+    # preserves annotation
+    peak_ranges <- Signac::StringToGRanges(keep_peaks_sub)
+    
+    return(peak_ranges)
+    
+}
+
+
+## conversion from Seurat to SingleCellExperiment (SCE) is a standard and 
+## necessary step for using Bioconductor packages like edgeR and limma
+global_convert_atac_subset_to_sce <- function(
+        SeuratOBJ_pb, 
+        PSEUDO_ATAC_ASSAY, 
+        peaks_to_keep, 
+        meta
+) {
+    
+    # subset by peaks
+    Seurat_subset <- subset(
+        SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]],
+        features = peaks_to_keep
+    )
+    Seurat_subset
+    
+    ## convert object into sce with meta.data
+    counts_mat <- GetAssayData(Seurat_subset, layer = "counts")
+    
+    Seurat_subset2 <- CreateSeuratObject(
+        counts = counts_mat,
+        assay = PSEUDO_ATAC_ASSAY,
+        meta.data = meta
+    )
+    Seurat_subset2
+    # > Seurat_subset2
+    # An object of class Seurat 
+    # 5224 features across 169 samples within 1 assay 
+    # Active assay: ATAC_macs2_merged_pseudo (5224 features, 0 variable features)
+    # 1 layer present: counts
+    
+    sce_pb <- as.SingleCellExperiment(
+        Seurat_subset2,
+        assay = PSEUDO_ATAC_ASSAY
+    )
+    
+    # copy Seurat's "logcounts" layer (if it existed) into SCE
+    # if ("logcounts" %in% Layers(Seurat_subset2[[PSEUDO_ATAC_ASSAY]])) {
+    #     logcounts(sce_pb) <- GetAssayData(Seurat_subset2, assay = PSEUDO_ATAC_ASSAY, layer = "logcounts")
+    # }
+    
+    # Note. actual voomLmFit still use the raw counts - no need to compute logcounts / (for QC or visualization only)
+    if (!"logcounts" %in% assayNames(sce_pb)) {
+        # create logcounts from raw counts
+        dge <- DGEList(counts = assay(sce_pb, "counts"))
+        dge <- calcNormFactors(dge, method = "TMM") # gives scaling factors for library sizes
+        lcpm <- edgeR::cpm(dge, log = FALSE, prior.count = 0, normalized.lib.sizes = TRUE)
+        logcounts(sce_pb) <- log2(lcpm + 1)
+    }
+    
+    #dim(sce_pb)
+    #colData(sce_pb) #Endo test: [1] 5224  169
+    #rowData(sce_pb)
+    #table(sce_pb$cellType)
+    #table(sce_pb$donor)
+    
+    return(sce_pb)
+}
+
+
 global_rebuild_rna_normalization <- function(
         SeuratOBJ,
         assay_name = "RNA"
