@@ -10,6 +10,7 @@
 ########################################################################
 
 library("spatialLIBD")
+library("purrr")
 library("ggplot2")
 library("ggrepel") 
 library("patchwork")
@@ -21,7 +22,7 @@ library("here")
 # Testing spearman at 5e4 on macs2 peaks 
 resolution_level = "Mid"
 lfc_thresh <- 0.25 # 2^0.25 ≈ 1.189 
-FDR_thr = 0.20
+FDR_thr = c(0.10, 0.20)
 
 ## Check/create directories
 input_cvsDir <- here( 
@@ -117,7 +118,7 @@ create_barPlot_significant_DARs <- function(res_enrich, clus, FDR_thr, lfc_thres
 
 
 ## create volcano
-create_volcano <- function(res_enrich, clus,FDR_thr, lfc_thresh, plot_Dir) {
+create_volcano <- function(res_enrich, clus, FDR_thr, lfc_thresh, plot_Dir) {
     
     plot_data <- res_enrich |>
         select(
@@ -132,7 +133,7 @@ create_volcano <- function(res_enrich, clus,FDR_thr, lfc_thresh, plot_Dir) {
                 TRUE ~ "Not Significant"
             )
         )
-    
+
     # Calculate the number of all and significant DARs
     n_all_dars <- nrow(plot_data)
     n_significant_dars <- sum(plot_data$is_significant == "Significant")
@@ -140,7 +141,7 @@ create_volcano <- function(res_enrich, clus,FDR_thr, lfc_thresh, plot_Dir) {
     plot_title <- paste0("Differentially Accessible Regions (DARs) in ", clus)
     plot_subtitle <- paste0("Total DARs: ", n_all_dars, " | Significant DARs: ", n_significant_dars)
     
-    f_name <- here(plot_Dir, paste0("Volcano_", clus, "_voomLmFit.pdf"))
+    f_name <- here(plot_Dir, paste0("Volcano_", clus, "_voomLmFit_FDR", FDR_thr, ".pdf"))
     pdf(f_name, width = 7, height = 6)  
     
     g1 <- ggplot(plot_data, aes(x = logFC, y = -log10(fdr), color = is_significant)) +
@@ -153,7 +154,8 @@ create_volcano <- function(res_enrich, clus,FDR_thr, lfc_thresh, plot_Dir) {
             subtitle = plot_subtitle,
             x = "Log2 Fold Change (logFC)",
             y = "-Log10(FDR)",
-            color = "Significance"
+            color = "Significance",
+            caption = paste0("FDR threshold = ", FDR_thr) # Add this line
         ) +
         theme_minimal() +
         theme(plot.title = element_text(hjust = 0))
@@ -188,37 +190,42 @@ for (ct_DARs in lst_DARs_cvs) {
 
     # get cluster name. ge. "Endo"
     clust_name <- sub("^voomlmFit_DAR_peaks_ALL_in_(.*)\\.csv$", "\\1", ct_DARs)
-        
-    create_volcano(DARs_df, clust_name, FDR_thr, lfc_thresh, plot_Dir)
+    
+    ## create plot for FDR_thr (s)     
+    purrr::map(FDR_thr, ~ {
+        create_volcano(
+            DARs_df, 
+            clust_name,
+            FDR_thr = .x,   # current FDR
+            lfc_thresh = lfc_thresh,
+            plot_Dir
+        )
+    })
     
     barPlot_list[[clust_name]] <- create_barPlot_significant_DARs(DARs_df, clust_name, FDR_thr, lfc_thresh)
     
-    # # save enrichment stats
-    # f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_ALL_in_", clus, ".csv"))
-    # write.csv(res_enrich, f_name, row.names = FALSE)
-    # 
-    # # Identify top up/down peaks based on FDR
-    # fdr_cols <- grep("^fdr_", colnames(res_enrich), value = TRUE)
-    # 
-    # # cluster-specific significant peaks
-    # res_sig_ct <- res_enrich |>
-    #     # filter(.data[[paste0("fdr_", clus)]] < FDR_thr) |>
-    #     filter(.data[[paste0("fdr_", clus)]] < FDR_thr,
-    #            abs(.data[[paste0("logFC_", clus)]]) > lfc_thresh) |>
-    #     mutate(
-    #         logFC_ct = .data[[paste0("logFC_", clus)]],
-    #         direction = case_when(
-    #             logFC_ct >  0 ~ "Up",    # opening
-    #             logFC_ct <  0 ~ "Down",  # closing
-    #             TRUE ~ "NS"              # should not occur if you filtered
-    #         )
-    #     )
-    # 
-    # if (nrow(res_sig_ct) > 0) { 
-    #     f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_", clus, ".csv"))
-    #     write.csv(res_sig_ct, f_name, row.names = FALSE)
-    #     message("Enrichment statistics saved [", clus, "]")    
-    # }
+    # Identify top up/down peaks based on FDR
+    fdr_cols <- grep("^fdr_", colnames(res_enrich), value = TRUE)
+
+    # cluster-specific significant peaks
+    res_sig_ct <- res_enrich |>
+        # filter(.data[[paste0("fdr_", clus)]] < FDR_thr) |>
+        filter(.data[[paste0("fdr_", clus)]] < FDR_thr,
+               abs(.data[[paste0("logFC_", clus)]]) > lfc_thresh) |>
+        mutate(
+            logFC_ct = .data[[paste0("logFC_", clus)]],
+            direction = case_when(
+                logFC_ct >  0 ~ "Up",    # opening
+                logFC_ct <  0 ~ "Down",  # closing
+                TRUE ~ "NS"              # should not occur if you filtered
+            )
+        )
+
+    if (nrow(res_sig_ct) > 0) {
+        f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_", clus, ".csv"))
+        write.csv(res_sig_ct, f_name, row.names = FALSE)
+        message("Enrichment statistics saved [", clus, "]")
+    }
 
 }
 
@@ -226,7 +233,7 @@ for (ct_DARs in lst_DARs_cvs) {
 # Plot barPlots
 if (length(barPlot_list) > 0) {
     
-    pdf(here(plot_Dir, "BarPlots_ALL_cellTypes_voomLmFit.pdf"), width = 10, height = 6)
+    pdf(here(plot_Dir, "BarPlots_ALL_cellTypes_voomLmFit.pdf"), width = 10, height = 10)
     
     # Remove redundant y-axis labels
     barPlot_list_clean <- lapply(barPlot_list, function(p) {
@@ -240,8 +247,8 @@ if (length(barPlot_list) > 0) {
         plot_annotation(
             title = title_name,
             theme = theme(
-                plot.title = element_text(size = 14, hjust = 0.5),
-                axis.title.y = element_text(size = 12)
+                plot.title = element_text(size = 12, hjust = 0.5),
+                axis.title.y = element_text(size = 9)
             )
         ) # +
         #labs(tag = "Number of DARs") +
