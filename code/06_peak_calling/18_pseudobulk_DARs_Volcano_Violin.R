@@ -8,7 +8,6 @@
 ## Recommended resources mem=30GB
 ########################################################################
 library("spatialLIBD")
-# library("GenomicRanges")
 library("ggplot2")
 library("ggrepel") 
 library("dplyr")
@@ -79,12 +78,13 @@ create_volcano <- function(res_enrich, clus,FDR_thr, lfc_thresh, plot_Dir) {
         ) |>
         mutate(
             is_significant = case_when(
-                fdr < FDR_thr & abs(logFC) > lfc_thresh ~ "Significant",
+                fdr < FDR_thr ~ "Significant",
+                #fdr < FDR_thr & abs(logFC) > lfc_thresh ~ "Significant",
                 TRUE ~ "Not Significant"
             )
         )
     
-    plot_title <- paste0("Volcano Plot for DARs in ", clus)
+    plot_title <- paste0("Differentially Accessible Regions in ", clus)
     
     f_name <- here(plot_Dir, paste0("Volcano_", clus, "_voomLmFit.pdf"))
     pdf(f_name, width = 7, height = 6)  
