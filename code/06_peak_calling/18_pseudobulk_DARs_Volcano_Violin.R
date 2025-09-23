@@ -10,6 +10,7 @@
 library("spatialLIBD")
 library("ggplot2")
 library("ggrepel") 
+library("patchwork")
 library("dplyr")
 library("stringr")
 library("here")
@@ -17,7 +18,7 @@ library("here")
 
 # Testing spearman at 5e4 on macs2 peaks 
 resolution_level = "Mid"
-lfc_thresh <- 0.25 # 2^0.25 ≈1.189 
+lfc_thresh <- 0.25 # 2^0.25 ≈ 1.189 
 FDR_thr = 0.20
 
 # ## read input arguments
@@ -66,6 +67,58 @@ message("DAR files found:")
 lst_DARs_cvs
 
 ##==============================================================================
+
+create_barPlot_significant_DARs <- function(res_enrich, clus, FDR_thr, lfc_thresh, plot_Dir) {
+    ## Barplot of Up vs Down DARs per cluster
+    
+    message("Starting Barplot per cluster ", clus)
+    
+    f_name <- here(plot_Dir, paste0("DA_barplot_UpDown_per_cluster_", clus ,".pdf"))
+    
+    # Prepare counts of Up and Down DARs for the specified cluster
+    up_down_counts <- res_enrich |>
+        mutate(
+            logFC = .data[[paste0("logFC_", clus)]], # Access column by dynamic name
+            fdr = .data[[paste0("fdr_", clus)]]      # Access column by dynamic name
+        ) |>
+        filter(
+            fdr < FDR_thr,                           # Filter for significant DARs
+            abs(logFC) > lfc_thresh                  # Filter by logFC threshold
+        ) |>
+        mutate(
+            direction = case_when(
+                logFC > lfc_thresh ~ "Up",
+                logFC < -lfc_thresh ~ "Down",
+                TRUE ~ "Not"
+            )
+        ) |>
+        filter(direction != "Not") |>
+        group_by(direction) |>
+        summarise(n = n(), .groups = "drop")
+    
+    # The original plot was for multiple clusters. We will adapt it to show
+    # a single bar plot for the requested cluster.
+    g1 <- ggplot(up_down_counts, aes(x = "", y = n, fill = direction)) +
+        geom_col(position = "dodge") +
+        scale_fill_manual(values = c("Up" = "red", "Down" = "blue")) +
+        labs(
+            title = paste0("Number of Up and Down Significant DARs in ", clus),
+            x = "",
+            y = "Number of DARs",
+            fill = "Direction"
+        ) +
+        theme_minimal() +
+        geom_text(aes(label = n), position = position_dodge(width = 0.9), vjust = -0.5)
+    
+    ggsave(f_name, g1, width = 4, height = 5, dpi = 300)
+    
+    message("Barplot saved to: ", f_name)
+    
+}
+
+
+##==============================================================================
+
 
 ## create volcano
 create_volcano <- function(res_enrich, clus,FDR_thr, lfc_thresh, plot_Dir) {
@@ -118,6 +171,9 @@ create_volcano <- function(res_enrich, clus,FDR_thr, lfc_thresh, plot_Dir) {
 
 ## Parse csv DAR files and plot Volcano and ViolinPlot for the 5 "Up/Down" DARs by cellType
 
+# empty list to store the plots
+barPlot_list <- list()
+
 for (ct_DARs in lst_DARs_cvs) {
     # ct_DARs = lst_DARs_cvs[2] # "Endo"
     
@@ -137,6 +193,8 @@ for (ct_DARs in lst_DARs_cvs) {
     clust_name <- sub("^voomlmFit_DAR_peaks_ALL_in_(.*)\\.csv$", "\\1", ct_DARs)
         
     create_volcano(DARs_df, clust_name, FDR_thr, lfc_thresh, plot_Dir)
+    
+    barPlot_list[[clust_name]] <- create_barPlot_significant_DARs(DARs_df, clust_name, FDR_thr, lfc_thresh, plot_Dir)
     
     # # save enrichment stats
     # f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_ALL_in_", clus, ".csv"))
@@ -166,6 +224,12 @@ for (ct_DARs in lst_DARs_cvs) {
     # }
 
 }
+
+
+# Plot barPlots
+pdf(here(plot_Dir, "BarPlots_ALL_cellTypes_voomLmFit.pdf"), width = 10, height = 8)
+wrap_plots(barPlot_list, ncol = 4)
+dev.off()
 
 message("Plots done!")
 
