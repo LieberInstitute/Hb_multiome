@@ -7,20 +7,10 @@
 ## Date. Sep 16, 2025
 ## Recommended resources mem=30GB
 ########################################################################
-
-suppressPackageStartupMessages({
-    library("edgeR")     # for DGEList, filterByExpr, voomLmFit
-    library("limma")     # for contrasts.fit, eBayes, topTable, plot helpers
-    library("Matrix")    # if counts are sparse; otherwise base matrix is fine
-    library("data.table")
-})
-library("Seurat")
 library("spatialLIBD")
-library("GenomicRanges")
+# library("GenomicRanges")
 library("ggplot2")
 library("ggrepel") 
-library("Seurat")
-library("Signac")
 library("dplyr")
 library("stringr")
 library("here")
@@ -28,266 +18,56 @@ library("here")
 
 # Testing spearman at 5e4 on macs2 peaks 
 resolution_level = "Mid"
-lfc_thresh <- 0.25 # 2^0.25 ≈1.189
+lfc_thresh <- 0.25 # 2^0.25 ≈1.189 
 FDR_thr = 0.20
 
-## read input arguments
-args = commandArgs(trailingOnly = TRUE)
-clus <- args[1]
-if (is.na(clus) || !nzchar(clus)) stop("Missing cluster_name argument")
+# ## read input arguments
+# args = commandArgs(trailingOnly = TRUE)
+# clus <- args[1]
+# if (is.na(clus) || !nzchar(clus)) stop("Missing cluster_name argument")
 
-## ATAC function's helper used globally
-source(here("code", "06_peak_calling", "multiome_custom_functions", "multiome_idents_normalization_helper.R"))
-
-# Inputs:
-# counts:   matrix of raw counts, rows = peaks, cols = pseudobulk samples
-#           (e.g., aggregated by cluster x donor)
-# coldata:  data.frame with sample metadata, nrow = ncol(counts)
-#           must include at least: sample_id, cluster_id, group, donor
-# peaks_df: data.frame/GRanges of peaks for annotation (optional)
-
-# Check/create directories
-inputRDS_Dir <- here(
+## Check/create directories
+input_cvsDir <- here( 
     "processed-data",
     "06_peak_calling",
-    "12_pseudobulk_MACS2"
+    "17_pseudobulk_DARs_MACS2_reduced_voomLmFit"
 )
 # these are mac2 peaks merged and normalized 
-Seurat_base_name <- "Mid_pseudobulk.spearman.5e5_merged_peaks.rds"
+# Seurat_base_name <- "Mid_pseudobulk.spearman.5e5_merged_peaks.rds"
 
-output_Dir <- here(
+processed_Dir <- here(
     "processed-data",
     "06_peak_calling",
-    "17_pseudobulk_DARs_MACS2_reduced_voomLmFit"
+    "18_pseudobulk_DARs_Volcano_Violin"
 )
-plotDir <- here(
+plot_Dir <- here(
     "plots",
     "06_peak_calling",
-    "17_pseudobulk_DARs_MACS2_reduced_voomLmFit"
+    "18_pseudobulk_DARs_Volcano_Violin"
 )
-PSEUDO_ATAC_ASSAY <- "ATAC_macs2_merged_pseudo"
 
-## Check directories
-if (!dir.exists(plotDir)) {
-    dir.create(plotDir)
+if (!dir.exists(plot_Dir)) {
+    dir.create(plot_Dir)
 }
-if (!dir.exists(output_Dir)) {
-    dir.create(output_Dir)
+if (!dir.exists(processed_Dir)) {
+    dir.create(processed_Dir)
 }
-
 
 ##==============================================================================
 
-## extract peaks cell-type specific
-## code assumes peak_called_in column exists and contains a comma-separated list of cell types
-peaks_ranges_cellType <- function(
-        pb_obj = SeuratOBJ_pb,
-        atac_assay_name = PSEUDO_ATAC_ASSAY,
-        cluster_name
-    ) {
-    
-    # Use the pseudobulk ATAC assay that exists
-    #stopifnot(atac_assay_name %in% Assays(pb_obj))
-    DefaultAssay(pb_obj) <- atac_assay_name
-    
-    # subset to cluster
-    seurat_subset <- subset(pb_obj, idents = cluster_name)
-    n_samples <- ncol(seurat_subset)
-    message("Processing ", cluster_name, " (", n_samples, " pseudobulk samples)")
-    if (n_samples < 3) stop("Too few samples for cluster ", cluster_name, "")
-    
-    # peaks for assay
-    peaks_gr <- granges(seurat_subset[[atac_assay_name]])
-    peaks_gr$peak_id <- Signac::GRangesToString(peaks_gr)
-    
-    if (!"peak_called_in" %in% colnames(mcols(peaks_gr))) {
-        warning("No peak_called_in metadata; returning all peaks in subset")
-        return(peaks_gr)
-    }
-    
-    peaks_map <- as.data.frame(peaks_gr) |>
-        transmute(peak_id = peak_id,
-                  peak_called_in = as.character(peak_called_in)) |>
-        mutate(peak_called_in = str_split(peak_called_in, "\\s*,\\s*")) |>
-        tidyr::unnest(peak_called_in) |>
-        mutate(peak_called_in = trimws(peak_called_in)) |>
-        filter(!is.na(peak_called_in), peak_called_in != "") |>
-        distinct()
-    #head(peaks_map)
+## load linked peaks from Signac::CallPeaks() and compute TSS stats 
 
-    cluster_peaks <- peaks_map |> 
-        filter(peak_called_in == cluster_name) |> 
-        pull(peak_id) |> 
-        intersect(rownames(seurat_subset[[atac_assay_name]]))
-    
-    if (length(cluster_peaks) == 0) stop("No peaks for ", cluster_name)
-    
-    # drop ultra-sparse peaks in this cluster (improves stability)
-    counts_mat <- GetAssayData(
-        seurat_subset, 
-        assay = atac_assay_name, 
-        layer = "counts")[cluster_peaks, , drop = FALSE]
-    
-    min_cells_sub <- max(3, floor(0.05 * n_samples))   # ≥5% or at least 3
-    keep_peaks_sub <- rownames(counts_mat)[Matrix::rowSums(counts_mat > 0) >= min_cells_sub]
-    if (length(keep_peaks_sub) == 0) stop("No peaks pass support filter in ", cluster_name, ".")
-    
-    # preserves annotation
-    peak_ranges <- Signac::StringToGRanges(keep_peaks_sub)
-    
-    return(peak_ranges)
+# List all files matching the specific clustering resolution level
+pattern = paste0("^voomlmFit_DAR_peaks_ALL_in_.*\\.csv$")
+lst_link_files <- list.files(
+    path = input_cvsDir,
+    pattern = pattern
+)
 
-}
+message("DAR files found:")
+lst_link_files
 
-
-## conversion from Seurat to SingleCellExperiment (SCE) is a standard and 
-## necessary step for using Bioconductor packages like edgeR and limma
-convert_atac_subset_to_sce <- function(
-        SeuratOBJ_pb, 
-        PSEUDO_ATAC_ASSAY, 
-        peaks_to_keep, 
-        meta
-    ) {
-    
-    # subset by peaks
-    Seurat_subset <- subset(
-        SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]],
-        features = peaks_to_keep
-    )
-    Seurat_subset
-    
-    ## convert object into sce with meta.data
-    counts_mat <- GetAssayData(Seurat_subset, layer = "counts")
-    
-    Seurat_subset2 <- CreateSeuratObject(
-        counts = counts_mat,
-        assay = PSEUDO_ATAC_ASSAY,
-        meta.data = meta
-    )
-    Seurat_subset2
-    # > Seurat_subset2
-    # An object of class Seurat 
-    # 5224 features across 169 samples within 1 assay 
-    # Active assay: ATAC_macs2_merged_pseudo (5224 features, 0 variable features)
-    # 1 layer present: counts
-    
-    sce_pb <- as.SingleCellExperiment(
-        Seurat_subset2,
-        assay = PSEUDO_ATAC_ASSAY
-    )
-    
-    # copy Seurat's "logcounts" layer (if it existed) into SCE
-    # if ("logcounts" %in% Layers(Seurat_subset2[[PSEUDO_ATAC_ASSAY]])) {
-    #     logcounts(sce_pb) <- GetAssayData(Seurat_subset2, assay = PSEUDO_ATAC_ASSAY, layer = "logcounts")
-    # }
-    
-    # Note. actual voomLmFit still use the raw counts - no need to compute logcounts / (for QC or visualization only)
-    if (!"logcounts" %in% assayNames(sce_pb)) {
-        # create logcounts from raw counts
-        dge <- DGEList(counts = assay(sce_pb, "counts"))
-        dge <- calcNormFactors(dge, method = "TMM") # gives scaling factors for library sizes
-        lcpm <- edgeR::cpm(dge, log = FALSE, prior.count = 0, normalized.lib.sizes = TRUE)
-        logcounts(sce_pb) <- log2(lcpm + 1)
-    }
-    
-    #dim(sce_pb)
-    #colData(sce_pb) #Endo test: [1] 5224  169
-    #rowData(sce_pb)
-    #table(sce_pb$cellType)
-    #table(sce_pb$donor)
-    
-    return(sce_pb)
-}
-
-
-registration_stats_enrichment_voomLmFit <- function(
-        sce_pseudo,
-        # block_cor,                                  # 
-        covars = NULL,                              # c("age", "sex", "ethnicity")
-        var_registration = "registration_variable", # cellType = 18 ct
-        var_sample_id = "registration_sample_id",   # donor = 169 samples
-        gene_ensembl = NULL,
-        gene_name = NULL
-    ) {
-        ## For each cluster, test it against the rest
-        cluster_idx <- split(
-            seq(along = sce_pseudo[[var_registration]]),
-            sce_pseudo[[var_registration]]
-        )
-        
-        message(Sys.time(), " computing enrichment statistics")
-        eb0_list_cluster <- lapply(cluster_idx, function(x) {
-            res <- rep(0, ncol(sce_pseudo))
-            res[x] <- 1
-            if (!is.null(covars)) {
-                res_formula <-
-                    eval(str2expression(paste(
-                        "~",
-                        "res",
-                        "+",
-                        paste(covars, collapse = " + ")
-                    )))
-            } else {
-                res_formula <- eval(str2expression(paste("~", "res")))
-            }
-            # res_formula = ~res + age + sex + ethnicity
-            m <- model.matrix(res_formula, data = colData(sce_pseudo))
-            
-            ## voomLmFit, is a shorthand that includes: log2-counts per million (logCPM) -> Weighting -> Linear model fitting
-            ## run voomLmFit for the pseudobulked data, referring donor to duplicateCorrelation; 
-            ## using an adaptive span (number of genes, based on the number of genes in the dge) for smoothing the mean-variance trend
-            res <- limma::eBayes(edgeR::voomLmFit(
-                assay(sce_pseudo, "counts"),
-                design = m,
-                block = sce_pseudo[[var_sample_id]], # ge. donor
-                # correlation = block_cor, #recent version of the edgeR package does not accept the correlation argument 
-                #  - it computes the inter-block correlation internally 
-                sample.weights = TRUE
-            ))
-            return(res)
-        })
-        
-        message(Sys.time(), " extract and reformat enrichment results")
-        
-        ## Extract the p-values
-        pvals0_contrasts_cluster <-
-            sapply(eb0_list_cluster, function(x) {
-                x$p.value[, 2, drop = FALSE]
-            })
-        rownames(pvals0_contrasts_cluster) <- rownames(sce_pseudo)
-        
-        ## Extract t-statistics
-        t0_contrasts_cluster <- sapply(eb0_list_cluster, function(x) {
-            x$t[, 2, drop = FALSE]
-        })
-        rownames(t0_contrasts_cluster) <- rownames(sce_pseudo)
-        
-        ## Extract logFC
-        logFC_contrasts_cluster <- sapply(eb0_list_cluster, function(x) {
-            x$coefficients[, 2, drop = FALSE]
-        })
-        rownames(logFC_contrasts_cluster) <- rownames(sce_pseudo)
-        
-        ## Compute FDRs
-        fdrs0_contrasts_cluster <-
-            apply(pvals0_contrasts_cluster, 2, p.adjust, "fdr")
-        
-        ## Merge into one data.frame
-        results_specificity <-
-            spatialLIBD:::f_merge(
-                p = pvals0_contrasts_cluster,
-                fdr = fdrs0_contrasts_cluster,
-                t = t0_contrasts_cluster,
-                logFC = logFC_contrasts_cluster
-            )
-        
-        ## Add gene info
-        results_specificity$ensembl <-
-            rowData(sce_pseudo)[[gene_ensembl]]
-        results_specificity$gene <- rowData(sce_pseudo)[[gene_name]]
-        
-        return(results_specificity)
-}
+##==============================================================================
 
 ## create volcanos
 create_volcano <- function(res_enrich, clus,FDR_thr, lfc_thresh,plotDir) {
