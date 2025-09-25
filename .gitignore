@@ -33,4 +33,8 @@ processed-data/cellrangerATAC/
 processed-data/05_Clustering_ARCr/01_clustering_std_method/
 processed-data/**/*.rds
 processed-data/**/*.RDS
+
+# better to check file size before adding the sub-dir living here:
+processed-data/06_peak_calling/
+
 .Rproj.user
