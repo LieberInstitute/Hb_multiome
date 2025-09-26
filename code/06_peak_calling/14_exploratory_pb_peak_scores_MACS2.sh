@@ -24,11 +24,11 @@ fi
 
 res="${peak_ds[$i]}"
 
-# # skip "regular"
-# if [[ "$res" == "regular" ]]; then
-#   echo "[$(date)] Skipping peak_ds='regular' for array task $i"
-#   exit 0   # success so SLURM won’t retry
-# fi
+# skip "regular"
+if [[ "$res" == "regular" ]]; then
+  echo "[$(date)] Skipping peak_ds='regular' for array task $i"
+  exit 0   # success so SLURM won’t retry
+fi
 
 #mkdir -p logs
 log_path="logs/14_exploratory_pb_peak_scores_MACS2_${res}.log"
