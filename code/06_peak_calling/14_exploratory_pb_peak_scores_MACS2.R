@@ -22,13 +22,13 @@ resolution_level = "Mid"
 p_met = "spearman"
 w_size = "5e5"
 FDR_thresh = 0.2
-score_thresh = 0.2
+score_thresh = 0 # 0.2
 
 ## read input arguments
 args = commandArgs(trailingOnly = TRUE)
 peaks_ds <- args[2]
 # peak_ds=(regular merged) 
-
+# peaks_ds = "merged"
 if (is.na(peaks_ds) || !nzchar(peaks_ds)) stop("Missing peaks dataset argument")
 
 if (length(resolution_level)) {
@@ -149,10 +149,14 @@ make_width_plots <- function(
         resolution_lev,
         ct_name,
         plotDir,
-        suffix = ""
+        ds_name = "",     # identify ds: merged/regular
+        FDR_thr = 0,   # labels for plots/cvs
+        CC_thr = 0
 ) {
     
-    print(paste0("Processing plots for ", resolution_lev, " for ", ct_name, " cell_type"))
+    print(paste0("Processing plot for ", resolution_lev, " for ", ct_name, " cell_type"))
+    
+    FDR_CC_thr = paste0("FDR", FDR_thr, "_score", CC_thr)   # labels for plots/cvs
     
     # Parse true peak coordinates from the `peak` column
     # peak format assumed: "chrX-start-end"
@@ -175,7 +179,7 @@ make_width_plots <- function(
     median_width <- median(link_df2_parsed$peak_width_bp, na.rm = TRUE)
     mean_width   <- mean(link_df2_parsed$peak_width_bp, na.rm = TRUE)
     
-    suffix_subtitle <- paste(resolution_lev, "resolution. ", ct_name)
+    suffix_subtitle <- paste0(resolution_lev, " resolution clustering ( pb ", ds_name ," daatset)")
     
     p_hist <- ggplot(link_df2_parsed, aes(x = peak_width_bp)) +
         # histogram as horizontal bars
@@ -190,47 +194,29 @@ make_width_plots <- function(
         # log scale for widths
         scale_x_log10(labels = label_number(scale_cut = cut_si("b"))) +
         labs(
-            title = paste0(suffix, " Distribution of LinkPeak widths"),
-            subtitle = suffix_subtitle,
+            # title = paste0(ct_name, " distribution of LinkPeak widths"),
+            # subtitle = suffix_subtitle,
             x = "Peak width (bp, log scale)",
             y = "Density",
             caption = paste("Dashed = median (", round(median_width), 
                             "bp), dotted = mean (", round(mean_width), "bp)\n", 
                             paste(total_peaks, "total peaks"))
         ) +
-        theme_minimal(base_size = 12) +
+        theme_minimal() +
         coord_flip()
     
-    # Peak width vs. correlation score
+    # f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_width_histogram_", FDR_CC_thr, ".pdf")
+    # ggsave(here::here(plotDir, f_name), p_hist, width = 8, height = 8)
+
+    print(paste0("Width plot done!"))    
     
-    df <- link_df2_parsed %>%
-        mutate(score = as.numeric(score),
-               peak_width_bp = as.numeric(peak_width_bp)) %>%
-        filter(is.finite(score), is.finite(peak_width_bp), peak_width_bp > 0)
-    
-    p_scatter_score <- ggplot(df, aes(x = score, y = peak_width_bp)) +
-        geom_point(alpha = 0.25, size = 0.8, color = "grey30") +
-        geom_smooth(method = "loess", se = FALSE, color = "darkred") +
-        #scale_x_continuous(trans = pseudo_log_trans(base = 10, sigma = 0.01)) +
-        scale_y_log10() +
-        labs(title = paste0(suffix, " LinkPeak-Width vs Correlation-Scores"),
-             subtitle = suffix_subtitle,
-             x = "Correlation Score (pseudo-log scaled)",
-             y = "Peak width (bp, log scale)",
-             caption = paste(total_peaks, "total local peaks")) +
-        theme_minimal()
-    
-    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_width_histogram", suffix, ".pdf")
-    ggsave(here::here(plotDir, f_name), p_hist, width = 8, height = 8)
-    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_width_vs_score", suffix, ".pdf")
-    ggsave(here::here(plotDir, f_name), p_scatter_score, width = 8, height = 6)
-    
-    print(paste0("Width related plots for ", ct_name, " done!"))    
+    return(p_hist)
     
 }
 
 
 #===========================================================================
+
 
 make_exploratory_plots <- function(
         link_df2,
@@ -349,44 +335,45 @@ make_exploratory_plots <- function(
         )  +
         labs(
             title = paste(ct_name, "linkPeak scores by tier"),
-            subtitle = paste(resolution_lev, "resolution clustering (pb ", suffix, " dataset / spearman at 1e5)"),
+            subtitle = paste(resolution_lev, "resolution clustering (pb ", ds_name, " dataset / spearman at 1e5)"),
             x = "Distance from TSS (kb)",
             y = "Correlation score",
         ) +
         theme_minimal() + 
         theme(legend.position = "none")
     
-    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_tier_scores", FDR_CC_thr, ".pdf")
-    ggsave(here(plotDir, f_name), g1, width = 8, height = 5, device = cairo_pdf)
+    # f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_tier_scores", FDR_CC_thr, ".pdf")
+    # ggsave(here(plotDir, f_name), g1, width = 8, height = 5, device = cairo_pdf)
+    
+    message("Exploratory plot done!")
     
     return(g1)
-    
-    message("Exploratory plots for ", ct_name, " done!")
     
 }
 
 
 #===============================================================================
 
-make_peak_gene_histograms <- function(
+make_tier_peak_gene_hist <- function(
         link_df2,
         resolution_lev,
         ct_name,
-        plotDir,
+        pltDir,
         ds_name = "",     # identify ds: merged/regular
-        FDR_CC_thr = ""   # labels for plots/cvs
+        FDR_thr = 0,   # labels for plots/cvs
+        CC_thr = 0
 ){
 
     # link_df2 = link_df2
     # resolution_lev = resolution_level
     # ct_name = "Endo"
-    # plotDir = plotDir_raw
+    # pltDir = plotDir_raw
     # ds_name ="merged"
-    # FDR_CC_thr = ""
+    # FDR_thr = 0.2
     
     # ## Histogram TSS Scores
     # pdf(file = here(
-    #     plotDir, 
+    #     pltDir, 
     #     paste0(resolution_level, "_", ct_name, "_pb_histogram_TSS_dist", FDR_CC_thr, ".pdf")), 
     #     width = 7, height = 5)
     # 
@@ -396,7 +383,9 @@ make_peak_gene_histograms <- function(
     #      col = "lightblue")
     # dev.off()
     
-    g0 <- make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir_raw, ds_name, FDR_CC_thr)
+    FDR_CC_thr = paste0("FDR", FDR_thr, "_score", CC_thr)   # labels for plots/cvs
+    
+    g0 <- make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir_raw, ds_name, as.character(FDR_CC_thr))
     
     peaks_per_gene <- link_df2 %>%
         count(gene, name = "n_peaks") %>%
@@ -430,16 +419,17 @@ make_peak_gene_histograms <- function(
         ) +
         theme_minimal()
     
-    combined_plot <- g0 / (g1 + g2)  + 
+    g3 <- make_width_plots(link_df2, resolution_level, ct_name, pltDir, ds_name, FDR_thr, CC_thr)
+    
+    combined_plot <- g0 / (g1 + g2 + g3) + 
         plot_layout(heights = c(2, 1))
     combined_plot
     
-    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_link_peak_exploratory_gene-peaks_histograms", FDR_CC_thr, ".pdf")
-    ggsave(here(plotDir, f_name),
+    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_links_tiers_gene_peaks_histograms_", FDR_CC_thr, ".pdf")
+    ggsave(here(pltDir, f_name),
            combined_plot, width = 8, height = 8)
     
-    message("Gene-Peak plots for ", ct_name, " done!")
-    
+    message("Integrated plot done!")
     
 }
 
@@ -526,11 +516,12 @@ for (ct in lst_peak_files) {
     #=========================================
     
     # plot exploratory over the full links set
-    # make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir_raw)
     ## make an integrated plot with exploratory scores and pean-gene frequencies
-    make_peak_gene_histograms(link_df2, resolution_level, ct_name, 
-                              plotDir_raw, peaks_ds, paste0("FDR", FDR_thresh, "_score", score_thresh))
-    
+    make_tier_peak_gene_hist(
+        link_df2, resolution_level, ct_name, 
+        plotDir_raw, peaks_ds, 
+        0, 0)
+
     ## filter putative links
     nrow(link_df2)
     filtered_links <- link_df2 |>
@@ -543,23 +534,24 @@ for (ct in lst_peak_files) {
     
     if (total_lk_filtered > 0) {
         
-        lk_perc <- (total_lk_filtered* 100) / nrow(link_df2)    
-        lk_perc_label <- paste0(lk_perc, "%")
-        message(lk_perc_label, " percent of links passing threshold.\nSaved ", nrow(filtered_links), " putative links")
+        lk_perc <- (total_lk_filtered * 100) / nrow(link_df2)    
+        lk_perc_label <- sprintf("%.2f%%", lk_perc)
+        message(lk_perc_label, " percent of links passing threshold.\nSaved ", 
+                nrow(filtered_links), " putative links")
         
         # save filtered links
-        FDR_CC_thr = paste0("FDR", FDR_thresh, "_score", score_thresh)
+        # FDR_CC_thr = paste0("FDR", FDR_thresh, "_score", score_thresh)
+        # we are using only FDR as first filtering to intersect with DARs
+        FDR_CC_thr = paste0("FDR", FDR_thresh, "_score", score_thresh) 
         f_name <- here(processed_csvDir, paste0(resolution_level, "_", ct_name,
-                                      "_links_FDR", FDR_CC_thr, ".csv"))
+                                      "_links_", FDR_CC_thr, ".csv"))
         write.csv(filtered_links, f_name, row.names = FALSE)
         
-        
-        # make exploratory of filtered links
-        make_exploratory_plots(filtered_links, resolution_level, ct_name, plotDir, FDR_CC_thr)
-        make_peak_gene_histograms(filtered_links, resolution_level, ct_name, plotDir)
-        make_width_plots(filtered_links, resolution_level, ct_name, plotDir)
-        
-        
+        ## make an integrated plot with exploratory scores and pean-gene frequencies
+        make_tier_peak_gene_hist(filtered_links, resolution_level, ct_name, 
+                                  plotDir, peaks_ds, 
+                                  FDR_thresh, score_thresh)
+
     } else {
         message("No links passing threshold found!")
     }
