@@ -531,11 +531,14 @@ for (ct in lst_peak_files) {
     make_peak_gene_histograms(link_df2, resolution_level, ct_name, 
                               plotDir_raw, peaks_ds, paste0("FDR", FDR_thresh, "_score", score_thresh))
     
-    ## filter pRE links
+    ## filter putative links
+    nrow(link_df2)
     filtered_links <- link_df2 |>
+        dplyr::filter(FDR <= FDR_thresh)
         #dplyr::filter(FDR <= FDR_thresh, score >= score_thresh)
-        dplyr::filter(FDR <= FDR_thresh, abs(score) >= score_thresh)
+        #dplyr::filter(FDR <= FDR_thresh, abs(score) >= score_thresh)
     total_lk_filtered <- nrow(filtered_links)    
+    nrow(filtered_links)
     head(filtered_links)    
     
     if (total_lk_filtered > 0) {
