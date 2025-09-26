@@ -23,12 +23,12 @@ p_met = "spearman"
 w_size = "5e5"
 FDR_thresh = 0.2
 score_thresh = 0.2
-# peaks_ds = "merged"
 
 ## read input arguments
 args = commandArgs(trailingOnly = TRUE)
 peaks_ds <- args[2]
 # peak_ds=(regular merged) 
+
 if (is.na(peaks_ds) || !nzchar(peaks_ds)) stop("Missing peaks dataset argument")
 
 if (length(resolution_level)) {
@@ -41,32 +41,39 @@ if (length(resolution_level)) {
     stop()
 }
 
+if (peaks_ds=="merged") { subDir = "links_ct_merged"; "links_ct_not_merged" }
+
 input_cvsDir <- here(
     "processed-data",
     "06_peak_calling",
-    "13_pseudobulk_LinkPeaks_MACS2_split_ct"
+    "13_pseudobulk_LinkPeaks_MACS2_split_ct",
+    subDir
+    # If testing regular argument value. Set Sub-Dir:
+    # links_ct_not_merged # those are comming directatly from macs2
 )
 plotDir <- here(
     "plots",
     "06_peak_calling",
-    "14_exploratory_pb_peak_scores_MACS2"
+    "14_exploratory_pb_peak_scores_MACS2",
+    subDir
 )
-csvDir <- here(
+processed_csvDir <- here(
     "processed-data",
     "06_peak_calling",
-    "14_exploratory_pb_peak_scores_MACS2"
+    "14_exploratory_pb_peak_scores_MACS2",
+    subDir
 )
 
 ## set specific peaks pb dataset
-input_cvsDir <- here(input_cvsDir, paste0("links_ct_", peaks_ds))
-plotDir <- here(plotDir, paste0("links_ct_", peaks_ds))
-plotDir_raw <- here(plotDir, "raw_links")
-csvDir <- here(csvDir, paste0("links_ct_", peaks_ds))
-csvDir_raw <- here(csvDir, "raw_links")
+# input_cvsDir <- here(input_cvsDir, paste0("links_ct_", peaks_ds))
+# plotDir <- here(plotDir, paste0("links_ct_", peaks_ds))
+# processed_csvDir <- here(processed_csvDir, paste0("links_ct_", peaks_ds))
+plotDir_raw <- here(plotDir, "all_links")
+csvDir_raw <- here(processed_csvDir, "all_links")
 
 ## Check directories
 if (!dir.exists(plotDir)) {dir.create(plotDir)}
-if (!dir.exists(csvDir)) {dir.create(csvDir)}
+if (!dir.exists(processed_csvDir)) {dir.create(processed_csvDir)}
 if (!dir.exists(plotDir_raw)) {dir.create(plotDir_raw)}
 if (!dir.exists(csvDir_raw)) {dir.create(csvDir_raw)}
 
@@ -81,8 +88,6 @@ lst_peak_files <- list.files(
 message("Link peak-genes files found:")
 lst_peak_files
 
-# for testing at Mid resolution:
-# lst_peak_files <- lst_peak_files[5]
 
 #===========================================================================
 
@@ -232,7 +237,8 @@ make_exploratory_plots <- function(
         resolution_lev,
         ct_name,
         plotDir,
-        suffix_name = ""
+        ds_name = "",     # identify ds: merged/regular
+        FDR_CC_thr = ""   # labels for plots/cvs
 ){
     
     # adding exploratory scores
@@ -245,8 +251,9 @@ make_exploratory_plots <- function(
     # link_df2 = link_df2
     # resolution_lev = resolution_level
     # ct_name = ct_name
-    # plotDir = plotDir
-    # suffix_name = suffix
+    # plotDir = plotDir_raw
+    # #plotDir = plotDir
+    # ds_name = ""
     
     print(paste0("Processing plots for ", resolution_lev, " for ", ct_name, " cell_type"))
     suffix_subtitle <- paste(resolution_lev, "resolution. ", ct_name)
@@ -284,8 +291,8 @@ make_exploratory_plots <- function(
                  label = paste("< -0.2 (", count_neg_below_02, " links)"),
                  size = 3, hjust = 0.8, vjust = 1, color = "black", fill = "white", label.size = NA)
     )
-    # Add conditional labels if suffix_name is not empty
-    if (suffix_name == "") {
+    # Add conditional labels if FDR_CC_thr is not empty
+    if (FDR_CC_thr == "") {
         threshold_labels <- append(threshold_labels, list(
             annotate("label", x = max(df_plot$distance/1000)*1.02, y = 0.2,
                      label = paste(">0.1 and <0.2 (", count_below_02, " links)"),
@@ -341,16 +348,18 @@ make_exploratory_plots <- function(
             ) 
         )  +
         labs(
-            title = "LinkPeak scores by tier",
-            subtitle = paste(suffix_subtitle, " - spearman at 1e5", suffix_name),
+            title = paste(ct_name, "linkPeak scores by tier"),
+            subtitle = paste(resolution_lev, "resolution clustering (pb ", suffix, " dataset / spearman at 1e5)"),
             x = "Distance from TSS (kb)",
             y = "Correlation score",
         ) +
         theme_minimal() + 
         theme(legend.position = "none")
     
-    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_tier_scores", suffix_name, ".pdf")
+    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_linkpeaks_tier_scores", FDR_CC_thr, ".pdf")
     ggsave(here(plotDir, f_name), g1, width = 8, height = 5, device = cairo_pdf)
+    
+    return(g1)
     
     message("Exploratory plots for ", ct_name, " done!")
     
@@ -359,27 +368,35 @@ make_exploratory_plots <- function(
 
 #===============================================================================
 
-## Check number of linked peaks per gene and vice-verse
-# Number of linked peaks per gene
 make_peak_gene_histograms <- function(
         link_df2,
         resolution_lev,
         ct_name,
-        plotDir, 
-        suffix =""
+        plotDir,
+        ds_name = "",     # identify ds: merged/regular
+        FDR_CC_thr = ""   # labels for plots/cvs
 ){
+
+    # link_df2 = link_df2
+    # resolution_lev = resolution_level
+    # ct_name = "Endo"
+    # plotDir = plotDir_raw
+    # ds_name ="merged"
+    # FDR_CC_thr = ""
     
-    ## Histogram TSS Scores
-    pdf(file = here(
-        plotDir, 
-        paste0(resolution_level, "_", ct_name, "_pb_histogram_TSS_dist", suffix, ".pdf")), 
-        width = 7, height = 5)
+    # ## Histogram TSS Scores
+    # pdf(file = here(
+    #     plotDir, 
+    #     paste0(resolution_level, "_", ct_name, "_pb_histogram_TSS_dist", FDR_CC_thr, ".pdf")), 
+    #     width = 7, height = 5)
+    # 
+    # hist(link_df2$distance / 1000, breaks = 100,
+    #      main = paste0(FDR_CC_thr, " LinkPeaks distance from Peaks to TSS"),
+    #      xlab = "Distance (kb)",
+    #      col = "lightblue")
+    # dev.off()
     
-    hist(link_df2$distance / 1000, breaks = 100,
-         main = paste0(suffix, " LinkPeaks distance from Peaks to TSS"),
-         xlab = "Distance (kb)",
-         col = "lightblue")
-    dev.off()
+    g0 <- make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir_raw, ds_name, FDR_CC_thr)
     
     peaks_per_gene <- link_df2 %>%
         count(gene, name = "n_peaks") %>%
@@ -389,9 +406,10 @@ make_peak_gene_histograms <- function(
         geom_histogram(binwidth = 1, fill = "steelblue", color = "white") +
         scale_x_continuous(breaks = scales::pretty_breaks()) +
         labs(
-            title = paste0(suffix, " Local LinkPeaks by cell-type (pseudobulk)"), 
-            subtitle = "Peaks per gene",
-            x = "Number of linked peaks per gene",
+            #title = " Local LinkPeaks by cell-type", 
+            #subtitle = "Peaks per gene",
+            #x = paste("linked peaks per gene ( pb - ", FDR_CC_thr, " dataset )"),
+            x = "linked peaks per gene",
             y = "Number of genes"
         ) +
         theme_minimal()
@@ -405,18 +423,20 @@ make_peak_gene_histograms <- function(
         geom_histogram(binwidth = 1, fill = "firebrick", color = "white") +
         scale_x_continuous(breaks = scales::pretty_breaks()) +
         labs(
-            subtitle = "Genes per peak",
-            x = "Number of linked genes per peak",
+            #subtitle = "Genes per peak",
+            #x = paste("linked genes per peak  ( pb - ", FDR_CC_thr, " dataset )"),
+            x = "linked genes per peak",
             y = "Number of peaks"
         ) +
         theme_minimal()
     
-    combined_plot <- g1 + g2
+    combined_plot <- g0 / (g1 + g2)  + 
+        plot_layout(heights = c(2, 1))
     combined_plot
     
-    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_link_peak_gene_histograms", suffix, ".pdf")
+    f_name <- paste0(resolution_lev, "_", ct_name, "_pb_link_peak_exploratory_gene-peaks_histograms", FDR_CC_thr, ".pdf")
     ggsave(here(plotDir, f_name),
-           combined_plot, width = 7, height = 7)
+           combined_plot, width = 8, height = 8)
     
     message("Gene-Peak plots for ", ct_name, " done!")
     
@@ -431,7 +451,7 @@ message("Making plots for ", length(lst_peak_files), " cell-types")
 
 for (ct in lst_peak_files) {
     # testing
-    # ct =  lst_peak_files[6]
+    # ct =  lst_peak_files[2]
     
     gene_peaks_csv <- here(input_cvsDir, ct)
     
@@ -449,7 +469,7 @@ for (ct in lst_peak_files) {
     
     #=========================================
     # prepare df
-    message("Processing ", nrow(link_df), " peaks found in ", ct_name, " ...")
+    message("Processing ", nrow(link_df), " links found in ", ct_name, " ...")
     
     link_df <- link_df |>
         mutate(
@@ -457,7 +477,6 @@ for (ct in lst_peak_files) {
             seqnames = as.character(seqnames),
             start    = as.numeric(start),
             end      = as.numeric(end)
-            #peak_called_in = peak_called_in
         )
     head(link_df)
     
@@ -498,7 +517,7 @@ for (ct in lst_peak_files) {
     
     #=========================================
     
-    # save full links found 
+    # save full links with TSS stats 
     f_name <- here(csvDir_raw, paste0(resolution_level, "_", ct_name,  "_links_with_TSS_CC_FDR_spearman_5e5.csv"))
     write.csv(link_df2, file = f_name, row.names = FALSE)
     
@@ -507,8 +526,10 @@ for (ct in lst_peak_files) {
     #=========================================
     
     # plot exploratory over the full links set
-    make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir_raw)
-    make_peak_gene_histograms(link_df2, resolution_level, ct_name, plotDir_raw)
+    # make_exploratory_plots(link_df2, resolution_level, ct_name, plotDir_raw)
+    ## make an integrated plot with exploratory scores and pean-gene frequencies
+    make_peak_gene_histograms(link_df2, resolution_level, ct_name, 
+                              plotDir_raw, peaks_ds, paste0("FDR", FDR_thresh, "_score", score_thresh))
     
     ## filter pRE links
     filtered_links <- link_df2 |>
@@ -524,14 +545,14 @@ for (ct in lst_peak_files) {
         message(lk_perc_label, " percent of links passing threshold.\nSaved ", nrow(filtered_links), " putative links")
         
         # save filtered links
-        suffix = paste0("FDR", FDR_thresh, "_score", score_thresh)
-        f_name <- here(csvDir, paste0(resolution_level, "_", ct_name,
-                                      "_links_FDR", suffix, ".csv"))
+        FDR_CC_thr = paste0("FDR", FDR_thresh, "_score", score_thresh)
+        f_name <- here(processed_csvDir, paste0(resolution_level, "_", ct_name,
+                                      "_links_FDR", FDR_CC_thr, ".csv"))
         write.csv(filtered_links, f_name, row.names = FALSE)
         
         
         # make exploratory of filtered links
-        make_exploratory_plots(filtered_links, resolution_level, ct_name, plotDir, suffix)
+        make_exploratory_plots(filtered_links, resolution_level, ct_name, plotDir, FDR_CC_thr)
         make_peak_gene_histograms(filtered_links, resolution_level, ct_name, plotDir)
         make_width_plots(filtered_links, resolution_level, ct_name, plotDir)
         
