@@ -36,8 +36,8 @@ lfc_thresh = 0.2
 inputCSV_Links_Dir <- here(
     "processed-data",
     "06_peak_calling",
-    "13_pseudobulk_LinkPeaks_MACS2_split_ct",
-    #"14_exploratory_pb_peak_scores_MACS2",
+    #"13_pseudobulk_LinkPeaks_MACS2_split_ct",
+    "14_exploratory_pb_peak_scores_MACS2",
     "links_ct_merged"
 )
 inputCSV_DARs_Dir <- here(
@@ -75,9 +75,8 @@ lst_peak_files
 # bind all files 
 list_of_df <- lapply(here(inputCSV_Links_Dir, lst_peak_files), read.csv)
 # ## Testing - using all links:
-# tmp_lst_peak_files = lst_peak_files[2]
-# lst_peak_files = append(tmp_lst_peak_files, lst_peak_files[18])
-# list_of_df <- lapply(here(inputCSV_Links_Dir, lst_peak_files), read.csv)
+# tmp_lst_peak_files = c(lst_peak_files[2], lst_peak_files[18])
+# list_of_df <- lapply(here(inputCSV_Links_Dir, tmp_lst_peak_files), read.csv)
 
 combined_data <- bind_rows(list_of_df)
 
@@ -131,14 +130,6 @@ lst_DARs_files_cellType <- grep("voomlmFit_DAR_peaks_ALL_in_", all_DARs_files, v
 
 message(length(lst_DARs_files_cellType), " DAR files found ... ")
 lst_DARs_files_cellType
-
-
-# bind all files 
-# list_of_DARs_df <- lapply(here(inputCSV_DARs_Dir, lst_DARs_files_cellType), read.csv)
-# combined_DARs_data <- bind_rows(list_of_DARs_df)
-# message("Processing LinkPeaks results for merged-peaks ds")
-# message(nrow(combined_DARs_data), " total links found") 
-# head(combined_DARs_data)
 
 
 #===========================================================================
@@ -244,23 +235,112 @@ g2 <- ggplot(DARs_counts, aes(x = reorder(cell_type, n), y = n)) +
 
 g2
 
-
-
-
 head(combined_data$peak)
 head(DARs_results_all$peak_id)
 
+#===========================================================================
+# # Prepare as a named list
+# venn_list <- list(
+#     LinkPeaks = unique(combined_data$peak),
+#     DARs = unique(DARs_results_all$peak_id)
+# )
+# 
+# ggvenn(venn_list,
+#        fill_color = c("skyblue", "orange"),
+#        stroke_size = 0.5,
+#        set_name_size = 4)
 
 
+#===========================================================================
+## Parse csv DAR files and plot Volcano and ViolinPlot for the 5 "Up/Down" DARs by cellType
 
-# Prepare as a named list
-venn_list <- list(
-    LinkPeaks = unique(combined_data$peak),
-    DARs = unique(DARs_results_all$peak_id)
-)
-
-ggvenn(venn_list,
-       fill_color = c("skyblue", "orange"),
-       stroke_size = 0.5,
-       set_name_size = 4)
-
+# # empty list to store the plots
+# barPlot_list <- list()
+# 
+# for (ct_DARs in lst_DARs_cvs) {
+#     # ct_DARs = lst_DARs_cvs[2] # "Endo"
+#     # ct_DARs = lst_DARs_cvs[18] 
+#     
+#     message("Processing:\n", ct_DARs)
+#     
+#     # load DARs
+#     DAR_peaks_cvs <- here(input_cvsDir, ct_DARs)
+#     if (file.exists(DAR_peaks_cvs)) {
+#         DARs_df <- read.csv(DAR_peaks_cvs)
+#         message("File loaded!")
+#     } else {
+#         stop(paste("File not found:", DAR_peaks_cvs))
+#     }
+#     #colnames(DARs_df)
+#     
+#     # get cluster name. ge. "Endo"
+#     clust_name <- sub("^voomlmFit_DAR_peaks_ALL_in_(.*)\\.csv$", "\\1", ct_DARs)
+#     
+#     ## create plot for FDR_thr (s)     
+#     purrr::map(FDR_thr, ~ {
+#         create_volcano(
+#             DARs_df, 
+#             clust_name,
+#             FDR_thr = .x,   # current FDR
+#             lfc_thresh = lfc_thresh,
+#             plot_Dir
+#         )
+#     })
+#     
+#     barPlot_list[[clust_name]] <- create_barPlot_significant_DARs(DARs_df, clust_name, FDR_thr, lfc_thresh)
+#     
+#     # Identify top up/down peaks based on FDR
+#     fdr_cols <- grep("^fdr_", colnames(res_enrich), value = TRUE)
+#     
+#     # cluster-specific significant peaks
+#     res_sig_ct <- res_enrich |>
+#         # filter(.data[[paste0("fdr_", clus)]] < FDR_thr) |>
+#         filter(.data[[paste0("fdr_", clus)]] < FDR_thr,
+#                abs(.data[[paste0("logFC_", clus)]]) > lfc_thresh) |>
+#         mutate(
+#             logFC_ct = .data[[paste0("logFC_", clus)]],
+#             direction = case_when(
+#                 logFC_ct >  0 ~ "Up",    # opening
+#                 logFC_ct <  0 ~ "Down",  # closing
+#                 TRUE ~ "NS"              # should not occur if you filtered
+#             )
+#         )
+#     
+#     if (nrow(res_sig_ct) > 0) {
+#         f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_", clus, ".csv"))
+#         write.csv(res_sig_ct, f_name, row.names = FALSE)
+#         message("Enrichment statistics saved [", clus, "]")
+#     }
+#     
+# }
+# 
+# 
+# # Plot barPlots
+# if (length(barPlot_list) > 0) {
+#     
+#     pdf(here(plot_Dir, "BarPlots_ALL_cellTypes_voomLmFit.pdf"), width = 10, height = 10)
+#     
+#     # Remove redundant y-axis labels
+#     barPlot_list_clean <- lapply(barPlot_list, function(p) {
+#         p + ylab(NULL) + theme(legend.position = "none")
+#     })
+#     
+#     combined_plot <- wrap_plots(barPlot_list_clean, ncol = 5)
+#     
+#     title_name <- paste0("Number of Up/Down Enriched DARs by CellType (FDR < ", FDR_thr, ")") 
+#     final_plot <- combined_plot +
+#         plot_annotation(
+#             title = title_name,
+#             theme = theme(
+#                 plot.title = element_text(size = 12, hjust = 0.5),
+#                 axis.title.y = element_text(size = 9)
+#             )
+#         ) # +
+#     #labs(tag = "Number of DARs") +
+#     #theme(plot.tag = element_text(angle = 90), plot.tag.position = "left")
+#     
+#     print(final_plot)
+#     
+#     dev.off()
+#     
+# }
