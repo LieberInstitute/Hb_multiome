@@ -36,7 +36,8 @@ lfc_thresh = 0.2
 inputCSV_Links_Dir <- here(
     "processed-data",
     "06_peak_calling",
-    "14_exploratory_pb_peak_scores_MACS2",
+    "13_pseudobulk_LinkPeaks_MACS2_split_ct",
+    #"14_exploratory_pb_peak_scores_MACS2",
     "links_ct_merged"
 )
 inputCSV_DARs_Dir <- here(
@@ -73,10 +74,15 @@ lst_peak_files
 
 # bind all files 
 list_of_df <- lapply(here(inputCSV_Links_Dir, lst_peak_files), read.csv)
+# ## Testing - using all links:
+# tmp_lst_peak_files = lst_peak_files[2]
+# lst_peak_files = append(tmp_lst_peak_files, lst_peak_files[18])
+# list_of_df <- lapply(here(inputCSV_Links_Dir, lst_peak_files), read.csv)
+
 combined_data <- bind_rows(list_of_df)
 
-message("Processing LinkPeaks results for merged-peaks ds")
-message(nrow(combined_data), " total links found") 
+message("Processing ", length(list_of_df), " LinkPeaks files for merged-peaks dataset")
+message(nrow(combined_data), " total links") 
 
 head(combined_data)
 
