@@ -1,6 +1,6 @@
 ########################################################################
-##                   Compute LinkPeaks ∩ DARs by cellType 
-## ##################### DAR → Links perspective ## ####################
+## Summaries: three strategies (pairwise, unique DARs, unique Links)
+##
 ## Authors. CSC
 ## Date. Sep 24, 2025
 ## Recommended resources on interactive mode: srun --pty --mem=30GB --x11 bash
@@ -55,7 +55,8 @@ if (!dir.exists(processedDir)) { dir.create(processedDir) }
 if (!dir.exists(plotDir)) { dir.create(plotDir) }
 
 ##==============================================================================
-## Load LinkPeaks results
+
+message("Loading  LinkPeaks results ...")
 
 # List all files matching the specific clustering resolution level
 lst_peak_files <- list.files(
@@ -78,7 +79,8 @@ head(linkPeaks_results_all)
 
 
 #===========================================================================
-## plot basic barplot of number of links by cellType
+
+message("Ploting barplot of number of links by cellType .. ")
 
 # get number of links (rows) for each cluster
 cluster_counts <- linkPeaks_results_all |>
@@ -104,7 +106,8 @@ ggsave(here(plotDir, f_name),
 
 
 ##==============================================================================
-## Load DARs results
+
+message("Loading DARs results ...")
 
 all_DARs_files <- list.files(
     path = inputCSV_DARs_Dir,
@@ -119,7 +122,8 @@ lst_DARs_files_cellType
 
 
 #===========================================================================
-# parse DARs results for each cellType at specific FDR thr
+
+message("Parsing DARs for each cellType at ", FDR_thresh)
 
 DARS_signif_df_lst = list()
 # FDR_thresh = c(0.1, 0.2)
@@ -194,9 +198,10 @@ DARs_results_all |> head()
 
 
 #===========================================================================
-## plot basic barplot to visualize number of DARs by cellType
 
-message("Making intersection plots  DAR → Links perspective .... ")
+message("Plotting barplot of DARs by cellType ...")
+
+message("####### DAR → Links perspective #######")
 
 # Make FDR_threshold is a factor for facet labels
 DARs_results_all <- DARs_results_all |>
@@ -258,7 +263,8 @@ ggsave(here(plotDir, f_name),
 
 
 #===========================================================================
-## Make intersection btw links and DARs
+
+message("Preparing GRanges for overlaping peaks ... ")
 
 # inspect data
 nrow(linkPeaks_results_all)
@@ -310,7 +316,8 @@ gr_dars <- with(DARs_split,
 head(gr_links)
 head(gr_dars)
 
-## find overlaps
+message("Finding overlaps ...") 
+
 # findOverlaps() reports all pairs of ranges that overlap
 # If one LinkPeaks region overlaps many DARs regions, you’ll get multiple rows for the same LinkPeak
 hits <- findOverlaps(gr_links, gr_dars)
@@ -323,35 +330,6 @@ overlaps_df <- data.frame(
 
 nrow(overlaps_df)
 head(overlaps_df)
-
-
-overlap_counts <- overlaps_df |>
-    count(cell_type, FDR_thresh, sort = TRUE)
-
-overlap_counts
-
-#===========================================================================
-## control overlaps: Unique overlapping LinkPeaks or DARs
-
-# LinkPeaks overlap at least one DAR
-unique_links <- unique(mcols(gr_links)$peak_id[queryHits(hits)])
-length(unique_links)   # number of distinct LinkPeaks overlapping DARs
-
-head(unique_links)
-
-# only distinct DAR 
-unique_dars <- unique(mcols(gr_dars)$peak_id[subjectHits(hits)])
-length(unique_dars)    # number of distinct DARs overlapping LinkPeaks
-
-## Count overlaps per region
-link_counts <- as.data.frame(table(mcols(gr_links)$peak_id[queryHits(hits)]))
-nrow(link_counts) # [1] 7089
-head(link_counts)
-# Var1 Freq
-# 1 chr1-100213166-100213615   41
-# 2 chr1-100231650-100231970   44
-# 3 chr1-100265432-100266863    1
-
 
 #===========================================================================
 ## Up vs Down DAR-Links count per cell type
@@ -366,90 +344,36 @@ overlaps_df <- overlaps_df |>
         TRUE ~ "Neutral"
     ))
 
-########## Get the counts per cell type ##########
-
-## This is a pairwise overlap count (DAR–Link edges)
-# A DAR overlaps multiple LinkPeaks, it is counted once per overlap
-DAR_link_summary <- overlaps_df |>
-    group_by(cell_type, direction) |>
-    summarise(n = n(), .groups = "drop")
-DAR_link_summary
-
-## counts unique DAR peaks per cell type & direction
-
-# A DAR overlapping 5 Links is only counted once
-summary_dar <- overlaps_df |>
-    group_by(cell_type, direction) |>
-    summarise(
-        n_DARs = n_distinct(peak_id.1),   # distinct DAR peaks
-        .groups = "drop"
-    )
-summary_dar
-# A Link overlapping 5 DARs is only counted once
-summary_links <- overlaps_df %>%
-    group_by(cluster, direction) %>%
-    summarise(
-        n_Links = n_distinct(peak_id),   # distinct Link peaks
-        .groups = "drop"
-    )
-summary_links
-
-############
-
-if (nrow(DAR_link_summary) > 0) { 
-    
-    f_name <- here(processedDir, paste0("summary_intersected_counts_per_ct_FDR", FDR, ".csv"))
-    write.csv(DAR_link_summary, f_name, row.names = FALSE)
-    message("Summary saved!")
-    
-} else (
-    
-    stop("None overlaps found!")
-    
-)
-
-
 #===========================================================================
 
 prepare_data_to_plot <- function(
         df_summary
 ) {
-    # make a diverging plot (Up → right, Down → left), flip the sign of n for Down peaks
-    df_summary_div <- df_summary |> 
-        mutate(n_signed = ifelse(direction == "Down", -n, n))
-    # order cell types by total number of overlaps
-    cell_totals <- df_summary |>
-        group_by(cell_type) |>
+    # make a df for diverging plots (Up → right, Down → left), flip the sign of n for Down peaks
+    cell_totals <- df_summary %>%
+        group_by(cell_type) %>%
         summarise(total = sum(n), .groups = "drop")
-    # Join back to signed summary
-    df_summary_div <- df_summary |>
-        mutate(n_signed = ifelse(direction == "Down", -n, n)) |> 
+    df_summary_div <- df_summary %>%
+        mutate(n_signed = ifelse(direction == "Down", -n, n)) %>%
         left_join(cell_totals, by = "cell_type")
     
     return(df_summary_div)
     
 }
-
-DAR_link_summary_div <- function(DAR_link_summary)
-
-# # make a diverging plot (Up → right, Down → left), flip the sign of n for Down peaks
-# DAR_link_summary_div <- DAR_link_summary |> 
-#     mutate(n_signed = ifelse(direction == "Down", -n, n))
-# # order cell types by total number of overlaps
-# cell_totals <- DAR_link_summary |>
-#     group_by(cell_type) |>
-#     summarise(total = sum(n), .groups = "drop")
-# # Join back to signed summary
-# DAR_link_summary_div <- DAR_link_summary |>
-#     mutate(n_signed = ifelse(direction == "Down", -n, n)) |> 
-#     left_join(cell_totals, by = "cell_type")
-
     
 make_div_prop_barplots <- function(
-        
+        summary_df,
+        summary_div_df,
+        FDR,
+        suffix
 ) {
+    # testing:
+    summary_df = DAR_link_summary
+    summary_div_df = DAR_link_summary_div
+    FDR = FDR 
+    suffix = "DAR–Link_pairwise"
     
-    g4_overlap <- ggplot(DAR_link_summary_div, 
+    g4_overlap <- ggplot(summary_div_df, 
                          aes(x = reorder(cell_type, total), y = n_signed, fill = direction)) +
         geom_col() +
         # add labels outside bars
@@ -460,38 +384,42 @@ make_div_prop_barplots <- function(
                   color = "#3D3936") +
         scale_y_continuous(labels = abs, expand = expansion(mult = c(0.15, 0.15))) + # add padding
         labs(
-            title = "DAR-Links Overlaps by cell type",
+            title = paste("Overlaps by cell type -", suffix),
             subtitle = paste0("FDR = ", FDR),
             x = "Cell Type",
-            y = "Number of overlapping DAR-Links",
+            y = "Number of overlapping",
             fill = "Direction"
         ) +
         theme_minimal() +
         coord_flip()
     
-    
     # define factor levels by total counts
-    cell_totals <- DAR_link_summary |>
+    cell_totals <- summary_df |>
         group_by(cell_type) |>
         summarise(total = sum(n), .groups = "drop")
-    
     cell_order <- cell_totals |>
         arrange(total) |>
         pull(cell_type)
+    summary_df$cell_type <- factor(summary_df$cell_type, levels = cell_order)
+    summary_div_df$cell_type <- factor(summary_div_df$cell_type, levels = cell_order)
     
-    DAR_link_summary$cell_type <- factor(DAR_link_summary$cell_type, levels = cell_order)
-    DAR_link_summary_div$cell_type <- factor(DAR_link_summary_div$cell_type, levels = cell_order)
-    
-    g4b_overlap <- DAR_link_summary|>
+    g4b_overlap <- summary_df|>
         group_by(cell_type) |>
         mutate(prop = n / sum(n)) |>
         ggplot(aes(x = cell_type, y = prop, fill = direction)) +
         geom_col() +
+        # add percentage labels
+        geom_text(
+            aes(label = abs(n_signed),
+                hjust = ifelse(direction == "Down", 1.2, -0.2)),
+            check_overlap = TRUE,
+            size = 3
+        ) +
         scale_y_continuous(labels = scales::percent) +
         labs(
-            title = "Proportion of Up/Down DAR-Links",
+            title = paste("Proportion of Up/Down -", suffix),
             x = "Cell Type",
-            y = "Proportion",
+            y = "Proportion ",
             fill = "Direction"
         ) +
         theme_minimal() +
@@ -499,11 +427,128 @@ make_div_prop_barplots <- function(
     
     g4_combined <- g4_overlap | g4b_overlap
     
-    f_name <- paste0(resolution_level, "_level_pb_Links_DARs_overaping_FDR", FDR, ".pdf")
+    f_name <- paste0(suffix, "_overaping_FDR", FDR, ".pdf")
     ggsave(here(plotDir, f_name),
            g4_combined, width = 10, height = 7)
     
+    message("All plots done!")
+    
 }
+
+
+########## Get the counts per cell type ##########
+
+# Pairwise (DAR–Link edges)
+summarise_pairwise <- function(overlaps_df) {
+    overlaps_df |>
+        group_by(cell_type, direction) |>
+        summarise(n = n(), .groups = "drop")
+}
+
+# Unique DAR peaks (per cell type & direction)
+summarise_unique_dars <- function(overlaps_df) {
+    overlaps_df |>
+        group_by(cell_type, direction) |>
+        summarise(n = n_distinct(peak_id.1), .groups = "drop")
+}
+
+# Unique Link peaks (per Link cluster & direction)
+summarise_unique_links <- function(overlaps_df) {
+    overlaps_df |>
+        group_by(cluster, direction) |>
+        summarise(n = n_distinct(peak_id), .groups = "drop") |>
+        rename(cell_type = cluster)   # rename for consistent plotting
+}
+
+# Define strategies
+strategies <- list(
+    "DAR–Link_pairwise" = summarise_pairwise,
+    "DAR–Link_unique"   = summarise_unique_dars,
+    "Link-DAR_unique"   = summarise_unique_links
+)
+
+# Run all strategies
+walk2(strategies, names(strategies), function(fun, suffix) {
+    
+    # Apply summariser
+    summary_df <- fun(overlaps_df)
+    
+    # Prepare diverging data
+    summary_div <- prepare_data_to_plot(summary_df)
+    
+    # Make plots + save
+    make_div_prop_barplots(summary_df, summary_div, FDR, suffix)
+    
+    # Save raw summary
+    f_name <- here(processedDir, paste0("summary_", suffix, "_FDR", FDR, ".csv"))
+    write.csv(summary_df, f_name, row.names = FALSE)
+    
+    message("Finished: ", suffix)
+})
+
+message("All plots done!!!")
+
+
+# ## Pairwise overlap count (DAR–Link edges)
+# # ge. A DAR overlaps multiple LinkPeaks, it is counted once per overlap
+# DAR_link_summary <- overlaps_df |>
+#     group_by(cell_type, direction) |>
+#     summarise(n = n(), .groups = "drop")
+# DAR_link_summary
+# 
+# if (nrow(DAR_link_summary) > 0) { 
+#     
+#     f_name <- here(processedDir, paste0("summary_intersected_counts_per_ct_FDR", FDR, ".csv"))
+#     write.csv(DAR_link_summary, f_name, row.names = FALSE)
+#     message("Summary saved!")
+#     
+# } else (
+#     
+#     stop("None overlaps found!")
+#     
+# )
+# 
+# ## Pairwise overlap count (DAR–Link edges)
+# DAR_link_summary_div <- prepare_data_to_plot(DAR_link_summary)
+# make_div_prop_barplots(DAR_link_summary, 
+#                        DAR_link_summary_div, 
+#                        FDR, 
+#                        "DAR–Link_pairwise")
+# 
+# ## counts unique DAR peaks per cell type & direction
+# # ge. A DAR overlapping 5 Links is only counted once
+# summary_dar <- overlaps_df |>
+#     group_by(cell_type, direction) |>
+#     summarise(
+#         n_DARs = n_distinct(peak_id.1),   # distinct DAR peaks
+#         .groups = "drop"
+#     )
+# summary_dar
+# summary_dar <- summary_dar |> rename(n = n_DARs)
+# 
+# DAR_link_summary_unique_div <- prepare_data_to_plot(summary_dar)
+# make_div_prop_barplots(summary_dar, 
+#                        DAR_link_summary_unique_div, 
+#                        FDR, 
+#                        "DAR–Link_unique")
+# 
+# ## counts unique Link peaks per cell type & direction
+# # ge. A Link overlapping 5 DARs is only counted once
+# summary_links <- overlaps_df |>
+#     group_by(cluster, direction) |>
+#     summarise(
+#         n_Links = n_distinct(peak_id),   # distinct Link peaks
+#         .groups = "drop"
+#     )
+# summary_links
+# summary_links <- summary_links |> rename(n = n_Links)
+# 
+# link_DAR_summary_unique_div <- prepare_data_to_plot(summary_links)
+# make_div_prop_barplots(DAR_link_summary, 
+#                        link_DAR_summary_unique_div, 
+#                        FDR, 
+#                        "Link_DAR_unique")
+
 
 #===========================================================================
 ## Venn Diagram
