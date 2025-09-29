@@ -87,34 +87,31 @@ head(combined_data)
 
 
 #===========================================================================
-## plot basic barplot to visualize number of links by cellType
+## plot basic barplot of number of links by cellType
 
 # get number of links (rows) for each cluster
 cluster_counts <- combined_data |>
     count(cluster, sort = TRUE)
 
-# 2. Create the bar plot using ggplot2
-# - We use aes() to map the 'cluster' column to the x-axis and the 'n' (count) column to the y-axis.
-# - geom_col() creates the bars.
-# - labs() adds a title and improves the axis labels.
-# - theme_minimal() provides a clean, minimalist plot theme.
-# - coord_flip() flips the x and y axes for better readability, especially with long cluster names.
 g1 <- ggplot(cluster_counts, aes(x = reorder(cluster, n), y = n)) +
     geom_col(fill = "steelblue") +
     geom_text(aes(label = n), hjust = -0.2, size = 3) +
     labs(
-        title = "Number of Links by cell-type",
-        x = "Cluster",
+        title = "Links by Cell Type",
+        subtitle = paste0("FDR thr = 0.2"),
+        x = "Cell Type",
         y = "Number of Links"
     ) +
     theme_minimal() +
-    coord_flip()
+    coord_flip() +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.2)))  # add 10% space on right
 
 #print(g1)
 
-f_name <- paste0(resolution_level, "_level_pb_link_peaks_barplot.pdf")
+f_name <- paste0(resolution_level, "_level_pb_link_peaks_barplot_ct.pdf")
 ggsave(here(plotDir, f_name),
-       combined_plot, width = 7, height = 7)
+       g1, width = 7, height = 7)
+
 
 
 ##==============================================================================
@@ -201,7 +198,7 @@ DARs_results_all <- purrr::map_dfr(
 )
 
 # Convert the .id column (1, 2) into meaningful labels
-DARs_results_all <- DARs_results_all %>%
+DARs_results_all <- DARs_results_all |>
     mutate(FDR_threshold = factor(FDR_threshold, 
                                   labels = paste0("FDR", FDR_thresh)))
 
@@ -220,20 +217,58 @@ DARs_results_all <- DARs_results_all |>
 DARs_counts <- DARs_results_all |>
     count(cell_type, FDR_threshold, sort = TRUE)
 
-g2 <- ggplot(DARs_counts, aes(x = reorder(cell_type, n), y = n)) +
-    geom_col(fill = "steelblue") +
-    geom_text(aes(label = n), hjust = -0.2, size = 3) +
-    facet_wrap(~ FDR_threshold, ncol = 1, scales = "free_y",
-               labeller = labeller(FDR_threshold = label_both)) +
+# Get unique thresholds
+thresholds <- unique(DARs_counts$FDR_threshold)
+
+# Loop through thresholds and plot one at a time
+g2 <- lapply(thresholds, function(th) {
+        df_sub <- filter(DARs_counts, FDR_threshold == th)
+        
+        ggplot(df_sub, aes(x = reorder(cell_type, n), y = n)) +
+            geom_col(fill = "steelblue") +
+            geom_text(aes(label = n), hjust = -0.2, size = 3) +
+            labs(
+                title = paste("DARs by Cell Type"),
+                subtitle = paste("FDR thr =", str_split(th, "FDR")[[1]][2]),
+                x = "Cell Type",
+                y = "Number of DARs"
+            ) +
+            theme_minimal() +
+            coord_flip() +
+            scale_y_continuous(expand = expansion(mult = c(0, 0.2)))  # add 10% space on right
+    })
+
+walk2(
+    .x = g2,           
+    .y = thresholds,   # thresholds for filenames
+    ~ ggsave(
+        filename = file.path(plotDir, paste0(resolution_level, "_level_pb_DARs_", .y, ".pdf")),
+        plot = .x,
+        width = 7,
+        height = 7
+    )
+)
+
+## overlay both thr for comparison purposes 
+g3 <- ggplot(DARs_counts, aes(x = reorder(cell_type, n), y = n, fill = FDR_threshold)) +
+    geom_col(alpha = 0.5, position = "identity") +  # <- overlay instead of dodge
     labs(
-        title = "Number of Significant DARs by Cell Type",
+        title = paste("DARs by Cell Type"),
+        subtitle = "FDR thresholds",
         x = "Cell Type",
-        y = "Number of Significant DARs"
+        y = "Number of DARs",
+        fill = "FDR Threshold"
     ) +
     theme_minimal() +
     coord_flip()
 
-g2
+f_name <- paste0(resolution_level, "_level_pb_DARs_overlay_FDR.pdf")
+ggsave(here(plotDir, f_name),
+       g3, width = 7, height = 7)
+
+
+
+#===========================================================================
 
 head(combined_data$peak)
 head(DARs_results_all$peak_id)
