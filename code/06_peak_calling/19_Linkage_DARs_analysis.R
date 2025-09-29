@@ -367,6 +367,31 @@ head(link_counts)
 
 
 #===========================================================================
+## Up vs Down DAR-Links count per cell type
+
+# Define Up vs Down
+overlaps_df <- overlaps_df %>%
+    mutate(direction = case_when(
+        logFC > 0 ~ "Up",
+        logFC < 0 ~ "Down",
+        TRUE ~ "Neutral"
+    ))
+
+# Collapse to counts per cell type
+DAR_link_summary <- overlaps_df |>
+    group_by(cell_type, direction) |>
+    summarise(n = n(), .groups = "drop")
+
+if (nrow(DAR_link_summary) > 0) {
+    f_name <- here(processedDir, "summary_intersected_counts_per_ct_FDR0.2.csv")
+    write.csv(DAR_link_summary, f_name, row.names = FALSE)
+    message("Summary saved!")
+} else (
+    stop("None overlaps found!")
+)
+
+
+#===========================================================================
 ## Venn Diagram
 
 # venn_list <- list(
