@@ -89,15 +89,15 @@ g1 <- ggplot(cluster_counts, aes(x = reorder(cluster, n), y = n)) +
     geom_text(aes(label = n), hjust = -0.2, size = 3) +
     labs(
         title = "Links by Cell Type",
-        subtitle = paste0("FDR thr = 0.2"),
+        subtitle = paste0("FDR thr = ", FDR),
         x = "Cell Type",
         y = "Number of Links"
     ) +
     theme_minimal() +
     coord_flip() +
-    scale_y_continuous(expand = expansion(mult = c(0, 0.2)))  # add 10% space on right
+    scale_y_continuous(expand = expansion(mult = c(0, 0.15)))  # add 10% space on right
 
-f_name <- paste0(resolution_level, "_level_pb_link_peaks_barplot_ct.pdf")
+f_name <- paste0(resolution_level, "_level_pb_link_peaks_barplot_ct_FDR", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
        g1, width = 7, height = 7)
 
@@ -119,7 +119,7 @@ lst_DARs_files_cellType
 
 
 #===========================================================================
-# parse DARs results for each cellType
+# parse DARs results for each cellType at specific FDR thr
 
 DARS_signif_df_lst = list()
 # FDR_thresh = c(0.1, 0.2)
@@ -196,6 +196,8 @@ DARs_results_all |> head()
 #===========================================================================
 ## plot basic barplot to visualize number of DARs by cellType
 
+message("Making intersection plots  DAR → Links perspective .... ")
+
 # Make FDR_threshold is a factor for facet labels
 DARs_results_all <- DARs_results_all |>
     mutate(FDR_threshold = as.factor(FDR_threshold))
@@ -249,7 +251,7 @@ g3 <- ggplot(DARs_counts, aes(x = reorder(cell_type, n), y = n, fill = FDR_thres
     theme_minimal() +
     coord_flip()
 
-f_name <- paste0(resolution_level, "_level_pb_DARs_overlay_FDR.pdf")
+f_name <- paste0(resolution_level, "_level_pb_DARs_overlay.pdf")
 ggsave(here(plotDir, f_name),
        g3, width = 7, height = 7)
 
@@ -284,13 +286,13 @@ gr_links <- with(linkPeaks_results_all,
 ## only use DARs at FDR02
 nrow(DARs_results_all) # [1] 582590
 table(DARs_results_all$FDR_threshold)
-DARs_FDR02 <- DARs_results_all |>
-    filter(FDR_threshold == "FDR0.2")
-nrow(DARs_FDR02) # [1] 325580
+DARs_FDRX <- DARs_results_all |>
+    filter(FDR_threshold == paste0("FDR", FDR)) 
+nrow(DARs_FDRX) # [1] 325580
 
 # split the peak_id "chr-start-end" into seqnames, start, end
-colnames(DARs_FDR02)
-DARs_split <- tidyr::separate(DARs_FDR02, peak_id, into = c("seqnames", "start", "end"), sep = "-") |>
+colnames(DARs_FDRX)
+DARs_split <- tidyr::separate(DARs_FDRX, peak_id, into = c("seqnames", "start", "end"), sep = "-") |>
     mutate(start = as.integer(start),
            end   = as.integer(end))
 
@@ -355,6 +357,8 @@ head(link_counts)
 ## Up vs Down DAR-Links count per cell type
 
 # Define Up vs Down
+# peak_id → the LinkPeak ID (from gr_links)
+# peak_id.1 → the DAR peak ID (from gr_dars)
 overlaps_df <- overlaps_df |>
     mutate(direction = case_when(
         logFC > 0 ~ "Up",
@@ -362,89 +366,144 @@ overlaps_df <- overlaps_df |>
         TRUE ~ "Neutral"
     ))
 
-# Collapse to counts per cell type
+########## Get the counts per cell type ##########
+
+## This is a pairwise overlap count (DAR–Link edges)
+# A DAR overlaps multiple LinkPeaks, it is counted once per overlap
 DAR_link_summary <- overlaps_df |>
     group_by(cell_type, direction) |>
     summarise(n = n(), .groups = "drop")
+DAR_link_summary
 
-if (nrow(DAR_link_summary) > 0) {
-    f_name <- here(processedDir, "summary_intersected_counts_per_ct_FDR0.2.csv")
+## counts unique DAR peaks per cell type & direction
+
+# A DAR overlapping 5 Links is only counted once
+summary_dar <- overlaps_df |>
+    group_by(cell_type, direction) |>
+    summarise(
+        n_DARs = n_distinct(peak_id.1),   # distinct DAR peaks
+        .groups = "drop"
+    )
+summary_dar
+# A Link overlapping 5 DARs is only counted once
+summary_links <- overlaps_df %>%
+    group_by(cluster, direction) %>%
+    summarise(
+        n_Links = n_distinct(peak_id),   # distinct Link peaks
+        .groups = "drop"
+    )
+summary_links
+
+############
+
+if (nrow(DAR_link_summary) > 0) { 
+    
+    f_name <- here(processedDir, paste0("summary_intersected_counts_per_ct_FDR", FDR, ".csv"))
     write.csv(DAR_link_summary, f_name, row.names = FALSE)
     message("Summary saved!")
+    
 } else (
+    
     stop("None overlaps found!")
+    
 )
 
 
 #===========================================================================
 
-# make a diverging plot (Up → right, Down → left), flip the sign of n for Down peaks
-DAR_link_summary_div <- DAR_link_summary |> 
-    mutate(n_signed = ifelse(direction == "Down", -n, n))
+prepare_data_to_plot <- function(
+        df_summary
+) {
+    # make a diverging plot (Up → right, Down → left), flip the sign of n for Down peaks
+    df_summary_div <- df_summary |> 
+        mutate(n_signed = ifelse(direction == "Down", -n, n))
+    # order cell types by total number of overlaps
+    cell_totals <- df_summary |>
+        group_by(cell_type) |>
+        summarise(total = sum(n), .groups = "drop")
+    # Join back to signed summary
+    df_summary_div <- df_summary |>
+        mutate(n_signed = ifelse(direction == "Down", -n, n)) |> 
+        left_join(cell_totals, by = "cell_type")
+    
+    return(df_summary_div)
+    
+}
 
-# order cell types by total number of overlaps
-cell_totals <- DAR_link_summary |>
-    group_by(cell_type) |>
-    summarise(total = sum(n), .groups = "drop")
-# Join back to signed summary
-DAR_link_summary_div <- DAR_link_summary %>%
-    mutate(n_signed = ifelse(direction == "Down", -n, n)) |> 
-    left_join(cell_totals, by = "cell_type")
+DAR_link_summary_div <- function(DAR_link_summary)
 
+# # make a diverging plot (Up → right, Down → left), flip the sign of n for Down peaks
+# DAR_link_summary_div <- DAR_link_summary |> 
+#     mutate(n_signed = ifelse(direction == "Down", -n, n))
+# # order cell types by total number of overlaps
+# cell_totals <- DAR_link_summary |>
+#     group_by(cell_type) |>
+#     summarise(total = sum(n), .groups = "drop")
+# # Join back to signed summary
+# DAR_link_summary_div <- DAR_link_summary |>
+#     mutate(n_signed = ifelse(direction == "Down", -n, n)) |> 
+#     left_join(cell_totals, by = "cell_type")
 
-g4_overlap <- ggplot(DAR_link_summary_div, 
-                     aes(x = reorder(cell_type, total), y = n_signed, fill = direction)) +
-    geom_col() +
-    # add labels outside bars
-    geom_text(aes(label = abs(n_signed),
-                  hjust = ifelse(direction == "Down", 1.1, -0.1)), # left for Down, right for Up
-              position = position_identity(),
-              size = 3,
-              color = "#3D3936") +
-    scale_y_continuous(labels = abs, expand = expansion(mult = c(0.15, 0.15))) + # add padding
-    labs(
-        title = "DAR-Links Overlaps by cell type",
-        subtitle = "FDR=0.2",
-        x = "Cell Type",
-        y = "Number of overlapping DAR-Links",
-        fill = "Direction"
-    ) +
-    theme_minimal() +
-    coord_flip()
-
-
-# define factor levels by total counts
-cell_totals <- DAR_link_summary |>
-    group_by(cell_type) |>
-    summarise(total = sum(n), .groups = "drop")
-
-cell_order <- cell_totals |>
-    arrange(total) |>
-    pull(cell_type)
-
-DAR_link_summary$cell_type <- factor(DAR_link_summary$cell_type, levels = cell_order)
-DAR_link_summary_div$cell_type <- factor(DAR_link_summary_div$cell_type, levels = cell_order)
-
-g4b_overlap <- DAR_link_summary|>
-    group_by(cell_type) |>
-    mutate(prop = n / sum(n)) |>
-    ggplot(aes(x = cell_type, y = prop, fill = direction)) +
-    geom_col() +
-    scale_y_continuous(labels = scales::percent) +
-    labs(
-        title = "Proportion of Up/Down DAR-Links",
-        x = "Cell Type",
-        y = "Proportion",
-        fill = "Direction"
-    ) +
-    theme_minimal() +
-    coord_flip()
-
-g4_combined <- g4_overlap | g4b_overlap
-
-f_name <- paste0(resolution_level, "_level_pb_Links_DARs_overaping_FDR0.2.pdf")
-ggsave(here(plotDir, f_name),
-       g4_combined, width = 10, height = 7)
+    
+make_div_prop_barplots <- function(
+        
+) {
+    
+    g4_overlap <- ggplot(DAR_link_summary_div, 
+                         aes(x = reorder(cell_type, total), y = n_signed, fill = direction)) +
+        geom_col() +
+        # add labels outside bars
+        geom_text(aes(label = abs(n_signed),
+                      hjust = ifelse(direction == "Down", 1.1, -0.1)), # left for Down, right for Up
+                  position = position_identity(),
+                  size = 3,
+                  color = "#3D3936") +
+        scale_y_continuous(labels = abs, expand = expansion(mult = c(0.15, 0.15))) + # add padding
+        labs(
+            title = "DAR-Links Overlaps by cell type",
+            subtitle = paste0("FDR = ", FDR),
+            x = "Cell Type",
+            y = "Number of overlapping DAR-Links",
+            fill = "Direction"
+        ) +
+        theme_minimal() +
+        coord_flip()
+    
+    
+    # define factor levels by total counts
+    cell_totals <- DAR_link_summary |>
+        group_by(cell_type) |>
+        summarise(total = sum(n), .groups = "drop")
+    
+    cell_order <- cell_totals |>
+        arrange(total) |>
+        pull(cell_type)
+    
+    DAR_link_summary$cell_type <- factor(DAR_link_summary$cell_type, levels = cell_order)
+    DAR_link_summary_div$cell_type <- factor(DAR_link_summary_div$cell_type, levels = cell_order)
+    
+    g4b_overlap <- DAR_link_summary|>
+        group_by(cell_type) |>
+        mutate(prop = n / sum(n)) |>
+        ggplot(aes(x = cell_type, y = prop, fill = direction)) +
+        geom_col() +
+        scale_y_continuous(labels = scales::percent) +
+        labs(
+            title = "Proportion of Up/Down DAR-Links",
+            x = "Cell Type",
+            y = "Proportion",
+            fill = "Direction"
+        ) +
+        theme_minimal() +
+        coord_flip()
+    
+    g4_combined <- g4_overlap | g4b_overlap
+    
+    f_name <- paste0(resolution_level, "_level_pb_Links_DARs_overaping_FDR", FDR, ".pdf")
+    ggsave(here(plotDir, f_name),
+           g4_combined, width = 10, height = 7)
+    
+}
 
 #===========================================================================
 ## Venn Diagram
