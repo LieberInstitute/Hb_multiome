@@ -392,6 +392,47 @@ if (nrow(DAR_link_summary) > 0) {
 
 
 #===========================================================================
+
+# make a diverging plot (Up → right, Down → left), flip the sign of n for Down peaks
+DAR_link_summary_div <- DAR_link_summary |> 
+    mutate(n_signed = ifelse(direction == "Down", -n, n))
+
+g4_overlap <- ggplot(DAR_link_summary_div, aes(x = reorder(cell_type, n_signed), y = n_signed, fill = direction)) +
+    geom_col() +
+    labs(
+        title = "DAR–Links Overlaps by cell type",
+        subtitle = "FDR=0.2",
+        x = "Cell Type",
+        y = "Number of overlapping DAR–Links",
+        fill = "Direction"
+    ) +
+    theme_minimal() +
+    coord_flip() +
+    scale_y_continuous(labels = abs)
+# g4
+
+g4b_overlap <- DAR_link_summary|>
+    group_by(cell_type) %>%
+    mutate(prop = n / sum(n)) %>%
+    ggplot(aes(x = reorder(cell_type, prop), y = prop, fill = direction)) +
+    geom_col() +
+    scale_y_continuous(labels = scales::percent) +
+    labs(
+        title = "Proportion of Up vs Down DAR–Links per cell type",
+        x = "Cell Type",
+        y = "Proportion",
+        fill = "Direction"
+    ) +
+    theme_minimal() +
+    coord_flip()
+
+g4_overlap + g4b_overlap
+
+f_name <- paste0(resolution_level, "_level_pb_Links_DARs_overaping_FDR0.2.pdf")
+ggsave(here(plotDir, f_name),
+       g4, width = 7, height = 7)
+
+#===========================================================================
 ## Venn Diagram
 
 # venn_list <- list(
