@@ -13,7 +13,9 @@
 library("GenomicRanges") 
 library("dplyr")
 library("purrr")
-library("ggvenn")
+# library("ggvenn")
+library("ggplot2")
+library("patchwork")
 library("tidyverse")
 library("tidyr")
 library("stringr")
@@ -370,7 +372,7 @@ head(link_counts)
 ## Up vs Down DAR-Links count per cell type
 
 # Define Up vs Down
-overlaps_df <- overlaps_df %>%
+overlaps_df <- overlaps_df |>
     mutate(direction = case_when(
         logFC > 0 ~ "Up",
         logFC < 0 ~ "Down",
@@ -397,28 +399,57 @@ if (nrow(DAR_link_summary) > 0) {
 DAR_link_summary_div <- DAR_link_summary |> 
     mutate(n_signed = ifelse(direction == "Down", -n, n))
 
-g4_overlap <- ggplot(DAR_link_summary_div, aes(x = reorder(cell_type, n_signed), y = n_signed, fill = direction)) +
+# order cell types by total number of overlaps
+cell_totals <- DAR_link_summary |>
+    group_by(cell_type) |>
+    summarise(total = sum(n), .groups = "drop")
+# Join back to signed summary
+DAR_link_summary_div <- DAR_link_summary %>%
+    mutate(n_signed = ifelse(direction == "Down", -n, n)) |> 
+    left_join(cell_totals, by = "cell_type")
+
+
+g4_overlap <- ggplot(DAR_link_summary_div, 
+                     aes(x = reorder(cell_type, total), y = n_signed, fill = direction)) +
     geom_col() +
+    # add labels outside bars
+    geom_text(aes(label = abs(n_signed),
+                  hjust = ifelse(direction == "Down", 1.1, -0.1)), # left for Down, right for Up
+              position = position_identity(),
+              size = 3,
+              color = "#3D3936") +
+    scale_y_continuous(labels = abs, expand = expansion(mult = c(0.15, 0.15))) + # add padding
     labs(
-        title = "DAR–Links Overlaps by cell type",
+        title = "DAR-Links Overlaps by cell type",
         subtitle = "FDR=0.2",
         x = "Cell Type",
-        y = "Number of overlapping DAR–Links",
+        y = "Number of overlapping DAR-Links",
         fill = "Direction"
     ) +
     theme_minimal() +
-    coord_flip() +
-    scale_y_continuous(labels = abs)
-# g4
+    coord_flip()
+
+
+# define factor levels by total counts
+cell_totals <- DAR_link_summary |>
+    group_by(cell_type) |>
+    summarise(total = sum(n), .groups = "drop")
+
+cell_order <- cell_totals |>
+    arrange(total) |>
+    pull(cell_type)
+
+DAR_link_summary$cell_type <- factor(DAR_link_summary$cell_type, levels = cell_order)
+DAR_link_summary_div$cell_type <- factor(DAR_link_summary_div$cell_type, levels = cell_order)
 
 g4b_overlap <- DAR_link_summary|>
-    group_by(cell_type) %>%
-    mutate(prop = n / sum(n)) %>%
-    ggplot(aes(x = reorder(cell_type, prop), y = prop, fill = direction)) +
+    group_by(cell_type) |>
+    mutate(prop = n / sum(n)) |>
+    ggplot(aes(x = cell_type, y = prop, fill = direction)) +
     geom_col() +
     scale_y_continuous(labels = scales::percent) +
     labs(
-        title = "Proportion of Up vs Down DAR–Links per cell type",
+        title = "Proportion of Up/Down DAR-Links",
         x = "Cell Type",
         y = "Proportion",
         fill = "Direction"
@@ -426,11 +457,11 @@ g4b_overlap <- DAR_link_summary|>
     theme_minimal() +
     coord_flip()
 
-g4_overlap + g4b_overlap
+g4_combined <- g4_overlap | g4b_overlap
 
 f_name <- paste0(resolution_level, "_level_pb_Links_DARs_overaping_FDR0.2.pdf")
 ggsave(here(plotDir, f_name),
-       g4, width = 7, height = 7)
+       g4_combined, width = 10, height = 7)
 
 #===========================================================================
 ## Venn Diagram
