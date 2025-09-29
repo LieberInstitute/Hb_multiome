@@ -343,6 +343,28 @@ overlap_counts <- overlaps_df |>
 
 overlap_counts
 
+#===========================================================================
+## control overlaps: Unique overlapping LinkPeaks or DARs
+
+# LinkPeaks overlap at least one DAR
+unique_links <- unique(mcols(gr_links)$peak_id[queryHits(hits)])
+length(unique_links)   # number of distinct LinkPeaks overlapping DARs
+
+head(unique_links)
+
+# only distinct DAR 
+unique_dars <- unique(mcols(gr_dars)$peak_id[subjectHits(hits)])
+length(unique_dars)    # number of distinct DARs overlapping LinkPeaks
+
+## Count overlaps per region
+link_counts <- as.data.frame(table(mcols(gr_links)$peak_id[queryHits(hits)]))
+nrow(link_counts) # [1] 7089
+head(link_counts)
+# Var1 Freq
+# 1 chr1-100213166-100213615   41
+# 2 chr1-100231650-100231970   44
+# 3 chr1-100265432-100266863    1
+
 
 #===========================================================================
 ## Venn Diagram
