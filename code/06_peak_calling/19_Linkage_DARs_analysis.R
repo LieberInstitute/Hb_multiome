@@ -489,65 +489,17 @@ walk2(strategies, names(strategies), function(fun, suffix) {
 message("All plots done!!!")
 
 
-# ## Pairwise overlap count (DAR–Link edges)
-# # ge. A DAR overlaps multiple LinkPeaks, it is counted once per overlap
-# DAR_link_summary <- overlaps_df |>
-#     group_by(cell_type, direction) |>
-#     summarise(n = n(), .groups = "drop")
-# DAR_link_summary
-# 
-# if (nrow(DAR_link_summary) > 0) { 
-#     
-#     f_name <- here(processedDir, paste0("summary_intersected_counts_per_ct_FDR", FDR, ".csv"))
-#     write.csv(DAR_link_summary, f_name, row.names = FALSE)
-#     message("Summary saved!")
-#     
-# } else (
-#     
-#     stop("None overlaps found!")
-#     
+# library("slurmjobs")
+# job_single(
+#   "19_Linkage_DARs_analysis",
+#   create_shell = TRUE,
+#   partition = "katun",
+#   memory = "30G",
+#   cores = 2,
+#   logdir = "logs",
+#   command = "Rscript 19_Linkage_DARs_analysis.R",
+#   create_logdir = FALSE
 # )
-# 
-# ## Pairwise overlap count (DAR–Link edges)
-# DAR_link_summary_div <- prepare_data_to_plot(DAR_link_summary)
-# make_div_prop_barplots(DAR_link_summary, 
-#                        DAR_link_summary_div, 
-#                        FDR, 
-#                        "DAR–Link_pairwise")
-# 
-# ## counts unique DAR peaks per cell type & direction
-# # ge. A DAR overlapping 5 Links is only counted once
-# summary_dar <- overlaps_df |>
-#     group_by(cell_type, direction) |>
-#     summarise(
-#         n_DARs = n_distinct(peak_id.1),   # distinct DAR peaks
-#         .groups = "drop"
-#     )
-# summary_dar
-# summary_dar <- summary_dar |> rename(n = n_DARs)
-# 
-# DAR_link_summary_unique_div <- prepare_data_to_plot(summary_dar)
-# make_div_prop_barplots(summary_dar, 
-#                        DAR_link_summary_unique_div, 
-#                        FDR, 
-#                        "DAR–Link_unique")
-# 
-# ## counts unique Link peaks per cell type & direction
-# # ge. A Link overlapping 5 DARs is only counted once
-# summary_links <- overlaps_df |>
-#     group_by(cluster, direction) |>
-#     summarise(
-#         n_Links = n_distinct(peak_id),   # distinct Link peaks
-#         .groups = "drop"
-#     )
-# summary_links
-# summary_links <- summary_links |> rename(n = n_Links)
-# 
-# link_DAR_summary_unique_div <- prepare_data_to_plot(summary_links)
-# make_div_prop_barplots(DAR_link_summary, 
-#                        link_DAR_summary_unique_div, 
-#                        FDR, 
-#                        "Link_DAR_unique")
 
 
 #===========================================================================
