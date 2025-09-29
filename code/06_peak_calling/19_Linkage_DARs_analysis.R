@@ -10,7 +10,8 @@
 # library("Seurat")
 # library("Signac")
 # library("BSgenome.Hsapiens.UCSC.hg38")
-# library("GenomicRanges") 
+library("GenomicRanges") 
+library("dplyr")
 library("purrr")
 library("ggvenn")
 library("tidyverse")
@@ -69,7 +70,8 @@ lst_peak_files <- list.files(
 )
 #lst_peak_files = list.files(path = input_cvsDir)
 message(length(lst_peak_files), " Link peak-genes files found ... ")
-lst_peak_files
+# lst_peak_files
+## tier field is missing ?
 
 
 # bind all files 
@@ -78,19 +80,19 @@ list_of_df <- lapply(here(inputCSV_Links_Dir, lst_peak_files), read.csv)
 # tmp_lst_peak_files = c(lst_peak_files[2], lst_peak_files[18])
 # list_of_df <- lapply(here(inputCSV_Links_Dir, tmp_lst_peak_files), read.csv)
 
-combined_data <- bind_rows(list_of_df)
+linkPeaks_results_all <- bind_rows(list_of_df)
 
 message("Processing ", length(list_of_df), " LinkPeaks files for merged-peaks dataset")
-message(nrow(combined_data), " total links") 
+message(nrow(linkPeaks_results_all), " total links") 
 
-head(combined_data)
+head(linkPeaks_results_all)
 
 
 #===========================================================================
 ## plot basic barplot of number of links by cellType
 
 # get number of links (rows) for each cluster
-cluster_counts <- combined_data |>
+cluster_counts <- linkPeaks_results_all |>
     count(cluster, sort = TRUE)
 
 g1 <- ggplot(cluster_counts, aes(x = reorder(cluster, n), y = n)) +
@@ -269,14 +271,84 @@ ggsave(here(plotDir, f_name),
 
 
 #===========================================================================
+## Make intersection btw links and DARs
 
-head(combined_data$peak)
-head(DARs_results_all$peak_id)
+# inspect data
+nrow(linkPeaks_results_all)
+colnames(linkPeaks_results_all)
+head(linkPeaks_results_all$peak) # join id key
+nrow(DARs_results_all)
+colnames(DARs_results_all)
+head(DARs_results_all$peak_id) # join id key
+
+## convert genomic ranges and do a proper overlap
+
+# Convert LinkPeaks to GRanges
+gr_links <- with(linkPeaks_results_all, 
+                 GRanges(seqnames = seqnames,
+                         ranges   = IRanges(start, end),
+                         peak_id  = peak,
+                         score    = score,
+                         gene     = gene,
+                         cluster  = cluster,
+                         distance = distance,
+                         tier     = tier))
+
+# Convert DARs to GRanges
+
+## only use DARs at FDR02
+nrow(DARs_results_all) # [1] 582590
+table(DARs_results_all$FDR_threshold)
+DARs_FDR02 <- DARs_results_all |>
+    filter(FDR_threshold == "FDR0.2")
+nrow(DARs_FDR02) # [1] 325580
+
+# split the peak_id "chr-start-end" into seqnames, start, end
+colnames(DARs_FDR02)
+DARs_split <- tidyr::separate(DARs_FDR02, peak_id, into = c("seqnames", "start", "end"), sep = "-") |>
+    mutate(start = as.integer(start),
+           end   = as.integer(end))
+
+gr_dars <- with(DARs_split,
+                GRanges(seqnames = seqnames,
+                        ranges   = IRanges(start, end),
+                        peak_id  = paste(seqnames, start, end, sep = "-"),
+                        cell_type = cell_type,
+                        FDR_threshold = FDR_threshold,
+                        logFC = logFC,
+                        fdr = fdr,
+                        is_significant = is_significant))
+
+## inspect
+head(gr_links)
+head(gr_dars)
+
+## find overlaps
+# findOverlaps() reports all pairs of ranges that overlap
+# If one LinkPeaks region overlaps many DARs regions, you’ll get multiple rows for the same LinkPeak
+hits <- findOverlaps(gr_links, gr_dars)
+
+# Combine metadata from both sides
+overlaps_df <- data.frame(
+    as.data.frame(mcols(gr_links)[queryHits(hits), ]),
+    as.data.frame(mcols(gr_dars)[subjectHits(hits), ])
+)
+
+nrow(overlaps_df)
+head(overlaps_df)
+
+
+overlap_counts <- overlaps_df |>
+    count(cell_type, FDR_thresh, sort = TRUE)
+
+overlap_counts
+
 
 #===========================================================================
-# # Prepare as a named list
+## Venn Diagram
+
 # venn_list <- list(
-#     LinkPeaks = unique(combined_data$peak),
+#     LinkPeaks = unique(linkPeaks_results_all$peak),
 #     DARs = unique(DARs_results_all$peak_id)
 # )
 # 
@@ -287,17 +359,16 @@ head(DARs_results_all$peak_id)
 
 
 #===========================================================================
-## Parse csv DAR files and plot Volcano and ViolinPlot for the 5 "Up/Down" DARs by cellType
-
+# 
 # # empty list to store the plots
 # barPlot_list <- list()
 # 
 # for (ct_DARs in lst_DARs_cvs) {
 #     # ct_DARs = lst_DARs_cvs[2] # "Endo"
-#     # ct_DARs = lst_DARs_cvs[18] 
-#     
+#     # ct_DARs = lst_DARs_cvs[18]
+# 
 #     message("Processing:\n", ct_DARs)
-#     
+# 
 #     # load DARs
 #     DAR_peaks_cvs <- here(input_cvsDir, ct_DARs)
 #     if (file.exists(DAR_peaks_cvs)) {
@@ -307,26 +378,26 @@ head(DARs_results_all$peak_id)
 #         stop(paste("File not found:", DAR_peaks_cvs))
 #     }
 #     #colnames(DARs_df)
-#     
+# 
 #     # get cluster name. ge. "Endo"
 #     clust_name <- sub("^voomlmFit_DAR_peaks_ALL_in_(.*)\\.csv$", "\\1", ct_DARs)
-#     
-#     ## create plot for FDR_thr (s)     
+# 
+#     ## create plot for FDR_thr (s)
 #     purrr::map(FDR_thr, ~ {
 #         create_volcano(
-#             DARs_df, 
+#             DARs_df,
 #             clust_name,
 #             FDR_thr = .x,   # current FDR
 #             lfc_thresh = lfc_thresh,
 #             plot_Dir
 #         )
 #     })
-#     
+# 
 #     barPlot_list[[clust_name]] <- create_barPlot_significant_DARs(DARs_df, clust_name, FDR_thr, lfc_thresh)
-#     
+# 
 #     # Identify top up/down peaks based on FDR
 #     fdr_cols <- grep("^fdr_", colnames(res_enrich), value = TRUE)
-#     
+# 
 #     # cluster-specific significant peaks
 #     res_sig_ct <- res_enrich |>
 #         # filter(.data[[paste0("fdr_", clus)]] < FDR_thr) |>
@@ -340,16 +411,16 @@ head(DARs_results_all$peak_id)
 #                 TRUE ~ "NS"              # should not occur if you filtered
 #             )
 #         )
-#     
+# 
 #     if (nrow(res_sig_ct) > 0) {
 #         f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_", clus, ".csv"))
 #         write.csv(res_sig_ct, f_name, row.names = FALSE)
 #         message("Enrichment statistics saved [", clus, "]")
 #     }
-#     
+# 
 # }
-# 
-# 
+
+ 
 # # Plot barPlots
 # if (length(barPlot_list) > 0) {
 #     
