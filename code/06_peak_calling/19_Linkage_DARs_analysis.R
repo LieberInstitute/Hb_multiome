@@ -1,19 +1,15 @@
 ########################################################################
-## Compute LinkPeaks ∩ DARs by cellType 
-## 
+##                   Compute LinkPeaks ∩ DARs by cellType 
+## ##################### DAR → Links perspective ## ####################
 ## Authors. CSC
 ## Date. Sep 24, 2025
-## Recommended resources on interactive mode: srun --pty --mem=60GB --x11 bash
+## Recommended resources on interactive mode: srun --pty --mem=30GB --x11 bash
 ## Note. Seurat objects were created with module load conda_R/4.3.x
 ########################################################################
 
-# library("Seurat")
-# library("Signac")
-# library("BSgenome.Hsapiens.UCSC.hg38")
 library("GenomicRanges") 
 library("dplyr")
 library("purrr")
-# library("ggvenn")
 library("ggplot2")
 library("patchwork")
 library("tidyverse")
@@ -26,20 +22,16 @@ library("here")
 #===============================================================================
 
 ## setup variable names
-p_met = "spearman"
-w_size_num <- 5e5 
-w_size = "5e5" 
 resolution_level = "Mid" 
-
-## FDR and signif scores
-# FDR_thresh = 0.1 # In link peaks was used a FDR_thresh = 0.2 
-lfc_thresh = 0.2
+# test 2 thresholds
+FDR = 0.2 # actual value to run the DAR-Links
+FDR_thresh = c(0.1, 0.2)
+# lfc_thresh = 0.2 # we do not use log FC for this exploratory analysis
 
 ## Set directory names
 inputCSV_Links_Dir <- here(
     "processed-data",
     "06_peak_calling",
-    #"13_pseudobulk_LinkPeaks_MACS2_split_ct",
     "14_exploratory_pb_peak_scores_MACS2",
     "links_ct_merged"
 )
@@ -75,13 +67,8 @@ message(length(lst_peak_files), " Link peak-genes files found ... ")
 # lst_peak_files
 ## tier field is missing ?
 
-
 # bind all files 
 list_of_df <- lapply(here(inputCSV_Links_Dir, lst_peak_files), read.csv)
-# ## Testing - using all links:
-# tmp_lst_peak_files = c(lst_peak_files[2], lst_peak_files[18])
-# list_of_df <- lapply(here(inputCSV_Links_Dir, tmp_lst_peak_files), read.csv)
-
 linkPeaks_results_all <- bind_rows(list_of_df)
 
 message("Processing ", length(list_of_df), " LinkPeaks files for merged-peaks dataset")
@@ -110,8 +97,6 @@ g1 <- ggplot(cluster_counts, aes(x = reorder(cluster, n), y = n)) +
     coord_flip() +
     scale_y_continuous(expand = expansion(mult = c(0, 0.2)))  # add 10% space on right
 
-#print(g1)
-
 f_name <- paste0(resolution_level, "_level_pb_link_peaks_barplot_ct.pdf")
 ggsave(here(plotDir, f_name),
        g1, width = 7, height = 7)
@@ -137,9 +122,7 @@ lst_DARs_files_cellType
 # parse DARs results for each cellType
 
 DARS_signif_df_lst = list()
-
-# test 2 thresholds
-FDR_thresh = c(0.1, 0.2)
+# FDR_thresh = c(0.1, 0.2)
 
 ## extract/filters DARs from a given list of DARs at specific FDR thresh
 filter_signific_DARs <- function(
@@ -465,7 +448,7 @@ ggsave(here(plotDir, f_name),
 
 #===========================================================================
 ## Venn Diagram
-
+# library("ggvenn")
 # venn_list <- list(
 #     LinkPeaks = unique(linkPeaks_results_all$peak),
 #     DARs = unique(DARs_results_all$peak_id)
@@ -476,96 +459,3 @@ ggsave(here(plotDir, f_name),
 #        stroke_size = 0.5,
 #        set_name_size = 4)
 
-
-#===========================================================================
-# 
-# # empty list to store the plots
-# barPlot_list <- list()
-# 
-# for (ct_DARs in lst_DARs_cvs) {
-#     # ct_DARs = lst_DARs_cvs[2] # "Endo"
-#     # ct_DARs = lst_DARs_cvs[18]
-# 
-#     message("Processing:\n", ct_DARs)
-# 
-#     # load DARs
-#     DAR_peaks_cvs <- here(input_cvsDir, ct_DARs)
-#     if (file.exists(DAR_peaks_cvs)) {
-#         DARs_df <- read.csv(DAR_peaks_cvs)
-#         message("File loaded!")
-#     } else {
-#         stop(paste("File not found:", DAR_peaks_cvs))
-#     }
-#     #colnames(DARs_df)
-# 
-#     # get cluster name. ge. "Endo"
-#     clust_name <- sub("^voomlmFit_DAR_peaks_ALL_in_(.*)\\.csv$", "\\1", ct_DARs)
-# 
-#     ## create plot for FDR_thr (s)
-#     purrr::map(FDR_thr, ~ {
-#         create_volcano(
-#             DARs_df,
-#             clust_name,
-#             FDR_thr = .x,   # current FDR
-#             lfc_thresh = lfc_thresh,
-#             plot_Dir
-#         )
-#     })
-# 
-#     barPlot_list[[clust_name]] <- create_barPlot_significant_DARs(DARs_df, clust_name, FDR_thr, lfc_thresh)
-# 
-#     # Identify top up/down peaks based on FDR
-#     fdr_cols <- grep("^fdr_", colnames(res_enrich), value = TRUE)
-# 
-#     # cluster-specific significant peaks
-#     res_sig_ct <- res_enrich |>
-#         # filter(.data[[paste0("fdr_", clus)]] < FDR_thr) |>
-#         filter(.data[[paste0("fdr_", clus)]] < FDR_thr,
-#                abs(.data[[paste0("logFC_", clus)]]) > lfc_thresh) |>
-#         mutate(
-#             logFC_ct = .data[[paste0("logFC_", clus)]],
-#             direction = case_when(
-#                 logFC_ct >  0 ~ "Up",    # opening
-#                 logFC_ct <  0 ~ "Down",  # closing
-#                 TRUE ~ "NS"              # should not occur if you filtered
-#             )
-#         )
-# 
-#     if (nrow(res_sig_ct) > 0) {
-#         f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_", clus, ".csv"))
-#         write.csv(res_sig_ct, f_name, row.names = FALSE)
-#         message("Enrichment statistics saved [", clus, "]")
-#     }
-# 
-# }
-
- 
-# # Plot barPlots
-# if (length(barPlot_list) > 0) {
-#     
-#     pdf(here(plot_Dir, "BarPlots_ALL_cellTypes_voomLmFit.pdf"), width = 10, height = 10)
-#     
-#     # Remove redundant y-axis labels
-#     barPlot_list_clean <- lapply(barPlot_list, function(p) {
-#         p + ylab(NULL) + theme(legend.position = "none")
-#     })
-#     
-#     combined_plot <- wrap_plots(barPlot_list_clean, ncol = 5)
-#     
-#     title_name <- paste0("Number of Up/Down Enriched DARs by CellType (FDR < ", FDR_thr, ")") 
-#     final_plot <- combined_plot +
-#         plot_annotation(
-#             title = title_name,
-#             theme = theme(
-#                 plot.title = element_text(size = 12, hjust = 0.5),
-#                 axis.title.y = element_text(size = 9)
-#             )
-#         ) # +
-#     #labs(tag = "Number of DARs") +
-#     #theme(plot.tag = element_text(angle = 90), plot.tag.position = "left")
-#     
-#     print(final_plot)
-#     
-#     dev.off()
-#     
-# }
