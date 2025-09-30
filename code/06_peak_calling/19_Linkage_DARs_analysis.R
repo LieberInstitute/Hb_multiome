@@ -315,9 +315,25 @@ head(gr_dars)
 
 message("Finding overlaps ...") 
 
-# findOverlaps() reports all pairs of ranges that overlap
+# findOverlaps() reports all pairs of ranges that overlap # “≥1 bp overlap”
 # If one LinkPeaks region overlaps many DARs regions, you’ll get multiple rows for the same LinkPeak
-hits <- findOverlaps(gr_links, gr_dars)
+#hits <- findOverlaps(gr_links, gr_dars)
+
+# exact coordinate matches 
+exact_hits <- findOverlaps(gr_links, gr_dars, type="equal")
+# Extract matched ranges (optional)
+exact_links <- gr_links_ct[queryHits(exact_hits)]
+exact_dars  <- gr_dars_ct[subjectHits(exact_hits)]
+message("exact_links: ", length(exact_links))
+message("exact_dars: ", length(exact_dars))
+
+# Compute percent overlap for both query (links) and subject (DARs)
+ov <- findOverlaps(gr_links, gr_dars)
+pi <- pintersect(gr_links_ct[queryHits(ov)], gr_dars_ct[subjectHits(ov)])
+prop_query  <- width(pi) / width(gr_links_ct[queryHits(ov)])
+prop_subject <- width(pi) / width(gr_dars_ct[subjectHits(ov)])
+# Keep only reciprocal overlaps ≥50% on both sides
+hits <- ov[prop_query >= 0.5 & prop_subject >= 0.5]
 
 # Combine metadata from both sides
 overlaps_df <- data.frame(
