@@ -266,25 +266,38 @@ ggsave(here(plotDir, f_name),
 message("Preparing GRanges for overlaping peaks ... ")
 
 # inspect data
-nrow(linkPeaks_results_all)
+nrow(linkPeaks_results_all) # [1] 10948
 colnames(linkPeaks_results_all)
 head(linkPeaks_results_all$peak) # join id key
-nrow(DARs_results_all)
+nrow(DARs_results_all) # [1] 582590
 colnames(DARs_results_all)
 head(DARs_results_all$peak_id) # join id key
 
-## convert genomic ranges and do a proper overlap
+# Split the peak column into coordinates
+link_split <- tidyr::separate(linkPeaks_results_all, peak,
+                              into = c("seqnames","start","end"), sep = "-") |>
+    mutate(start = as.integer(start),
+           end   = as.integer(end))
 
 # Convert LinkPeaks to GRanges
-gr_links <- with(linkPeaks_results_all, 
+#gr_links <- with(linkPeaks_results_all, 
+gr_links <- with(link_split, 
                  GRanges(seqnames = seqnames,
                          ranges   = IRanges(start, end),
-                         peak_id  = peak,
+                         #peak_id  = peak,
+                         peak_id  = paste(seqnames, start, end, sep = "-"),
                          score    = score,
                          gene     = gene,
                          cluster  = cluster,
                          distance = distance,
                          tier     = tier))
+length(gr_links) # [1] 10948
+head(gr_links)
+# GRanges object with 6 ranges and 6 metadata columns:
+# seqnames            ranges strand     |                peak_id      score
+# <Rle>         <IRanges>  <Rle>        |            <character>  <numeric>
+# [1]     chr1     629146-629354      * |     chr1-629146-629354  0.4131671
+# [2]     chr1   1745993-1746550      * |   chr1-1745993-1746550 -0.4085366
 
 # only use DARs at FDR02
 nrow(DARs_results_all) # [1] 582590
@@ -295,10 +308,19 @@ nrow(DARs_FDRX) # [1] 325580
 
 # split the peak_id "chr-start-end" into seqnames, start, end
 colnames(DARs_FDRX)
+nrow(DARs_FDRX) # [1] 325580
+head(DARs_FDRX)
+# FDR_threshold cell_type            peak_id      logFC          fdr
+# 1        FDR0.2 Astrocyte chr1-629811-630032  1.1115262 1.970054e-07
+# 2        FDR0.2 Astrocyte chr1-633694-634122  1.1348873 8.347289e-09
 DARs_split <- tidyr::separate(DARs_FDRX, peak_id, into = c("seqnames", "start", "end"), sep = "-") |>
     mutate(start = as.integer(start),
            end   = as.integer(end))
-
+nrow(DARs_split) # [1] 325580
+head(DARs_split)
+# FDR_threshold cell_type seqnames  start    end      logFC          fdr
+# 1        FDR0.2 Astrocyte     chr1 629811 630032  1.1115262 1.970054e-07
+# 2        FDR0.2 Astrocyte     chr1 633694 634122  1.1348873 8.347289e-09
 gr_dars <- with(DARs_split,
                 GRanges(seqnames = seqnames,
                         ranges   = IRanges(start, end),
@@ -310,39 +332,80 @@ gr_dars <- with(DARs_split,
                         is_significant = is_significant))
 
 ## inspect
-head(gr_links)
+length(gr_dars) # [1] 325580
 head(gr_dars)
+# GRanges object with 6 ranges and 6 metadata columns:
+# seqnames        ranges strand | peak_id   cell_type
+# <Rle>     <IRanges>  <Rle>    | <character> <character>
+# [1]     chr1 629811-630032  * | chr1-629811-630032   Astrocyte
+# [2]     chr1 633694-634122  * | chr1-633694-634122   Astrocyte
 
 message("Finding overlaps ...") 
+
+## testing:
+#===========================================================================
+library("ggvenn")
+venn_list <- list(
+    LinkPeaks = unique(linkPeaks_results_all$peak),
+    DARs = unique(DARs_results_all$peak_id)
+)
+length(venn_list$LinkPeaks) # [1] 7098
+length(venn_list$DARs) # [1] 211558
+ggvenn(venn_list,
+       fill_color = c("skyblue", "orange"),
+       stroke_size = 0.5,
+       set_name_size = 4)
 
 # findOverlaps() reports all pairs of ranges that overlap # “≥1 bp overlap”
 # If one LinkPeaks region overlaps many DARs regions, you’ll get multiple rows for the same LinkPeak
 #hits <- findOverlaps(gr_links, gr_dars)
 
 # exact coordinate matches 
-exact_hits <- findOverlaps(gr_links, gr_dars, type="equal")
-# Extract matched ranges (optional)
-exact_links <- gr_links_ct[queryHits(exact_hits)]
-exact_dars  <- gr_dars_ct[subjectHits(exact_hits)]
+exact_hits <- findOverlaps(gr_links, gr_dars, type="equal") 
+length(exact_hits) # 20650
+## mini-test
+# unique_equal <- unique(mcols(gr_links)$peak_id[queryHits(exact_hits)])
+# length(unique_equal)
+
+# Extract matched ranges
+exact_links <- gr_links[queryHits(exact_hits)]
+exact_dars  <- gr_dars[subjectHits(exact_hits)]
 message("exact_links: ", length(exact_links))
 message("exact_dars: ", length(exact_dars))
 
-# Compute percent overlap for both query (links) and subject (DARs)
-ov <- findOverlaps(gr_links, gr_dars)
-pi <- pintersect(gr_links_ct[queryHits(ov)], gr_dars_ct[subjectHits(ov)])
-prop_query  <- width(pi) / width(gr_links_ct[queryHits(ov)])
-prop_subject <- width(pi) / width(gr_dars_ct[subjectHits(ov)])
-# Keep only reciprocal overlaps ≥50% on both sides
-hits <- ov[prop_query >= 0.5 & prop_subject >= 0.5]
+# # Compute percent overlap for both query (links) and subject (DARs)
+# ov <- findOverlaps(gr_links, gr_dars)
+# pi <- pintersect(gr_links_ct[queryHits(ov)], gr_dars_ct[subjectHits(ov)])
+# prop_query  <- width(pi) / width(gr_links_ct[queryHits(ov)])
+# prop_subject <- width(pi) / width(gr_dars_ct[subjectHits(ov)])
+# # Keep only reciprocal overlaps ≥50% on both sides
+# hits <- ov[prop_query >= 0.5 & prop_subject >= 0.5]
 
 # Combine metadata from both sides
 overlaps_df <- data.frame(
-    as.data.frame(mcols(gr_links)[queryHits(hits), ]),
-    as.data.frame(mcols(gr_dars)[subjectHits(hits), ])
+    as.data.frame(mcols(gr_links)[queryHits(exact_hits), ]),
+    as.data.frame(mcols(gr_dars)[subjectHits(exact_hits), ])
 )
 
-nrow(overlaps_df) # [1] 521984
+nrow(overlaps_df) # [1] 20650
 head(overlaps_df)
+
+# Summarize LinkPeak overlaps
+link_summary <- overlaps_df |>
+    group_by(peak_id) |>
+    summarise(
+        n_DARs       = n(),                         # total matched DAR rows
+        n_cell_types = n_distinct(cell_type),       # how many distinct DAR cell types
+        cell_types   = paste(unique(cell_type), collapse = "; "), # list cell types
+        .groups = "drop"
+    ) |>
+    mutate(overlap_type = ifelse(n_DARs == 1, "Unique", "Replicated"))
+
+f_name <- here(processedDir, paste0("summary_LinkPeak_overlap_stats_FDR", FDR, ".csv"))
+write.csv(link_summary, f_name, row.names = FALSE)
+
+message("LinkPeak summary saved: ", f_name)
+
 
 #===========================================================================
 ## Up vs Down DAR-Links count per cell type
@@ -579,16 +642,4 @@ message("All plots done!!!")
 # )
 
 
-#===========================================================================
-## Venn Diagram
-# library("ggvenn")
-# venn_list <- list(
-#     LinkPeaks = unique(linkPeaks_results_all$peak),
-#     DARs = unique(DARs_results_all$peak_id)
-# )
-# 
-# ggvenn(venn_list,
-#        fill_color = c("skyblue", "orange"),
-#        stroke_size = 0.5,
-#        set_name_size = 4)
 
