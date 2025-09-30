@@ -99,7 +99,7 @@ g1 <- ggplot(cluster_counts, aes(x = reorder(cluster, n), y = n)) +
     coord_flip() +
     scale_y_continuous(expand = expansion(mult = c(0, 0.15)))  # add 10% space on right
 
-f_name <- paste0(resolution_level, "_level_pb_link_peaks_barplot_ct_FDR", FDR, ".pdf")
+f_name <- paste0("links_barplot_ct_FDR", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
        g1, width = 7, height = 7)
 
@@ -201,8 +201,6 @@ DARs_results_all |> head()
 
 message("Plotting barplot of DARs by cellType ...")
 
-message("####### DAR → Links perspective #######")
-
 # Make FDR_threshold is a factor for facet labels
 DARs_results_all <- DARs_results_all |>
     mutate(FDR_threshold = as.factor(FDR_threshold))
@@ -216,6 +214,7 @@ thresholds <- unique(DARs_counts$FDR_threshold)
 
 # Loop through thresholds and plot one at a time
 g2 <- lapply(thresholds, function(th) {
+    
         df_sub <- filter(DARs_counts, FDR_threshold == th)
         
         ggplot(df_sub, aes(x = reorder(cell_type, n), y = n)) +
@@ -236,7 +235,7 @@ walk2(
     .x = g2,           
     .y = thresholds,   # thresholds for filenames
     ~ ggsave(
-        filename = file.path(plotDir, paste0(resolution_level, "_level_pb_DARs_", .y, ".pdf")),
+        filename = file.path(plotDir, paste0("DARs_barplot_ct_FDR", .y, ".pdf")),
         plot = .x,
         width = 7,
         height = 7
@@ -256,7 +255,7 @@ g3 <- ggplot(DARs_counts, aes(x = reorder(cell_type, n), y = n, fill = FDR_thres
     theme_minimal() +
     coord_flip()
 
-f_name <- paste0(resolution_level, "_level_pb_DARs_overlay.pdf")
+f_name <- paste0("DARs_barplot_overlay_FDRs.pdf")
 ggsave(here(plotDir, f_name),
        g3, width = 7, height = 7)
 
@@ -287,9 +286,7 @@ gr_links <- with(linkPeaks_results_all,
                          distance = distance,
                          tier     = tier))
 
-# Convert DARs to GRanges
-
-## only use DARs at FDR02
+# only use DARs at FDR02
 nrow(DARs_results_all) # [1] 582590
 table(DARs_results_all$FDR_threshold)
 DARs_FDRX <- DARs_results_all |>
@@ -328,7 +325,7 @@ overlaps_df <- data.frame(
     as.data.frame(mcols(gr_dars)[subjectHits(hits), ])
 )
 
-nrow(overlaps_df)
+nrow(overlaps_df) # [1] 521984
 head(overlaps_df)
 
 #===========================================================================
@@ -342,19 +339,23 @@ overlaps_df <- overlaps_df |>
         logFC > 0 ~ "Up",
         logFC < 0 ~ "Down",
         TRUE ~ "Neutral"
-    ))
+    )) |>
+    filter(direction %in% c("Up", "Down"))
+
+nrow(overlaps_df) # [1] 521984
 
 #===========================================================================
 
 prepare_data_to_plot <- function(
-        df_summary
+        df_summary,
+        count_col = "n"
 ) {
     # make a df for diverging plots (Up → right, Down → left), flip the sign of n for Down peaks
-    cell_totals <- df_summary %>%
-        group_by(cell_type) %>%
+    cell_totals <- df_summary |>
+        group_by(cell_type) |>
         summarise(total = sum(n), .groups = "drop")
-    df_summary_div <- df_summary %>%
-        mutate(n_signed = ifelse(direction == "Down", -n, n)) %>%
+    df_summary_div <- df_summary |>
+        mutate(n_signed = ifelse(direction == "Down", -n, n)) |>
         left_join(cell_totals, by = "cell_type")
     
     return(df_summary_div)
@@ -367,11 +368,11 @@ make_div_prop_barplots <- function(
         FDR,
         suffix
 ) {
-    # testing:
-    summary_df = DAR_link_summary
-    summary_div_df = DAR_link_summary_div
-    FDR = FDR 
-    suffix = "DAR–Link_pairwise"
+    # # testing:
+    # summary_df = DAR_link_summary
+    # summary_div_df = DAR_link_summary_div
+    # FDR = FDR 
+    # suffix = "DAR–Link_pairwise"
     
     g4_overlap <- ggplot(summary_div_df, 
                          aes(x = reorder(cell_type, total), y = n_signed, fill = direction)) +
@@ -403,23 +404,22 @@ make_div_prop_barplots <- function(
     summary_df$cell_type <- factor(summary_df$cell_type, levels = cell_order)
     summary_div_df$cell_type <- factor(summary_div_df$cell_type, levels = cell_order)
     
-    g4b_overlap <- summary_df|>
+    g4b_overlap <- summary_df |>
         group_by(cell_type) |>
-        mutate(prop = n / sum(n)) |>
+        mutate(prop = n / sum(n)) |> 
         ggplot(aes(x = cell_type, y = prop, fill = direction)) +
         geom_col() +
-        # add percentage labels
         geom_text(
-            aes(label = abs(n_signed),
-                hjust = ifelse(direction == "Down", 1.2, -0.2)),
-            check_overlap = TRUE,
-            size = 3
+            aes(label = scales::percent(prop, accuracy = 1)),
+            position = position_stack(vjust = 0.5),
+            size = 3,
+            color = "black"
         ) +
         scale_y_continuous(labels = scales::percent) +
         labs(
             title = paste("Proportion of Up/Down -", suffix),
             x = "Cell Type",
-            y = "Proportion ",
+            y = "Proportion", suffix,
             fill = "Direction"
         ) +
         theme_minimal() +
@@ -436,7 +436,7 @@ make_div_prop_barplots <- function(
 }
 
 
-########## Get the counts per cell type ##########
+#### Get the counts per cell type for each strategy ####
 
 # Pairwise (DAR–Link edges)
 summarise_pairwise <- function(overlaps_df) {
