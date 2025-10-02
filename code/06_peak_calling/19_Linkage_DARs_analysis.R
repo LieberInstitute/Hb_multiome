@@ -201,7 +201,7 @@ DARs_results_all |> head()
 
 message("Plotting barplot of DARs by cellType ...")
 
-# Make FDR_threshold is a factor for facet labels
+# Make FDR_threshold a factor for facet labels
 DARs_results_all <- DARs_results_all |>
     mutate(FDR_threshold = as.factor(FDR_threshold))
 
@@ -243,17 +243,27 @@ walk2(
 )
 
 ## overlay both thr for comparison purposes 
+
+# Turn into a nicely formatted label
+subtitle_label <- paste(
+    names(table(DARs_results_all$FDR_threshold)),
+    table(DARs_results_all$FDR_threshold),
+    sep = ": ",
+    collapse = " | "
+)
+
 g3 <- ggplot(DARs_counts, aes(x = reorder(cell_type, n), y = n, fill = FDR_threshold)) +
     geom_col(alpha = 0.5, position = "identity") +  # <- overlay instead of dodge
     labs(
         title = paste("DARs by Cell Type"),
-        subtitle = "FDR thresholds",
+        subtitle = subtitle_label,
         x = "Cell Type",
         y = "Number of DARs",
         fill = "FDR Threshold"
     ) +
     theme_minimal() +
-    coord_flip()
+    coord_flip()  +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.2)))  # add 10% space on right
 
 f_name <- paste0("DARs_barplot_overlay_FDRs.pdf")
 ggsave(here(plotDir, f_name),
@@ -273,18 +283,19 @@ nrow(DARs_results_all) # [1] 582590
 colnames(DARs_results_all)
 head(DARs_results_all$peak_id) # join id key
 
-# Split the peak column into coordinates
+# Split the peak column into coordinates. Note:
+# seqnames / start / end: full chromatin accessibility window carried over in the aggregated assay.
+# peak: a canonicalized peak ID string used for joins, overlaps, and downstream correlation reporting
+
 link_split <- tidyr::separate(linkPeaks_results_all, peak,
                               into = c("seqnames","start","end"), sep = "-") |>
     mutate(start = as.integer(start),
            end   = as.integer(end))
 
-# Convert LinkPeaks to GRanges
-#gr_links <- with(linkPeaks_results_all, 
+# Convert LinkPeaks to GRanges to run findOverlaps()
 gr_links <- with(link_split, 
                  GRanges(seqnames = seqnames,
                          ranges   = IRanges(start, end),
-                         #peak_id  = peak,
                          peak_id  = paste(seqnames, start, end, sep = "-"),
                          score    = score,
                          gene     = gene,
@@ -301,7 +312,6 @@ head(gr_links)
 
 # only use DARs at FDR02
 nrow(DARs_results_all) # [1] 582590
-table(DARs_results_all$FDR_threshold)
 DARs_FDRX <- DARs_results_all |>
     filter(FDR_threshold == paste0("FDR", FDR)) 
 nrow(DARs_FDRX) # [1] 325580
