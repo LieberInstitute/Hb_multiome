@@ -438,6 +438,28 @@ write.csv(link_summary, f_name, row.names = FALSE)
 
 message("LinkPeak summary saved: ", f_name)
 
+## Plot "Count of Unique vs. Replicated Overlaps"
+# visualizes the counts from the overlap_type column
+g_overlap_type <- link_summary |>
+    ggplot(aes(x = overlap_type, fill = overlap_type)) +
+    geom_bar(color = "black") +
+    geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 4) +
+    labs(
+        title = "LinkPeak Overlap: Unique vs. Multi-Cell Type DARs",
+        x = "Overlap Classification",
+        y = "Number of LinkPeaks (Unique Regions)",
+        fill = "Overlap Type"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, face = "bold"),
+        legend.position = "none"
+    )
+
+f_name <- paste0("Overlaps_Unique_vs_Replicated_FDR", FDR, ".pdf")
+ggsave(here(plotDir, f_name),
+       g_overlap_type, width = 4, height = 7)
+
 
 #===========================================================================
 ## Up vs Down DAR-Links count per cell type
