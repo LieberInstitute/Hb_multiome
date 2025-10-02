@@ -69,7 +69,7 @@ g_overlap_type <- link_summary |>
     labs(
         #title = "LinkPeak Overlap: Unique vs. Multi-Cell Type DARs",
         x = "Overlap Classification",
-        y = "Number of LinkPeaks (Unique Regions)",
+        y = NULL,
         fill = "Overlap Type"
     ) +
     theme_minimal() +
@@ -84,8 +84,9 @@ g_multiplicity <- link_summary |>
     labs(
         #title = "Multiplicity of Cell Type Overlap (DARs per LinkPeak)",
         x = "Number of Distinct Cell Types Overlapping the LinkPeak",
-        #y = "Number of LinkPeaks (Unique Regions)"
+        y = NULL
     ) +
+    scale_y_continuous(limits = c(0, 4000)) +
     theme_minimal() +
     theme(legend.position = "none")
 
@@ -103,8 +104,7 @@ combined_plot <- combined_plot +
         subtitle = NULL,
         caption = NULL,
         theme = theme(
-            plot.margin = margin(5, 5, 5, 5),
-            axis.title.y = element_text(size = 12)
+            plot.margin = margin(5, 5, 5, 5)
         )
     ) &
     ylab("Number of LinkPeaks (Unique Regions)")
