@@ -452,8 +452,25 @@ g_overlap_type <- link_summary |>
     ) +
     theme_minimal() +
     theme(
-        plot.title = element_text(hjust = 0.5, face = "bold"),
+        #plot.title = element_text(hjust = 0.5, face = "bold"),
         legend.position = "none"
+    )
+
+g_multiplicity <- link_summary |>
+    # Ensure n_cell_types is treated as a discrete factor for the bar plot
+    mutate(n_cell_types_factor = factor(n_cell_types)) |>
+    ggplot(aes(x = n_cell_types_factor)) +
+    geom_bar(fill = "#56B4E9", color = "black") + # Use a distinct color
+    geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
+    labs(
+        title = "Multiplicity of Cell Type Overlap (DARs per LinkPeak)",
+        x = "Number of Distinct Cell Types Overlapping the LinkPeak",
+        y = "Number of LinkPeaks (Unique Regions)"
+    ) +
+    theme_minimal() +
+    theme(
+        #plot.title = element_text(hjust = 0.5, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1)
     )
 
 f_name <- paste0("Overlaps_Unique_vs_Replicated_FDR", FDR, ".pdf")
