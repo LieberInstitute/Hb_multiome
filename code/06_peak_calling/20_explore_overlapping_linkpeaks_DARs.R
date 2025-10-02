@@ -21,7 +21,6 @@ library("here")
 
 ## setup variable names
 # resolution_level = "Mid" 
-# # test 2 thresholds
 FDR = 0.2 # actual value to run the DAR-Links
 # FDR_thresh = c(0.1, 0.2)
 # # lfc_thresh = 0.2 # we do not use log FC for this exploratory analysis
@@ -37,11 +36,11 @@ inputCSV_Overlaps_Dir <- here(
 #     "06_peak_calling",
 #     "17_pseudobulk_DARs_MACS2_reduced_voomLmFit"
 # )
-# processedDir <- here(
-#     "processed-data",
-#     "06_peak_calling",
-#     "19_Linkage_DARs_analysis"
-# )
+processedDir <- here(
+    "processed-data",
+    "06_peak_calling",
+    "20_explore_overlapping_linkpeaks_DARs"
+)
 plotDir <- here(
     "plots",
     "06_peak_calling",
@@ -55,17 +54,27 @@ if (!dir.exists(plotDir)) { dir.create(plotDir) }
 
 message("Loading Unique-Overlap Hits ...")
 
-f_name <- here(inputCSV_Overlaps_Dir, paste0("summary_LinkPeak_overlap_stats_FDR", FDR, ".csv"))
-link_summary <- read.csv(f_name)
+## load summary overlaps df
+link_summary <- read.csv(here(inputCSV_Overlaps_Dir, 
+                              paste0("summary_LinkPeak_overlap_stats_FDR", FDR, ".csv")))
 
-message("LinkPeak summary saved: ", f_name)
+## load full overlaps df
+overlaps_df <- read.csv(here(inputCSV_Overlaps_Dir, 
+                             paste0("Overlaps_LinkPeak_DARs_FDR", FDR, ".csv")))
+
+message("Loaded full/summary overlaps ...")
+
+
+##==============================================================================
+
+message("Processing exploratory overlap plots ... ")
 
 ## Plot "Count of Unique vs. Replicated Overlaps"
 # Counts from the overlap_type column
 g_overlap_type <- link_summary |>
     ggplot(aes(x = overlap_type, fill = overlap_type)) +
     geom_bar(color = "black") +
-    geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 4) +
+    geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
     labs(
         #title = "LinkPeak Overlap: Unique vs. Multi-Cell Type DARs",
         x = "Overlap Classification",
@@ -92,7 +101,7 @@ g_multiplicity <- link_summary |>
 
 # Adjust widths (1, 2) and keep a single y-axis title
 combined_plot <- g_overlap_type + g_multiplicity +
-    plot_layout(widths = c(1, 2)) &
+    plot_layout(widths = c(1, 3)) &
     theme(
         axis.title.y = element_text(size = 10)  # keep y-label once
     )
@@ -111,242 +120,230 @@ combined_plot <- combined_plot +
 
 f_name <- paste0("Overlaps_Unique_vs_Replicated_FDR", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
-       g_overlap_type, width = 7, height = 7)
+       combined_plot, width = 7, height = 7)
 
 
-# #===========================================================================
-# ## Up vs Down DAR-Links count per cell type
-# 
-# # Define Up vs Down
-# # peak_id → the LinkPeak ID (from gr_links)
-# # peak_id.1 → the DAR peak ID (from gr_dars)
-# overlaps_df <- overlaps_df |>
-#     mutate(direction = case_when(
-#         logFC > 0 ~ "Up",
-#         logFC < 0 ~ "Down",
-#         TRUE ~ "Neutral"
-#     )) |>
-#     filter(direction %in% c("Up", "Down"))
-# 
-# nrow(overlaps_df) # [1] 521984
-# 
-# #===========================================================================
-# 
-# prepare_data_to_plot <- function(
-#         df_summary,
-#         count_col = "n"
-# ) {
-#     # make a df for diverging plots (Up → right, Down → left), flip the sign of n for Down peaks
-#     message("Preparing data ... ")
-#     cell_totals <- df_summary |>
-#         group_by(cell_type) |>
-#         summarise(total = sum(n), .groups = "drop")
-#     df_summary_div <- df_summary |>
-#         mutate(n_signed = ifelse(direction == "Down", -n, n)) |>
-#         left_join(cell_totals, by = "cell_type")
-#     
-#     return(df_summary_div)
-#     
-# }
-# 
-# # Unique Link peaks (per Link cluster & direction)
-# # method = "majority" → assigns direction by majority of overlaps
-# # method = "exclusive" → keeps only Links with exclusively Up or exclusively Down DARs
-# # method = "any" → counts a Link in both categories (original behaviour, usually symmetric)
-# summarise_unique_links <- function(
-#         overlaps_df, 
-#         method = c("majority", "exclusive", "any")
-# ) {
-#     message("Summarizing data ...")
-#     method <- match.arg(method)
-#     df <- overlaps_df|>
-#         group_by(cluster, peak_id) |>
-#         summarise(
-#             up_count   = sum(direction == "Up"),
-#             down_count = sum(direction == "Down"),
-#             .groups = "drop"
-#         )
-#     if (method == "majority") {
-#         df <- df |>
-#             mutate(direction = ifelse(up_count >= down_count, "Up", "Down")) |>
-#             count(cluster, direction, name = "n")
-#     }
-#     if (method == "exclusive") {
-#         df <- df |>
-#             filter(xor(up_count > 0, down_count > 0)) %>%   # keep Links with only one direction
-#             mutate(direction = ifelse(up_count > 0, "Up", "Down")) |>
-#             count(cluster, direction, name = "n")
-#     }
-#     if (method == "any") {
-#         df <- overlaps_df |>
-#             group_by(cluster, direction) |>
-#             summarise(n = n_distinct(peak_id), .groups = "drop")
-#     }
-#     
-#     df |> rename(cell_type = cluster)
-# }
-# 
-#     
-# make_div_prop_barplots <- function(
-#         summary_df,
-#         summary_div_df,
-#         FDR,
-#         suffix
-# ) {
-#     # # testing:
-#     # summary_df = DAR_link_summary
-#     # summary_div_df = DAR_link_summary_div
-#     # FDR = FDR 
-#     # suffix = "DAR–Link_pairwise"
-#     message("Ploting ...")
-#     
-#     g4_overlap <- ggplot(summary_div_df, 
-#                          aes(x = reorder(cell_type, total), y = n_signed, fill = direction)) +
-#         geom_col() +
-#         # add labels outside bars
-#         geom_text(aes(label = abs(n_signed),
-#                       hjust = ifelse(direction == "Down", 1.1, -0.1)), # left for Down, right for Up
-#                   position = position_identity(),
-#                   size = 3,
-#                   color = "#3D3936") +
-#         scale_y_continuous(
-#             labels = abs, 
-#             expand = expansion(mult = c(0.15, 0.15))) + # add padding
-#         labs(
-#             title = paste("Overlaps by cell type -", suffix),
-#             subtitle = paste0("FDR = ", FDR),
-#             x = "Cell Type",
-#             y = "# overlapping",
-#             fill = "Direction"
-#         ) +
-#         theme_minimal() +
-#         coord_flip()
-#     
-#     # define factor levels by total counts
-#     cell_totals <- summary_df |>
-#         group_by(cell_type) |>
-#         summarise(total = sum(n), .groups = "drop")
-#     cell_order <- cell_totals |>
-#         arrange(total) |>
-#         pull(cell_type)
-#     summary_df$cell_type <- factor(summary_df$cell_type, levels = cell_order)
-#     summary_div_df$cell_type <- factor(summary_div_df$cell_type, levels = cell_order)
-#     
-#     # Proportion consistency checks
-#     stopifnot(all.equal(
-#         summary_df |> group_by(cell_type) |> summarise(total = sum(n)),
-#         summary_div_df |> group_by(cell_type) |> summarise(total = sum(abs(n_signed)))
-#     ))
-#     
-#     g4b_overlap <- summary_df |>
-#         # Calculate the necessary proportions and cumulative sums
-#         group_by(cell_type) |>
-#         mutate(
-#             total = sum(n),
-#             prop = n / total
-#         ) |>
-#         # Add a cumulative proportion for position calculation *before* plotting
-#         arrange(cell_type, direction) |> # Ensure consistent stacking order
-#         mutate(
-#             c_prop = cumsum(prop),
-#             mid_prop = c_prop - (prop / 2) # Calculate the center position
-#         ) |>
-#         ungroup() |>
-#         ggplot(aes(x = cell_type, y = prop, fill = direction)) +
-#         geom_col(position = "fill") + # Draw the 100% stacked bars
-#         geom_text(
-#             # Use the calculated midpoint position (mid_prop) for y
-#             aes(label = scales::percent(prop, accuracy = 1), y = mid_prop),
-#             size = 3,
-#             color = "black"
-#         ) +
-#         scale_y_continuous( 
-#             labels = scales::percent, 
-#             breaks = seq(0, 1, by = 0.25), 
-#             expand = expansion(mult = c(0, 0))
-#         ) +
-#         labs(
-#             title = "Proportion of Up/Down",
-#             x = "",
-#             y = "Proportion",
-#             fill = "Direction"
-#         ) +
-#         theme_minimal() +
-#         coord_flip()
-#     
-#     plot_widths <- c(2, 1)
-#     g4_combined <- (g4_overlap | g4b_overlap) +
-#         plot_layout(
-#             guides = "collect",
-#             widths = plot_widths)
-#     
-#     f_name <- paste0("overaping_", suffix, "_FDR", FDR, ".pdf")
-#     ggsave(here(plotDir, f_name),
-#            g4_combined, width = 10, height = 7)
-#     
-#     message("All plots done!")
-#     
-# }
-# 
-# 
-# #### Get the counts per cell type for each strategy ####
-# 
-# # Pairwise (DAR–Link edges)
-# summarise_pairwise <- function(overlaps_df) {
-#     overlaps_df |>
-#         group_by(cell_type, direction) |>
-#         summarise(n = n(), .groups = "drop")
-# }
-# 
-# # Unique DAR peaks (per cell type & direction)
-# summarise_unique_dars <- function(overlaps_df) {
-#     overlaps_df |>
-#         group_by(cell_type, direction) |>
-#         summarise(n = n_distinct(peak_id.1), .groups = "drop")
-# }
-# 
-# # Define strategies
-# strategies <- list(
-#     "DAR-Link_pairwise" = summarise_pairwise,
-#     "DAR-Link_unique"   = summarise_unique_dars,
-#     "Link-DAR_unique_majority"  = function(df) summarise_unique_links(df, method = "majority"),
-#     "Link-DAR_unique_exclusive" = function(df) summarise_unique_links(df, method = "exclusive")
-#     # "Link-DAR_unique_any"     = function(df) summarise_unique_links(df, method = "any") # optional
-# )
-# 
-# # Run all strategies
-# walk2(strategies, names(strategies), function(fun, suffix) {
-#     
-#     # Apply summariser
-#     summary_df <- fun(overlaps_df)
-#     
-#     # Prepare diverging data
-#     summary_div <- prepare_data_to_plot(summary_df)
-#     
-#     # Make plots + save
-#     make_div_prop_barplots(summary_df, summary_div, FDR, suffix)
-#     
-#     # Save raw summary
-#     f_name <- here(processedDir, paste0("summary_", suffix, "_FDR", FDR, ".csv"))
-#     write.csv(summary_df, f_name, row.names = FALSE)
-#     
-#     message("Finished: ", suffix)
-# })
+#===========================================================================
+
+message("Processing Up/Down DAR overlapping peaks per cell type ... ")
+
+# Define Up vs Down
+# peak_id → the LinkPeak ID (from gr_links)
+# peak_id.1 → the DAR peak ID (from gr_dars)
+overlaps_df <- overlaps_df |>
+    mutate(direction = case_when(
+        logFC > 0 ~ "Up",
+        logFC < 0 ~ "Down",
+        TRUE ~ "Neutral"
+    )) |>
+    filter(direction %in% c("Up", "Down"))
+
+nrow(overlaps_df) # [1] 20650
+
+#===========================================================================
+
+prepare_data_to_plot <- function(
+        df_summary,
+        count_col = "n"
+) {
+    # make a df for diverging plots (Up → right, Down → left), flip the sign of n for Down peaks
+    message("Preparing data ... ")
+    cell_totals <- df_summary |>
+        group_by(cell_type) |>
+        summarise(total = sum(n), .groups = "drop")
+    df_summary_div <- df_summary |>
+        mutate(n_signed = ifelse(direction == "Down", -n, n)) |>
+        left_join(cell_totals, by = "cell_type")
+
+    return(df_summary_div)
+
+}
+
+# Unique Link peaks (per Link cluster & direction)
+# method = "majority" → assigns direction by majority of overlaps
+# method = "exclusive" → keeps only Links with exclusively Up or exclusively Down DARs
+# method = "any" → counts a Link in both categories (original behaviour, usually symmetric)
+summarise_unique_links <- function(
+        overlaps_df,
+        method = c("majority", "exclusive", "any")
+) {
+    message("Summarizing data ...")
+    method <- match.arg(method)
+    df <- overlaps_df|>
+        group_by(cluster, peak_id) |>
+        summarise(
+            up_count   = sum(direction == "Up"),
+            down_count = sum(direction == "Down"),
+            .groups = "drop"
+        )
+    if (method == "majority") {
+        df <- df |>
+            mutate(direction = ifelse(up_count >= down_count, "Up", "Down")) |>
+            count(cluster, direction, name = "n")
+    }
+    if (method == "exclusive") {
+        df <- df |>
+            filter(xor(up_count > 0, down_count > 0)) %>%   # keep Links with only one direction
+            mutate(direction = ifelse(up_count > 0, "Up", "Down")) |>
+            count(cluster, direction, name = "n")
+    }
+    if (method == "any") {
+        df <- overlaps_df |>
+            group_by(cluster, direction) |>
+            summarise(n = n_distinct(peak_id), .groups = "drop")
+    }
+
+    df |> rename(cell_type = cluster)
+}
+
+
+make_div_prop_barplots <- function(
+        summary_df,
+        summary_div_df,
+        FDR,
+        suffix
+) {
+    # # testing:
+    # summary_df = DAR_link_summary
+    # summary_div_df = DAR_link_summary_div
+    # FDR = FDR
+    # suffix = "DAR–Link_pairwise"
+    message("Ploting ...")
+
+    g4_overlap <- ggplot(summary_div_df,
+                         aes(x = reorder(cell_type, total), y = n_signed, fill = direction)) +
+        geom_col() +
+        # add labels outside bars
+        geom_text(aes(label = abs(n_signed),
+                      hjust = ifelse(direction == "Down", 1.1, -0.1)), # left for Down, right for Up
+                  position = position_identity(),
+                  size = 3,
+                  color = "#3D3936") +
+        scale_y_continuous(
+            labels = abs,
+            expand = expansion(mult = c(0.15, 0.15))) + # add padding
+        labs(
+            title = paste("Overlaps by cell type -", suffix),
+            subtitle = paste0("FDR = ", FDR),
+            x = "Cell Type",
+            y = "# overlapping",
+            fill = "Direction"
+        ) +
+        theme_minimal() +
+        coord_flip()
+
+    # define factor levels by total counts
+    cell_totals <- summary_df |>
+        group_by(cell_type) |>
+        summarise(total = sum(n), .groups = "drop")
+    cell_order <- cell_totals |>
+        arrange(total) |>
+        pull(cell_type)
+    summary_df$cell_type <- factor(summary_df$cell_type, levels = cell_order)
+    summary_div_df$cell_type <- factor(summary_div_df$cell_type, levels = cell_order)
+
+    # Proportion consistency checks
+    stopifnot(all.equal(
+        summary_df |> group_by(cell_type) |> summarise(total = sum(n)),
+        summary_div_df |> group_by(cell_type) |> summarise(total = sum(abs(n_signed)))
+    ))
+
+    g4b_overlap <- summary_df |>
+        # Calculate the necessary proportions and cumulative sums
+        group_by(cell_type) |>
+        mutate(
+            total = sum(n),
+            prop = n / total
+        ) |>
+        # Add a cumulative proportion for position calculation *before* plotting
+        arrange(cell_type, direction) |> # Ensure consistent stacking order
+        mutate(
+            c_prop = cumsum(prop),
+            mid_prop = c_prop - (prop / 2) # Calculate the center position
+        ) |>
+        ungroup() |>
+        ggplot(aes(x = cell_type, y = prop, fill = direction)) +
+        geom_col(position = "fill") + # Draw the 100% stacked bars
+        geom_text(
+            # Use the calculated midpoint position (mid_prop) for y
+            aes(label = scales::percent(prop, accuracy = 1), y = mid_prop),
+            size = 3,
+            color = "black"
+        ) +
+        scale_y_continuous(
+            labels = scales::percent,
+            breaks = seq(0, 1, by = 0.25),
+            expand = expansion(mult = c(0, 0))
+        ) +
+        labs(
+            title = "Proportion of Up/Down",
+            x = "",
+            y = "Proportion",
+            fill = "Direction"
+        ) +
+        theme_minimal() +
+        coord_flip()
+
+    plot_widths <- c(2, 1)
+    g4_combined <- (g4_overlap | g4b_overlap) +
+        plot_layout(
+            guides = "collect",
+            widths = plot_widths)
+
+    f_name <- paste0("overaping_", suffix, "_FDR", FDR, ".pdf")
+    ggsave(here(plotDir, f_name),
+           g4_combined, width = 10, height = 7)
+
+    message("All plots done!")
+
+}
+
+
+#### Get the counts per cell type for each strategy ####
+
+# Pairwise (DAR–Link edges)
+summarise_pairwise <- function(overlaps_df) {
+    overlaps_df |>
+        group_by(cell_type, direction) |>
+        summarise(n = n(), .groups = "drop")
+}
+
+# Unique DAR peaks (per cell type & direction)
+summarise_unique_dars <- function(overlaps_df) {
+    overlaps_df |>
+        group_by(cell_type, direction) |>
+        summarise(n = n_distinct(peak_id.1), .groups = "drop")
+}
+
+## Define strategies
+strategies <- list(
+    "DAR-Link_pairwise" = summarise_pairwise,
+    "DAR-Link_unique"   = summarise_unique_dars,
+    "Link-DAR_unique_majority"  = function(df) summarise_unique_links(df, method = "majority"),
+    "Link-DAR_unique_exclusive" = function(df) summarise_unique_links(df, method = "exclusive")
+    # "Link-DAR_unique_any"     = function(df) summarise_unique_links(df, method = "any") # optional
+)
+
+# Run all strategies
+walk2(strategies, names(strategies), function(fun, suffix) {
+
+    # Apply summariser
+    summary_df <- fun(overlaps_df)
+
+    # Prepare diverging data
+    summary_div <- prepare_data_to_plot(summary_df)
+
+    # Make plots + save
+    make_div_prop_barplots(summary_df, summary_div, FDR, suffix)
+
+    # Save raw summary
+    f_name <- here(processedDir, paste0("summary_", suffix, "_FDR", FDR, ".csv"))
+    write.csv(summary_df, f_name, row.names = FALSE)
+
+    message("Finished: ", suffix)
+})
 
 message("All plots done!!!")
 
 
-# library("slurmjobs")
-# job_single(
-#   "19_Linkage_DARs_analysis",
-#   create_shell = TRUE,
-#   partition = "katun",
-#   memory = "30G",
-#   cores = 2,
-#   logdir = "logs",
-#   command = "Rscript 19_Linkage_DARs_analysis.R",
-#   create_logdir = FALSE
-# )
-
-
-
+# library("slurmjo
