@@ -293,24 +293,39 @@ link_split <- tidyr::separate(linkPeaks_results_all, peak,
            end   = as.integer(end))
 
 # Convert LinkPeaks to GRanges to run findOverlaps()
-gr_links <- with(link_split, 
-                 GRanges(seqnames = seqnames,
-                         ranges   = IRanges(start, end),
-                         peak_id  = paste(seqnames, start, end, sep = "-"),
-                         score    = score,
-                         gene     = gene,
-                         cluster  = cluster,
-                         distance = distance,
-                         tier     = tier))
+gr_links <- 
+    with(link_split, 
+        GRanges(
+             seqnames = seqnames,
+             ranges   = IRanges(start, end),
+             strand   = strand,
+             # Metadata columns passed directly:
+             peak_id_links = paste(seqnames, start, end, sep = "-"),
+             CCscore  = score, # spearman CC
+             gene_name  = gene,
+             gene_id  = gene_id, 
+             FDR_CC = FDR,
+             cluster  = cluster,
+             tss = tss,
+             # the strand of the linked gene (+ or -)
+             gene_strand = gene_strand, 
+             distance = distance,
+             distance_kb = distance_kb,
+             # distance from peak center to TSS, 
+             # keeping genomic sign (positive = downstream, negative = upstream)
+             signed_distance = signed_distance, 
+             # adjusts the sign of signed_distance to reflect the gene’s strand:
+             # If the gene is on +, then upstream is negative, downstream positive
+             # If the gene is on -, it flips accordingly
+             signed_by_strand = signed_by_strand
+        )
+    )
 length(gr_links) # [1] 10948
 head(gr_links)
-# GRanges object with 6 ranges and 6 metadata columns:
-# seqnames            ranges strand     |                peak_id      score
-# <Rle>         <IRanges>  <Rle>        |            <character>  <numeric>
-# [1]     chr1     629146-629354      * |     chr1-629146-629354  0.4131671
-# [2]     chr1   1745993-1746550      * |   chr1-1745993-1746550 -0.4085366
 
-# only use DARs at FDR02
+
+## ONLY use DARs at FDR02
+
 nrow(DARs_results_all) # [1] 582590
 DARs_FDRX <- DARs_results_all |>
     filter(FDR_threshold == paste0("FDR", FDR)) 
@@ -328,43 +343,50 @@ DARs_split <- tidyr::separate(DARs_FDRX, peak_id, into = c("seqnames", "start", 
            end   = as.integer(end))
 nrow(DARs_split) # [1] 325580
 head(DARs_split)
-# FDR_threshold cell_type seqnames  start    end      logFC          fdr
-# 1        FDR0.2 Astrocyte     chr1 629811 630032  1.1115262 1.970054e-07
-# 2        FDR0.2 Astrocyte     chr1 633694 634122  1.1348873 8.347289e-09
-gr_dars <- with(DARs_split,
-                GRanges(seqnames = seqnames,
-                        ranges   = IRanges(start, end),
-                        peak_id  = paste(seqnames, start, end, sep = "-"),
-                        cell_type = cell_type,
-                        FDR_threshold = FDR_threshold,
-                        logFC = logFC,
-                        fdr = fdr,
-                        is_significant = is_significant))
+
+# In GRanges(), anything other than seqnames, ranges, and strand is read as metadata
+# Differential Accessibility Regions (DARs) are treated as unstranded 
+gr_dars <- 
+    with(DARs_split, 
+        GRanges(
+            seqnames = seqnames,
+            ranges   = IRanges(start = start, end = end),
+            strand   = "*",
+            # Metadata columns passed directly:
+            peak_id        = paste(seqnames, start, end, sep = "-"),
+            cell_type      = cell_type,
+            FDR_threshold  = FDR_threshold, # 0.1 / 0.2 
+            # Add FC of chromatin accessibility:
+            # - logFC > 0 → peak is more accessible (open) in the target cell type
+            # - logFC < 0 → peak is less accessible (closed) in the target cell type
+            logFC          = logFC,
+            fdr_dars = fdr
+            #is_significant = is_significant
+    )
+)
 
 ## inspect
 length(gr_dars) # [1] 325580
 head(gr_dars)
-# GRanges object with 6 ranges and 6 metadata columns:
-# seqnames        ranges strand | peak_id   cell_type
-# <Rle>     <IRanges>  <Rle>    | <character> <character>
-# [1]     chr1 629811-630032  * | chr1-629811-630032   Astrocyte
-# [2]     chr1 633694-634122  * | chr1-633694-634122   Astrocyte
+
+
+
+#===========================================================================
 
 message("Finding overlaps ...") 
 
-## testing:
-#===========================================================================
-library("ggvenn")
-venn_list <- list(
-    LinkPeaks = unique(linkPeaks_results_all$peak),
-    DARs = unique(DARs_results_all$peak_id)
-)
-length(venn_list$LinkPeaks) # [1] 7098
-length(venn_list$DARs) # [1] 211558
-ggvenn(venn_list,
-       fill_color = c("skyblue", "orange"),
-       stroke_size = 0.5,
-       set_name_size = 4)
+# ## testing:
+# library("ggvenn")
+# venn_list <- list(
+#     DARs = unique(gr_dars$peak_id),
+#     LinkPeaks = unique(gr_links$peak_id_links)
+# )
+# length(venn_list$LinkPeaks) # [1] 7098
+# length(venn_list$DARs) # [1] 211558
+# ggvenn(venn_list,
+#        fill_color = c("skyblue", "orange"),
+#        stroke_size = 0.5,
+#        set_name_size = 4)
 
 # findOverlaps() reports all pairs of ranges that overlap # “≥1 bp overlap”
 # If one LinkPeaks region overlaps many DARs regions, you’ll get multiple rows for the same LinkPeak
