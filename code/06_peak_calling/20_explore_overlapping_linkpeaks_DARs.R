@@ -97,7 +97,15 @@ g_multiplicity <- link_summary |>
     ) +
     scale_y_continuous(limits = c(0, 4000)) +
     theme_minimal() +
-    theme(legend.position = "none")
+    theme(legend.position = "none") +
+    # textual annotation for simple display only
+    plot_annotation(
+        caption = paste(
+            "Key insight: A large portion of overlapping LinkPeaks are differentially accessible in multiple cell types (n > 1).",
+            "Refer to the 'top_combinations_key' table for the most common cell type mixtures at each multiplicity level.",
+            sep = "\n"
+        )
+    )
 
 # Adjust widths (1, 2) and keep a single y-axis title
 combined_plot <- g_overlap_type + g_multiplicity +
@@ -121,6 +129,36 @@ combined_plot <- combined_plot +
 f_name <- paste0("Overlaps_Unique_vs_Replicated_FDR", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
        combined_plot, width = 7, height = 7)
+
+
+message("Calculate the top 3 most frequent cell type combinations for each multiplicity level")
+
+# aggregate your link_summary data to find the top 3 most common cell type combinations 
+# for each multiplicity level (n_cell_types)
+
+# Calculate the top 3 most frequent cell type combinations for each multiplicity level
+top_combinations_key <- link_summary |>
+    # Group by the multiplicity level (the bar) and the specific cell type combination
+    group_by(n_cell_types, cell_types) |>
+    # Count how many unique LinkPeaks share that exact combination
+    summarise(n_peaks = n(), .groups = 'drop_last') |>
+    # Get the top 3 most frequent combinations
+    slice_max(order_by = n_peaks, n = 3) |>
+    # Format the combination for easy reading
+    mutate(
+        display_text = paste0(cell_types, " (n=", n_peaks, ")")
+    ) |>
+    # Combine the top 3 combinations into a single string for the table
+    summarise(
+        `Top Combinations & Counts` = paste(display_text, collapse = " | "),
+        .groups = 'drop'
+    ) |>
+    rename(`Multiplicity (n)` = n_cell_types)
+
+head(top_combinations_key)
+
+
+
 
 
 #===========================================================================
@@ -346,4 +384,17 @@ walk2(strategies, names(strategies), function(fun, suffix) {
 message("All plots done!!!")
 
 
-# library("slurmjo
+# library("slurmjobs")
+# job_single(
+#   "19_Linkage_DARs_analysis",
+#   create_shell = TRUE,
+#   partition = "katun",
+#   memory = "30G",
+#   cores = 2,
+#   logdir = "logs",
+#   command = "Rscript 19_Linkage_DARs_analysis.R",
+#   create_logdir = FALSE
+# )
+
+
+
