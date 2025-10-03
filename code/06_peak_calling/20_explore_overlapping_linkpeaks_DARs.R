@@ -138,14 +138,8 @@ g_multiplicity <- link_summary |>
     )
 
 # Adjust widths (1, 2) and keep a single y-axis title
-combined_plot <- g_overlap_type + g_multiplicity +
-    plot_layout(widths = c(1, 3)) &
-    theme(
-        axis.title.y = element_text(size = 10)  # keep y-label once
-    )
-
-# Add a shared y-axis label
-combined_plot <- combined_plot +
+combined_plot <- (g_overlap_type + g_multiplicity) + plot_layout(widths = c(1, 3)) + 
+    plot_layout(axes = "collect_y") & 
     plot_annotation(
         title = "LinkPeak-DARs Overlap",
         subtitle = NULL,
@@ -154,7 +148,7 @@ combined_plot <- combined_plot +
             plot.margin = margin(5, 5, 5, 5)
         )
     ) &
-    ylab("Number of LinkPeaks (Unique Regions)")
+    labs(y = "Number of LinkPeaks Overlaps")
 
 f_name <- paste0("overlaps_linkPeak_unique_vs_replicated_FDR", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
@@ -176,15 +170,16 @@ g_uniques <- uniques_df |>
     geom_bar(color = "black") +
     geom_text(stat = "count", aes(label = after_stat(count)), hjust = -0.5, size = 3) +
     coord_flip() + # Flip coordinates for readable cell type labels
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1))) + # add 10% space on right
     labs(
-        title = "Distribution of Cell Type-Specific LinkPeaks (Unique Overlaps)",
-        subtitle = paste0("Total Unique LinkPeaks: ", nrow(uniques_df)),
+        title = paste0("Distribution of Cell Type-Specific LinkPeaks (Unique Overlaps - ", nrow(uniques_df),")"),
+        #subtitle = paste0("Total Unique LinkPeaks: ", ),
         x = "Cell Type (DARs with n=1 Overlap)",
         y = "Number of LinkPeaks"
     ) +
     theme_minimal() +
     theme(
-        plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.title = element_text(hjust = 0.5),
         legend.position = "none" # Remove legend since fill is redundant with the y-axis
     )
 
@@ -239,7 +234,7 @@ g_top_combinations <- ggplot(top_combinations_key,
     theme(
         plot.title = element_text(hjust = 0),
         strip.text = element_text(face = "bold"),
-        axis.text.y = element_text(size = 8)
+        axis.text.y = element_text(size = 6)
     ) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
 
@@ -277,20 +272,42 @@ nrow(uniques_df) # 2138
 unique_overlaps <- overlaps_df |>
     filter(peak_id_links %in% (uniques_df |> pull(peak_id)))
 head(unique_overlaps)
-
+nrow(unique_overlaps)
 
 ## ===== Plot 1: Peak-level (collapse to one direction per LinkPeak) =====
 unique_summary_collapsed <- unique_overlaps |>
     group_by(cell_type, peak_id_links) |>
     summarise(
-        direction = ifelse(mean(logFC) > 0, "Up", "Down"),
+        # direction = ifelse(mean(logFC) > 0, "Up", "Down"),
+        direction = case_when(
+            all(logFC > 0) ~ "Up",
+            all(logFC < 0) ~ "Down",
+            TRUE ~ "Mixed"   # at least one Up and one Down DAR
+        ),
         .groups = "drop"
     ) |>
     count(cell_type, direction) |>
     group_by(cell_type) |>
     mutate(total = sum(n)) |>
     ungroup() |>
-    mutate(n_signed = ifelse(direction == "Down", -n, n))
+    mutate(
+        #n_signed = ifelse(direction == "Down", -n, n)
+        n_signed = case_when(
+            direction == "Down"  ~ -n,
+            direction == "Up"    ~  n,
+            direction == "Mixed" ~  n   # show Mixed as positive
+        )
+    )
+head(unique_summary_collapsed)
+# cell_type  direction     n total n_signed
+# <chr>      <chr>     <int> <int>    <int>
+# 1 Astrocyte  Down         45    66      -45
+# 2 Astrocyte  Up           21    66       21
+# 3 Endo       Up            1     1        1
+# 4 Excit.Thal Down        127   301     -127
+table(unique_summary_collapsed$direction)
+# Down   Up 
+# 13   15 
 
 cell_order1 <- unique_summary_collapsed |>
     group_by(cell_type) |>
@@ -300,19 +317,22 @@ cell_order1 <- unique_summary_collapsed |>
 
 unique_summary_collapsed$cell_type <- factor(unique_summary_collapsed$cell_type, levels = cell_order1)
 
+# # Plot with Mixed in the center
 g_collapsed <- ggplot(unique_summary_collapsed,
                       aes(x = cell_type, y = n_signed, fill = direction)) +
     geom_col() +
     geom_text(
-        aes(label = abs(n_signed),
-            hjust = ifelse(direction == "Down", 1.1, -0.1)),
+        aes(label = n,
+            hjust = ifelse(direction == "Down", 1.1, 
+                           ifelse(direction == "Up", -0.1, 0.5))),
         size = 3, color = "black"
     ) +
     scale_y_continuous(labels = abs, expand = expansion(mult = c(0.15, 0.15))) +
     labs(
-        title = "Peak-level Summary (1 per LinkPeak)",
+        #title = "Peak-level Summary (1 per LinkPeak)",
+        title = "Up/Down/Mixed DAR-Link Overlaps (Unique LinkPeaks)",
         x = "Cell Type",
-        y = "Number of Unique LinkPeaks",
+        y = "Number of Overlaps",
         fill = "Direction"
     ) +
     theme_minimal() +
@@ -353,8 +373,10 @@ g_darlevel <- ggplot(unique_summary_div,
     theme_minimal() +
     coord_flip()
 
-combined_plot <- g_collapsed | g_darlevel
-combined_plot
+combined_plot <- g_collapsed | g_darlevel +
+    plot_layout(
+        guides = "collect",
+        widths = plot_widths)
 
 ggsave(here(plotDir, paste0("overlaps_unique_LinkPeaks_vs_DARlevel_FDR", FDR, ".pdf")),
        combined_plot, width = 12, height = 6)
