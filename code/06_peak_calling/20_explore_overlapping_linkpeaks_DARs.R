@@ -248,18 +248,17 @@ ggsave(here(plotDir, f_name),
 
 
 #===========================================================================
-
-
+## Process and Plot Up/Down LinkPekas-DARs overlapping per cell type
 
 message("Processing Up/Down LinkPekas-DARs overlapping per cell type ... ")
-
 
 colnames(overlaps_df)
 head(overlaps_df)
 
-# Define defines direction: Up vs Down
+# Define defines direction for all the overlaps: Up / Down
 # peak_id_links → the LinkPeak ID (from gr_links)
 # peak_id → the DAR peak ID (from gr_dars)
+
 overlaps_df <- overlaps_df |>
     mutate(direction = case_when(
         logFC > 0 ~ "Up",
@@ -269,7 +268,8 @@ overlaps_df <- overlaps_df |>
     filter(direction %in% c("Up", "Down"))
 
 nrow(overlaps_df) # [1] 20650
-nrow(uniques_df) # 2138
+n_uniques <- nrow(uniques_df) # 2138
+n_uniques
 
 # Restrict overlaps to Unique LinkPeaks only
 unique_overlaps <- overlaps_df |>
@@ -277,7 +277,9 @@ unique_overlaps <- overlaps_df |>
 head(unique_overlaps)
 nrow(unique_overlaps)
 
+
 ## ===== Plot 1: Peak-level (collapse to one direction per LinkPeak) =====
+
 unique_summary_collapsed <- unique_overlaps |>
     group_by(cell_type, peak_id_links) |>
     summarise(
@@ -320,7 +322,7 @@ cell_order1 <- unique_summary_collapsed |>
 
 unique_summary_collapsed$cell_type <- factor(unique_summary_collapsed$cell_type, levels = cell_order1)
 
-# # Plot with Mixed in the center
+## Plot with Mixed in the center
 g_collapsed <- ggplot(unique_summary_collapsed,
                       aes(x = cell_type, y = n_signed, fill = direction)) +
     geom_col() +
@@ -332,8 +334,7 @@ g_collapsed <- ggplot(unique_summary_collapsed,
     ) +
     scale_y_continuous(labels = abs, expand = expansion(mult = c(0.15, 0.15))) +
     labs(
-        #title = "Peak-level Summary (1 per LinkPeak)",
-        title = "Up/Down/Mixed DAR-Link Overlaps (Unique LinkPeaks)",
+        title = paste0("Up/Down/Mixed Link-DARs Overlaps (Unique LinkPeaks - ", n_uniques ,")"),
         x = "Cell Type",
         y = "Number of Overlaps",
         fill = "Direction"
@@ -341,7 +342,9 @@ g_collapsed <- ggplot(unique_summary_collapsed,
     theme_minimal() +
     coord_flip()
 
+
 ## ===== Plot 2: DAR-level  =====
+
 unique_summary_div <- unique_overlaps |>
     group_by(cell_type, direction) |>
     summarise(n = n(), .groups = "drop") |>
@@ -376,7 +379,7 @@ g_darlevel <- ggplot(unique_summary_div,
     theme_minimal() +
     coord_flip()
 
-combined_plot <- g_collapsed | g_darlevel +
+combined_plot <- (g_collapsed | g_darlevel) +
     plot_layout(
         guides = "collect",
         widths = plot_widths)
