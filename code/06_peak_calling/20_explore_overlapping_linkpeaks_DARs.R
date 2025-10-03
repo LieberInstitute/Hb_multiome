@@ -189,6 +189,7 @@ ggsave(here(plotDir, f_name),
 
 
 ##==============================================================================
+## Calculate and plot top 3 most frequent cell type combinations for each multiplicity level. I have 10 levels 
 
 message("Calculate the top 3 most frequent cell type combinations for each multiplicity level")
 
@@ -219,28 +220,30 @@ write.csv(link_summary, f_name, row.names = FALSE)
 
 message("Summary overlaps done!")
 
-g_top_combinations <- ggplot(top_combinations_key,
-                             aes(x = reorder(display_text, n_peaks), y = n_peaks, fill = factor(`Multiplicity (n)`))) +
+# make combined plot
+g_top_combinations <- ggplot(
+    top_combinations_key,
+    aes(x = reorder(display_text, n_peaks), y = n_peaks, fill = factor(`Multiplicity (n)`))
+) +
     geom_col(show.legend = FALSE) +
-    #geom_text(aes(label = n_peaks), hjust = -0.1, size = 3) +
     coord_flip() +
     facet_wrap(~`Multiplicity (n)`, scales = "free_y", ncol = 1) +
     labs(
-        title = "Top 3 Cell-Type Combinations per Multiplicity Level",
+        title = "Top 3 Cell-Type Combinations\nper Multiplicity Level",
         x = "Cell-Type Combination",
         y = "Number of LinkPeaks"
     ) +
     theme_minimal() +
     theme(
-        plot.title = element_text(hjust = 0),
+        plot.title = element_text(hjust = 0, face = "bold"), # left-aligned title
         strip.text = element_text(face = "bold"),
-        axis.text.y = element_text(size = 6)
+        axis.text.y = element_text(size = 6)                 # smaller y-axis labels
     ) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
 
 f_name <- paste0("overlaps_linkPeak_multiplicity_top3_frequent_ct_", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
-       g_top_combinations, width = 8, height = 7)
+       g_top_combinations, width = 10, height = 8)
 
 
 
