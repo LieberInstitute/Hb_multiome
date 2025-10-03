@@ -334,9 +334,10 @@ g_collapsed <- ggplot(unique_summary_collapsed,
     ) +
     scale_y_continuous(labels = abs, expand = expansion(mult = c(0.15, 0.15))) +
     labs(
-        title = paste0("Up/Down/Mixed Link-DARs Overlaps (Unique LinkPeaks - ", n_uniques ,")"),
+        title = "Up/Down/Mixed Link-DARs",
+        subtitle = paste0("Overlaps (Unique LinkPeaks - ", n_uniques ,")"),
         x = "Cell Type",
-        y = "Number of Overlaps",
+        y = NULL,
         fill = "Direction"
     ) +
     theme_minimal() +
@@ -344,6 +345,8 @@ g_collapsed <- ggplot(unique_summary_collapsed,
 
 
 ## ===== Plot 2: DAR-level  =====
+
+n_DARS_peaks_total_DARS <- sum(unique_summary_div$n) 
 
 unique_summary_div <- unique_overlaps |>
     group_by(cell_type, direction) |>
@@ -371,21 +374,32 @@ g_darlevel <- ggplot(unique_summary_div,
     ) +
     scale_y_continuous(labels = abs, expand = expansion(mult = c(0.15, 0.15))) +
     labs(
-        title = "DAR-level Summary (Multiple DARs per LinkPeak)",
+        title = "Up/Down DAR-level",
+        subtitle = paste0("Multiple DARs per LinkPeak - ", n_DARS_peaks_total_DARS ,")"),
         x = "Cell Type",
-        y = "Number of Overlaps",
+        y = NULL,
         fill = "Direction"
     ) +
     theme_minimal() +
+    theme(
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.x = element_blank() 
+    ) +
     coord_flip()
 
 combined_plot <- (g_collapsed | g_darlevel) +
     plot_layout(
-        guides = "collect",
-        widths = plot_widths)
+        guides = "collect")
 
-ggsave(here(plotDir, paste0("overlaps_unique_LinkPeaks_vs_DARlevel_FDR", FDR, ".pdf")),
-       combined_plot, width = 12, height = 6)
+ggsave(here(plotDir, paste0("overlaps_diverg_linkPeaks_vs_DARlevel_FDR", FDR, ".pdf")),
+       combined_plot, width = 8, height = 8)
+
+
+
+
+#===========================================================================
+## Violin plot with top-4 Unique Links overlaps
 
 
 
