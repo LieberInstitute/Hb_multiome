@@ -20,10 +20,10 @@ library("here")
 #===============================================================================
 
 ## setup variable names
+
 # resolution_level = "Mid" 
 FDR = 0.2 # actual value to run the DAR-Links
-# FDR_thresh = c(0.1, 0.2)
-# # lfc_thresh = 0.2 # we do not use log FC for this exploratory analysis
+# we do not use log FC for this exploratory analysis
 
 ## Set directory names
 inputCSV_Overlaps_Dir <- here(
@@ -31,11 +31,6 @@ inputCSV_Overlaps_Dir <- here(
     "06_peak_calling",
     "19_Linkage_DARs_analysis"
 )
-# inputCSV_DARs_Dir <- here(
-#     "processed-data",
-#     "06_peak_calling",
-#     "17_pseudobulk_DARs_MACS2_reduced_voomLmFit"
-# )
 processedDir <- here(
     "processed-data",
     "06_peak_calling",
@@ -54,20 +49,53 @@ if (!dir.exists(plotDir)) { dir.create(plotDir) }
 
 message("Loading Unique-Overlap Hits ...")
 
-## load summary overlaps df
-link_summary <- read.csv(here(inputCSV_Overlaps_Dir, 
-                              paste0("summary_LinkPeak_overlap_stats_FDR", FDR, ".csv")))
+# ## load summary overlaps df
+# link_summary <- read.csv(here(inputCSV_Overlaps_Dir, 
+#                               paste0("summary_LinkPeak_overlap_stats_FDR", FDR, ".csv")))
 
 ## load full overlaps df
 overlaps_df <- read.csv(here(inputCSV_Overlaps_Dir, 
                              paste0("Overlaps_LinkPeak_DARs_FDR", FDR, ".csv")))
+# test
+colnames(overlaps_df)
+overlaps_df |>
+    filter(peak_id == "chr1-1745993-1746550") |>
+    select(peak_id, cell_type, FDR_CC, fdr_dars) |>
+    distinct()
+length(unique(overlaps_df$peak_id)) # 5535
 
-message("Loaded full/summary overlaps ...")
+## Summarize unique LinkPeak with n_DARs and n_cell_types
+
+link_summary <- overlaps_df |>
+    group_by(peak_id) |>
+    summarise(
+        n_DARs       = n(),                         # total DAR rows linked to this LinkPeak
+        n_cell_types = n_distinct(cell_type),       # distinct od distinc cell types represented
+        cell_types   = paste(unique(cell_type), collapse = "; "), # list cell types
+        .groups = "drop"
+    ) |>
+    # 2138 = LinkPeaks overlapping DARs from exactly one cell type (new definition, consistent with multiplicity)
+    mutate(overlap_type = ifelse(n_cell_types == 1, "Unique", "Replicated"))
+    # 1572 = LinkPeaks overlapping exactly one DAR (old definition)
+    #mutate(overlap_type = ifelse(n_DARs == 1, "Unique", "Replicated"))
+
+table(link_summary$overlap_type)
+# Replicated     Unique 
+# 3397            2138 
+table(link_summary$n_cell_types==1)
+# FALSE  TRUE 
+# 3397  2138 
+
+f_name <- here(processedDir, paste0("summary_LinkPeak_overlaps_FDR", FDR, ".csv"))
+write.csv(link_summary, f_name, row.names = FALSE)
+
+message("Summary overlaps done!")
 
 
 ##==============================================================================
+## make combined plot with: "LinkPeak Overlap: Unique vs. Multi-Cell Type DARs" and "Multiplicity of Cell Type Overlap"
 
-message("Processing exploratory overlap plots ... ")
+message("Plotting exploratory LinkPeaks overlap  ... ")
 
 ## Plot "Count of Unique vs. Replicated Overlaps"
 # Counts from the overlap_type column
@@ -84,7 +112,9 @@ g_overlap_type <- link_summary |>
     theme_minimal() +
     theme(legend.position = "none")
 
+
 ## Distribution of Cell Type Multiplicity
+
 g_multiplicity <- link_summary |>
     mutate(n_cell_types_factor = factor(n_cell_types)) |>
     ggplot(aes(x = n_cell_types_factor)) +
@@ -101,8 +131,8 @@ g_multiplicity <- link_summary |>
     # textual annotation for simple display only
     plot_annotation(
         caption = paste(
+            "Note: The n=1 bar is defined by a single DAR row match (n_DARs=1) for consistency with other analyses.",
             "Key insight: A large portion of overlapping LinkPeaks are differentially accessible in multiple cell types (n > 1).",
-            "Refer to the 'top_combinations_key' table for the most common cell type mixtures at each multiplicity level.",
             sep = "\n"
         )
     )
@@ -126,17 +156,52 @@ combined_plot <- combined_plot +
     ) &
     ylab("Number of LinkPeaks (Unique Regions)")
 
-f_name <- paste0("Overlaps_Unique_vs_Replicated_FDR", FDR, ".pdf")
+f_name <- paste0("LinkPeak_overlaps_unique_vs_replicated_FDR", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
        combined_plot, width = 7, height = 7)
 
+
+##==============================================================================
+## Make "Distribution of Cell Type-Specific LinkPeaks (Unique Overlaps)" plot
+
+message("Creating barplot showing the frequency of each unique cell type .." )
+
+# Filter the link_summary dataframe to include only "Unique" overlaps
+uniques_df <- link_summary |>
+    filter(overlap_type == "Unique")
+nrow(uniques_df) # 2138
+
+g_uniques <- uniques_df |>
+    ggplot(aes(x = fct_infreq(cell_types), fill = cell_types)) + # fct_infreq orders bars by count
+    geom_bar(color = "black") +
+    geom_text(stat = "count", aes(label = after_stat(count)), hjust = -0.5, size = 3) +
+    coord_flip() + # Flip coordinates for readable cell type labels
+    labs(
+        title = "Distribution of Cell Type-Specific LinkPeaks (Unique Overlaps)",
+        subtitle = paste0("Total Unique LinkPeaks: ", nrow(uniques_df)),
+        x = "Cell Type (DARs with n=1 Overlap)",
+        y = "Number of LinkPeaks"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, face = "bold"),
+        legend.position = "none" # Remove legend since fill is redundant with the y-axis
+    )
+
+f_name <- paste0("LinkPeak_overlaps_unique_ct_specific_", FDR, ".pdf")
+ggsave(here(plotDir, f_name),
+       g_uniques, width = 7, height = 7)
+
+
+##==============================================================================
 
 message("Calculate the top 3 most frequent cell type combinations for each multiplicity level")
 
 # aggregate your link_summary data to find the top 3 most common cell type combinations 
 # for each multiplicity level (n_cell_types)
 
-# Calculate the top 3 most frequent cell type combinations for each multiplicity level
+# Calculate up to 3 rows per multiplicity level ( I have set 10 level )
+head(link_summary)
 top_combinations_key <- link_summary |>
     # Group by the multiplicity level (the bar) and the specific cell type combination
     group_by(n_cell_types, cell_types) |>
@@ -144,20 +209,43 @@ top_combinations_key <- link_summary |>
     summarise(n_peaks = n(), .groups = 'drop_last') |>
     # Get the top 3 most frequent combinations
     slice_max(order_by = n_peaks, n = 3) |>
-    # Format the combination for easy reading
     mutate(
-        display_text = paste0(cell_types, " (n=", n_peaks, ")")
+        display_text = paste0(cell_types, " (n=", n_peaks, ")"),
+        `Multiplicity (n)` = n_cell_types
     ) |>
-    # Combine the top 3 combinations into a single string for the table
-    summarise(
-        `Top Combinations & Counts` = paste(display_text, collapse = " | "),
-        .groups = 'drop'
-    ) |>
-    rename(`Multiplicity (n)` = n_cell_types)
+    ungroup() |>
+    arrange(`Multiplicity (n)`, desc(n_peaks))
 
+nrow(top_combinations_key)
 head(top_combinations_key)
 
+f_name <- here(processedDir, paste0("summary_LinkPeak_overlaps_multiplicity_top3_freq_ct_", FDR, ".csv"))
+write.csv(link_summary, f_name, row.names = FALSE)
 
+message("Summary overlaps done!")
+
+g_top_combinations <- ggplot(top_combinations_key,
+                             aes(x = reorder(display_text, n_peaks), y = n_peaks, fill = factor(`Multiplicity (n)`))) +
+    geom_col(show.legend = FALSE) +
+    #geom_text(aes(label = n_peaks), hjust = -0.1, size = 3) +
+    coord_flip() +
+    facet_wrap(~`Multiplicity (n)`, scales = "free_y", ncol = 1) +
+    labs(
+        title = "Top 3 Cell-Type Combinations per Multiplicity Level",
+        x = "Cell-Type Combination",
+        y = "Number of LinkPeaks"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0),
+        strip.text = element_text(face = "bold"),
+        axis.text.y = element_text(size = 8)
+    ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+
+f_name <- paste0("LinkPeak_overlaps_multiplicity_top3_frequent_ct_", FDR, ".pdf")
+ggsave(here(plotDir, f_name),
+       g_top_combinations, width = 8, height = 7)
 
 
 
