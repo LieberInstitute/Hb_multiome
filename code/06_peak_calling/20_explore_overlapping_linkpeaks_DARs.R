@@ -55,7 +55,7 @@ message("Loading Unique-Overlap Hits ...")
 
 ## load full overlaps df
 overlaps_df <- read.csv(here(inputCSV_Overlaps_Dir, 
-                             paste0("overlaps_LinkPeak_DARs_FDR", FDR, ".csv")))
+                             paste0("Overlaps_LinkPeak_DARs_FDR", FDR, ".csv")))
 # # test
 # colnames(overlaps_df)
 # overlaps_df |>
@@ -346,8 +346,6 @@ g_collapsed <- ggplot(unique_summary_collapsed,
 
 ## ===== Plot 2: DAR-level  =====
 
-n_DARS_peaks_total_DARS <- sum(unique_summary_div$n) 
-
 unique_summary_div <- unique_overlaps |>
     group_by(cell_type, direction) |>
     summarise(n = n(), .groups = "drop") |>
@@ -355,6 +353,8 @@ unique_summary_div <- unique_overlaps |>
     mutate(total = sum(n)) |>
     ungroup() |>
     mutate(n_signed = ifelse(direction == "Down", -n, n))
+
+n_DARS_peaks_total_DARS <- sum(unique_summary_div$n) 
 
 cell_order2 <- unique_summary_div |>
     group_by(cell_type) |>
@@ -396,13 +396,32 @@ ggsave(here(plotDir, paste0("overlaps_diverg_linkPeaks_vs_DARlevel_FDR", FDR, ".
        combined_plot, width = 8, height = 8)
 
 
+message("All plots done!!!")
+
+
+# library("slurmjobs")
+# job_single(
+#   "19_Linkage_DARs_analysis",
+#   create_shell = TRUE,
+#   partition = "katun",
+#   memory = "30G",
+#   cores = 2,
+#   logdir = "logs",
+#   command = "Rscript 19_Linkage_DARs_analysis.R",
+#   create_logdir = FALSE
+# )
+
+## Reproducibility information
+library("sessioninfo")
+print("Reproducibility information:")
+Sys.time()
+proc.time()
+options(width = 120)
+session_info()
 
 
 #===========================================================================
-## Violin plot with top-4 Unique Links overlaps
-
-
-
+## Other strategies considered: 
 
 # # count Up/Down per cell type
 # unique_summary <- unique_overlaps |>
@@ -449,12 +468,6 @@ ggsave(here(plotDir, paste0("overlaps_diverg_linkPeaks_vs_DARlevel_FDR", FDR, ".
 # f_name <- paste0("overlaps_diverg_plot_unique_ct_", FDR, ".pdf")
 # ggsave(here(plotDir, f_name),
 #        g_unique_div, width = 7, height = 7)
-
-
-
-
-
-
 
 # prepare_data_to_plot <- function(
 #         df_summary,
@@ -657,20 +670,6 @@ ggsave(here(plotDir, paste0("overlaps_diverg_linkPeaks_vs_DARlevel_FDR", FDR, ".
 #     message("Finished: ", suffix)
 # })
 
-message("All plots done!!!")
-
-
-# library("slurmjobs")
-# job_single(
-#   "19_Linkage_DARs_analysis",
-#   create_shell = TRUE,
-#   partition = "katun",
-#   memory = "30G",
-#   cores = 2,
-#   logdir = "logs",
-#   command = "Rscript 19_Linkage_DARs_analysis.R",
-#   create_logdir = FALSE
-# )
 
 
 
