@@ -255,7 +255,7 @@ message("Processing Up/Down LinkPekas-DARs overlapping per cell type ... ")
 colnames(overlaps_df)
 head(overlaps_df)
 
-# Define defines direction for all the overlaps: Up / Down
+# Define direction for all the overlaps: Up / Down
 # peak_id_links → the LinkPeak ID (from gr_links)
 # peak_id → the DAR peak ID (from gr_dars)
 
@@ -276,6 +276,12 @@ unique_overlaps <- overlaps_df |>
     filter(peak_id_links %in% (uniques_df |> pull(peak_id)))
 head(unique_overlaps)
 nrow(unique_overlaps)
+
+f_name <- here(processedDir, paste0("overlaps_unique_with_direction_ct_FDR", FDR, ".csv"))
+write.csv(unique_overlaps, f_name, row.names = FALSE)
+
+message("Saved unique overlaps!")
+
 
 
 ## ===== Plot 1: Peak-level (collapse to one direction per LinkPeak) =====
