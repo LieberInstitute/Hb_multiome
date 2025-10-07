@@ -61,17 +61,6 @@ if (!dir.exists(output_Dir)) {
     dir.create(output_Dir)
 }
 
-# List all files matching the specific clustering resolution level
-lst_peak_files <- list.files(
-    path = inputRDS_Dir,
-    pattern = "*.rds",
-)
-#lst_peak_files = list.files(path = input_cvsDir)
-message("Link peak-genes files found:")
-lst_peak_files
-# [1] "mtx_merged_peaks_cell_level_Mid_resolution.rds"   
-# [2] "Seurat_peaks_merged_cell_level_Mid_resolution.rds"
-
 
 ########################################################################
 ## Differential Accessibility Analysis in Seurat/Signac
@@ -104,6 +93,7 @@ head(meta)
 ## Ensure we are testing by cell-type
 if (!"cellType" %in% colnames(SeuratOBJ_pb@meta.data)) {
     SeuratOBJ_pb$cellType <-  sub("_.*$", "", colnames(SeuratOBJ_pb)) # keep part after first underscore
+    # sub("^[^_]+_", "", colnames(SeuratOBJ_pb)) # Astrocyte_Sample1
 }
 
 
@@ -171,7 +161,7 @@ for (ct in cluster_ids) {
             )
             tmp$cluster <- ct
             tmp$peak    <- rownames(tmp)
-            #tmp$FDR     <- p.adjust(tmp$p_val, method = "BH")
+            tmp$p_val_adj_BH <- p.adjust(tmp$p_val, method = "BH")
             dim(tmp); head(tmp)
         },
         error = function(e) {
@@ -215,31 +205,34 @@ head(da_results)
 
 ## Keeps all statistically significant peaks, whether up (positive log2FC) or down (negative log2FC).
 da_sig <- da_results |>
-    filter(p_val_adj < sig_thresh & abs(avg_log2FC) > lfc_thresh)
-nrow(da_sig)
-# [1] 21849
+    filter(p_val_adj_BH < sig_thresh & abs(avg_log2FC) > lfc_thresh)
+if (nrow(da_sig) == 0) {
+    warning("No significant DARs found across clusters.")
+} else {
+    message(nrow(da_sig), "significant DARs found across clusters.")
+} # [1] 21849
 
 tail(da_sig)
 table(da_sig$cluster)
 
-# summary counts per cluster / respect the fold-change cutoff when defining up vs down DARs
-summary_table <- da_sig |>
-    group_by(cluster) |>
-    summarise(
-        n_sig_peaks = n(),
-        n_up   = sum(avg_log2FC >  lfc_thresh),   # significantly up 0.25
-        n_down = sum(avg_log2FC < -lfc_thresh),   # significantly down 0.25
-        top_up_peak   = peak[which.max(avg_log2FC)],        # most upregulated
-        top_down_peak = peak[which.min(avg_log2FC)],        # most downregulated
-        max_log2FC = max(avg_log2FC),             # give the extreme values per cluster.
-        min_log2FC = min(avg_log2FC)
-    ) |>
-    arrange(desc(n_sig_peaks))
-
-
-# save summary
-f_name <- here(output_Dir, "DA_summary_per_cluster.csv")
-write.csv(summary_table, f_name, row.names = FALSE)
+# # summary counts per cluster / respect the fold-change cutoff when defining up vs down DARs
+# summary_table <- da_sig |>
+#     group_by(cluster) |>
+#     summarise(
+#         n_sig_peaks = n(),
+#         n_up   = sum(avg_log2FC >  lfc_thresh),   # significantly up 0.25
+#         n_down = sum(avg_log2FC < -lfc_thresh),   # significantly down 0.25
+#         top_up_peak   = peak[which.max(avg_log2FC)],        # most upregulated
+#         top_down_peak = peak[which.min(avg_log2FC)],        # most downregulated
+#         max_log2FC = max(avg_log2FC),             # give the extreme values per cluster.
+#         min_log2FC = min(avg_log2FC)
+#     ) |>
+#     arrange(desc(n_sig_peaks))
+# 
+# 
+# # save summary
+# f_name <- here(output_Dir, "DA_summary_per_cluster.csv")
+# write.csv(summary_table, f_name, row.names = FALSE)
 
 # extract top upregulated per cluster
 top10_up <- da_sig |>
@@ -278,8 +271,8 @@ for (ct in unique(da_results$cluster)) {
     if (nrow(df) == 0) next
     # classify as Up / Down / Not
     df$signif <- case_when(
-        df$p_val_adj < sig_thresh & df$avg_log2FC >  lfc_thresh  ~ "Up",
-        df$p_val_adj < sig_thresh & df$avg_log2FC < -lfc_thresh  ~ "Down",
+        df$p_val_adj_BH < sig_thresh & df$avg_log2FC >  lfc_thresh  ~ "Up",
+        df$p_val_adj_BH < sig_thresh & df$avg_log2FC < -lfc_thresh  ~ "Down",
         TRUE ~ "Not"
     )
     
@@ -296,7 +289,7 @@ for (ct in unique(da_results$cluster)) {
     
     top10 <- bind_rows(top_up, top_down)
     
-    p <- ggplot(df, aes(x = avg_log2FC, y = -log10(p_val_adj))) +
+    p <- ggplot(df, aes(x = avg_log2FC, y = -log10(p_val_adj_BH))) +
         geom_point(aes(color = signif), alpha = 0.6, size = 1.2) +
         scale_color_manual(values = c("Up" = "red", "Down" = "blue", "Not" = "grey70")) +
         geom_vline(xintercept = c(-lfc_thresh, lfc_thresh), linetype = "dashed") +
@@ -307,7 +300,7 @@ for (ct in unique(da_results$cluster)) {
             size = 3,
             box.padding = 0.3,
             point.padding = 0.2,
-            max.overlaps = 10
+            max.overlaps = Inf
         ) +
         labs(
             title = paste0("Volcano plot - ", ct),
@@ -326,48 +319,48 @@ dev.off()
 message("Volcano saved to: ", f_name)
 
 
-## Barplot of Up vs Down DARs per cluster
-
-message("Starting Barplot per cluster ...")
-
-f_name <- here(plotDir, "DA_barplot_UpDown_per_cluster.pdf")
-
-# Prepare counts of Up and Down DARs
-up_down_counts <- da_sig |>
-    mutate(direction = case_when(
-        avg_log2FC >  lfc_thresh ~ "Up",
-        avg_log2FC < -lfc_thresh ~ "Down",
-        TRUE ~ "Not"
-    )) |>
-    filter(direction != "Not") |>    # keep only true Up/Down DARs
-    group_by(cluster, direction) |>
-    summarise(n = n(), .groups = "drop")
-
-# Order clusters by total number of DARs
-cluster_order <- up_down_counts |>
-    group_by(cluster) |>
-    summarise(total = sum(n), .groups = "drop") |>
-    arrange(desc(total)) |>
-    pull(cluster)
-
-up_down_counts$cluster <- factor(up_down_counts$cluster, levels = cluster_order)
-
-# Plot
-p1 <- ggplot(up_down_counts, aes(x = cluster, y = n, fill = direction)) +
-    geom_col(position = "dodge") +
-    scale_fill_manual(values = c("Up" = "red", "Down" = "blue")) +
-    labs(
-        title = "Number of Up and Down DARs per cluster",
-        x = "Cluster",
-        y = "Number of DARs",
-        fill = "Direction"
-    ) +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ggsave(f_name, p1, width = 8, height = 5, dpi = 300)
-
-message("Barplot saved to: ", f_name)
+# ## Barplot of Up vs Down DARs per cluster
+# 
+# message("Starting Barplot per cluster ...")
+# 
+# f_name <- here(plotDir, "DA_barplot_UpDown_per_cluster.pdf")
+# 
+# # Prepare counts of Up and Down DARs
+# up_down_counts <- da_sig |>
+#     mutate(direction = case_when(
+#         avg_log2FC >  lfc_thresh ~ "Up",
+#         avg_log2FC < -lfc_thresh ~ "Down",
+#         TRUE ~ "Not"
+#     )) |>
+#     filter(direction != "Not") |>    # keep only true Up/Down DARs
+#     group_by(cluster, direction) |>
+#     summarise(n = n(), .groups = "drop")
+# 
+# # Order clusters by total number of DARs
+# cluster_order <- up_down_counts |>
+#     group_by(cluster) |>
+#     summarise(total = sum(n), .groups = "drop") |>
+#     arrange(desc(total)) |>
+#     pull(cluster)
+# 
+# up_down_counts$cluster <- factor(up_down_counts$cluster, levels = cluster_order)
+# 
+# # Plot
+# p1 <- ggplot(up_down_counts, aes(x = cluster, y = n, fill = direction)) +
+#     geom_col(position = "dodge") +
+#     scale_fill_manual(values = c("Up" = "red", "Down" = "blue")) +
+#     labs(
+#         title = "Number of Up and Down DARs per cluster",
+#         x = "Cluster",
+#         y = "Number of DARs",
+#         fill = "Direction"
+#     ) +
+#     theme_bw() +
+#     theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# 
+# ggsave(f_name, p1, width = 8, height = 5, dpi = 300)
+# 
+# message("Barplot saved to: ", f_name)
 
 
 
