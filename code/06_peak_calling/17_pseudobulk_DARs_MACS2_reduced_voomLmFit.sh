@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=30G
+#SBATCH --mem=25G
 #SBATCH --job-name=17_pseudobulk_DARs_MACS2_reduced_voomLmFit_ct
 #SBATCH -c 4
 #SBATCH -t 1-00:00:00
