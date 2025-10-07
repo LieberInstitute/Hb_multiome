@@ -128,10 +128,12 @@ registration_stats_enrichment_voomLmFit <- function(
             )
             res <- limma::eBayes(vfit, trend = TRUE)
             
+            #plotSA(res_enrich, main = "Mean–variance trend (voom+trend)")
             message("Residual DF summary:")
             print(summary(res$df.residual))
             
             return(res)
+            
         })
         
         message(Sys.time(), " extract and reformat enrichment results")
@@ -174,6 +176,7 @@ registration_stats_enrichment_voomLmFit <- function(
         results_specificity$gene <- rowData(sce_pseudo)[[gene_name]]
         
         return(results_specificity)
+
 }
 
 
@@ -366,8 +369,6 @@ res_enrich <- registration_stats_enrichment_voomLmFit(
 )
 # head(res_enrich)
 
-plotSA(res, main = "Mean–variance trend (voom+trend)")
-
 ## rename columns 
 res_enrich <- res_enrich |>
     rename(
@@ -379,27 +380,27 @@ res_enrich <- res_enrich |>
 f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_ALL_in_", clus, ".csv"))
 write.csv(res_enrich, f_name, row.names = FALSE)
 
-# Identify top up/down peaks based on FDR
-fdr_cols <- grep("^fdr_", colnames(res_enrich), value = TRUE)
-
-# cluster-specific significant peaks
-res_sig_ct <- res_enrich |>
-    filter(.data[[paste0("fdr_", clus)]] < FDR_thr) |>
-           #abs(.data[[paste0("logFC_", clus)]]) > lfc_thresh) |>
-    mutate(
-        logFC_ct = .data[[paste0("logFC_", clus)]],
-        direction = case_when(
-            logFC_ct >  0 ~ "Up",    # opening
-            logFC_ct <  0 ~ "Down",  # closing
-            TRUE ~ "NS"              # should not occur if logFC = 0
-        )
-    )
-
-if (nrow(res_sig_ct) > 0) { 
-    f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_", clus, ".csv"))
-    write.csv(res_sig_ct, f_name, row.names = FALSE)
-    message("Enrichment statistics saved [", clus, "]")    
-}
+# # Identify top up/down peaks based on FDR
+# fdr_cols <- grep("^fdr_", colnames(res_enrich), value = TRUE)
+# 
+# # cluster-specific significant peaks
+# res_sig_ct <- res_enrich |>
+#     filter(.data[[paste0("fdr_", clus)]] < FDR_thr) |>
+#            #abs(.data[[paste0("logFC_", clus)]]) > lfc_thresh) |>
+#     mutate(
+#         logFC_ct = .data[[paste0("logFC_", clus)]],
+#         direction = case_when(
+#             logFC_ct >  0 ~ "Up",    # opening
+#             logFC_ct <  0 ~ "Down",  # closing
+#             TRUE ~ "NS"              # should not occur if logFC = 0
+#         )
+#     )
+# 
+# if (nrow(res_sig_ct) > 0) { 
+#     f_name <- here(output_Dir, paste0("voomlmFit_DAR_peaks_", clus, ".csv"))
+#     write.csv(res_sig_ct, f_name, row.names = FALSE)
+#     message("Enrichment statistics saved [", clus, "]")    
+# }
 
 
 message("Enrichment statistics done!")
