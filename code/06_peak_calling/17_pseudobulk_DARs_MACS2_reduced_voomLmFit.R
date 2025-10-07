@@ -27,7 +27,7 @@ library("here")
 
 # Testing spearman at 5e4 on macs2 peaks 
 resolution_level = "Mid"
-lfc_thresh <- 0.25 # 2^0.25 ≈1.189
+# lfc_thresh <- 0.25 # 2^0.25 ≈1.189
 FDR_thr = 0.20
 
 ## read input arguments
@@ -77,131 +77,8 @@ if (!dir.exists(output_Dir)) {
 
 ##==============================================================================
 
-## extract peaks cell-type specific
-# ## code assumes peak_called_in column exists and contains a comma-separated list of cell types
-# peaks_ranges_cellType <- function(
-#         pb_obj = SeuratOBJ_pb,
-#         atac_assay_name = PSEUDO_ATAC_ASSAY,
-#         cluster_name
-#     ) {
-#     
-#     # Use the pseudobulk ATAC assay that exists
-#     #stopifnot(atac_assay_name %in% Assays(pb_obj))
-#     DefaultAssay(pb_obj) <- atac_assay_name
-#     
-#     # subset to cluster
-#     seurat_subset <- subset(pb_obj, idents = cluster_name)
-#     n_samples <- ncol(seurat_subset)
-#     message("Processing ", cluster_name, " (", n_samples, " pseudobulk samples)")
-#     if (n_samples < 3) stop("Too few samples for cluster ", cluster_name, "")
-#     
-#     # peaks for assay
-#     peaks_gr <- granges(seurat_subset[[atac_assay_name]])
-#     peaks_gr$peak_id <- Signac::GRangesToString(peaks_gr)
-#     
-#     if (!"peak_called_in" %in% colnames(mcols(peaks_gr))) {
-#         warning("No peak_called_in metadata; returning all peaks in subset")
-#         return(peaks_gr)
-#     }
-#     
-#     peaks_map <- as.data.frame(peaks_gr) |>
-#         transmute(peak_id = peak_id,
-#                   peak_called_in = as.character(peak_called_in)) |>
-#         mutate(peak_called_in = str_split(peak_called_in, "\\s*,\\s*")) |>
-#         tidyr::unnest(peak_called_in) |>
-#         mutate(peak_called_in = trimws(peak_called_in)) |>
-#         filter(!is.na(peak_called_in), peak_called_in != "") |>
-#         distinct()
-#     #head(peaks_map)
-# 
-#     cluster_peaks <- peaks_map |> 
-#         filter(peak_called_in == cluster_name) |> 
-#         pull(peak_id) |> 
-#         intersect(rownames(seurat_subset[[atac_assay_name]]))
-#     
-#     if (length(cluster_peaks) == 0) stop("No peaks for ", cluster_name)
-#     
-#     # drop ultra-sparse peaks in this cluster (improves stability)
-#     counts_mat <- GetAssayData(
-#         seurat_subset, 
-#         assay = atac_assay_name, 
-#         layer = "counts")[cluster_peaks, , drop = FALSE]
-#     
-#     min_cells_sub <- max(3, floor(0.05 * n_samples))   # ≥5% or at least 3
-#     keep_peaks_sub <- rownames(counts_mat)[Matrix::rowSums(counts_mat > 0) >= min_cells_sub]
-#     if (length(keep_peaks_sub) == 0) stop("No peaks pass support filter in ", cluster_name, ".")
-#     
-#     # preserves annotation
-#     peak_ranges <- Signac::StringToGRanges(keep_peaks_sub)
-#     
-#     return(peak_ranges)
-# 
-# }
-
-
-# ## conversion from Seurat to SingleCellExperiment (SCE) is a standard and 
-# ## necessary step for using Bioconductor packages like edgeR and limma
-# convert_atac_subset_to_sce <- function(
-#         SeuratOBJ_pb, 
-#         PSEUDO_ATAC_ASSAY, 
-#         peaks_to_keep, 
-#         meta
-#     ) {
-#     
-#     # subset by peaks
-#     Seurat_subset <- subset(
-#         SeuratOBJ_pb[[PSEUDO_ATAC_ASSAY]],
-#         features = peaks_to_keep
-#     )
-#     Seurat_subset
-#     
-#     ## convert object into sce with meta.data
-#     counts_mat <- GetAssayData(Seurat_subset, layer = "counts")
-#     
-#     Seurat_subset2 <- CreateSeuratObject(
-#         counts = counts_mat,
-#         assay = PSEUDO_ATAC_ASSAY,
-#         meta.data = meta
-#     )
-#     Seurat_subset2
-#     # > Seurat_subset2
-#     # An object of class Seurat 
-#     # 5224 features across 169 samples within 1 assay 
-#     # Active assay: ATAC_macs2_merged_pseudo (5224 features, 0 variable features)
-#     # 1 layer present: counts
-#     
-#     sce_pb <- as.SingleCellExperiment(
-#         Seurat_subset2,
-#         assay = PSEUDO_ATAC_ASSAY
-#     )
-#     
-#     # copy Seurat's "logcounts" layer (if it existed) into SCE
-#     # if ("logcounts" %in% Layers(Seurat_subset2[[PSEUDO_ATAC_ASSAY]])) {
-#     #     logcounts(sce_pb) <- GetAssayData(Seurat_subset2, assay = PSEUDO_ATAC_ASSAY, layer = "logcounts")
-#     # }
-#     
-#     # Note. actual voomLmFit still use the raw counts - no need to compute logcounts / (for QC or visualization only)
-#     if (!"logcounts" %in% assayNames(sce_pb)) {
-#         # create logcounts from raw counts
-#         dge <- DGEList(counts = assay(sce_pb, "counts"))
-#         dge <- calcNormFactors(dge, method = "TMM") # gives scaling factors for library sizes
-#         lcpm <- edgeR::cpm(dge, log = FALSE, prior.count = 0, normalized.lib.sizes = TRUE)
-#         logcounts(sce_pb) <- log2(lcpm + 1)
-#     }
-#     
-#     #dim(sce_pb)
-#     #colData(sce_pb) #Endo test: [1] 5224  169
-#     #rowData(sce_pb)
-#     #table(sce_pb$cellType)
-#     #table(sce_pb$donor)
-#     
-#     return(sce_pb)
-# }
-
-
 registration_stats_enrichment_voomLmFit <- function(
         sce_pseudo,
-        # block_cor,                                  # 
         covars = NULL,                              # c("age", "sex", "ethnicity")
         var_registration = "registration_variable", # cellType = 18 ct
         var_sample_id = "registration_sample_id",   # donor = 169 samples
@@ -215,6 +92,7 @@ registration_stats_enrichment_voomLmFit <- function(
         )
         
         message(Sys.time(), " computing enrichment statistics")
+        
         eb0_list_cluster <- lapply(cluster_idx, function(x) {
             res <- rep(0, ncol(sce_pseudo))
             res[x] <- 1
@@ -233,16 +111,26 @@ registration_stats_enrichment_voomLmFit <- function(
             m <- model.matrix(res_formula, data = colData(sce_pseudo))
             
             ## voomLmFit, is a shorthand that includes: log2-counts per million (logCPM) -> Weighting -> Linear model fitting
-            ## run voomLmFit for the pseudobulked data, referring donor to duplicateCorrelation; 
-            ## using an adaptive span (number of genes, based on the number of genes in the dge) for smoothing the mean-variance trend
-            res <- limma::eBayes(edgeR::voomLmFit(
+            # res <- limma::eBayes(edgeR::voomLmFit(
+            #     assay(sce_pseudo, "counts"),
+            #     design = m,
+            #     block = sce_pseudo[[var_sample_id]], # ge. donor
+            #     # correlation = block_cor, #recent version of the edgeR package does not accept the correlation argument 
+            #     #  - it computes the inter-block correlation internally 
+            #     sample.weights = TRUE
+            # ))
+            # add trend = TRUE to manage small size-samples (<10)
+            vfit <- edgeR::voomLmFit(
                 assay(sce_pseudo, "counts"),
                 design = m,
-                block = sce_pseudo[[var_sample_id]], # ge. donor
-                # correlation = block_cor, #recent version of the edgeR package does not accept the correlation argument 
-                #  - it computes the inter-block correlation internally 
+                block = sce_pseudo[[var_sample_id]],
                 sample.weights = TRUE
-            ))
+            )
+            res <- limma::eBayes(vfit, trend = TRUE)
+            
+            message("Residual DF summary:")
+            print(summary(res$df.residual))
+            
             return(res)
         })
         
@@ -307,7 +195,7 @@ SeuratOBJ_pb
 
 
 ## =============================================================================
-## add additional meta-data
+## add meta-data and setup ATAC assay
 
 # get matrix of peaks: rows = peaks, cols = pseudobulk samples
 atac_counts <- GetAssayData(SeuratOBJ_pb, assay = PSEUDO_ATAC_ASSAY, layer ="counts")
@@ -393,6 +281,7 @@ length(all_peaks) # [1] 351037
 message("Starting stats enrichment for cluster", clus)
     
 # Get peaks cellType specific
+
 peak_ranges_ct <- global_peaks_ranges_cellType(
     SeuratOBJ_pb,
     PSEUDO_ATAC_ASSAY,
@@ -463,28 +352,12 @@ reg_mod <- registration_model(
 )
 #head(reg_mod)  # inspect column names / coding
 
-## estimate donor-level block correlation
-# recent version of the edgeR does not accept the correlation argument directly. Instead, 
-# it computes the inter-block correlation internally when you provide a block argument
-# block_cor <- registration_block_cor(
-#     sce_pseudo = sce_pb,
-#     registration_model = reg_mod,
-#     var_sample_id = "registration_sample_id"
-# )
-
 ## Run enrichment t-stats (1-vs-all for each cell type)
-rowData(sce_pb) # ge. 0.009318037
-#                           DataFrame with 5224 rows and 2 columns
-#                           peak_id           peak_ensembl
-#                           <character>            <character>
-# chr1-629811-630032             chr1-629811-630032     chr1-629811-630032
-# chr1-630189-630389             chr1-630189-630389     chr1-630189-630389
-# chr1-633694-634122             chr1-633694-634122     chr1-633694-634122
+
 head(rowData(sce_pb)) # have peak_id and peak_ensembl
 
 res_enrich <- registration_stats_enrichment_voomLmFit(
     sce_pseudo = sce_pb,
-    # block_cor = block_cor,
     covars = covars_vec,
     var_registration = "registration_variable",
     var_sample_id = "registration_sample_id",
@@ -492,6 +365,8 @@ res_enrich <- registration_stats_enrichment_voomLmFit(
     gene_name = "peak_id"              # carry peak IDs into the output
 )
 # head(res_enrich)
+
+plotSA(res, main = "Mean–variance trend (voom+trend)")
 
 ## rename columns 
 res_enrich <- res_enrich |>
@@ -509,15 +384,14 @@ fdr_cols <- grep("^fdr_", colnames(res_enrich), value = TRUE)
 
 # cluster-specific significant peaks
 res_sig_ct <- res_enrich |>
-    # filter(.data[[paste0("fdr_", clus)]] < FDR_thr) |>
-    filter(.data[[paste0("fdr_", clus)]] < FDR_thr,
-           abs(.data[[paste0("logFC_", clus)]]) > lfc_thresh) |>
+    filter(.data[[paste0("fdr_", clus)]] < FDR_thr) |>
+           #abs(.data[[paste0("logFC_", clus)]]) > lfc_thresh) |>
     mutate(
         logFC_ct = .data[[paste0("logFC_", clus)]],
         direction = case_when(
             logFC_ct >  0 ~ "Up",    # opening
             logFC_ct <  0 ~ "Down",  # closing
-            TRUE ~ "NS"              # should not occur if you filtered
+            TRUE ~ "NS"              # should not occur if logFC = 0
         )
     )
 
