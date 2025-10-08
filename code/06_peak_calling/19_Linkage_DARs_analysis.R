@@ -215,11 +215,29 @@ DARs_counts <- DARs_results_all |>
 thresholds <- unique(DARs_counts$FDR_threshold)
 
 # Loop through thresholds and plot one at a time
+
+# Extract order used in the LinkedPeaks plot to keep same order
+cluster_order <- cluster_counts |>
+    pull(cluster)
+[1] "LHb.4"      "MHb.2"      "Excit.Thal" "LHb.2.7"    "Inhib.Thal"
+[6] "LHb.1.3.4"  "MHb.1"      "LHb.1"      "Astrocyte"  "LHb.1.3"   
+[11] "Oligo"      "Thal"       "MHb.1.2"    "MHb.3"      "OPC"       
+[16] "Endo"       "Microglia" 
+DARs_counts |> filter(FDR_threshold=="FDR0.2") |> pull(cell_type)
+[1] "Oligo"     "MHb.2"     "Astrocyte" "LHb.2.7"   "MHb.1"     "LHb.1"    
+[7] "MHb.1.2"   "OPC"       "Microglia" "LHb.1.3.4" "Thal"      "LHb.7"    
+[13] "Endo"      "LHb.1.3"   "MHb.3" 
+
 g2 <- lapply(thresholds, function(th) {
     
         df_sub <- filter(DARs_counts, FDR_threshold == th)
+        # This prevents issues with missing levels and ensures we only order the visible data.
+        current_cluster_order <- cluster_order[cluster_order %in% unique(df_sub$cell_type)]
+        reversed_order <- rev(current_cluster_order)
         
-        ggplot(df_sub, aes(x = reorder(cell_type, n), y = n)) +
+        ggplot(df_sub, # aes(x = reorder(cell_type, n), y = n)) +
+               aes(x = factor(cell_type, levels = reversed_order), y = n)) +
+            
             geom_col(fill = "steelblue") +
             geom_text(aes(label = n), hjust = -0.2, size = 3) +
             labs(
@@ -243,6 +261,13 @@ walk2(
         height = 7
     )
 )
+
+
+# only for FDR=0.2
+combined_LinkPeaks_DARs <- g1 + g2[[1]]
+f_name <- paste0("LinkPeaks_DARs_combined_barplot_FDR0.2.pdf")
+ggsave(here(plotDir, f_name),
+       combined_LinkPeaks_DARs, width = 7, height = 7)
 
 
 ## overlay both thr for comparison purposes 
