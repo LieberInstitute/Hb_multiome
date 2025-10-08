@@ -97,7 +97,40 @@ plot_df_ct <- overlaps_df |>
     )
 head(plot_df_ct)
 
+g_cell_type_overlap <- plot_df_ct |>
+    ggplot(aes(
+        # Order cell types by the total number of links (sum of Unique + Duplicated)
+        x = fct_reorder(cell_type, n_links, .fun = sum), 
+        y = n_links, 
+        fill = overlap_type
+    )) +
+    # Use geom_col (or geom_bar(stat="identity")) for counts
+    geom_col(position = position_stack(reverse = TRUE), color = "black") +
+    geom_text(
+        aes(label = n_links), 
+        position = position_stack(vjust = 0.5, reverse = TRUE), # Center the labels
+        size = 3
+    ) +
+    labs(
+        title = "Unique vs. Duplicated Overlaps by Cell Type",
+        subtitle = "Peaks classified by multiplicity of cell type overlap | FDR = 0.2",
+        x = "Cell Type",
+        y = "Number of Overlaps",
+        fill = "Overlap Type"
+    ) +
+    scale_fill_manual(values = c("Duplicated" = "grey", "Unique" = "#D62728")) +
+    coord_flip() + # Flip for readability
+    theme_minimal() +
+    theme( # legend right / bottom 
+        legend.position = c(0.95, 0.05), 
+        # Anchor the legend's bottom-right corner to that coordinate
+        legend.justification = c("right", "bottom"), 
+        legend.background = element_rect(colour = "gray80", fill = "white") 
+    )
 
+f_name = paste0("overlaps_unique_vs_duplicated_by_cellType_FDR", FDR, ".pdf")
+ggsave(here(plotDir, f_name),
+       g_cell_type_overlap, width = 8, height = 8)
 
 
 ##==============================================================================
@@ -154,7 +187,7 @@ g_overlap_type <- link_summary |>
 g_multiplicity <- link_summary |>
     mutate(n_cell_types_factor = factor(n_cell_types)) |>
     ggplot(aes(x = n_cell_types_factor)) +
-    geom_bar(fill = "#56B4E9", color = "black") + # Use a distinct color
+    geom_bar(fill = "grey", color = "black") + # Use a distinct color
     geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
     labs(
         #title = "Multiplicity of Cell Type Overlap (DARs per LinkPeak)",
@@ -191,6 +224,28 @@ ggsave(here(plotDir, f_name),
        combined_plot, width = 7, height = 7)
 
 
+
+##==============================================================================
+## make combined plot with: g_multiplicity+g_cell_type_overlap
+
+combined_unique_dup_plots <- (g_cell_type_overlap + g_multiplicity) + plot_layout(widths = c(1, 2)) + 
+    plot_layout(axes = "collect_y") & 
+    plot_annotation(
+        title = "Duplicted Overlaps",
+        subtitle = NULL,
+        caption = NULL,
+        theme = theme(
+            plot.margin = margin(5, 5, 5, 5)
+        )
+    ) &
+    labs(y = "Number of Overlaps")
+
+f_name <- paste0("overlaps_unique_vs_duplicated_by_cellType_detail_FDR", FDR, ".pdf")
+ggsave(here(plotDir, f_name),
+       combined_unique_dup_plots, width = 10, height = 8)
+
+
+
 ##==============================================================================
 ## Make "Distribution of Cell Type-Specific LinkPeaks (Unique Overlaps)" plot
 
@@ -225,7 +280,8 @@ ggsave(here(plotDir, f_name),
 
 
 ##==============================================================================
-## Calculate and plot top 3 most frequent cell type combinations for each multiplicity level. I have 10 levels 
+# Calculate and plot top 3 most frequent cell type combinations for each multiplicity level. I have 10 levels 
+# plot the results for the first 6 multiplicity levels (e.g., n=1 through n=6).
 
 message("Calculate the top 3 most frequent cell type combinations for each multiplicity level")
 
