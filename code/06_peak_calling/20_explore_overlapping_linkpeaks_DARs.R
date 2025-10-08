@@ -1,5 +1,5 @@
 ########################################################################
-## Summaries/Prepare plots for interpretate Peaks Overlapping Links-DARs
+## Summaries/Prepare plots for interpret Peaks Overlapping Links-DARs
 ##
 ## Authors. CSC
 ## Date. Oct 02, 2025
@@ -56,7 +56,8 @@ message("Loading Unique-Overlap Hits ...")
 ## load full overlaps df
 overlaps_df <- read.csv(here(inputCSV_Overlaps_Dir, 
                              paste0("Overlaps_LinkPeak_DARs_FDR", FDR, ".csv")))
-# # test
+## test
+head(overlaps_df)
 # colnames(overlaps_df)
 # overlaps_df |>
 #     filter(peak_id == "chr1-1745993-1746550") |>
@@ -64,6 +65,42 @@ overlaps_df <- read.csv(here(inputCSV_Overlaps_Dir,
 #     distinct()
 # length(unique(overlaps_df$peak_id)) # 5535
 
+
+##==============================================================================
+## stacked bar plot showing Unique vs. duplicated overlaps per cell type
+
+# Prepare classification
+link_summary_classification <- overlaps_df |>
+    group_by(peak_id) |>
+    summarise(
+        n_cell_types = n_distinct(cell_type),
+        .groups = "drop"
+    ) |>
+    mutate(
+        overlap_type = ifelse(n_cell_types == 1, "Unique", "Duplicated")
+    ) |>
+    select(peak_id, overlap_type) # Keep only peak_id and classification
+head(link_summary_classification)
+
+# Join classification back to cell-type level and count distinct LinkPeaks
+plot_df_ct <- overlaps_df |>
+    # Ensure each LinkPeak is counted once per cell type
+    select(peak_id, cell_type) |>
+    distinct() |>
+    # Merge with the classification calculated above
+    left_join(link_summary_classification, by = "peak_id") |>
+    # Aggregate: Count LinkPeaks (n_links) per cell_type and overlap_type
+    group_by(cell_type, overlap_type) |>
+    summarise(
+        n_links = n(),
+        .groups = "drop"
+    )
+head(plot_df_ct)
+
+
+
+
+##==============================================================================
 ## Summarize unique LinkPeak with n_DARs and n_cell_types
 
 link_summary <- overlaps_df |>
@@ -75,9 +112,8 @@ link_summary <- overlaps_df |>
         .groups = "drop"
     ) |>
     # 2138 = LinkPeaks overlapping DARs from exactly one cell type (new definition, consistent with multiplicity)
-    mutate(overlap_type = ifelse(n_cell_types == 1, "Unique", "Replicated"))
+    mutate(overlap_type = ifelse(n_cell_types == 1, "Unique", "Duplicated"))
     # 1572 = LinkPeaks overlapping exactly one DAR (old definition)
-    #mutate(overlap_type = ifelse(n_DARs == 1, "Unique", "Replicated"))
 
 table(link_summary$overlap_type)
 # Replicated     Unique 
