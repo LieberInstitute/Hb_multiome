@@ -253,20 +253,26 @@ message("Creating barplot showing the frequency of each unique cell type .." )
 
 # Filter the link_summary dataframe to include only "Unique" overlaps
 uniques_df <- link_summary |>
-    filter(overlap_type == "Unique")
+    filter(overlap_type == "Unique") |>
+    arrange(desc(n_DARs))
 nrow(uniques_df) # 2138
 
 g_uniques <- uniques_df |>
-    ggplot(aes(x = fct_infreq(cell_types), fill = cell_types)) + # fct_infreq orders bars by count
-    geom_bar(color = "black") +
+    #ggplot(aes(x = fct_infreq(cell_types), fill = cell_types)) + # fct_infreq orders bars by count
+    ggplot(aes(
+        # Use .desc = FALSE (Ascending count) to achieve largest bar at the top of the flipped plot.
+        x = fct_reorder(cell_types, cell_types, .fun = length, .desc = FALSE), 
+        fill = cell_types
+    )) + 
+    geom_bar(color = "black",  fill = "#D62728") +
     geom_text(stat = "count", aes(label = after_stat(count)), hjust = -0.5, size = 3) +
     coord_flip() + # Flip coordinates for readable cell type labels
     scale_y_continuous(expand = expansion(mult = c(0, 0.1))) + # add 10% space on right
     labs(
         title = paste0("Distribution of Cell Type-Specific LinkPeaks (Unique Overlaps - ", nrow(uniques_df),")"),
-        #subtitle = paste0("Total Unique LinkPeaks: ", ),
+        subtitle = paste("FDR = ", FDR ),
         x = "Cell Type (DARs with n=1 Overlap)",
-        y = "Number of LinkPeaks"
+        y = "Number of Overlaps"
     ) +
     theme_minimal() +
     theme(
@@ -276,7 +282,7 @@ g_uniques <- uniques_df |>
 
 f_name <- paste0("overlaps_linkPeak_unique_ct_specific_", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
-       g_uniques, width = 7, height = 7)
+       g_uniques, width = 7, height = 8)
 
 
 ##==============================================================================
