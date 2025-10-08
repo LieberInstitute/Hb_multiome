@@ -314,7 +314,9 @@ message("Summary overlaps done!")
 
 # make combined plot
 g_top_combinations <- ggplot(
-    top_combinations_key,
+    #top_combinations_key,
+    # Filter to include only the first 6 multiplicity levels (n=1 to n=5)
+    top_combinations_key |> filter(`Multiplicity (n)` <= 5),
     aes(x = reorder(display_text, n_peaks), y = n_peaks, fill = factor(`Multiplicity (n)`))
 ) +
     geom_col(show.legend = FALSE) +
@@ -322,20 +324,21 @@ g_top_combinations <- ggplot(
     facet_wrap(~`Multiplicity (n)`, scales = "free_y", ncol = 1) +
     labs(
         title = "Top 3 Cell-Type Combinations\nper Multiplicity Level",
+        subtitle = "first 6 multiplicity levels",
         x = "Cell-Type Combination",
-        y = "Number of LinkPeaks"
+        y = "Number of LinkPeaks Overlaps"
     ) +
     theme_minimal() +
     theme(
         plot.title = element_text(hjust = 0, face = "bold"), # left-aligned title
         strip.text = element_text(face = "bold"),
-        axis.text.y = element_text(size = 6)                 # smaller y-axis labels
+        axis.text.y = element_text(size = 9)                 # smaller y-axis labels
     ) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
 
-f_name <- paste0("overlaps_linkPeak_multiplicity_top3_frequent_ct_", FDR, ".pdf")
+f_name <- paste0("overlaps_linkPeak_5multiplicity_top3_frequent_ct_", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
-       g_top_combinations, width = 10, height = 8)
+       g_top_combinations, width = 8, height = 8)
 
 
 
