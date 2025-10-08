@@ -1,10 +1,12 @@
 ########################################################################
-## Summaries: three strategies (pairwise, unique DARs, unique Links)
-##
+## Find findOverlaps() between Unique LinkPeaks and DARs
+## Plot:
+## - barplot of number of links by cellType
+## - barplot of DARs by cellType (FDR=0.1 and FDR=0.2)
+## 
 ## Authors. CSC
 ## Date. Sep 24, 2025
 ## Recommended resources on interactive mode: srun --pty --mem=30GB --x11 bash
-## Note. Seurat objects were created with module load conda_R/4.3.x
 ########################################################################
 
 library("GenomicRanges") 
@@ -66,8 +68,6 @@ lst_peak_files <- list.files(
 )
 #lst_peak_files = list.files(path = input_cvsDir)
 message(length(lst_peak_files), " Link peak-genes files found ... ")
-# lst_peak_files
-## tier field is missing ?
 
 # bind all files 
 list_of_df <- lapply(here(inputCSV_Links_Dir, lst_peak_files), read.csv)
@@ -110,13 +110,11 @@ ggsave(here(plotDir, f_name),
 
 message("Loading DARs results ...")
 
-all_DARs_files <- list.files(
+lst_DARs_files_cellType <- list.files(
     path = inputCSV_DARs_Dir,
-    pattern = "voomlmFit_DAR_peaks.*\\.csv$",
+    pattern = "voomlmFit_DAR_peaks_ALL_in_.*\\.csv$",
     full.names = FALSE
 )
-# Subset the negation (files NOT containing "ALL_in_")
-lst_DARs_files_cellType <- grep("voomlmFit_DAR_peaks_ALL_in_", all_DARs_files, value = TRUE, invert = TRUE)
 
 message(length(lst_DARs_files_cellType), " DAR files found ... ")
 lst_DARs_files_cellType
@@ -124,9 +122,9 @@ lst_DARs_files_cellType
 
 #===========================================================================
 
-message("Parsing DARs for each cellType at ", FDR_thresh)
+message("Parsing DARs for each cellType at FDR ", paste("FDR=", FDR_thresh, " "))
 
-DARS_signif_df_lst = list()
+#DARS_signif_df_lst = list()
 # FDR_thresh = c(0.1, 0.2)
 
 ## extract/filters DARs from a given list of DARs at specific FDR thresh
@@ -143,7 +141,8 @@ filter_signific_DARs <- function(
     DARS_signif_df_lst <- list()
     
     for (ct in lst_DARs_files_cellType) {
-        ct_name <- gsub("voomlmFit_DAR_peaks_|.csv", "", ct)
+        
+        ct_name <- gsub("voomlmFit_DAR_peaks_ALL_in_|.csv", "", ct)
         message("Processing DARs for [", ct_name, "] with FDR=", fdr_thresh)
         
         DARs_csv <- here(inputCSV_DARs_Dir, ct)
@@ -198,7 +197,7 @@ table(DARs_results_all$FDR_threshold)
 # FDR0.1 FDR0.2 
 # 257010 325580 
 DARs_results_all |> head()
-
+nrow(DARs_results_all[DARs_results_all$cell_type == "LHb.4", ])
 
 #===========================================================================
 
@@ -244,6 +243,7 @@ walk2(
         height = 7
     )
 )
+
 
 ## overlay both thr for comparison purposes 
 
