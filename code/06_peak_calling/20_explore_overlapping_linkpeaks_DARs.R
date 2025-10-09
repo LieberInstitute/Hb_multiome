@@ -56,7 +56,6 @@ message("Loading Unique-Overlap Hits ...")
 ## load full overlaps df
 overlaps_df <- read.csv(here(inputCSV_Overlaps_Dir, 
                              paste0("Overlaps_LinkPeak_DARs_FDR", FDR, ".csv")))
-## test
 head(overlaps_df)
 # colnames(overlaps_df)
 # overlaps_df |>
@@ -67,7 +66,7 @@ head(overlaps_df)
 
 
 ##==============================================================================
-## stacked bar plot showing Unique vs. duplicated overlaps per cell type
+## stacked bar plot showing Unique vs. Shared overlaps per cell type
 
 # Prepare classification
 link_summary_classification <- overlaps_df |>
@@ -77,19 +76,30 @@ link_summary_classification <- overlaps_df |>
         .groups = "drop"
     ) |>
     mutate(
-        overlap_type = ifelse(n_cell_types == 1, "Unique", "Duplicated")
+        overlap_type = ifelse(n_cell_types == 1, "Unique", "Shared")
     ) |>
     select(peak_id, overlap_type) # Keep only peak_id and classification
 head(link_summary_classification)
 
-# Join classification back to cell-type level and count distinct LinkPeaks
-plot_df_ct <- overlaps_df |>
+
+## Join classification back to cell-type level and count distinct LinkPeaks --> save result
+
+unique_shared_overlaps <- overlaps_df |>
     # Ensure each LinkPeak is counted once per cell type
     select(peak_id, cell_type) |>
     distinct() |>
     # Merge with the classification calculated above
-    left_join(link_summary_classification, by = "peak_id") |>
-    # Aggregate: Count LinkPeaks (n_links) per cell_type and overlap_type
+    left_join(link_summary_classification, by = "peak_id") 
+nrow(unique_shared_overlaps)
+# 14611
+
+# save detailed unique and shared overlaps
+f_name <- here(processedDir, paste0("overlaps_detailed_unique_shared_FDR", FDR, ".csv"))
+write.csv(unique_shared_overlaps, f_name, row.names = FALSE)
+
+
+# Join classification back to cell-type level and count distinct LinkPeaks
+plot_df_ct <- unique_shared_overlaps |>
     group_by(cell_type, overlap_type) |>
     summarise(
         n_links = n(),
@@ -97,9 +107,21 @@ plot_df_ct <- overlaps_df |>
     )
 head(plot_df_ct)
 
+# Calculate total counts for each overlap type
+total_counts <- plot_df_ct |>
+    group_by(overlap_type) |>
+    summarise(total_n = sum(n_links))
+# Create named vectors for colors and labels
+overlap_colors <- c("Shared" = "grey", "Unique" = "#D62728")
+# Define the custom labels using the calculated totals
+overlap_labels <- c(
+    "Shared" = paste0("Shared (N=", total_counts$total_n[total_counts$overlap_type == "Shared"], ")"),
+    "Unique" = paste0("Unique (N=", total_counts$total_n[total_counts$overlap_type == "Unique"], ")")
+)
+
 g_cell_type_overlap <- plot_df_ct |>
     ggplot(aes(
-        # Order cell types by the total number of links (sum of Unique + Duplicated)
+        # Order cell types by the total number of links (sum of Unique + Shared)
         x = fct_reorder(cell_type, n_links, .fun = sum), 
         y = n_links, 
         fill = overlap_type
@@ -112,18 +134,20 @@ g_cell_type_overlap <- plot_df_ct |>
         size = 3
     ) +
     labs(
-        title = "Unique vs. Duplicated Overlaps by Cell Type",
+        title = "Unique vs. Shared Overlaps by Cell Type",
         subtitle = "Peaks classified by multiplicity of cell type overlap | FDR = 0.2",
         x = "Cell Type",
         y = "Number of Overlaps",
         fill = "Overlap Type"
     ) +
-    scale_fill_manual(values = c("Duplicated" = "grey", "Unique" = "#D62728")) +
+    scale_fill_manual(
+        values = overlap_colors, 
+        labels = overlap_labels
+    ) +
     coord_flip() + # Flip for readability
     theme_minimal() +
     theme( # legend right / bottom 
-        legend.position = c(0.95, 0.05), 
-        # Anchor the legend's bottom-right corner to that coordinate
+        legend.position.inside = c(0.95, 0.05), 
         legend.justification = c("right", "bottom"), 
         legend.background = element_rect(colour = "gray80", fill = "white") 
     )
@@ -145,17 +169,15 @@ link_summary <- overlaps_df |>
         .groups = "drop"
     ) |>
     # 2138 = LinkPeaks overlapping DARs from exactly one cell type (new definition, consistent with multiplicity)
-    mutate(overlap_type = ifelse(n_cell_types == 1, "Unique", "Duplicated"))
+    mutate(overlap_type = ifelse(n_cell_types == 1, "Unique", "Shared"))
     # 1572 = LinkPeaks overlapping exactly one DAR (old definition)
 
 table(link_summary$overlap_type)
-# Replicated     Unique 
-# 3397            2138 
-table(link_summary$n_cell_types==1)
-# FALSE  TRUE 
-# 3397  2138 
+# Shared Unique 
+# 3636   1967
+#table(link_summary$n_cell_types==2)
 
-f_name <- here(processedDir, paste0("overlaps_summary_LinkPeak_FDR", FDR, ".csv"))
+f_name <- here(processedDir, paste0("overlaps_summary_LinkPeak-DARs_FDR", FDR, ".csv"))
 write.csv(link_summary, f_name, row.names = FALSE)
 
 message("Summary overlaps done!")
