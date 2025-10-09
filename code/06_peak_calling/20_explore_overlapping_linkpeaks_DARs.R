@@ -186,8 +186,14 @@ g_overlap_type <- link_summary |>
 
 g_multiplicity <- link_summary |>
     mutate(n_cell_types_factor = factor(n_cell_types)) |>
-    ggplot(aes(x = n_cell_types_factor)) +
-    geom_bar(fill = "grey", color = "black") + # Use a distinct color
+    # create the color classification column, I want first red
+    mutate(
+        bar_color = ifelse(n_cell_types == 1, "#D62728", "grey")
+    ) |>
+    ggplot(aes(x = n_cell_types_factor, fill = bar_color)) +
+    geom_bar(color = "black") + 
+    # use the actual values in the 'bar_color' column as colors
+    scale_fill_identity() + 
     geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
     labs(
         #title = "Multiplicity of Cell Type Overlap (DARs per LinkPeak)",
