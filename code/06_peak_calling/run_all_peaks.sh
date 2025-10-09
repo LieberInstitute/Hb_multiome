@@ -78,6 +78,20 @@ rm -f ${PLOTDIR}/${SUBDIR}/18_pseudobulk_DARs_Volcano_Violin/*.pdf
 id6=$(sbatch --parsable --dependency=afterok:$id6 18_pseudobulk_DARs_Volcano_Violin.sh)
 
 
+echo "===== 19 xxxx  ................."
+
+rm -f ${CODEDIR}/${SUBDIR}/logs/...
+sbatch <- 19_Linkage_DARs_analysis.R
+
+
+echo "===== 20 xxxx  ................."
+
+rm -f ${CODEDIR}/${SUBDIR}/logs/20_explore_overlapping_linkpeaks_DARs.txt.txt
+rm -f ${PROCESSEDIR}/${SUBDIR}/20_explore_overlapping_linkpeaks_DARs/overlaps*.csv
+rm -f ${PLOTDIR}/${SUBDIR}/20_explore_overlapping_linkpeaks_DARs/overlaps*.pdf
+
+# sbatch 20_explore_overlapping_linkpeaks_DARs.sh
+id6=$(sbatch --parsable --dependency=afterok:$id6 18_pseudobulk_DARs_Volcano_Violin.sh)
 
 
 echo "Done!!-------------------------------------------------------------------"
