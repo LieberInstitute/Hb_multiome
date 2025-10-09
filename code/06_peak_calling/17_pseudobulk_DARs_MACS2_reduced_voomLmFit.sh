@@ -1,12 +1,13 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=25G
+#SBATCH --mem=35G
 #SBATCH --job-name=17_pseudobulk_DARs_MACS2_reduced_voomLmFit_ct
 #SBATCH -c 4
-#SBATCH -t 1-00:00:00
+#SBATCH -t 2-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
 #SBATCH --array=0-17%20   # 18 clusters, max 4 running concurrently
+# SBATCH --array=0-2%3   # 18 clusters, max 4 running concurrently
 # SBATCH --mail-type=ALL
 
 set -eo pipefail
@@ -17,6 +18,8 @@ clust=(
   "LHb.2.7" "LHb.4" "LHb.7" "MHb.1" "MHb.1.2" "MHb.2" "MHb.3"
   "Microglia" "Oligo" "OPC" "Thal"
 )
+# clust=("Excit.Thal" "Inhib.Thal" "LHb.4")
+
 
 # Allow local testing; SLURM sets this in the array
 i=${SLURM_ARRAY_TASK_ID:-0}
@@ -31,7 +34,7 @@ fi
 res="${clust[$i]}"
 
 mkdir -p logs
-log_path="logs/17_pseudobulk_DARs_MACS2_reduced_voomLmFit_ct${res}.log"
+log_path="logs/17_pseudobulk_DARs_MACS2_reduced_voomLmFit_ct_${res}.txt"
 
 {
 
