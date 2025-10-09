@@ -92,9 +92,9 @@ g1 <- ggplot(cluster_counts, aes(x = reorder(cluster, n), y = n)) +
     geom_text(aes(label = n), hjust = -0.2, size = 3) +
     labs(
         title = "Links by Cell Type",
-        subtitle = paste0("FDR thr = ", FDR),
-        x = "Cell Type",
-        y = "Number of Links"
+        subtitle = paste0(sum(cluster_counts$n), " unique links | FDR thr = ", FDR),
+        x = NULL, # "Cell Type",
+        y = "Links per cell type"
     ) +
     theme_minimal() +
     coord_flip() +

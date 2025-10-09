@@ -67,7 +67,16 @@ id5=$(sbatch --parsable --dependency=afterok:$id3 16_pseudobulk_DARs_MACS2_reduc
 
 echo "===== DARs (voomLmFit) in pb assays with merge macs2 peaks / by cell-type  ................."
 
-id6=$(sbatch --parsable --dependency=afterok:$id3 17_pseudobulk_DARs_MACS2_reduced_voomLmFit.R)
+id6=$(sbatch --parsable --dependency=afterok:$id3 17_pseudobulk_DARs_MACS2_reduced_voomLmFit.sh)
+
+
+echo "===== Visualizations for DARs by cellType  ................."
+
+rm -f ${CODEDIR}/${SUBDIR}/logs/18_pseudobulk_DARs_Volcano_Violin.txt
+rm -f ${PLOTDIR}/${SUBDIR}/18_pseudobulk_DARs_Volcano_Violin/*.pdf
+# sbatch 18_pseudobulk_DARs_Volcano_Violin.sh
+id6=$(sbatch --parsable --dependency=afterok:$id6 18_pseudobulk_DARs_Volcano_Violin.sh)
+
 
 
 
