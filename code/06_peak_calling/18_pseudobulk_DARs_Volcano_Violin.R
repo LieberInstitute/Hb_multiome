@@ -69,47 +69,62 @@ create_barPlot_significant_DARs <- function(res_enrich, clus, FDR_thr, lfc_thres
     ## Barplot of Up vs Down DARs per cluster
     # testing: 
     # res_enrich = res_enrich
-    # clust_name = "Endo"
+    # clus = "LHb.7"
     # FDR_thr = 0.2
     
     message("Starting Barplot for cluster ", clus)
     
-    # Prepare counts of Up and Down DARs for the specified cluster
+    # Prepare counts of Open and less-open DARs for the specified cluster
     up_down_counts <- res_enrich |>
         mutate(
             logFC = .data[[paste0("logFC_", clus)]], # Access column by dynamic name
             fdr = .data[[paste0("fdr_", clus)]]      # Access column by dynamic name
         ) |>
         filter(
-            fdr < FDR_thr                           # Filter for significant DARs
-            # abs(logFC) > lfc_thresh               # Filter by logFC threshold
+            fdr < FDR_thr                            # Filter for significant DARs
         ) |>
         mutate(
-            direction = case_when(
-                # logFC > lfc_thresh ~ "Up",
-                # logFC < -lfc_thresh ~ "Down",
-                logFC > 0 ~ "Up", # Up/Down is now based on positive/negative logFC
-                logFC < 0 ~ "Down",
+            accessibility = case_when(
+                logFC > 0 ~ "Increased Accessibility", # Improved label
+                logFC < 0 ~ "Decreased Accessibility", # Improved label
                 TRUE ~ "Not"
             )
         ) |>
-        filter(direction != "Not") |>
-        group_by(direction) |>
+        filter(accessibility != "Not") |>
+        group_by(accessibility) |>
         summarise(n = n(), .groups = "drop")
     
-    g1 <- ggplot(up_down_counts, aes(x = "", y = n, fill = direction)) +
+    # Check if there are significant DARs to plot
+    if (nrow(up_down_counts) == 0) {
+        warning("No significant DARs found for cluster ", clus, " at specified thresholds.")
+        return(NULL)
+    }
+    # Calculate the maximum count for scaling
+    max_count <- max(up_down_counts$n, na.rm = TRUE)
+    
+    g1 <- ggplot(up_down_counts, aes(x = "", y = n, fill = accessibility)) +
         geom_col(position = "dodge") +
-        scale_fill_manual(values = c("Up" = "red", "Down" = "blue")) +
+        scale_fill_manual(
+            values = c("Increased Accessibility" = "red", "Decreased Accessibility" = "blue"),
+            breaks = c("Increased Accessibility", "Decreased Accessibility")
+        ) +
         labs(
-            title = clus,
+            title = paste("Significant DARs in", clus), 
             x = "",
-            y = "Number of DARs",
-            fill = "Direction"
+            y = "Number of Significant DARs",          
+            fill = "Differential Accessibility"       
         ) +
         theme_minimal() +
-        geom_text(aes(label = n), position = position_dodge(width = 0.9), vjust = -0.5)
+        geom_text(aes(label = n), position = position_dodge(width = 0.9), vjust = -0.75) + 
+        scale_y_continuous(
+            expand = c(0, 0), 
+            limits = c(0, max_count * 1.15) 
+        ) +
+        theme(axis.text.x = element_blank(),
+              axis.ticks.x = element_blank())
     
     message("Up/Down Barplot done!")
+    
     return(g1)
     
 }
@@ -122,7 +137,7 @@ create_volcano <- function(res_enrich, clus, FDR_thr, lfc_thresh, plot_Dir) {
     # res_enrich=res_enrich
     # clus=clust_name
     # FDR_thr=0.2
-        
+    
     message("Starting Volcano for cluster ", clus)
     
     plot_data <- res_enrich |>
@@ -138,13 +153,13 @@ create_volcano <- function(res_enrich, clus, FDR_thr, lfc_thresh, plot_Dir) {
                 TRUE ~ "Not Significant"
             )
         )
-
+    
     # Calculate the number of all and significant DARs
     n_all_dars <- nrow(plot_data)
     n_significant_dars <- sum(plot_data$is_significant == "Significant")
     
     plot_title <- paste0("Differentially Accessible Regions (DARs) in ", clus)
-    plot_subtitle <- paste0("Total DARs: ", n_all_dars, " | Significant DARs: ", n_significant_dars, " | FDR = ", FDR_thr)
+    plot_subtitle <- paste0("Total DARs: ", n_all_dars, " | [FDR < ", FDR_thr, "] = ", n_significant_dars)
     
     g1 <- ggplot(plot_data, aes(x = logFC, y = -log10(fdr), color = is_significant)) +
         geom_point(alpha = 0.5, size = 1) +
@@ -167,20 +182,20 @@ create_volcano <- function(res_enrich, clus, FDR_thr, lfc_thresh, plot_Dir) {
     dev.off()
     
     print("Volcano done!")
-
+    
 }
 
 
 ##==============================================================================
 
 
-## Parse csv DAR files and plot Volcano and ViolinPlot for the 5 "Up/Down" DARs by cellType
+## Parse csv DAR files and plot Volcano and BarPlot for "Up/Down" DARs by cellType
 
 # empty list to store the plots
 barPlot_list <- list()
 
 for (ct_DARs in lst_DARs_enrich_cvs) {
-    # ct_DARs = lst_DARs_enrich_cvs[1] # "Endo"
+    # ct_DARs = lst_DARs_enrich_cvs[2] # "Endo"
     
     message("Processing:\n", ct_DARs)
     
@@ -192,9 +207,6 @@ for (ct_DARs in lst_DARs_enrich_cvs) {
     } else {
         stop(paste("File not found:", DAR_peaks_enrich_cvs))
     }
-    #colnames(res_enrich)
-
-    # get cluster name. ge. "Endo"
     clust_name <- sub("^voomlmFit_DAR_peaks_ALL_in_(.*)\\.csv$", "\\1", ct_DARs)
     
     ## create plot for FDR_thr (s)     
@@ -210,50 +222,12 @@ for (ct_DARs in lst_DARs_enrich_cvs) {
     
     barPlot_list[[clust_name]] <- create_barPlot_significant_DARs(res_enrich, clust_name, FDR_thr, lfc_thresh)
     
-    # Identify top up/down peaks based on FDR
-    fdr_cols <- grep("^fdr_", colnames(res_enrich), value = TRUE)
-
-    # cluster-specific significant peaks / at 2 FDR thr
-    FDR_thr
-    # [1] 0.1 0.2
-    
-    # Loop over each threshold
-    purrr::walk(FDR_thr, function(fdr_value) {
-        
-        # Filter significant peaks for this FDR threshold
-        res_sig_ct <- res_enrich |>
-            filter(.data[[paste0("fdr_", clust_name)]] < fdr_value) |>
-            # abs(.data[[paste0("logFC_", clust_name)]]) > lfc_thresh) |>
-            mutate(
-                logFC_ct = .data[[paste0("logFC_", clust_name)]],
-                direction = case_when(
-                    logFC_ct >  0 ~ "Up",    # opening
-                    logFC_ct <  0 ~ "Down",  # closing
-                    TRUE ~ "NS"
-                )
-            )
-        if (nrow(res_sig_ct) > 0) {
-            message(glue::glue(
-                "[{clust_name}] {nrow(res_sig_ct)} peaks pass FDR < {fdr_value}"
-            ))
-            
-            # Build output file name
-            f_name <- here(processed_Dir, paste0("voomlmFit_DAR_filtered_peaks_", clust_name, "_FDR", fdr_value,".csv"))
-            write.csv(res_sig_ct, f_name, row.names = FALSE)
-            message("Filtered peaks (cvs) saved [", clust_name, "]")
-            
-        } else {
-            message("No significant peaks for FDR < ", fdr_value, "found")
-        }
-    })
-    
 }
 
 
-# Plot barPlots
+# Integrated BarPlots for Open/Close Chromatin
+
 if (length(barPlot_list) > 0) {
-    
-    pdf(here(plot_Dir, "BarPlots_ALL_cellTypes_voomLmFit.pdf"), width = 10, height = 10)
     
     # Remove redundant y-axis labels
     barPlot_list_clean <- lapply(barPlot_list, function(p) {
@@ -261,25 +235,28 @@ if (length(barPlot_list) > 0) {
     })
     
     combined_plot <- wrap_plots(barPlot_list_clean, ncol = 5)
-
-    title_name <- paste0("Number of Up/Down Enriched DARs by CellType (FDR < ", FDR_thr, ")") 
+    
+    title_name <- paste0("Number of Open/Close DARs by CellType") 
     final_plot <- combined_plot +
         plot_annotation(
             title = title_name,
+            subtitle =  paste0("FDR < ", FDR_thr),
             theme = theme(
                 plot.title = element_text(size = 12, hjust = 0.5),
                 axis.title.y = element_text(size = 9)
             )
         )
-
-    print(final_plot)
     
+    pdf(here(plot_Dir, "BarPlots_ALL_cellTypes_voomLmFit.pdf"), width = 10, height = 10)
+    print(final_plot)
     dev.off()
+    
+    message("BarPlots done!")
     
 }
 
 
-message("Plots done!")
+message("All done!")
 
 
 # library("slurmjobs")
