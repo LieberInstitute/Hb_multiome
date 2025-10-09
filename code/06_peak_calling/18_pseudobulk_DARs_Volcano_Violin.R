@@ -23,6 +23,7 @@ library("here")
 resolution_level = "Mid"
 lfc_thresh <- 0.25 # 2^0.25 ≈ 1.189 
 FDR_thr = c(0.10, 0.20)
+fdr_thr02 = 0.2
 
 ## Check/create directories
 input_cvsDir <- here( 
@@ -72,6 +73,8 @@ create_barPlot_significant_DARs <- function(res_enrich, clus, FDR_thr, lfc_thres
     # clus = "LHb.7"
     # FDR_thr = 0.2
     
+    if (!FDR_thr==0.2) { stop() }
+    
     message("Starting Barplot for cluster ", clus)
     
     # Prepare counts of Open and less-open DARs for the specified cluster
@@ -109,19 +112,28 @@ create_barPlot_significant_DARs <- function(res_enrich, clus, FDR_thr, lfc_thres
             breaks = c("Increased Accessibility", "Decreased Accessibility")
         ) +
         labs(
-            title = paste("Significant DARs in", clus), 
-            x = "",
-            y = "Number of Significant DARs",          
+            title = paste0("[", clus, "]"), 
+            x = NULL,
+            y = NULL,          
             fill = "Differential Accessibility"       
         ) +
-        theme_minimal() +
-        geom_text(aes(label = n), position = position_dodge(width = 0.9), vjust = -0.75) + 
+        theme_minimal() + 
+        geom_text(
+            aes(label = n), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.75,
+            size = 3
+        ) + 
         scale_y_continuous(
             expand = c(0, 0), 
             limits = c(0, max_count * 1.15) 
         ) +
-        theme(axis.text.x = element_blank(),
-              axis.ticks.x = element_blank())
+        theme(
+            plot.title = element_text(size = 10, face = "bold"),
+            axis.text.y = element_text(size = 8), 
+            axis.text.x = element_blank(),
+            axis.ticks.x = element_blank()
+        )
     
     message("Up/Down Barplot done!")
     
@@ -209,10 +221,10 @@ for (ct_DARs in lst_DARs_enrich_cvs) {
     }
     clust_name <- sub("^voomlmFit_DAR_peaks_ALL_in_(.*)\\.csv$", "\\1", ct_DARs)
     
-    ## create plot for FDR_thr (s)     
+    ## create plot for FDR_thr (s)
     purrr::map(FDR_thr, ~ {
         create_volcano(
-            res_enrich, 
+            res_enrich,
             clust_name,
             FDR_thr = .x,   # current FDR
             lfc_thresh = lfc_thresh,
@@ -220,34 +232,37 @@ for (ct_DARs in lst_DARs_enrich_cvs) {
         )
     })
     
-    barPlot_list[[clust_name]] <- create_barPlot_significant_DARs(res_enrich, clust_name, FDR_thr, lfc_thresh)
+    # Only for FDR=0.2
+    barPlot_list[[clust_name]] <- create_barPlot_significant_DARs(res_enrich, clust_name, fdr_thr02, lfc_thresh)
     
 }
 
 
 # Integrated BarPlots for Open/Close Chromatin
+# Only for FDR=0.2
 
 if (length(barPlot_list) > 0) {
     
-    # Remove redundant y-axis labels
-    barPlot_list_clean <- lapply(barPlot_list, function(p) {
-        p + ylab(NULL) + theme(legend.position = "none")
-    })
+    combined_plot <- wrap_plots(barPlot_list, ncol = 5)
     
-    combined_plot <- wrap_plots(barPlot_list_clean, ncol = 5)
+    title_name <- paste0("Number of DARs per Cell Type") 
     
-    title_name <- paste0("Number of Open/Close DARs by CellType") 
     final_plot <- combined_plot +
+        plot_layout(guides = "collect") + 
         plot_annotation(
             title = title_name,
-            subtitle =  paste0("FDR < ", FDR_thr),
+            subtitle =  paste0("FDR < ", fdr_thr02),
             theme = theme(
-                plot.title = element_text(size = 12, hjust = 0.5),
-                axis.title.y = element_text(size = 9)
+                # Sets the position of the single merged legend
+                legend.position = "bottom",
+                element_text(size = rel(10)), 
+                plot.title = element_text(size = rel(0.9), face = "bold"), # 90% of base size
+                plot.subtitle = element_text(size = rel(0.8))              # 80% of base size
             )
         )
     
-    pdf(here(plot_Dir, "BarPlots_ALL_cellTypes_voomLmFit.pdf"), width = 10, height = 10)
+    f_name = paste0("BarPlots_ALL_cellTypes_voomLmFit_FDR", fdr_thr02, ".pdf")
+    pdf(here(plot_Dir, f_name), width = 8, height = 8)
     print(final_plot)
     dev.off()
     
