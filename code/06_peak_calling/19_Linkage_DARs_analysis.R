@@ -196,8 +196,9 @@ DARs_results_all <- DARs_results_all |>
 table(DARs_results_all$FDR_threshold)
 # FDR0.1 FDR0.2 
 # 257010 325580 
+# 266011 349352
 DARs_results_all |> head()
-nrow(DARs_results_all[DARs_results_all$cell_type == "LHb.4", ])
+# nrow(DARs_results_all[DARs_results_all$cell_type == "LHb.7", ])
 
 #===========================================================================
 
@@ -216,17 +217,33 @@ thresholds <- unique(DARs_counts$FDR_threshold)
 
 # Loop through thresholds and plot one at a time
 
-# Extract order used in the LinkedPeaks plot to keep same order
+# Extract cluster-order used in the LinkPeaks plot to set plots side to side in the same order
 cluster_order <- cluster_counts |>
     pull(cluster)
-[1] "LHb.4"      "MHb.2"      "Excit.Thal" "LHb.2.7"    "Inhib.Thal"
-[6] "LHb.1.3.4"  "MHb.1"      "LHb.1"      "Astrocyte"  "LHb.1.3"   
-[11] "Oligo"      "Thal"       "MHb.1.2"    "MHb.3"      "OPC"       
-[16] "Endo"       "Microglia" 
 DARs_counts |> filter(FDR_threshold=="FDR0.2") |> pull(cell_type)
-[1] "Oligo"     "MHb.2"     "Astrocyte" "LHb.2.7"   "MHb.1"     "LHb.1"    
-[7] "MHb.1.2"   "OPC"       "Microglia" "LHb.1.3.4" "Thal"      "LHb.7"    
-[13] "Endo"      "LHb.1.3"   "MHb.3" 
+
+# Validate cluster vectors: check for missing clusters between LinkPeaks and DARs
+cluster_order_DARs <- DARs_counts |>
+    filter(FDR_threshold == "FDR0.2") |>
+    pull(cell_type)
+
+# Clusters unique to each dataset
+DAR_clust     <- setdiff(cluster_order_DARs, cluster_order)
+Linked_clust  <- setdiff(cluster_order, cluster_order_DARs)
+
+if (length(DAR_clust) > 0) {
+    message("Clusters found in DARs but missing in LinkPeaks: ",
+            paste(DAR_clust, collapse = ", "))
+    cluster_order <- unique(c(cluster_order, DAR_clust))
+} else if (length(Linked_clust) > 0) {
+    message("Clusters found in LinkPeaks but missing in DARs: ",
+            paste(Linked_clust, collapse = ", "))
+    cluster_order <- unique(c(cluster_order, Linked_clust))
+} else {
+    message("oth LinkPeaks and DARs contain the same clusters.")
+}
+# preserve original order but keep unique entries
+cluster_order <- unique(cluster_order)
 
 g2 <- lapply(thresholds, function(th) {
     
