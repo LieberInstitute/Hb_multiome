@@ -94,7 +94,7 @@ g1 <- ggplot(cluster_counts, aes(x = reorder(cluster, n), y = n)) +
         title = "Links by Cell Type",
         subtitle = paste0(sum(cluster_counts$n), " unique links | FDR thr = ", FDR),
         x = NULL, # "Cell Type",
-        y = "Links per cell type"
+        y = "Number of Links"
     ) +
     theme_minimal() +
     coord_flip() +
@@ -252,15 +252,15 @@ g2 <- lapply(thresholds, function(th) {
         current_cluster_order <- cluster_order[cluster_order %in% unique(df_sub$cell_type)]
         reversed_order <- rev(current_cluster_order)
         
-        ggplot(df_sub, # aes(x = reorder(cell_type, n), y = n)) +
+        ggplot(df_sub,
                aes(x = factor(cell_type, levels = reversed_order), y = n)) +
             
             geom_col(fill = "steelblue") +
             geom_text(aes(label = n), hjust = -0.2, size = 3) +
             labs(
                 title = paste("DARs by Cell Type"),
-                subtitle = paste("FDR thr =", str_split(th, "FDR")[[1]][2]),
-                x = "Cell Type",
+                subtitle = paste0(sum(DARs_counts$n), " unique DARs | FDR thr = ", FDR),
+                x = NULL,
                 y = "Number of DARs"
             ) +
             theme_minimal() +
@@ -287,7 +287,7 @@ ggsave(here(plotDir, f_name),
        combined_LinkPeaks_DARs, width = 7, height = 7)
 
 
-## overlay both thr for comparison purposes 
+## overlay both FDR thr for comparison purposes 
 
 # Turn into a nicely formatted label
 subtitle_label <- paste(
@@ -302,7 +302,7 @@ g3 <- ggplot(DARs_counts, aes(x = reorder(cell_type, n), y = n, fill = FDR_thres
     labs(
         title = paste("DARs by Cell Type"),
         subtitle = subtitle_label,
-        x = "Cell Type",
+        x = NULL,
         y = "Number of DARs",
         fill = "FDR Threshold"
     ) +
