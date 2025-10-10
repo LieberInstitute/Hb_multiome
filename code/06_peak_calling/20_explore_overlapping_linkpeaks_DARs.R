@@ -131,12 +131,12 @@ g_cell_type_overlap <- plot_df_ct |>
     geom_text(
         aes(label = n_links), 
         position = position_stack(vjust = 0.5, reverse = TRUE), # Center the labels
-        size = 3
+        size = 4
     ) +
     labs(
         title = "Unique vs. Shared Overlaps by Cell Type",
-        subtitle = "Peaks classified by multiplicity of cell type overlap | FDR = 0.2",
-        x = "Cell Type",
+        subtitle = paste0("FDR thr = ", FDR),
+        x = NULL,
         y = "Number of Overlaps",
         fill = "Overlap Type"
     ) +
@@ -152,7 +152,7 @@ g_cell_type_overlap <- plot_df_ct |>
         legend.background = element_rect(colour = "gray80", fill = "white") 
     )
 
-f_name = paste0("overlaps_unique_vs_duplicated_by_cellType_FDR", FDR, ".pdf")
+f_name = paste0("overlaps_unique_replicated_cellType_FDR", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
        g_cell_type_overlap, width = 8, height = 8)
 
@@ -194,9 +194,12 @@ g_overlap_type <- link_summary |>
     ggplot(aes(x = overlap_type, fill = overlap_type)) +
     geom_bar(color = "black") +
     geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
+    scale_fill_manual(
+        values = c("Unique" = "#D62728", "Shared" = "grey") 
+    ) +
     labs(
         #title = "LinkPeak Overlap: Unique vs. Multi-Cell Type DARs",
-        x = "Overlap Classification",
+        x = "Classification",
         y = NULL,
         fill = "Overlap Type"
     ) +
@@ -216,10 +219,15 @@ g_multiplicity <- link_summary |>
     geom_bar(color = "black") + 
     # use the actual values in the 'bar_color' column as colors
     scale_fill_identity() + 
-    geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
+    geom_text(
+        stat = "count", 
+        aes(label = after_stat(count)), 
+        vjust = -0.5, 
+        size = 4
+    ) +
     labs(
         #title = "Multiplicity of Cell Type Overlap (DARs per LinkPeak)",
-        x = "Number of Distinct Cell Types Overlapping the LinkPeak",
+        x = "Number of Distinct Cell-Types Overlapping",
         y = NULL
     ) +
     scale_y_continuous(limits = c(0, 4000)) +
@@ -238,16 +246,16 @@ g_multiplicity <- link_summary |>
 combined_plot <- (g_overlap_type + g_multiplicity) + plot_layout(widths = c(1, 3)) + 
     plot_layout(axes = "collect_y") & 
     plot_annotation(
-        title = "LinkPeak-DARs Overlap",
+        title = "LinkPeak-DARs Overlaps",
         subtitle = NULL,
         caption = NULL,
         theme = theme(
             plot.margin = margin(5, 5, 5, 5)
         )
     ) &
-    labs(y = "Number of LinkPeaks Overlaps")
+    labs(y = "Number of LinkPeaks-DARs")
 
-f_name <- paste0("overlaps_linkPeak_unique_vs_replicated_FDR", FDR, ".pdf")
+f_name <- paste0("overlaps_combined_unique_distinct_shared_ct_FDR", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
        combined_plot, width = 7, height = 7)
 
@@ -259,7 +267,7 @@ ggsave(here(plotDir, f_name),
 combined_unique_dup_plots <- (g_cell_type_overlap + g_multiplicity) + plot_layout(widths = c(1, 2)) + 
     plot_layout(axes = "collect_y") & 
     plot_annotation(
-        title = "Duplicted Overlaps",
+        #title = "Duplicted Overlaps",
         subtitle = NULL,
         caption = NULL,
         theme = theme(
@@ -268,7 +276,8 @@ combined_unique_dup_plots <- (g_cell_type_overlap + g_multiplicity) + plot_layou
     ) &
     labs(y = "Number of Overlaps")
 
-f_name <- paste0("overlaps_unique_vs_duplicated_by_cellType_detail_FDR", FDR, ".pdf")
+f_name <- paste0("overlaps_combined_unique_shared_ct_detail_FDR", FDR, ".pdf")
+
 ggsave(here(plotDir, f_name),
        combined_unique_dup_plots, width = 10, height = 8)
 
@@ -293,13 +302,18 @@ g_uniques <- uniques_df |>
         fill = cell_types
     )) + 
     geom_bar(color = "black",  fill = "#D62728") +
-    geom_text(stat = "count", aes(label = after_stat(count)), hjust = -0.5, size = 3) +
+    geom_text(
+        stat = "count", 
+        aes(label = after_stat(count)), 
+        hjust = -0.5, 
+        size = 4
+    ) +
     coord_flip() + # Flip coordinates for readable cell type labels
     scale_y_continuous(expand = expansion(mult = c(0, 0.1))) + # add 10% space on right
     labs(
-        title = paste0("Distribution of Cell Type-Specific LinkPeaks (Unique Overlaps - ", nrow(uniques_df),")"),
-        subtitle = paste("FDR = ", FDR ),
-        x = "Cell Type (DARs with n=1 Overlap)",
+        title = "Distribution of Cell Type-Specific Unique LinkPeaks-DARs",
+        subtitle = paste0("Total Overlaps: ", nrow(uniques_df), " | FDR thr = ", FDR),
+        x = NULL,
         y = "Number of Overlaps"
     ) +
     theme_minimal() +
