@@ -57,13 +57,61 @@ message("Loading Unique-Overlap Hits ...")
 overlaps_df <- read.csv(here(inputCSV_Overlaps_Dir, 
                              paste0("Overlaps_LinkPeak_DARs_FDR", FDR, ".csv")))
 head(overlaps_df)
-# colnames(overlaps_df)
-# overlaps_df |>
-#     filter(peak_id == "chr1-1745993-1746550") |>
-#     select(peak_id, cell_type, FDR_CC, fdr_dars) |>
-#     distinct()
-# length(unique(overlaps_df$peak_id)) # 5535
 
+
+##==============================================================================
+## Declare functions:
+
+plt_shared_overlaps <- function(
+        shared_overlaps,
+        FDR,
+        all_shared=TRUE
+) {
+    
+    if (all_shared) { 
+        title = "All 2 Cell Type Shared Overlaps"
+    } else {
+        title = "Only Hb Related"
+    }
+    
+    color_vector <- c(
+        "MHb/LHb Related" = "green4", 
+        "Other Cell Types" = "grey70"
+    )
+    
+    g_shared_2ct <- shared_overlaps |>
+        ggplot(aes(
+            # Use .desc = FALSE (Ascending count) to achieve largest bar at the top of the flipped plot.
+            x = fct_reorder(cell_types, cell_types, .fun = length, .desc = FALSE), 
+            fill = bar_color_group
+        )) + 
+        geom_bar(color = "black") +
+        geom_text(
+            stat = "count", 
+            aes(label = after_stat(count)), 
+            hjust = -0.5, 
+            size = 3
+        ) +
+        coord_flip() + # Flip coordinates for readable cell type labels
+        scale_y_continuous(expand = expansion(mult = c(0, 0.1))) + # add 10% space on right
+        scale_fill_manual(values = color_vector) +
+        labs(
+            title = title,
+            subtitle = paste0("Overlaps: ", nrow(shared_overlaps), " | FDR thr = ", FDR),
+            x = NULL,
+            y = "Number of Overlaps"
+        ) +
+        theme_minimal() +
+        theme(
+            legend.position = "none"
+            # legend.position.inside = c(0.95, 0.05),
+            # legend.justification = c("right", "bottom"), 
+            # legend.background = element_rect(colour = "gray80", fill = "white") 
+        )
+    
+    return(g_shared_2ct)
+    
+}
 
 ##==============================================================================
 ## stacked bar plot showing Unique vs. Shared overlaps per cell type
@@ -152,7 +200,7 @@ g_cell_type_overlap <- plot_df_ct |>
         legend.background = element_rect(colour = "gray80", fill = "white") 
     )
 
-f_name = paste0("overlaps_unique_replicated_cellType_FDR", FDR, ".pdf")
+f_name = paste0("overlaps_unique_shared_cellType_FDR", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
        g_cell_type_overlap, width = 8, height = 8)
 
@@ -168,14 +216,12 @@ link_summary <- overlaps_df |>
         cell_types   = paste(unique(cell_type), collapse = "; "), # list cell types
         .groups = "drop"
     ) |>
-    # 2138 = LinkPeaks overlapping DARs from exactly one cell type (new definition, consistent with multiplicity)
+    # LinkPeaks overlapping DARs from exactly one cell type (new defin ition, consistent with multiplicity)
     mutate(overlap_type = ifelse(n_cell_types == 1, "Unique", "Shared"))
-    # 1572 = LinkPeaks overlapping exactly one DAR (old definition)
 
 table(link_summary$overlap_type)
 # Shared Unique 
 # 3636   1967
-#table(link_summary$n_cell_types==2)
 
 f_name <- here(processedDir, paste0("overlaps_summary_LinkPeak-DARs_FDR", FDR, ".csv"))
 write.csv(link_summary, f_name, row.names = FALSE)
@@ -292,10 +338,9 @@ message("Creating barplot showing the frequency of each unique cell type .." )
 uniques_df <- link_summary |>
     filter(overlap_type == "Unique") |>
     arrange(desc(n_DARs))
-nrow(uniques_df) # 2138
+nrow(uniques_df) # 1967
 
 g_uniques <- uniques_df |>
-    #ggplot(aes(x = fct_infreq(cell_types), fill = cell_types)) + # fct_infreq orders bars by count
     ggplot(aes(
         # Use .desc = FALSE (Ascending count) to achieve largest bar at the top of the flipped plot.
         x = fct_reorder(cell_types, cell_types, .fun = length, .desc = FALSE), 
@@ -311,20 +356,68 @@ g_uniques <- uniques_df |>
     coord_flip() + # Flip coordinates for readable cell type labels
     scale_y_continuous(expand = expansion(mult = c(0, 0.1))) + # add 10% space on right
     labs(
-        title = "Distribution of Cell Type-Specific Unique LinkPeaks-DARs",
+        title = "Cell Type-Specific Unique LinkPeaks-DARs",
         subtitle = paste0("Total Overlaps: ", nrow(uniques_df), " | FDR thr = ", FDR),
         x = NULL,
         y = "Number of Overlaps"
     ) +
     theme_minimal() +
     theme(
-        plot.title = element_text(hjust = 0.5),
-        legend.position = "none" # Remove legend since fill is redundant with the y-axis
+        #plot.title = element_text(hjust = 0.5),
+        legend.position = "none"
     )
 
 f_name <- paste0("overlaps_linkPeak_unique_ct_specific_", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
-       g_uniques, width = 7, height = 8)
+       g_uniques, width = 5, height = 8)
+
+
+
+#===== Distribution of 2 Distinct Cell-Types Overlapping 
+
+message("Creating barplot showing the frequency of 2 distinct cell-types .." )
+
+table(link_summary$n_cell_types==2)
+table(link_summary$n_cell_types)
+#   1    2    3    4    5    6    7    8    9   10   11 
+# 1967 1238  912  693  381  240  100   46   15    9    2 
+
+# Filter the link_summary df to include shared overlaps with 2 shared cell-types
+shared_2ct_df <- link_summary |>
+    filter(overlap_type == "Shared" & n_cell_types == 2) |>
+    arrange(desc(n_DARs))
+nrow(shared_2ct_df) # 1238
+head(shared_2ct_df)
+
+# Prepare Data: Add the classification column for all shared 2-ct overlaps
+shared_2ct_df_colored <- shared_2ct_df |>
+    mutate(
+        is_hdb_related = grepl("MHb|LHb", cell_types),
+        bar_color_group = case_when(
+            is_hdb_related ~ "MHb/LHb Related",
+            TRUE ~ "Other Cell Types"
+        )
+    )
+
+## All shared `cell_types` 
+g1_ove_all <- plt_shared_overlaps(shared_2ct_df_colored, FDR, all_shared=TRUE)
+
+## only those shared `cell_types` that are MHb or LHb related 
+shared_2_Hb_ct_df_colored <- shared_2ct_df_colored |>
+    filter(is_hdb_related==TRUE)
+#nrow(shared_2_Hb_ct_df_colored)
+g2_ove_hb <- plt_shared_overlaps(shared_2_Hb_ct_df_colored, FDR, all_shared=FALSE)
+
+combined_2ct_plot <- (g1_ove_all | g2_ove_hb) +
+    plot_layout(
+        guides = "collect",
+        axis = "collect" )
+
+f_name = paste0("overlaps_shared_2cellType_FDR", FDR, ".pdf")
+ggsave(here(plotDir, f_name),
+       combined_2ct_plot, width = 8, height = 8)
+
+
 
 
 ##==============================================================================
