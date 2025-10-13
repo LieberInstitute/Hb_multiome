@@ -1,5 +1,5 @@
 ########################################################################
-## Summaries/Prepare plots for interpret Peaks Overlapping Links-DARs
+## Summaries/Prepare divergence plots for interpreting Peaks Overlappings
 ##
 ## Authors. CSC
 ## Date. Oct 02, 2025
@@ -93,7 +93,7 @@ plt_shared_overlaps <- function(
             size = 3
         ) +
         coord_flip() + # Flip coordinates for readable cell type labels
-        scale_y_continuous(expand = expansion(mult = c(0, 0.1))) + # add 10% space on right
+        scale_y_continuous(expand = expansion(mult = c(0, 0.25))) + # add 20% space on right
         scale_fill_manual(values = color_vector) +
         labs(
             title = title,
@@ -112,6 +112,108 @@ plt_shared_overlaps <- function(
     return(g_shared_2ct)
     
 }
+
+## create a single summary table for shared ct-levels
+make_combined_summary_divergence_plots <- function( 
+        all_overlaps_raw
+){
+    
+    combined_summary <- all_overlaps_raw |>
+        group_by(cell_type, peak_id_links, overlap_type) |>
+        summarise(
+            peak_accessibility = case_when(
+                all(logFC > 0) ~ "More",
+                all(logFC < 0) ~ "Less",
+                TRUE ~ "Mixed" # Mark as Mixed if LinkPeak has both More and Less DARs
+            ),
+            .groups = "drop" 
+        ) |>
+        count(cell_type, overlap_type, peak_accessibility, name = "n") |>
+        filter(peak_accessibility %in% c("More", "Less")) |> 
+        
+        # Add n_signed column for divergence (More = Negative, Less = Positive)
+        mutate(
+            n_signed = case_when(
+                peak_accessibility == "More" ~ n, 
+                peak_accessibility == "Less" ~ -n, 
+                TRUE ~ 0
+            ),
+            # create a combined factor for filling/coloring/legend
+            fill_group = factor(
+                paste(overlap_type, peak_accessibility),
+                levels = c("Shared Less", "Unique Less",
+                           "Unique More", "Shared More")
+            )
+        )
+    
+    ## define cell order (based on total count magnitude)
+    cell_order_combined <- combined_summary |>
+        group_by(cell_type) |>
+        summarise(total = sum(abs(n_signed)), .groups = "drop") |>
+        arrange(total) |>
+        pull(cell_type)
+    
+    combined_summary$cell_type <- factor(combined_summary$cell_type, levels = cell_order_combined)
+    
+    return(combined_summary)
+    
+}
+
+
+## Single Stacked Diverging Plot 
+plt_divergence_stacked <- function(
+        combined_summary,
+        n_unique_links,
+        n_shared_links,
+        FDR,
+        ct_level,
+        plotDir
+){
+    
+    plot_title = paste("LinkPeaks-DARs: Unique vs. ", ct_level, "Shared Cell-Types")
+    
+    color_palette <- c(
+        "Unique More" = "#D62728",
+        "Shared More" = "#FF9896",
+        "Unique Less" = "#1F77B4",
+        "Shared Less" = "#AEC7E8"
+    )
+    
+    g_divergence_stacked <- ggplot(combined_summary,
+                                   aes(x = cell_type, y = n_signed, fill = fill_group)) +
+        geom_col(color = "black", linewidth = 0.3) + 
+        geom_text(
+            aes(label = n), # raw count to display
+            position = position_stack(vjust = 0.5), 
+            size = 3
+        ) +
+        coord_flip() +
+        scale_fill_manual(
+            values = color_palette,
+            name = "Overlap - Accessibility"
+        ) +
+        scale_y_continuous(
+            labels = abs, # Display only positive numbers on the axis
+            expand = expansion(mult = c(0.15, 0.15))
+        ) +
+        labs(
+            title = plot_title,
+            subtitle = paste0("Unique = ", n_unique_links, " | Shared = ", n_shared_links, " | FDR thr = ", FDR),
+            x = NULL,
+            y = "Number of Overlaps"
+        ) +
+        theme_minimal()
+    # g_divergence_stacked
+    
+    f_name <- paste0("overlaps_unique_and_", ct_level, "_shared_stackedbar_", FDR, ".pdf")
+    ggsave(here(plotDir, f_name),
+           g_divergence_stacked, width = 8, height = 8)
+    
+    #return(g_divergence_stacked)
+    message("Divergence plots completed!")
+    
+}
+
 
 ##==============================================================================
 ## stacked bar plot showing Unique vs. Shared overlaps per cell type
@@ -336,7 +438,7 @@ g_uniques <- uniques_df |>
         size = 4
     ) +
     coord_flip() + # Flip coordinates for readable cell type labels
-    scale_y_continuous(expand = expansion(mult = c(0, 0.1))) + # add 10% space on right
+    scale_y_continuous(expand = expansion(mult = c(0, 0.25))) + # add 10% space on right
     labs(
         title = "Cell Type-Specific Unique LinkPeaks-DARs",
         subtitle = paste0("Total Overlaps: ", nrow(uniques_df), " | FDR thr = ", FDR),
@@ -402,7 +504,7 @@ combined_2ct_plot <- (g1_ove_all | g2_ove_hb) +
 
 f_name = paste0("overlaps_shared_2ct_FDR", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
-       combined_2ct_plot, width = 8, height = 8)
+       combined_2ct_plot, width = 9, height = 8)
 
 
 
@@ -506,7 +608,8 @@ write.csv(unique_overlaps, f_name, row.names = FALSE)
 
 message("Saved unique overlaps csv!")
 
-## ==== Prepare data for Plot1: Peak-level (collapse to one accessibility per LinkPeak) / Only Uniques
+
+## ==== Prepare data for divergence plots: Peak-level / Uniques vs shared-level 
 
 unique_summary_collapsed <- unique_overlaps |>
     group_by(cell_type, peak_id_links) |>
@@ -526,8 +629,8 @@ unique_summary_collapsed <- unique_overlaps |>
         # n_signed represent the count of unique DARs for each cell_type and accessibility group,
         # where the sign (+ or -) determines the direction in which the bar will be plotted
         n_signed = case_when(
-            accessibility == "More"  ~ -n,
-            accessibility == "Less"    ~  n,
+            accessibility == "More"  ~ n, # -n,
+            accessibility == "Less"    ~  -n, # n
             accessibility == "Mixed" ~  n   # show Mixed as positive
         )
     )
@@ -538,7 +641,7 @@ head(unique_summary_collapsed)
 # 2 Astrocyte  More             20    53      -20
 
 table(unique_summary_collapsed$accessibility)
-# Down   Up
+# Less More 
 # 10   15
 
 cell_order1 <- unique_summary_collapsed |>
@@ -551,12 +654,6 @@ unique_summary_collapsed$cell_type <- factor(unique_summary_collapsed$cell_type,
 
 unique_peak_ids <- uniques_df |> pull(peak_id)
 
-# Filter for Shared overlaps
-shared_overlaps <- overlaps_df |>
-    filter(!peak_id_links %in% unique_peak_ids)
-n_shared <- shared_overlaps |> pull(peak_id_links) |> unique() |> length()
-n_shared # [1] 3636
-
 # filter, label, and combine raw overlaps data
 all_overlaps_raw <- overlaps_df |>
     filter(accessibility %in% c("More", "Less")) |> # Filter out Neutral
@@ -568,87 +665,65 @@ all_overlaps_raw <- overlaps_df |>
         )
     )
 
-# get total counts for the subtitle
+## get total counts / all shared overlaps
+
 n_unique_links <- all_overlaps_raw |> filter(overlap_type == "Unique") |> pull(peak_id_links) |> unique() |> length()
+# 1967
 n_shared_links <- all_overlaps_raw |> filter(overlap_type == "Shared") |> pull(peak_id_links) |> unique() |> length()
+# 3636
 
-## create a single summary table for all LinkPeaks
-combined_summary <- all_overlaps_raw |>
-    # Collapse accessibility per LinkPeak, now grouping by overlap_type as well
-    group_by(cell_type, peak_id_links, overlap_type) |>
-    summarise(
-        peak_accessibility = case_when(
-            all(logFC > 0) ~ "More",
-            all(logFC < 0) ~ "Less",
-            TRUE ~ "Mixed" # Mark as Mixed if LinkPeak has both More and Less DARs
-        ),
-        .groups = "drop" 
-    ) |>
-    count(cell_type, overlap_type, peak_accessibility, name = "n") |>
-    filter(peak_accessibility %in% c("More", "Less")) |> 
-    
-    # Add n_signed column for divergence (More = Negative, Less = Positive)
-    mutate(
-        n_signed = case_when(
-            peak_accessibility == "More" ~ n, 
-            peak_accessibility == "Less" ~ -n, 
-            TRUE ~ 0
-        ),
-        # create a combined factor for filling/coloring/legend
-        fill_group = factor(
-            paste(overlap_type, peak_accessibility),
-            levels = c("Shared Less", "Unique Less",
-                       "Unique More", "Shared More")
-        )
-    )
-head(combined_summary)
+## make summary table to divergence plot
+combined_summary <- make_combined_summary_divergence_plots(
+    all_overlaps_raw)
 
-## define cell order (based on total count magnitude)
-cell_order_combined <- combined_summary |>
-    group_by(cell_type) |>
-    summarise(total = sum(abs(n_signed)), .groups = "drop") |>
-    arrange(total) |>
-    pull(cell_type)
+## verify
+unique_summary_collapsed |> 
+    group_by(accessibility) |> summarise(sum_signed = sum(n_signed))
+# Expect: sum_signed(More) > 0, sum_signed(Less) < 0
+combined_summary |> 
+    group_by(peak_accessibility) |> summarise(sum_signed = sum(n_signed))
+# Expect: sum_signed(More) > 0, sum_signed(Less) < 0
 
-combined_summary$cell_type <- factor(combined_summary$cell_type, levels = cell_order_combined)
-
-color_palette <- c(
-    "Unique More" = "#D62728",
-    "Shared More" = "#FF9896",
-    "Unique Less" = "#1F77B4",
-    "Shared Less" = "#AEC7E8"
+## make divergence plot
+plt_divergence_stacked(
+    combined_summary,
+    n_unique_links,
+    n_shared_links,
+    FDR,
+    "All",
+    plotDir
 )
 
-## Single Stacked Diverging Plot 
-g_divergence_stacked <- ggplot(combined_summary,
-                               aes(x = cell_type, y = n_signed, fill = fill_group)) +
-    geom_col(color = "black", , linewidth = 0.3) + 
-    geom_text(
-        aes(label = n), # raw count to display
-        position = position_stack(vjust = 0.5), 
-        size = 3
-    ) +
-    coord_flip() +
-    scale_fill_manual(
-        values = color_palette,
-        name = "Overlap - Accessibility"
-    ) +
-    scale_y_continuous(
-        labels = abs, # Display only positive numbers on the axis
-        expand = expansion(mult = c(0.15, 0.15))
-    ) +
-    labs(
-        title = "LinkPeaks-DARs: Unique vs. Shared Overlaps",
-        subtitle = paste0("Unique = ", n_unique_links, " | Shared = ", n_shared_links, " | FDR thr = ", FDR),
-        x = NULL,
-        y = "Number of Overlaps"
-    ) +
-    theme_minimal()
-# g_divergence_stacked
 
-f_name <- paste0("overlaps_unique_shared_stacked_ct_", FDR, ".pdf")
-ggsave(here(plotDir, f_name),
-       g_divergence_stacked, width = 8, height = 8)
+## ======= filter only 2-shared cell-Types / (skip this block if you want all shared peaks)
+
+## Define the list of peaks shared by exactly 2 cell types
+shared2_links <- overlaps_df |>
+    distinct(peak_id_links, cell_type) |>
+    count(peak_id_links, name = "n_cell_types") |>
+    filter(n_cell_types == 2) |>
+    pull(peak_id_links)
+
+all_overlaps_raw <- all_overlaps_raw |>
+    filter(overlap_type == "Unique" | peak_id_links %in% shared2_links)
+
+## recompute shared count after filtering
+n_shared_links <- all_overlaps_raw |> filter(overlap_type == "Shared") |> pull(peak_id_links) |>  unique() |> length() 
+# 1238
+
+## make summary table to divergence plot for 2-ct level 
+combined_summary <- make_combined_summary_divergence_plots(
+    all_overlaps_raw)
+
+## make divergence plot
+plt_divergence_stacked(
+    combined_summary,
+    n_unique_links,
+    n_shared_links,
+    FDR,
+    "2", # means 2 shared ct-levels
+    plotDir
+)
 
 
 message("All plots done!!!")
