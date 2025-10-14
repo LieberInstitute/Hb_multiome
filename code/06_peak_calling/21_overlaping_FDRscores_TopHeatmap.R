@@ -86,6 +86,16 @@ uniques_df |>
 # cell_type → From the ATAC side: where the chromatin accessibility change occurs (DARs)
 # cluster → From the RNA side: where the correlated gene was expressed or correlated in the LinkPeaks model
 
+
+all_clusters <- unique(uniques_df$cell_type)
+# sort by MHh and LHb first 
+clusters_sorted <- c(
+    sort(grep("MHb|LHb", all_clusters, value = TRUE)), 
+    sort(grep("MHb|LHb", all_clusters, value = TRUE, invert = TRUE))
+)
+clusters_sorted
+
+
 subset_uniques <- uniques_df |> filter(cell_type == cluster_specific)
 nrow(subset_uniques)
 length(unique(subset_uniques$peak_id_links)) # 194
@@ -119,7 +129,8 @@ thr_DAR <- thr_val
 
 cat("Using FDR threshold =", thr_val, "\n")
 
-plot_data <- uniques_df |>
+# plot_data <- uniques_df |>
+plot_data <- subset_uniques |>
     mutate(
         neglog_FDR_CC = -log10(FDR_CC),
         neglog_fdr_dars = -log10(fdr_dars),
@@ -128,7 +139,7 @@ plot_data <- uniques_df |>
         sig_both = sig_CC & sig_DAR, 
         category = case_when(
             sig_CC & sig_DAR & logFC > 0  ~ "Active CRE (+)",
-            sig_CC & sig_DAR & logFC < 0  ~ "Repressive CRE (−)",
+            sig_CC & sig_DAR & logFC < 0  ~ "Repressive CRE (-)",
             sig_CC & !sig_DAR              ~ "Shared CRE",
             !sig_CC & sig_DAR              ~ "Unlinked OCR",
             TRUE                           ~ "Non-significant"
@@ -136,7 +147,7 @@ plot_data <- uniques_df |>
     )
 
 top_hits <- plot_data |>
-    filter(category %in% c("Active CRE (+)", "Repressive CRE (−)")) %>%
+    filter(category %in% c("Active CRE (+)", "Repressive CRE (-)")) |>
     arrange(FDR_CC) |>
     head(20)
 
@@ -152,7 +163,7 @@ g1 <- ggplot(plot_data, aes(x = neglog_FDR_CC, y = neglog_fdr_dars, color = cate
     geom_hline(yintercept = -log10(thr_DAR), linetype = "dashed", color = "darkgrey") +
     scale_color_manual(values = c(
         "Active CRE (+)" = "#E64B35FF",
-        "Repressive CRE (−)" = "#4DBBD5FF",
+        "Repressive CRE (-)" = "#4DBBD5FF",
         "Shared CRE" = "#00A087FF",
         "Unlinked OCR" = "#3C5488FF",
         "Non-significant" = "lightgrey"
