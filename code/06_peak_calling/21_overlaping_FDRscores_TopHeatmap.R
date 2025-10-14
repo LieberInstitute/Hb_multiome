@@ -1,10 +1,9 @@
 ########################################################################
-## Plotting FDR Scores and Heatmap: 
-## Distribution of differential accessibility (logFC) values for genes whose linked peaks overlap with DARs
+## Explore FDR-Scores and Top overlapping (Heatmap): 
 ##
 ## Authors. CSC
-## Date. Oct 06, 2025
-## Recommended resources on interactive mode: srun --pty --mem=15GB --x11 bash
+## Date. Oct 14, 2025
+## Recommended resources on interactive mode: srun --pty --mem=20GB --x11 bash
 ########################################################################
 
 library("dplyr")
@@ -64,9 +63,9 @@ uniques_df <- read.csv(here(inputCSV_Overlaps_Dir,
 colnames(uniques_df)
 head(uniques_df)
 nrow(uniques_df) # 2904
+length(unique(uniques_df$peak_id_links)) # [1] 1967
 
 ## verification, unique DARs
-length(unique(uniques_df$peak_id_links)) # [1] 1967
 unique_summary_collapsed <- uniques_df |>
     group_by(cell_type, peak_id_links, accessibility) |> 
     summarise(.groups = "drop") # assign accessibility (More, Less, Mixed) based on all links
@@ -79,6 +78,29 @@ uniques_df |>
 # 1 chr1-2683852-2684422 108
 # 2 chr1-161612222-161613071  96
 # 3 chr11-65497297-65497968  91
+
+
+## =============================================================================
+## subset by cell_type and cluster, focus only on cis-links where both accessibility and expression specificity occur in the same cluster
+# Conceptually: 
+# cell_type → From the ATAC side: where the chromatin accessibility change occurs (DARs)
+# cluster → From the RNA side: where the correlated gene was expressed or correlated in the LinkPeaks model
+
+cluster_specific = "LHb.4"
+
+subset_uniques <- uniques_df |> filter(cell_type == cluster_specific)
+nrow(subset_uniques)
+length(unique(subset_uniques$peak_id_links)) # 194
+head(subset_uniques)
+table(subset_uniques$cluster)
+
+## focus only on cis-links where both accessibility and expression specificity occur in the same cluster
+subset_uniques <- uniques_df |> 
+    filter(cell_type == cluster)
+head(subset_uniques)
+subset_uniques <- subset_uniques |> filter(cell_type == cluster_specific)
+head(subset_uniques)
+nrow(subset_uniques)
 
 
 ## =============================================================================
@@ -105,6 +127,7 @@ plot_data <- uniques_df %>%
         neglog_fdr_dars = -log10(fdr_dars),
         sig_CC = FDR_CC < thr_CC,
         sig_DAR = fdr_dars < thr_DAR,
+        sig_both = sig_CC & sig_DAR, 
         category = case_when(
             sig_CC & sig_DAR & logFC > 0  ~ "Active CRE (+)",
             sig_CC & sig_DAR & logFC < 0  ~ "Repressive CRE (−)",
@@ -144,6 +167,21 @@ ggplot(plot_data, aes(x = neglog_FDR_CC, y = neglog_fdr_dars, color = category))
     ) +
     theme_minimal(base_size = 12)
 
+
+# ggplot(plot_data, aes(x = neglog_FDR_CC, y = neglog_fdr_dars)) +
+#     geom_point(aes(color = sig_both), alpha = 0.7, size = 1.5) +
+#     geom_vline(xintercept = -log10(thr_CC), linetype = "dashed", color = "darkgrey") +
+#     geom_hline(yintercept = -log10(thr_DAR), linetype = "dashed", color = "darkgrey") +
+#     facet_wrap(~ cell_type, scales = "free_y") +
+#     scale_color_manual(values = c("TRUE" = "#E64B35FF", "FALSE" = "lightgrey"),
+#                        name = paste0("FDR < ", thr_val, " in both")) +
+#     labs(
+#         title = "LinkPeaks vs DARs Significance per Cell Type",
+#         x = expression(-log[10](FDR[CC])),
+#         y = expression(-log[10](FDR[DARs]))
+#     ) +
+#     theme_minimal(base_size = 11) +
+#     theme(strip.text = element_text(face = "bold"))
 
 
 message("All plots done!!!")
