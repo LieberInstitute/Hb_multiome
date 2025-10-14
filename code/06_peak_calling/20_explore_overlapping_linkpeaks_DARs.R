@@ -49,10 +49,6 @@ if (!dir.exists(plotDir)) { dir.create(plotDir) }
 
 message("Loading Unique-Overlap Hits ...")
 
-# ## load summary overlaps df
-# link_summary <- read.csv(here(inputCSV_Overlaps_Dir, 
-#                               paste0("summary_LinkPeak_overlap_stats_FDR", FDR, ".csv")))
-
 ## load full overlaps df
 overlaps_df <- read.csv(here(inputCSV_Overlaps_Dir, 
                              paste0("Overlaps_LinkPeak_DARs_FDR", FDR, ".csv")))
@@ -573,17 +569,11 @@ ggsave(here(plotDir, f_name),
 
 
 #===========================================================================
-## Process and Plot Accessibility LinkPeaks-DARs overlapping per cell type
+## Process and Plot Accessibility UNIQUE LinkPeaks-DARs overlapping per cell type
 
 message("Processing Open/Close LinkPeaks-DARs overlappings per cell type ... ")
 
-colnames(overlaps_df)
-head(overlaps_df)
-
-# Define Accessibility  for all the unique overlaps
-# peak_id_links → the LinkPeak ID (from gr_links)
-# peak_id → the DAR peak ID (from gr_dars)
-
+## Define Accessibility  for all the unique overlaps
 overlaps_df <- overlaps_df |>
     mutate(accessibility = case_when(
         logFC > 0 ~ "More",
@@ -592,16 +582,30 @@ overlaps_df <- overlaps_df |>
     )) |>
     filter(accessibility %in% c("More", "Less"))
 
-nrow(overlaps_df) # [1] 23691
-head(overlaps_df)
-n_uniques <- nrow(uniques_df) # 1967
-n_uniques
+nrow(overlaps_df) # 23691
+nrow(uniques_df) # 1967
+
+## verification
+overlaps_df |>
+    count(peak_id_links, sort = TRUE) |>
+    filter(n > 1) |> head()
+# peak_id_links   n
+# 1 chr1-2683852-2684422 108
+# 2 chr1-161612222-161613071  96
+# 3 chr11-65497297-65497968  91
+
+unique_peak_ids_to_filter <- uniques_df |>
+    # We pull the peak_id column, which seems to correspond to the ATAC-seq peak identifier
+    pull(peak_id) |>
+    unique()
+n_uniques_peak_ids <- length(unique_peak_ids_to_filter) # 1967
 
 ## Restrict overlaps to Unique LinkPeaks only
 unique_overlaps <- overlaps_df |>
-    filter(peak_id_links %in% (uniques_df |> pull(peak_id)))
+    filter(peak_id_links %in% unique_peak_ids_to_filter) 
+
+nrow(unique_overlaps) # [1] 2904
 head(unique_overlaps)
-nrow(unique_overlaps)
 
 f_name <- here(processedDir, paste0("overlaps_unique_linkPeak_DARs_detail_FDR", FDR, ".csv"))
 write.csv(unique_overlaps, f_name, row.names = FALSE)
@@ -629,9 +633,9 @@ unique_summary_collapsed <- unique_overlaps |>
         # n_signed represent the count of unique DARs for each cell_type and accessibility group,
         # where the sign (+ or -) determines the direction in which the bar will be plotted
         n_signed = case_when(
-            accessibility == "More"  ~ n, # -n,
-            accessibility == "Less"    ~  -n, # n
-            accessibility == "Mixed" ~  n   # show Mixed as positive
+            accessibility == "More"  ~ n, 
+            accessibility == "Less"    ~ -n, 
+            accessibility == "Mixed" ~ n   # show Mixed as positive
         )
     )
 head(unique_summary_collapsed)
