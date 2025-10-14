@@ -95,87 +95,176 @@ clusters_sorted <- c(
 )
 clusters_sorted
 
+subset_cell_type <- function(unique_df, cluster_specific) {
+    message("Subsetting [", cluster_specific, "] cell_type")
+    subset_uniques <- unique_df |> filter(cell_type == cluster_specific)
+    message("Rows found: ", nrow(subset_uniques))
+    message("Unique peaks: ", length(unique(subset_uniques$peak_id_links)))
+    return(subset_uniques)
+}
 
-subset_uniques <- uniques_df |> filter(cell_type == cluster_specific)
-nrow(subset_uniques)
-length(unique(subset_uniques$peak_id_links)) # 194
-head(subset_uniques)
-table(subset_uniques$cluster)
+subsetted_df <- purrr::map_df(
+    clusters_sorted,
+    ~ subset_cell_type(uniques_df, .x)
+)
 
-## focus only on cis-links where both accessibility and expression specificity occur in the same cluster
-subset_uniques <- uniques_df |> 
-    filter(cell_type == cluster)
-head(subset_uniques)
-subset_uniques <- subset_uniques |> filter(cell_type == cluster_specific)
-head(subset_uniques)
-nrow(subset_uniques)
+length(subsetted_cellTypes_df)
 
 
 ## =============================================================================
 ## Generate scatterplot
 
-# Define thresholds for visual reference
-thr_CC <- 0.1      # significance for LinkPeaks correlation
-thr_DAR <- 0.1     # significance for differential accessibility
 
-# # Extract numeric value from FDR_threshold column, e.g. "FDR0.2" → 0.2
-# thr_val <- uniques_df$FDR_threshold[1] |>
-#     gsub("FDR", "", x = _) |>
-#     as.numeric()
-thr_val <- thr_DAR
-
-thr_CC <- thr_val
-thr_DAR <- thr_val
-
-cat("Using FDR threshold =", thr_val, "\n")
-
-# plot_data <- uniques_df |>
-plot_data <- subset_uniques |>
-    mutate(
-        neglog_FDR_CC = -log10(FDR_CC),
-        neglog_fdr_dars = -log10(fdr_dars),
-        sig_CC = FDR_CC < thr_CC,
-        sig_DAR = fdr_dars < thr_DAR,
-        sig_both = sig_CC & sig_DAR, 
-        category = case_when(
-            sig_CC & sig_DAR & logFC > 0  ~ "Active CRE (+)",
-            sig_CC & sig_DAR & logFC < 0  ~ "Repressive CRE (-)",
-            sig_CC & !sig_DAR              ~ "Shared CRE",
-            !sig_CC & sig_DAR              ~ "Unlinked OCR",
-            TRUE                           ~ "Non-significant"
+make_scattered_plot_dars_cc_real <- function(subset_uniques) {
+    # FDR thresholds for LinkPeaks (CC) and DARs
+    thr_CC <- 0.1
+    thr_DAR <- 0.1
+    thr_val <- thr_DAR
+    clus_name <- unique(subset_uniques[["cell_type"]])
+    
+    message("Building plot for [", clus_name, "] (real FDR values)")
+    message("Using FDR threshold =", thr_val)
+    
+    plot_data <- subset_uniques |>
+        mutate(
+            sig_CC = FDR_CC < thr_CC,
+            sig_DAR = fdr_dars < thr_DAR,
+            category = case_when(
+                sig_CC & sig_DAR & logFC > 0  ~ "Active CRE (+)",
+                sig_CC & sig_DAR & logFC < 0  ~ "Repressive CRE (-)",
+                sig_CC & !sig_DAR              ~ "Shared CRE",
+                !sig_CC & sig_DAR              ~ "Unlinked OCR",
+                TRUE                           ~ "Non-significant"
+            )
         )
-    )
+    
+    top_hits <- plot_data |>
+        filter(category %in% c("Active CRE (+)", "Repressive CRE (-)")) |>
+        arrange(FDR_CC) |>
+        head(15)
+    
+    g1 <- ggplot(plot_data, aes(x = FDR_CC, y = fdr_dars, color = category)) +
+        geom_point(alpha = 0.7, size = 1.6) +
+        geom_text_repel(
+            data = top_hits,
+            aes(label = gene_name),
+            size = 3,
+            max.overlaps = 15
+        ) +
+        geom_vline(xintercept = thr_CC, linetype = "dashed", color = "darkgrey") +
+        geom_hline(yintercept = thr_DAR, linetype = "dashed", color = "darkgrey") +
+        scale_color_manual(values = c(
+            "Active CRE (+)" = "#E64B35FF",
+            "Repressive CRE (-)" = "#4DBBD5FF",
+            "Shared CRE" = "#00A087FF",
+            "Unlinked OCR" = "#3C5488FF",
+            "Non-significant" = "lightgrey"
+        )) +
+        scale_x_continuous(limits = c(0, 0.5)) +
+        scale_y_continuous(limits = c(0, 0.5)) +
+        labs(
+            title = paste0(clus_name, " | Peak–Gene Correlation vs. Differential Accessibility"),
+            subtitle = paste0("Dashed lines: FDR = ", thr_val),
+            x = "LinkPeaks FDR (Correlation)",
+            y = "DARs FDR (Accessibility)"
+        ) +
+        theme_minimal(base_size = 12) +
+        theme(
+            panel.grid.minor = element_blank(),
+            plot.title = element_text(face = "bold")
+        )
+    
+    return(g1)
+}
 
-top_hits <- plot_data |>
-    filter(category %in% c("Active CRE (+)", "Repressive CRE (-)")) |>
-    arrange(FDR_CC) |>
-    head(20)
+make_scattered_plot_dars_cc <- function(subset_uniques) {
+    thr_CC <- 0.1
+    thr_DAR <- 0.1
+    thr_val <- thr_DAR
+    clus_name <- unique(subset_uniques[["cell_type"]])
+    
+    message("Building plot for [", clus_name, "]")
+    message("Using FDR threshold =", thr_val)
+    
+    plot_data <- subset_uniques |>
+        mutate(
+            neglog_FDR_CC = -log10(FDR_CC),
+            neglog_fdr_dars = -log10(fdr_dars),
+            sig_CC = FDR_CC < thr_CC,
+            sig_DAR = fdr_dars < thr_DAR,
+            category = case_when(
+                sig_CC & sig_DAR & logFC > 0  ~ "Active CRE (+)",
+                sig_CC & sig_DAR & logFC < 0  ~ "Repressive CRE (-)",
+                sig_CC & !sig_DAR              ~ "Shared CRE",
+                !sig_CC & sig_DAR              ~ "Unlinked OCR",
+                TRUE                           ~ "Non-significant"
+            )
+        )
+    
+    top_hits <- plot_data |>
+        filter(category %in% c("Active CRE (+)", "Repressive CRE (-)")) |>
+        arrange(FDR_CC) |>
+        head(20)
+    
+    g1 <- ggplot(plot_data, aes(x = neglog_FDR_CC, y = neglog_fdr_dars, color = category)) +
+        geom_point(alpha = 0.7, size = 1.6) +
+        geom_text_repel(
+            data = top_hits,
+            aes(label = gene_name),
+            size = 3,
+            max.overlaps = 15
+        ) +
+        geom_vline(xintercept = -log10(thr_CC), linetype = "dashed", color = "darkgrey") +
+        geom_hline(yintercept = -log10(thr_DAR), linetype = "dashed", color = "darkgrey") +
+        scale_color_manual(values = c(
+            "Active CRE (+)" = "#E64B35FF",
+            "Repressive CRE (-)" = "#4DBBD5FF",
+            "Shared CRE" = "#00A087FF",
+            "Unlinked OCR" = "#3C5488FF",
+            "Non-significant" = "lightgrey"
+        )) +
+        +
+        scale_x_continuous(limits = c(0, 0.5)) +
+        scale_y_continuous(limits = c(0, 0.5)) +
+        labs(
+            title = "Peak–Gene Correlation vs. Differential Accessibility",
+            subtitle = paste0(clus_name, " | FDR = ", thr_val),
+            x = expression(-log[10](FDR[CC])),
+            y = expression(-log[10](FDR[DARs]))
+        ) +
+        theme_minimal(base_size = 12)
+    
+    return(g1)
+}
 
-g1 <- ggplot(plot_data, aes(x = neglog_FDR_CC, y = neglog_fdr_dars, color = category)) +
-    geom_point(alpha = 0.7, size = 1.6) +
-    geom_text_repel(
-        data = top_hits,
-        aes(label = gene_name),
-        size = 3,
-        max.overlaps = 15
-    ) +
-    geom_vline(xintercept = -log10(thr_CC), linetype = "dashed", color = "darkgrey") +
-    geom_hline(yintercept = -log10(thr_DAR), linetype = "dashed", color = "darkgrey") +
-    scale_color_manual(values = c(
-        "Active CRE (+)" = "#E64B35FF",
-        "Repressive CRE (-)" = "#4DBBD5FF",
-        "Shared CRE" = "#00A087FF",
-        "Unlinked OCR" = "#3C5488FF",
-        "Non-significant" = "lightgrey"
-    )) +
-    labs(
-        title = "Peak–Gene Correlation vs. Differential Accessibility",
-        subtitle = paste0("Dashed lines: FDR = ", thr_val),
-        x = expression(-log[10](FDR[CC])),
-        y = expression(-log[10](FDR[DARs]))
-    ) +
-    theme_minimal(base_size = 12)
+length(subsetted_df) # 18
+table(subsetted_df$cell_type)
+# Astrocyte Excit.Thal Inhib.Thal      LHb.1  LHb.1.3.4    LHb.2.7      LHb.4 
+# 11        160        501         13         20         91        163 
+# MHb.1    MHb.1.2      MHb.2  Microglia      Oligo 
+# 7          2        258          1         13
 
+subsetted_list_df <- split(subsetted_df, subsetted_df$cell_type)
+length(subsetted_list_df)
+
+# log10
+scattered_plt_cell_type <- purrr::map(
+    subsetted_list_df,
+    ~ make_scattered_plot_dars_cc(.x)
+)
+
+scattered_plt_cell_type[1] 
+
+pdf("ScatteredPlots_byCellType.pdf", width = 6, height = 5)
+walk(scattered_plt_cell_type, print)
+dev.off()
+
+# real values
+scattered_plt_cell_type_real_values <- purrr::map(
+    subsetted_list_df,
+    ~ make_scattered_plot_dars_cc_real(.x)
+)
+scattered_plt_cell_type_real_values[1]
 
 
 ## =============================================================================
