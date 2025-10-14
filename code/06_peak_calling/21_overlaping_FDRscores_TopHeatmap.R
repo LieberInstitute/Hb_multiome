@@ -35,12 +35,12 @@ inputCSV_Overlaps_Dir <- here(
 processedDir <- here(
     "processed-data",
     "06_peak_calling",
-    "21_explore_top_overlapping_linkpeaks_DARs"
+    "21_overlaping_FDRscores_TopHeatmap"
 )
 plotDir <- here(
     "plots",
     "06_peak_calling",
-    "21_explore_top_overlapping_linkpeaks_DARs"
+    "21_overlaping_FDRscores_TopHeatmap"
 )
 
 if (!dir.exists(processedDir)) { dir.create(processedDir) }
@@ -50,7 +50,7 @@ if (!dir.exists(plotDir)) { dir.create(plotDir) }
 
 message("Loading Unique-Overlap with directionality ...")
 
-ct = "LHb.4"
+cluster_specific = "LHb.4"
 top_g = 20
 
 ## load unique and shared df(s)
@@ -86,8 +86,6 @@ uniques_df |>
 # cell_type → From the ATAC side: where the chromatin accessibility change occurs (DARs)
 # cluster → From the RNA side: where the correlated gene was expressed or correlated in the LinkPeaks model
 
-cluster_specific = "LHb.4"
-
 subset_uniques <- uniques_df |> filter(cell_type == cluster_specific)
 nrow(subset_uniques)
 length(unique(subset_uniques$peak_id_links)) # 194
@@ -121,7 +119,7 @@ thr_DAR <- thr_val
 
 cat("Using FDR threshold =", thr_val, "\n")
 
-plot_data <- uniques_df %>%
+plot_data <- uniques_df |>
     mutate(
         neglog_FDR_CC = -log10(FDR_CC),
         neglog_fdr_dars = -log10(fdr_dars),
@@ -137,12 +135,12 @@ plot_data <- uniques_df %>%
         )
     )
 
-top_hits <- plot_data %>%
+top_hits <- plot_data |>
     filter(category %in% c("Active CRE (+)", "Repressive CRE (−)")) %>%
-    arrange(FDR_CC) %>%
+    arrange(FDR_CC) |>
     head(20)
 
-ggplot(plot_data, aes(x = neglog_FDR_CC, y = neglog_fdr_dars, color = category)) +
+g1 <- ggplot(plot_data, aes(x = neglog_FDR_CC, y = neglog_fdr_dars, color = category)) +
     geom_point(alpha = 0.7, size = 1.6) +
     geom_text_repel(
         data = top_hits,
@@ -168,24 +166,10 @@ ggplot(plot_data, aes(x = neglog_FDR_CC, y = neglog_fdr_dars, color = category))
     theme_minimal(base_size = 12)
 
 
-# ggplot(plot_data, aes(x = neglog_FDR_CC, y = neglog_fdr_dars)) +
-#     geom_point(aes(color = sig_both), alpha = 0.7, size = 1.5) +
-#     geom_vline(xintercept = -log10(thr_CC), linetype = "dashed", color = "darkgrey") +
-#     geom_hline(yintercept = -log10(thr_DAR), linetype = "dashed", color = "darkgrey") +
-#     facet_wrap(~ cell_type, scales = "free_y") +
-#     scale_color_manual(values = c("TRUE" = "#E64B35FF", "FALSE" = "lightgrey"),
-#                        name = paste0("FDR < ", thr_val, " in both")) +
-#     labs(
-#         title = "LinkPeaks vs DARs Significance per Cell Type",
-#         x = expression(-log[10](FDR[CC])),
-#         y = expression(-log[10](FDR[DARs]))
-#     ) +
-#     theme_minimal(base_size = 11) +
-#     theme(strip.text = element_text(face = "bold"))
 
+## =============================================================================
+## Classify links as within or cross: stacked bar (proportions and counts)
 
-
-## Classify links as within or cross
 # Each row in links_summary is a peak–gene pair labeled according to whether
 # the peak accessibility (cell_type) and correlated gene expression (cluster) belong to the same cluster.
 links_summary <- uniques_df |>
@@ -206,11 +190,11 @@ summary_counts
 ## stacked bar (proportions) show, for each cell_type what fraction of its significant LinkPeaks 
 ## - connect to genes in the same cluster (green) vs other clusters
 
-ggplot(summary_counts, aes(x = cell_type, y = proportion, fill = link_type)) +
+g1 <- ggplot(summary_counts, aes(x = cell_type, y = proportion, fill = link_type)) +
     geom_bar(stat = "identity", position = "stack") +
     scale_fill_manual(values = c("within_cluster" = "#1b9e77", "cross_cluster" = "#d95f02")) +
     labs(
-        title = "Within- vs Cross-Cluster LinkPeaks-DARs overlaps by Cell Type",
+        title = "Within vs Cross-Cluster LinkPeaks-DARs overlaps by Cell Type",
         x = "Cell Type",
         y = "Proportion of Links",
         fill = "Link Type"
@@ -218,8 +202,13 @@ ggplot(summary_counts, aes(x = cell_type, y = proportion, fill = link_type)) +
     theme_minimal(base_size = 12) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+f_name <- paste0("Cross-Cluster_proportions_FDR", FDR, ".pdf")
+ggsave(here(plotDir, f_name),
+       g1, width = 8, height = 8)
+
+
 ## stacked bar (absolute counts)
-ggplot(summary_counts, aes(x = cell_type, y = n, fill = link_type)) +
+g1 <- ggplot(summary_counts, aes(x = cell_type, y = n, fill = link_type)) +
     geom_bar(stat = "identity", position = "stack") +
     labs(y = "Number of Links") +
 labs(
@@ -231,6 +220,13 @@ labs(
     theme_minimal(base_size = 12) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+f_name <- paste0("Cross-Cluster_abs_counts_FDR", FDR, ".pdf")
+ggsave(here(plotDir, f_name),
+       g1, width = 8, height = 8)
+
+
+
+    
 
 
 message("All plots done!!!")
