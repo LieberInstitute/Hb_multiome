@@ -184,6 +184,55 @@ ggplot(plot_data, aes(x = neglog_FDR_CC, y = neglog_fdr_dars, color = category))
 #     theme(strip.text = element_text(face = "bold"))
 
 
+
+## Classify links as within or cross
+# Each row in links_summary is a peak–gene pair labeled according to whether
+# the peak accessibility (cell_type) and correlated gene expression (cluster) belong to the same cluster.
+links_summary <- uniques_df |>
+    mutate(link_type = if_else(cell_type == cluster, "within_cluster", "cross_cluster"))
+head(links_summary)
+
+## Summarize counts per cell type
+summary_counts <- links_summary |>
+    count(cell_type, link_type) |>
+    group_by(cell_type) |>
+    mutate(
+        total = sum(n),
+        proportion = n / total
+    )
+summary_counts
+
+
+## stacked bar (proportions) show, for each cell_type what fraction of its significant LinkPeaks 
+## - connect to genes in the same cluster (green) vs other clusters
+
+ggplot(summary_counts, aes(x = cell_type, y = proportion, fill = link_type)) +
+    geom_bar(stat = "identity", position = "stack") +
+    scale_fill_manual(values = c("within_cluster" = "#1b9e77", "cross_cluster" = "#d95f02")) +
+    labs(
+        title = "Within- vs Cross-Cluster LinkPeaks-DARs overlaps by Cell Type",
+        x = "Cell Type",
+        y = "Proportion of Links",
+        fill = "Link Type"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+## stacked bar (absolute counts)
+ggplot(summary_counts, aes(x = cell_type, y = n, fill = link_type)) +
+    geom_bar(stat = "identity", position = "stack") +
+    labs(y = "Number of Links") +
+labs(
+    title = "Within- vs Cross-Cluster LinkPeaks-DARs overlaps by Cell Type",
+    x = "Cell Type",
+    y = "Number of Links",
+    fill = "Link Type"
+) +
+    theme_minimal(base_size = 12) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
 message("All plots done!!!")
 
 
