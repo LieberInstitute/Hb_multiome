@@ -57,9 +57,11 @@ overlaps_df <- read.csv(here(inputCSV_Overlaps_Dir,
 colnames(overlaps_df)
 head(overlaps_df)
 nrow(overlaps_df) # 3201
-ct = "LHb.4|MHb.2"
+ct = "LHb.4"
 top_g = 20
 
+
+###===== declare functions
 
 make_correlations_logFC_CCScore <- function(
         ct,
@@ -158,6 +160,69 @@ make_correlations_logFC_CCScore <- function(
     return(g_violin_faceted)
 }
 
+
+make_joint_logFC_FDR_plot <- function(
+        ct,
+        logFC_thresh = 0.2,        # e.g. minimum abs(logFC)
+        FDR_logFC_thresh = 0.05,   # significance for DA
+        FDR_CC_thresh = 0.05       # significance for correlation
+) {
+    
+    # --- 1. Filter target cell type ---
+    df_ct <- unique_overlaps |>
+        filter(cell_type == ct) |>
+        mutate(
+            neglog10_FDR_CC = -log10(pmax(FDR_CC, 1e-300)),  # avoid Inf
+            sig_logFC = (fdr_dars < FDR_logFC_thresh & abs(logFC) > logFC_thresh),
+            sig_CC = (FDR_CC < FDR_CC_thresh)
+        )
+    
+    # --- 2. Categorize combinations ---
+    df_ct <- df_ct |>
+        mutate(category = case_when(
+            sig_logFC & sig_CC ~ "Both Significant",
+            sig_logFC & !sig_CC ~ "Only logFC",
+            !sig_logFC & sig_CC ~ "Only FDR_CC",
+            TRUE ~ "Non-significant"
+        ))
+    
+    # --- 3. Plot ---
+    g_joint <- ggplot(df_ct, aes(x = logFC, y = neglog10_FDR_CC)) +
+        geom_hline(yintercept = -log10(FDR_CC_thresh), color = "grey70", linetype = "dashed") +
+        geom_vline(xintercept = c(-logFC_thresh, logFC_thresh), color = "grey70", linetype = "dashed") +
+        geom_point(aes(color = category), size = 2, alpha = 0.8) +
+        scale_color_manual(
+            values = c(
+                "Both Significant" = "#D62728",
+                "Only logFC" = "#1F77B4",
+                "Only FDR_CC" = "#9467BD",
+                "Non-significant" = "grey80"
+            )
+        ) +
+        geom_text_repel(data = df_ct |> filter(sig_logFC & sig_CC),
+                        aes(label = gene_name), size = 3) + 
+        labs(
+            title = paste0("Joint significance of chromatin accessibility and peak–gene correlation (", ct, ")"),
+            subtitle = "Comparing logFC (DA) vs −log10(FDR_CC) significance",
+            x = "Log Fold Change (logFC)",
+            y = expression(-log[10]~"(FDR_CC)"),
+            color = "Significance Category"
+        ) +
+        theme_minimal() +
+        theme(
+            legend.position = "bottom",
+            plot.title = element_text(face = "bold"),
+            axis.title = element_text(size = 10)
+        )
+    
+    return(g_joint)
+}
+
+
+###==== end functions
+
+
+
 # Generate plots
 g1 <- make_correlations_logFC_CCScore(ct, top_g, "logFC")
 g2 <- make_correlations_logFC_CCScore(ct, top_g, "FDR_CC")
@@ -167,8 +232,17 @@ g_combined <- (g1 + g2) + plot_annotation(tag_levels = 'A')
 ggsave(here(plotDir, "top_unique_overlaps_ranked_by_logFC_FDR_CC.pdf"),
        g_combined, width = 8, height = 8)
 
+library(ggrepel)
+
+g3_joint <- make_joint_logFC_FDR_plot("LHb.4")
+ggsave(here(plotDir, "top_overlaps_VPlot_joined_significance", ct, ".pdf"),
+       g3_joint, width = 8, height = 8)
+
 
 message("All plots done!!!")
+
+
+
 
 
 # library("slurmjobs")
