@@ -225,6 +225,62 @@ ggsave(here(plotDir, f_name),
        g1, width = 8, height = 8)
 
 
+## =============================================================================
+
+## Highlighting reciprocal relationships
+# matrix heatmap of regulatory interactions between cell-type pairs
+# directionality and strength of inter-cluster links.
+
+# heatmap h1:
+# How many cross-cluster connections exist? 
+# h1 - Excludes diagonal (cell_type != cluster), showing only cross-cluster links
+# Shows how much cross-regulation occurs between clusters
+
+pair_counts <- links_summary |>
+    count(cell_type, cluster) |>
+    filter(cell_type != cluster)
+head(pair_counts)
+
+f_name = here(plotDir, paste0("heatmap_CrossCluster_LinkCounts_h1_FDR", FDR,".pdf"))
+pdf(f_name, width = 7, height = 6)
+pheatmap::pheatmap(
+    pivot_wider(pair_counts, names_from = cluster, values_from = n, values_fill = 0)[,-1],
+    cluster_rows = TRUE, cluster_cols = TRUE,
+    main = "Cross-Cluster Link Counts (peaks→genes)"
+)
+dev.off()
+
+# ======
+
+# heatmap h2:
+# How strongly each cell type favors certain gene clusters?
+# h2 Keeps all pairs, including within-cluster (diagonal)
+# Highlights preferential link patterns (who regulates whom more strongly) across all clusters
+
+pair_counts <- links_summary |>
+    count(cell_type, cluster)
+mat <- pair_counts |>
+    pivot_wider(names_from = cluster, values_from = n, values_fill = 0)
+mat_norm <- mat |>
+    column_to_rownames("cell_type") |>
+    as.matrix()
+# normalize by row totals
+mat_prop <- mat_norm / rowSums(mat_norm)
+# # center/scale each row
+mat_z <- t(scale(t(mat_norm)))  
+
+# Y-axis (rows)	ATAC-defined cell_type	Where the open chromatin peak is located (e.g., LHb.4).
+# X-axis (columns)	RNA-defined cluster	Where the correlated gene expression occurs (e.g., Excit.Thal).
+# Color	Strength or proportion of links	Fraction (or Z-score) of LHb.4 peaks linked to genes in each expression cluster.
+f_name = here(plotDir, paste0("heatmap_within_crossCluster_LinkCounts_h2_FDR", FDR,".pdf"))
+pdf(f_name, width = 7, height = 6)
+pheatmap::pheatmap(
+    mat_z,
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    main = "Z-scored Link Density (peaks→genes)"
+)
+dev.off()
 
     
 
