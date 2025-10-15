@@ -6,6 +6,8 @@
 ## Recommended resources on interactive mode: srun --pty --mem=20GB --x11 bash
 ########################################################################
 
+library("pheatmap")
+library("reshape2")
 library("dplyr")
 library("purrr")
 library("ggplot2")
@@ -54,28 +56,26 @@ message("Loading Unique-Overlap with directionality ...")
 cluster_specific = "LHb.4"
 top_g = 20
 
-## load raw overlaps df
+## load raw overlaps and 2-shared ct overlaps 
 overlap_df <- read.csv(here(inputCSV_Overlaps_Dir, "19_Linkage_DARs_analysis", 
                              paste0("Overlaps_LinkPeak_DARs_FDR", FDR, ".csv")))
 shared_2ct_df <- read.csv(here(inputCSV_Overlaps_Dir, "20_explore_overlapping_linkpeaks_DARs", 
                              paste0("overlaps_summary_linkPeak_DARs_unique_ct_FDR", FDR, ".csv")))
                             
-## 2-shared cell type-specific Overlaps
-# overlaps_shared_2ct_df <- read.csv(here(inputCSV_Overlaps_Dir, 
-#                              paste0("overlaps_summary_linkPeak_DARs_shared_2ct_FDR", FDR, ".csv")))
 
-## filter uniques
+## filter uniques and 2-shared ct overlaps
 all_unique_df <- overlap_df |>
     distinct(peak_id_links, .keep_all = TRUE)
 nrow(all_unique_df) # 5603
 head(all_unique_df)
 
+## first, filter uniques
 peaks_unique_cell_types <- shared_2ct_df |>
     filter(n_cell_types == 1) |>
     pull(peak_id)
 length(peaks_unique_cell_types) # 1967
 
-# Keep only those 1,967 unique LinkPeaks
+## Keep only those 1,967 unique LinkPeaks
 unique_df <- all_unique_df |>
     filter(peak_id_links %in% peaks_unique_cell_types) |>
     mutate(
@@ -145,11 +145,12 @@ subset_cell_type <- function(unique_df, cluster_specific) {
 
 make_scattered_plot_dars_cc_real <- function(
         subset_uniques,
-        fdr_cutoff = 0.05
+        top_genes,
+        fdr_cutoff = 0.2 # used to filter both LinkedPeaks and DARs
 ) {
     # FDR thresholds for LinkPeaks (CC) and DARs
     thr_CC <- 0.3 # magnitude threshold for correlation strength (|CCscore|)
-    thr_DAR <- fdr_cutoff # threshold for accessibility significance
+    thr_DAR <- 0.1 # log-FC threshold for accessibility significance
     clus_name <- unique(subset_uniques[["cell_type"]])
     
     message("Building plot for [", clus_name, "] (real FDR values)")
@@ -201,8 +202,8 @@ make_scattered_plot_dars_cc_real <- function(
         )) +
         labs(
             title = paste(clus_name, " | Uniques & 2-Shared CellTypes"),
-            subtitle = paste0("Correlation Score vs logFC-DARs | CC-Score > ", thr_CC, 
-                              " | FDR < ", thr_DAR),
+            subtitle = paste0("Correlation Score vs logFC-DARs > ", thr_DAR, " | CC-Score > ", thr_CC, 
+                              " | FDR < ", fdr_cutoff),
             x = "CC-Score",
             y = "log2 FC (DARs)"
         ) +
@@ -212,7 +213,8 @@ make_scattered_plot_dars_cc_real <- function(
             plot.title = element_text(face = "bold"),
             legend.position = "bottom",
             legend.title = element_blank()
-        )
+        ) +
+        plot_annotation(caption = paste("Top:", top_genes, "genes"))
     
     return(g1)
     
@@ -278,13 +280,6 @@ make_scattered_plot_dars_cc <- function(subset_uniques) {
     return(g1)
 }
 
-length(subsetted_df)
-table(subsetted_df$cell_type)
-head(subsetted_df)
-subsetted_list_df <- split(subsetted_df, subsetted_df$cell_type)
-names(subsetted_list_df)
-length(subsetted_list_df) # 15 ct
-table(subsetted_list_df[[8]]["overlap_type"])
 
 
 # # log10
@@ -292,24 +287,28 @@ table(subsetted_list_df[[8]]["overlap_type"])
 #     subsetted_list_df,
 #     ~ make_scattered_plot_dars_cc(.x)
 # )
-# 
-# 
+
+
 # ## subset the overlaps by cell_type
 # subsetted_df <- purrr::map_df(
 #     clusters_sorted,
 #     ~ subset_cell_type(unique_df, .x)
 # )
-#
-# scattered_plt_cell_type[1] 
 # 
-# pdf("ScatteredPlots_byCellType.pdf", width = 6, height = 5)
-# walk(scattered_plt_cell_type, print)
-# dev.off()
+# ## verifications
+# length(subsetted_df)
+# table(subsetted_df$cell_type)
+# head(subsetted_df)
+# subsetted_list_df <- split(subsetted_df, subsetted_df$cell_type)
+# names(subsetted_list_df)
+# length(subsetted_list_df) # 15 ct
+# table(subsetted_list_df[[8]]["overlap_type"])
+
 
 # real values
 scattered_plt_cell_type_real_values <- purrr::map(
     subsetted_list_df,
-    ~ make_scattered_plot_dars_cc_real(.x, 0.1)
+    ~ make_scattered_plot_dars_cc_real(.x, top_g, 0.2)
 )
 
 # verify results
@@ -328,11 +327,78 @@ scattered_plt_cell_type_real_values <- purrr::map(
 #     ) |>
 #     select(CCscore, fdr_dars, logFC, category_check)
 
-
-f_name = here(plotDir, paste0("ScatteredPlots_sig_categories_2shared_ct_byCellType_FDR", FDR, ".pdf"))
-pdf(f_name, width = 6, height = 5)
+f_name = here(plotDir, paste0("ScatteredPlots_sig_categories_2shared_ct_by_CellType_FDR", FDR, ".pdf"))
+pdf(f_name, width = 8, height = 6)
 walk(scattered_plt_cell_type_real_values, print)
 dev.off()
+
+
+## =============================================================================
+## Heatmap top genes based on CC-Score
+
+top_genes_list <- map(
+    subsetted_list_df,
+    ~ .x |>
+        arrange(desc(abs(CCscore))) |>
+        slice_head(n = top_g) |>
+        pull(gene_name) |>
+        unique()
+)
+
+# keep names for each cell_type
+names(top_genes_list) <- names(subsetted_list_df)
+# Combine all unique top genes across all cell types
+top_genes <- unique(unlist(top_genes_list))
+message("Total unique top genes: ", length(top_genes))
+
+# Check one example
+length(top_genes_list)
+head(top_genes_list[[3]])
+
+# Prepare the data for dcast (ensure no duplicates and correct type)
+wide_data <- subsetted_df |>
+    dplyr::filter(gene_name %in% top_genes) |>
+    dplyr::select(gene_name, cell_type, CCscore) |>
+    dplyr::mutate(CCscore = as.numeric(CCscore)) |> 
+    dplyr::distinct() 
+
+# Use dcast for the pivot operation
+# dcast's syntax is: dcast(data, rows_to_keep ~ columns_to_create, value_column)
+heatmap_mat <- reshape2::dcast(
+    data = wide_data, 
+    formula = gene_name ~ cell_type, 
+    value.var = "CCscore",
+    fill = 0 # Use the 'fill' argument for NA values
+) |> dplyr::as_tibble() 
+
+# Check matrix dimensions
+dim(heatmap_mat)
+head(heatmap_mat[, 1:3])
+
+# Set row names and remove the gene_name column
+heatmap_mat_clean <- heatmap_mat |> 
+    # Move the 'gene_name' column to be the row names
+    tibble::column_to_rownames(var = "gene_name") |>
+    
+    # Convert remaining data frame to a numeric matrix
+    as.matrix()
+
+# Explicitly replace any lingering NAs with 0 (redundant but safe)
+heatmap_mat_final <- replace(heatmap_mat_clean, is.na(heatmap_mat_clean), 0)
+
+pheatmap(
+    heatmap_mat_final,
+    color = colorRampPalette(c("blue", "white", "red"))(100),
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    main = paste0("Top ", top_g, " Genes per Cell Type by |CCscore|"),
+    fontsize_row = 7,
+    fontsize_col = 10,
+    border_color = NA,
+    show_rownames = TRUE,
+    show_colnames = TRUE
+)
+
 
 ## =============================================================================
 ## Classify links as within or cross: stacked bar (proportions and counts)
@@ -450,6 +516,8 @@ pheatmap::pheatmap(
 dev.off()
 
     
+
+
 
 
 message("All plots done!!!")
