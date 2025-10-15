@@ -338,9 +338,25 @@ dev.off()
 
 top_genes_heatmap = 5
 
+# Filter my df(s) to only consider those genes classified as Active CRE (+)", "Repressive CRE (-)" and "Shared CRE"
+# I applied a sig_CC=0.3 and a logFC=0.1 
+# sig_CC & sig_DAR & logFC > 0  ~ "Active CRE (+)"
+# sig_CC & sig_DAR & logFC < 0  ~ "Repressive CRE (-)"
+# sig_CC & !sig_DAR              ~ "Shared CRE"
+
 top_genes_list <- map(
     subsetted_list_df,
     ~ .x |>
+        # added filter first to only consider those genes classified as Active CRE (+)", "Repressive CRE (-)" and "Shared CRE"
+        filter(
+            # 1. Active CRE (+)
+            (abs(CCscore) > 0.3 & abs(logFC) > 0.1 & logFC > 0) |
+            # 2. Repressive CRE (-)
+            (abs(CCscore) > 0.3 & abs(logFC) > 0.1 & logFC < 0) |
+            # 3. Shared CRE (sig CCscore but not a sig DAR)
+            (abs(CCscore) > 0.3 & abs(logFC) <= 0.1)
+        ) |>
+        -------------------------------------------------------------------
         arrange(desc(abs(CCscore))) |>
         slice_head(n = top_genes_heatmap) |>
         pull(gene_name) |>
@@ -350,8 +366,9 @@ top_genes_list <- map(
 # keep names for each cell_type
 names(top_genes_list) <- names(subsetted_list_df)
 # Combine all unique top genes across all cell types
-top_genes <- unique(unlist(top_genes_list))
+top_genes2 <- unique(unlist(top_genes_list))
 message("Total unique top genes: ", length(top_genes))
+identical(top_genes, top_genes2)
 
 # Check one example
 length(top_genes_list)
@@ -404,15 +421,24 @@ col_order_final <- unique(sort_df$max_cell_type)
 heatmap_mat_ordered <- heatmap_mat_final[row_order_final, col_order_final]
 
 # plot
-f_name = here(plotDir, paste0("heatmap_all_CCscore_top", top_genes_heatmap, "genes_FDR", FDR,".pdf"))
+f_name = here(plotDir, paste0("heatmap_actve_repressed_CCscore_top", top_genes_heatmap, "genes_FDR", FDR,".pdf"))
 pdf(f_name, width = 8, height = 8)
 
+subtitle_content <- paste0(
+    "Active/Repressive/Shared CREs (CCscore > 0.3, |logFC| > 0.1)\n",
+    "Total Genes Plotted: ", nrow(heatmap_mat_final)
+)
 pheatmap(
     heatmap_mat_final,
     color = colorRampPalette(c("blue", "white", "red"))(100),
     cluster_rows = TRUE,
     cluster_cols = FALSE,
-    main = paste0("Top ", top_genes_heatmap, " Genes per Cell Type by |CCscore|"),
+    #main = paste0("Top ", top_genes_heatmap, " Genes per Cell Type by |CCscore|"),
+    main = paste0(
+        "Top ", top_genes_heatmap, " Genes Ordered by Max CCscore",
+        "\n",
+        subtitle_content
+    ),
     fontsize_row = 7,
     fontsize_col = 10,
     #border_color = NA,
