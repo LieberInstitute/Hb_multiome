@@ -54,7 +54,7 @@ if (!dir.exists(plotDir)) { dir.create(plotDir) }
 message("Loading Unique-Overlap with directionality ...")
 
 cluster_specific = "LHb.4"
-top_g = 20
+top_scattered_plt = 20
 
 ## load raw overlaps and 2-shared ct overlaps 
 overlap_df <- read.csv(here(inputCSV_Overlaps_Dir, "19_Linkage_DARs_analysis", 
@@ -308,7 +308,7 @@ make_scattered_plot_dars_cc <- function(subset_uniques) {
 # real values
 scattered_plt_cell_type_real_values <- purrr::map(
     subsetted_list_df,
-    ~ make_scattered_plot_dars_cc_real(.x, top_g, 0.2)
+    ~ make_scattered_plot_dars_cc_real(.x, top_scattered_plt, 0.2)
 )
 
 # verify results
@@ -336,11 +336,13 @@ dev.off()
 ## =============================================================================
 ## Heatmap top genes based on CC-Score
 
+top_genes_heatmap = 5
+
 top_genes_list <- map(
     subsetted_list_df,
     ~ .x |>
         arrange(desc(abs(CCscore))) |>
-        slice_head(n = top_g) |>
+        slice_head(n = top_genes_heatmap) |>
         pull(gene_name) |>
         unique()
 )
@@ -361,6 +363,7 @@ wide_data <- subsetted_df |>
     dplyr::select(gene_name, cell_type, CCscore) |>
     dplyr::mutate(CCscore = as.numeric(CCscore)) |> 
     dplyr::distinct() 
+head(wide_data)
 
 # Use dcast for the pivot operation
 # dcast's syntax is: dcast(data, rows_to_keep ~ columns_to_create, value_column)
@@ -368,6 +371,7 @@ heatmap_mat <- reshape2::dcast(
     data = wide_data, 
     formula = gene_name ~ cell_type, 
     value.var = "CCscore",
+    fun.aggregate = max, # max/mean?
     fill = 0 # Use the 'fill' argument for NA values
 ) |> dplyr::as_tibble() 
 
@@ -379,25 +383,45 @@ head(heatmap_mat[, 1:3])
 heatmap_mat_clean <- heatmap_mat |> 
     # Move the 'gene_name' column to be the row names
     tibble::column_to_rownames(var = "gene_name") |>
-    
-    # Convert remaining data frame to a numeric matrix
     as.matrix()
 
-# Explicitly replace any lingering NAs with 0 (redundant but safe)
+# Explicitly replace any lingering NAs with 0
 heatmap_mat_final <- replace(heatmap_mat_clean, is.na(heatmap_mat_clean), 0)
+
+# build diagonal
+max_col_index <- apply(abs(heatmap_mat_final), 1, which.max)
+max_col_name <- colnames(heatmap_mat_final)[max_col_index]
+# create a df for sorting
+sort_df <- data.frame(
+    gene_name = rownames(heatmap_mat_final),
+    max_cell_type = max_col_name,
+    max_abs_score = apply(abs(heatmap_mat_final), 1, max) # include the max |CCscore| to break ties within the same cell type
+) |>
+    dplyr::arrange(max_cell_type, desc(max_abs_score))
+# Row order
+row_order_final <- sort_df$gene_name
+col_order_final <- unique(sort_df$max_cell_type) 
+heatmap_mat_ordered <- heatmap_mat_final[row_order_final, col_order_final]
+
+# plot
+f_name = here(plotDir, paste0("heatmap_all_CCscore_top", top_genes_heatmap, "genes_FDR", FDR,".pdf"))
+pdf(f_name, width = 8, height = 8)
 
 pheatmap(
     heatmap_mat_final,
     color = colorRampPalette(c("blue", "white", "red"))(100),
     cluster_rows = TRUE,
-    cluster_cols = TRUE,
-    main = paste0("Top ", top_g, " Genes per Cell Type by |CCscore|"),
+    cluster_cols = FALSE,
+    main = paste0("Top ", top_genes_heatmap, " Genes per Cell Type by |CCscore|"),
     fontsize_row = 7,
     fontsize_col = 10,
-    border_color = NA,
+    #border_color = NA,
     show_rownames = TRUE,
     show_colnames = TRUE
 )
+
+dev.off()
+
 
 
 ## =============================================================================
