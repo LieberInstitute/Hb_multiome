@@ -64,22 +64,54 @@ shared_2ct_df <- read.csv(here(inputCSV_Overlaps_Dir, "20_explore_overlapping_li
 # overlaps_shared_2ct_df <- read.csv(here(inputCSV_Overlaps_Dir, 
 #                              paste0("overlaps_summary_linkPeak_DARs_shared_2ct_FDR", FDR, ".csv")))
 
+## filter uniques
 all_unique_df <- overlap_df |>
     distinct(peak_id_links, .keep_all = TRUE)
 nrow(all_unique_df) # 5603
 head(all_unique_df)
 
-peaks_2n_cell_types <- shared_2ct_df |>
-    filter(n_cell_types == 1 | n_cell_types == 2) |>
+peaks_unique_cell_types <- shared_2ct_df |>
+    filter(n_cell_types == 1) |>
     pull(peak_id)
-length(peaks_2n_cell_types) # 1967 / 3205
+length(peaks_unique_cell_types) # 1967
 
 # Keep only those 1,967 unique LinkPeaks
 unique_df <- all_unique_df |>
-    filter(peak_id_links %in% peaks_2n_cell_types)
+    filter(peak_id_links %in% peaks_unique_cell_types) |>
+    mutate(
+        overlap_type = "Unique",
+        n_cell_types = 1,
+    )
 
 length(unique_df$peak_id_links) # 1967 / 3205
 table(unique_df$cell_type)
+head(unique_df)
+summary(unique_df)
+
+
+## filter 2ct shared
+peaks_shared_cell_types <- shared_2ct_df |>
+    filter(n_cell_types == 2) |>
+    pull(peak_id)
+length(peaks_shared_cell_types) # 1238
+
+# Keep only those 1,967 unique LinkPeaks
+unique_df2 <- all_unique_df |>
+    filter(peak_id_links %in% peaks_shared_cell_types) |>
+    mutate(
+        overlap_type = "Shared",
+        n_cell_types = 2,
+    )
+
+length(unique_df2$peak_id_links) 
+table(unique_df2$cell_type)
+head(unique_df2)
+summary(unique_df2)
+
+unique_df <- bind_rows(unique_df, unique_df2)
+head(unique_df)
+table(unique_df$overlap_type)
+nrow(unique_df) # 3205
 
 
 ## =============================================================================
@@ -89,7 +121,7 @@ table(unique_df$cell_type)
 # cluster → From the RNA side: where the correlated gene was expressed or correlated in the LinkPeaks model
 
 
-all_clusters <- unique(uniques_df$cell_type)
+all_clusters <- unique(unique_df$cell_type)
 # sort by MHh and LHb first 
 clusters_sorted <- c(
     sort(grep("MHb|LHb", all_clusters, value = TRUE)), 
@@ -101,17 +133,10 @@ clusters_sorted
 subset_cell_type <- function(unique_df, cluster_specific) {
     message("Subsetting [", cluster_specific, "] cell_type")
     subset_uniques <- unique_df |> filter(cell_type == cluster_specific)
-    message("Rows found: ", nrow(subset_uniques))
+    #message("Rows found: ", nrow(subset_uniques))
     message("Unique peaks: ", length(unique(subset_uniques$peak_id_links)))
     return(subset_uniques)
 }
-
-subsetted_df <- purrr::map_df(
-    clusters_sorted,
-    ~ subset_cell_type(uniques_df, .x)
-)
-
-length(subsetted_cellTypes_df)
 
 
 ## =============================================================================
@@ -123,18 +148,17 @@ make_scattered_plot_dars_cc_real <- function(
         fdr_cutoff = 0.05
 ) {
     # FDR thresholds for LinkPeaks (CC) and DARs
-    thr_CC <- 0.1 # magnitude threshold for correlation strength (|CCscore|)
+    thr_CC <- 0.3 # magnitude threshold for correlation strength (|CCscore|)
     thr_DAR <- fdr_cutoff # threshold for accessibility significance
     clus_name <- unique(subset_uniques[["cell_type"]])
     
     message("Building plot for [", clus_name, "] (real FDR values)")
-    message("Using FDR threshold =", thr_DAR)
     
     # Categorize points
     plot_data <- subset_uniques |>
         mutate(
             sig_CC  = abs(CCscore) > thr_CC,     # strong correlation in either direction
-            sig_DAR = fdr_dars < thr_DAR,        # significant accessibility
+            sig_DAR = fdr_dars < thr_DAR,        # significant accessibility (FDR)
             category = case_when(
                 sig_CC & sig_DAR & logFC > 0  ~ "Active CRE (+)",
                 sig_CC & sig_DAR & logFC < 0  ~ "Repressive CRE (-)",
@@ -156,7 +180,9 @@ make_scattered_plot_dars_cc_real <- function(
     axis_labels <- sprintf("%.2f", axis_breaks)
     
     g1 <- ggplot(plot_data, aes(x = CCscore, y = logFC, color = category)) +
-        geom_hline(yintercept = 0, linetype = "solid", color = "grey70") +
+        #geom_hline(yintercept = 0, linetype = "solid", color = "grey70") +
+        geom_hline(yintercept = c(-log2(1 + thr_DAR), log2(1 + thr_DAR)), 
+                   linetype = "dashed", color = "darkgrey") +
         geom_vline(xintercept = 0, linetype = "solid", color = "grey70") +
         geom_vline(xintercept = c(-thr_CC, thr_CC), linetype = "dashed", color = "darkgrey") +
         geom_point(alpha = 0.7, size = 1.6) +
@@ -174,11 +200,11 @@ make_scattered_plot_dars_cc_real <- function(
             "Non-significant" = "lightgrey"
         )) +
         labs(
-            title = paste0(clus_name, " | CCscore vs logFC"),
-            subtitle = paste0("Dashed lines: |CCscore| > ", thr_CC, 
+            title = paste(clus_name, " | Uniques & 2-Shared CellTypes"),
+            subtitle = paste0("Correlation Score vs logFC-DARs | CC-Score > ", thr_CC, 
                               " | FDR < ", thr_DAR),
-            x = "LinkPeaks correlation (CCscore)",
-            y = "log2 Fold Change (Accessibility)"
+            x = "CC-Score",
+            y = "log2 FC (DARs)"
         ) +
         theme_minimal(base_size = 12) +
         theme(
@@ -189,6 +215,7 @@ make_scattered_plot_dars_cc_real <- function(
         )
     
     return(g1)
+    
 }
 
 make_scattered_plot_dars_cc <- function(subset_uniques) {
@@ -251,36 +278,61 @@ make_scattered_plot_dars_cc <- function(subset_uniques) {
     return(g1)
 }
 
-length(subsetted_df) # 18
+length(subsetted_df)
 table(subsetted_df$cell_type)
-# Astrocyte Excit.Thal Inhib.Thal      LHb.1  LHb.1.3.4    LHb.2.7      LHb.4 
-# 11        160        501         13         20         91        163 
-# MHb.1    MHb.1.2      MHb.2  Microglia      Oligo 
-# 7          2        258          1         13
-
 head(subsetted_df)
 subsetted_list_df <- split(subsetted_df, subsetted_df$cell_type)
-length(subsetted_list_df)
+names(subsetted_list_df)
+length(subsetted_list_df) # 15 ct
+table(subsetted_list_df[[8]]["overlap_type"])
 
-# log10
-scattered_plt_cell_type <- purrr::map(
-    subsetted_list_df,
-    ~ make_scattered_plot_dars_cc(.x)
-)
 
-scattered_plt_cell_type[1] 
-
-pdf("ScatteredPlots_byCellType.pdf", width = 6, height = 5)
-walk(scattered_plt_cell_type, print)
-dev.off()
+# # log10
+# scattered_plt_cell_type <- purrr::map(
+#     subsetted_list_df,
+#     ~ make_scattered_plot_dars_cc(.x)
+# )
+# 
+# 
+# ## subset the overlaps by cell_type
+# subsetted_df <- purrr::map_df(
+#     clusters_sorted,
+#     ~ subset_cell_type(unique_df, .x)
+# )
+#
+# scattered_plt_cell_type[1] 
+# 
+# pdf("ScatteredPlots_byCellType.pdf", width = 6, height = 5)
+# walk(scattered_plt_cell_type, print)
+# dev.off()
 
 # real values
 scattered_plt_cell_type_real_values <- purrr::map(
     subsetted_list_df,
-    ~ make_scattered_plot_dars_cc_real(.x, FDR)
+    ~ make_scattered_plot_dars_cc_real(.x, 0.1)
 )
-scattered_plt_cell_type_real_values[1]
 
+# verify results
+# scattered_plt_cell_type_real_values[1]
+# subsetted_df |>
+#     mutate(
+#         sig_CC  = abs(CCscore) > 0.1,
+#         sig_DAR = fdr_dars < 0.05,
+#         category_check = case_when(
+#             sig_CC & sig_DAR & logFC > 0  ~ "Active CRE (+)",
+#             sig_CC & sig_DAR & logFC < 0  ~ "Repressive CRE (-)",
+#             sig_CC & !sig_DAR              ~ "Shared CRE",
+#             !sig_CC & sig_DAR              ~ "Unlinked OCR",
+#             TRUE                           ~ "Non-significant"
+#         )
+#     ) |>
+#     select(CCscore, fdr_dars, logFC, category_check)
+
+
+f_name = here(plotDir, paste0("ScatteredPlots_sig_categories_2shared_ct_byCellType_FDR", FDR, ".pdf"))
+pdf(f_name, width = 6, height = 5)
+walk(scattered_plt_cell_type_real_values, print)
+dev.off()
 
 ## =============================================================================
 ## Classify links as within or cross: stacked bar (proportions and counts)
