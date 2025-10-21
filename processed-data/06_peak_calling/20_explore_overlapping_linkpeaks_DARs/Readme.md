@@ -70,7 +70,9 @@ Because a single LinkPeak can overlap multiple DARs from different cell types, t
 <br>
 
 <div align="center">
-  <img src="20_ie_LinkPeaks-DARs.jpg" alt="Illustration of LinkPeaks–DARs relationship>
+  <img src="20_ie_LinkPeaks-DARs.jpg" alt="Illustration of LinkPeaks–DARs relationship" width="700">
+</div>
+
 <br>
 
 #### Other related files: 
