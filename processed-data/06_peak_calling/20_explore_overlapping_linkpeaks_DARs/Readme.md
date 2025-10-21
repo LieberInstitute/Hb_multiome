@@ -13,8 +13,8 @@ Classifying peaks according to how many cell types share the same LinkPeak–DAR
 
 | File | Description |
 |------------------------------------|------------------------------------|
-| `overlaps_summary_linkPeak_DARs_unique_ct_FDR0.2.csv` | Summarizes all **LinkPeaks** that overlap **DARs** at *FDR = 0.2*, recording for each peak how many DARs and distinct cell types it overlaps. Peaks labeled **Unique** represent cell-type–specific regulatory elements. **Shared** peaks are accessible across multiple cell types, potentially marking common chromatin hubs or lineage-related programs. Typical counts: Shared = 3,636 vs Unique = 1,967. |
-| `overlaps_unique_linkPeak_DARs_detail_FDR0.2.csv` | Detailed table of **unique LinkPeaks** overlapping DARs (*FDR = 0.2*), including full accessibility direction (`logFC`) and per-cell-type annotation. Used to characterize chromatin opening/closing dynamics within uniquely regulated elements. Provides fine-grained accessibility orientation for each unique LinkPeak–DAR pair.  The table contains **≈2,900 entries** instead of 1,967 because several *unique LinkPeaks* overlap with **multiple DARs** within the same cell type, resulting in one row per LinkPeak–DAR pair |
+| `overlaps_summary_linkPeak_DARs_unique_ct_FDR0.2.csv` | Summarizes all **LinkPeaks** that overlap **DARs** at *FDR = 0.2*, recording for each peak how many DARs and distinct cell types it overlaps. Peaks labeled **Unique** represent cell-type–specific regulatory elements. **Shared** peaks are accessible across multiple cell types, potentially marking common chromatin hubs or lineage-related programs. Typical counts: Shared = 3,636 vs Unique = 1,967 |
+| `overlaps_unique_linkPeak_DARs_detail_FDR0.2.csv` | Detailed table of **unique LinkPeaks** overlapping DARs (*FDR = 0.2*), including full accessibility direction (`logFC`) and per-cell-type annotation. Used to characterize chromatin opening/closing dynamics within uniquely regulated elements. Provides fine-grained accessibility orientation for each unique LinkPeak–DAR pair |
 |  |  |
 
 
@@ -38,26 +38,39 @@ https://github.com/LieberInstitute/Hb_multiome/tree/040a7df1fa0007ba88fddf1508ef
 | `overlap_type` | `"Unique"` if `n_cell_types = 1`; `"Shared"` otherwise |
 
 
-------------------------------------------------------------------------
+---
 
 <br>
 
 #### Columns description: `overlaps_unique_linkPeak_DARs_detail_FDR0.2.csv`
 
-|  |  |
+| Column | Description |
 |---------|--------------|
 | `peak_id_links` | LinkPeak coordinate (`chr-start-end`) |
 | `gene_name`, `gene_id` | Target gene metadata (inherited from LinkPeaks) |
-| `cell_type` | Cell type in which the DAR–LinkPeak overlap occurs |
+| `cluster` | Cell group in which the `peak–gene` correlation (LinkPeaks) was originally computed |
+| `cell_type` | Cell type used for the DARs analysis. For example, the cell type in which this peak was found to be significantly more or less accessible. Indicates the cell type where the same peak is differentially accessible (open/closed) |
 | `logFC` | Log₂ fold-change of accessibility (from DARs) |
 | `fdr_dars` | Adjusted p-value (FDR) from the differential accessibility test |
 | `CCscore`, `FDR_CC` | Spearman correlation score and adjusted p-value from LinkPeaks |
 | `accessibility` | Direction of accessibility: `"More"` (open) or `"Less"` (closed) |
-| `overlap_type` | `"Unique"` (all rows in this file are unique peaks) |
+| `overlap_type` | `"Unique"` (all rows in this file correspond to unique peaks) |
 
+<br>
 
-------------------------------------------------------------------------
+**In Context:**
 
+Each row corresponds to one **LinkPeak–DAR overlap**:
+
+- **`cluster`** is the cell group where the *link* (peak-gene correlation) was detected.  
+- **`cell_type`** indicates the cell type where the same peak is *differentially accessible* (open or closed chromatin).  
+
+Because a single LinkPeak can overlap multiple DARs from different cell types, the table contains **≈2,900 rows** instead of 1,967 unique peaks.  Each additional row represents a case where the **same regulatory region** is open or closed in another cell type.
+
+<br>
+
+<div align="center">
+  <img src="20_ie_LinkPeaks-DARs.jpg" alt="Illustration of LinkPeaks–DARs relationship>
 <br>
 
 #### Other related files: 
