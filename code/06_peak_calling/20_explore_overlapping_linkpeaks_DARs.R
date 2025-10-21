@@ -1,5 +1,5 @@
 ########################################################################
-## Summaries/Prepare divergence plots for interpreting Peaks Overlappings
+## Summaries/Prepare divergence plots for interpreting Peaks Overlapings
 ##
 ## Authors. CSC
 ## Date. Oct 02, 2025
@@ -52,7 +52,7 @@ message("Loading Unique-Overlap Hits ...")
 ## load full overlaps df
 overlaps_df <- read.csv(here(inputCSV_Overlaps_Dir, 
                              paste0("Overlaps_LinkPeak_DARs_FDR", FDR, ".csv")))
-head(overlaps_df)
+# head(overlaps_df)
 
 
 ##==============================================================================
@@ -304,7 +304,7 @@ ggsave(here(plotDir, f_name),
 
 
 ##==============================================================================
-## Summarize unique LinkPeak with n_DARs and n_cell_types
+## Summarize unique LinkPeaks with n_DARs and n_cell_types
 
 link_summary <- overlaps_df |>
     group_by(peak_id) |>
