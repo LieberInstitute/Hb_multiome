@@ -79,14 +79,46 @@ Note these R scripts are located into the `raw-data/` directory. These is the on
 
 ------------------------------------------------------------------------
 
-# Core results
+# Core Results
 
 ## RNA-Multiome
 
+*(Section content to be added later)*
+
+📁 **Data Folder:**\
+[RNA-Multiome Processed Data](https://github.com/LieberInstitute/Hb_multiome/tree/main/processed-data/05_RNA_multiome)
+
+📊 **Related Plots:**\
+[RNA-Multiome Plots](https://github.com/LieberInstitute/Hb_multiome/tree/main/plots/05_RNA_multiome)
+
 ------------------------------------------------------------------------
 
-## ATAC-multiome
+## ATAC-Multiome
+
+### LinkPeaks–DARs Overlap Analysis
+
+This analysis identifies significant chromatin regions that serve as both cis-regulatory elements (LinkPeaks) and differentially accessible regions (DARs). Overlaps were assessed across cell types:
+
+-   **Resolution:** 18 mid-resolution WNN clusters\
+-   **Threshold:** False Discovery Rate (FDR) ≤ 0.2
 
 ------------------------------------------------------------------------
 
-CSC Oct. 2025
+### Key Results (CSV Outputs)
+
+| File | Description |
+|------------------------|------------------------------------------------|
+| [`ALL_DARs_signif_FDR02.csv`](https://github.com/LieberInstitute/Hb_multiome/tree/32b27fc1015923f46d4c44fe742e776e9e0a67e6/processed-data/06_peak_calling/19_Linkage_DARs_analysis/ALL_DARs_signif_FDR02.csv) | Identifies DARs representing chromatin opening/closing in specific cell types |
+| [`Overlaps_LinkPeak_DARs_FDR0.2.csv`](https://github.com/LieberInstitute/Hb_multiome/tree/32b27fc1015923f46d4c44fe742e776e9e0a67e6/processed-data/06_peak_calling/19_Linkage_DARs_analysis/Overlaps_LinkPeak_DARs_FDR0.2.csv) | Validates that correlated peaks are also cell-type-specific in accessibility |
+
+📁 **Data Folder:**\
+[19_Linkage_DARs_analysis (processed-data)](https://github.com/LieberInstitute/Hb_multiome/tree/32b27fc1015923f46d4c44fe742e776e9e0a67e6/processed-data/06_peak_calling/19_Linkage_DARs_analysis)
+
+📊 **Related Plots:**\
+[Linkage & DAR Overlap Visualizations (plots)](https://github.com/LieberInstitute/Hb_multiome/tree/32b27fc1015923f46d4c44fe742e776e9e0a67e6/plots/06_peak_calling/19_Linkage_DARs_analysis)
+
+------------------------------------------------------------------------
+
+*Cynthia SC*
+
+*October 2025*
