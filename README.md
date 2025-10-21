@@ -1,10 +1,14 @@
 # Hb_multiome
 
-Human Habenula Multiome Project
+------------------------------------------------------------------------
 
-### Overview
+## Project Description
 
-#### Local project name: Hb_multiome
+------------------------------------------------------------------------
+
+## Local Data in JHPCE
+
+#### Project name: Hb_multiome
 
 Allocated in: `/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome`
 
@@ -73,4 +77,16 @@ Note these R scripts are located into the `raw-data/` directory. These is the on
 
 [Cellranger-atac web summary report](https://github.com/LieberInstitute/Hb_multiome/tree/732545d59dcbb1087621414eb39c1b093832aa5e/processed-data/cellrangerATAC_summary_rpts)
 
-CSC Sep. 2024
+------------------------------------------------------------------------
+
+# Core results
+
+## RNA-Multiome
+
+------------------------------------------------------------------------
+
+## ATAC-multiome
+
+------------------------------------------------------------------------
+
+CSC Oct. 2025
