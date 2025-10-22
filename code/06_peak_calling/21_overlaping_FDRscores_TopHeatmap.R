@@ -316,30 +316,83 @@ dev.off()
 # - if comparing co-regulated gene modules across clusters
 
 # Filter plot_data_list to only consider those genes classified as: 
-# sig_CC & sig_DAR & logFC > thr_logFC  ~ "Active CRE (+)",      # positively correlated & accessible
-# sig_CC & sig_DAR & logFC < -thr_logFC  ~ "Repressive CRE (-)", # negatively correlated & less accessible
-# sig_CC & sig_DAR               ~ "Neutral CRE",          # New category for highly significant elements with marginal gene change
-# sig_CC & !sig_DAR               ~ "Shared CRE",          # correlated, not DAR
+# categories:
+# "Active CRE (+)"         # positively correlated & accessible
+# “Repressive CRE (-)"     # negatively correlated & less accessible
+# "Neutral CRE"            # New category for highly significant elements with marginal gene change
+# "Shared CRE"             # correlated, not DAR
+# "Unlinked OCR”.          # DAR, no correlation
+# "Non-significant"        # everything else
 
 # Active CRE (+)        Neutral CRE    Non-significant Repressive CRE (-) 
 # 230                136                157                 13 
 # Shared CRE       Unlinked OCR 
 # 170                230
 
+
+## =============================================================================
+## Define functions to plot all the defined cRE classes 
+
+make_heatmap_cRE <- function(
+        heatmap_mat_ordered,
+        subtitle_content
+) {
+    h1 <- pheatmap(
+        heatmap_mat_ordered, 
+        color = colorRampPalette(c("blue", "white", "red"))(100),
+        cluster_rows = FALSE, # FALSE to respect row_order_final
+        cluster_cols = FALSE,
+        main = paste0( 
+            "Top ", top_genes_heatmap, " Genes per Cell Type", #  by Max |CCscore|
+            "\n",
+            subtitle_content
+        ),
+        fontsize_row = 7,
+        fontsize_col = 10,
+        show_rownames = TRUE,
+        show_colnames = TRUE
+    )
+    return(h1)
+    
+}
+
+## ====
+
 ## filter to consider those genes classified as Active CRE (+)"
 
 top_genes_heatmap = 5
 names(plot_data_list)
+head(plot_data_list[[1]])
 
-top_genes_list <- map(
+
+prepare_top_genes_heatmap <- function(data_list,
+                                      category_peaks,
+                                      top_genes_heatmap) 
+    {
+    
+    # filtering within each cell type the specific category. ge. "Active CRE (+)"
+    top_genes <- map(
+        data_list,
+        ~ .x |>
+            filter(category == category_peaks) |> 
+            arrange(desc(abs(CCscore))) |>
+            slice_head(n = top_genes_heatmap) |>
+            pull(gene_name) |>
+            unique()
+    )
+    
+    return(top_genes)
+
+    }
+
+##  ============================================================================
+
+
+top_genes_list <- prepare_top_genes_heatmap(
     plot_data_list,
-    ~ .x |>
-        filter(category == "Active CRE (+)") |>
-        arrange(desc(abs(CCscore))) |>
-        slice_head(n = top_genes_heatmap) |>
-        pull(gene_name) |>
-        unique()
-)
+    "Active CRE (+)",
+    top_genes_heatmap
+    )
 
 # keep names for each cell_type
 names(top_genes_list) <- names(plot_data_list)
@@ -348,26 +401,22 @@ top_genes <- unique(unlist(top_genes_list))
 message("Total unique top genes: ", length(top_genes))
 
 # Prepare the data for dcast (ensure no duplicates and correct type)
-wide_data <- subsetted_df |>
+wide_data_clean <- plot_data_full_df |>
     dplyr::filter(gene_name %in% top_genes) |>
     dplyr::select(gene_name, cell_type, CCscore) |>
-    dplyr::mutate(CCscore = as.numeric(CCscore)) |> 
-    dplyr::distinct() 
-head(wide_data)
+    dplyr::group_by(gene_name, cell_type) |>
+    # Keep the row with the largest absolute CCscore for each gene/cell pair
+    dplyr::slice_max(order_by = abs(CCscore), n = 1, with_ties = FALSE) |>
+    dplyr::ungroup()
 
-# Use dcast for the pivot operation
-# dcast's syntax is: dcast(data, rows_to_keep ~ columns_to_create, value_column)
+# Then use dcast (or pivot_wider) on wide_data_clean without an aggregate function
 heatmap_mat <- reshape2::dcast(
-    data = wide_data, 
+    data = wide_data_clean, 
     formula = gene_name ~ cell_type, 
-    value.var = "CCscore",
-    fun.aggregate = max, # max/mean?
-    fill = 0 # Use the 'fill' argument for NA values
-) |> dplyr::as_tibble() 
+    value.var = "CCscore"
+)  |> dplyr::as_tibble()  # fun.aggregate is no longer needed
 
-# Check matrix dimensions
-dim(heatmap_mat)
-head(heatmap_mat[, 1:3])
+
 
 # Set row names and remove the gene_name column
 heatmap_mat_clean <- heatmap_mat |> 
@@ -393,31 +442,20 @@ row_order_final <- sort_df$gene_name
 col_order_final <- unique(sort_df$max_cell_type) 
 heatmap_mat_ordered <- heatmap_mat_final[row_order_final, col_order_final]
 
-# plot
-f_name = here(plotDir, paste0("heatmap_active_repressed_CCscore_top", top_genes_heatmap, "genes_FDR", FDR,".pdf"))
+# make the plot
+f_name = here(plotDir, paste0("heatmap_active_CCscore_top", top_genes_heatmap, "genes_FDR", thr_DAR,".pdf")) # FIX 4: Use thr_DAR
 pdf(f_name, width = 8, height = 8)
 
 subtitle_content <- paste0(
-    "Active/Repressive/Shared CREs (CCscore > 0.3, |logFC| > 0.1)\n",
-    "Total Genes Plotted: ", nrow(heatmap_mat_final)
+    "Active CRE (+)' Category\n", 
+    "Total Genes Plotted: ", nrow(heatmap_mat_ordered) 
 )
-pheatmap(
-    heatmap_mat_final,
-    color = colorRampPalette(c("blue", "white", "red"))(100),
-    cluster_rows = TRUE,
-    cluster_cols = FALSE,
-    #main = paste0("Top ", top_genes_heatmap, " Genes per Cell Type by |CCscore|"),
-    main = paste0(
-        "Top ", top_genes_heatmap, " Genes Ordered by Max CCscore",
-        "\n",
-        subtitle_content
-    ),
-    fontsize_row = 7,
-    fontsize_col = 10,
-    #border_color = NA,
-    show_rownames = TRUE,
-    show_colnames = TRUE
-)
+
+# plot the heatmap with cRE
+tmp_h1 <- make_heatmap_cRE(
+    heatmap_mat_ordered,
+    subtitle_content)
+print(tmp_h1)
 
 dev.off()
 
@@ -528,14 +566,31 @@ mat_z <- t(scale(t(mat_norm)))
 # Y-axis (rows)	ATAC-defined cell_type	Where the open chromatin peak is located (e.g., LHb.4).
 # X-axis (columns)	RNA-defined cluster	Where the correlated gene expression occurs (e.g., Excit.Thal).
 # Color	Strength or proportion of links	Fraction (or Z-score) of LHb.4 peaks linked to genes in each expression cluster.
-f_name = here(plotDir, paste0("heatmap_within_crossCluster_LinkCounts_h2_FDR", FDR,".pdf"))
-pdf(f_name, width = 7, height = 6)
-pheatmap::pheatmap(
-    mat_z,
-    cluster_rows = TRUE,
-    cluster_cols = TRUE,
-    main = "Z-scored Link Density (peaks→genes)"
+# plot
+f_name = here(plotDir, paste0("heatmap_active_repressed_CCscore_top", top_genes_heatmap, "genes_FDR", thr_DAR,".pdf")) # FIX 4: Use thr_DAR
+pdf(f_name, width = 8, height = 8)
+
+subtitle_content <- paste0(
+    "Genes Selected from 'Active CRE (+)' Category (CCscore > ", thr_CC, ", FDR-DAR < ", thr_DAR, ", logFC > ", thr_logFC, ")\n", # Recommended to be more specific
+    "Total Genes Plotted: ", nrow(heatmap_mat_ordered) # Use ordered matrix size
 )
+
+pheatmap(
+    heatmap_mat_ordered, # FIX 1: Plot the ordered matrix
+    color = colorRampPalette(c("blue", "white", "red"))(100),
+    cluster_rows = FALSE, # FIX 2: Set to FALSE to respect row_order_final
+    cluster_cols = FALSE,
+    main = paste0( # FIX 3: Clean up the main title
+        "Top ", top_genes_heatmap, " Genes per Cell Type by Max |CCscore|",
+        "\n",
+        subtitle_content
+    ),
+    fontsize_row = 7,
+    fontsize_col = 10,
+    show_rownames = TRUE,
+    show_colnames = TRUE
+)
+
 dev.off()
 
 message("All plots done!!!")
