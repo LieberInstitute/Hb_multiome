@@ -193,10 +193,12 @@ make_scattered_plot_dars_cc_real <- function(
         )) +
         labs(
             title = paste(clus_name, " | Peak-Gene Correlation vs DARs"),
-            subtitle = paste("Spearman CC |ρ| > ", thr_CC, 
-                             " |  FDR-DARs < ", thr_DAR, " &  log2FC ± ", thr_logFC), # |  FDR < ", fdr_cutoff
-            x = "Spearman CC |ρ|",
-            y = "log2FC (DARs)"
+            subtitle = expression(
+                paste("Spearman CC |", rho, "| > ", thr_CC,
+                      " | FDR-DARs < ", thr_DAR, " & log2FC ", phantom(), pm, " ", thr_logFC)
+            ), # |  FDR < ", fdr_cutoff
+            x = expression("Spearman CC |" * rho * "|"),
+            y = expression(log[2] * "FC (DARs)")
         ) +
         theme_minimal(base_size = 12) +
         theme(
@@ -261,20 +263,27 @@ plot_data_full_df <- bind_rows(plot_data_list, .id = "source_df")
 message("========= Summary of candidate RE by category ============\n")
 # head(plot_data_full_df)
 table(plot_data_full_df$cell_type)
+table(plot_data_full_df$category)
+
 hb_related_df <- plot_data_full_df |>
     filter(grepl("MHb|LHb", cell_type))
+
 total_hb_related <- nrow(hb_related_df)
 table(hb_related_df$category)
+
 hb_related_signif_df <- hb_related_df |>
-    filter(category %in% c("Active CRE (+)", "Repressive CRE (-)", "Shared CRE"))
+    filter(category %in% c("Active CRE (+)", "Repressive CRE (-)", "Neutral CRE", "Shared CRE"))
+
 total_hb_related_signif <- nrow(hb_related_signif_df) 
 
 message("Total Hb related [thr_CC=", thr_CC, 
         " & thr_DAR=", thr_DAR,
         " & thr_logFC=", thr_logFC, 
         "]: ", total_hb_related)
+# Total Hb related [thr_CC=0.3 & thr_DAR=0.1 & thr_logFC=0.5]: 936
+
 message("Total Hb related significant: ", total_hb_related_signif)
-# Total Hb related significant: 413
+# Total Hb related significant: 549
 
 # save overlapping with classification
 f_name <- here(processedDir, paste0("overlaps_linkPeak_DARs_classified_thr_CC", thr_CC, "_thr_DAR", thr_DAR, ".csv"))
@@ -283,7 +292,7 @@ write.csv(plot_data_full_df, f_name, row.names = FALSE)
 message("Saved linkPeak_DARs categories!")
 
 scattered_plt_cell_type_real_values <- purrr::map(
-    plot_data_list, #     #subsetted_list_df
+    plot_data_list,
     ~ make_scattered_plot_dars_cc_real(
         .x, 
         top_genes_scattered_plt,
@@ -291,35 +300,41 @@ scattered_plt_cell_type_real_values <- purrr::map(
         thr_fdr)
 )
 
-f_name = here(plotDir, paste0("ScatteredPlots_sig_categories_2shared_ct_by_CellType_FDR", FDR, ".pdf"))
+f_name = here(plotDir, paste0("ScatteredPlots_sig_categories_2sharedCT_DARs_criteria_FDR", FDR, ".pdf"))
 pdf(f_name, width = 8, height = 6)
 walk(scattered_plt_cell_type_real_values, print)
 dev.off()
 
 
 ## =============================================================================
-## Heatmap top genes based on CC-Score
+## Heatmaps:
+
+# (1) For summarizing accessibility (logFC, FDR, directionality) → Subset by cell_type
+# - the goal centers on cell-type–specific DARs
+
+# (2) For summarizing correlation strength (CCscore) →
+# - if comparing co-regulated gene modules across clusters
+
+# Filter plot_data_list to only consider those genes classified as: 
+# sig_CC & sig_DAR & logFC > thr_logFC  ~ "Active CRE (+)",      # positively correlated & accessible
+# sig_CC & sig_DAR & logFC < -thr_logFC  ~ "Repressive CRE (-)", # negatively correlated & less accessible
+# sig_CC & sig_DAR               ~ "Neutral CRE",          # New category for highly significant elements with marginal gene change
+# sig_CC & !sig_DAR               ~ "Shared CRE",          # correlated, not DAR
+
+# Active CRE (+)        Neutral CRE    Non-significant Repressive CRE (-) 
+# 230                136                157                 13 
+# Shared CRE       Unlinked OCR 
+# 170                230
+
+## filter to consider those genes classified as Active CRE (+)"
 
 top_genes_heatmap = 5
-
-# Filter my df(s) to only consider those genes classified as Active CRE (+)", "Repressive CRE (-)" and "Shared CRE"
-# I applied a sig_CC=0.3 and a logFC=0.1 
-# sig_CC & sig_DAR & logFC > 0  ~ "Active CRE (+)"
-# sig_CC & sig_DAR & logFC < 0  ~ "Repressive CRE (-)"
-# sig_CC & !sig_DAR              ~ "Shared CRE"
+names(plot_data_list)
 
 top_genes_list <- map(
     plot_data_list,
     ~ .x |>
-        # filter first to only consider those genes classified as Active CRE (+)", "Repressive CRE (-)" and "Shared CRE"
-        filter(
-            # 1. Active CRE (+)
-            (abs(CCscore) > 0.3 & abs(logFC) > 0.1 & logFC > 0) |
-            # 2. Repressive CRE (-)
-            (abs(CCscore) > 0.3 & abs(logFC) > 0.1 & logFC < 0) |
-            # 3. Shared CRE (sig CCscore but not a sig DAR)
-            (abs(CCscore) > 0.3 & abs(logFC) <= 0.1)
-        ) |>
+        filter(category == "Active CRE (+)") |>
         arrange(desc(abs(CCscore))) |>
         slice_head(n = top_genes_heatmap) |>
         pull(gene_name) |>
@@ -329,13 +344,8 @@ top_genes_list <- map(
 # keep names for each cell_type
 names(top_genes_list) <- names(plot_data_list)
 # Combine all unique top genes across all cell types
-top_genes2 <- unique(unlist(top_genes_list))
+top_genes <- unique(unlist(top_genes_list))
 message("Total unique top genes: ", length(top_genes))
-identical(top_genes, top_genes2)
-
-# Check one example
-length(top_genes_list)
-head(top_genes_list[[3]])
 
 # Prepare the data for dcast (ensure no duplicates and correct type)
 wide_data <- subsetted_df |>
