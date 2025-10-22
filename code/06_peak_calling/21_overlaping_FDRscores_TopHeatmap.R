@@ -161,7 +161,7 @@ make_scattered_plot_dars_cc_real <- function(
     message("Building plot for [", clus_name, "] (real FDR values)")
     
     top_hits <- plot_data |>
-        filter(category %in% c("Active CRE (+)", "Repressive CRE (-)")) |>
+        #filter(category %in% c("Active CRE (+)", "Repressive CRE (-)")) |>
         arrange(FDR_CC) |>
         head(top_genes)
     
@@ -173,8 +173,8 @@ make_scattered_plot_dars_cc_real <- function(
     
     g1 <- ggplot(plot_data, aes(x = CCscore, y = logFC, color = category)) +
         #geom_hline(yintercept = 0, linetype = "solid", color = "grey70") +
-        geom_hline(yintercept = c(-log2(1 + thr_DAR), log2(1 + thr_DAR)), 
-                   linetype = "dashed", color = "darkgrey") +
+        #geom_hline(yintercept = c(-log2(1 + thr_DAR), log2(1 + thr_DAR)), linetype = "dashed", color = "darkgrey") +
+        geom_hline(yintercept = c(-thr_logFC, thr_logFC), linetype = "dashed", color = "darkgrey") +
         geom_vline(xintercept = 0, linetype = "solid", color = "grey70") +
         geom_vline(xintercept = c(-thr_CC, thr_CC), linetype = "dashed", color = "darkgrey") +
         geom_point(alpha = 0.7, size = 1.6) +
@@ -187,6 +187,7 @@ make_scattered_plot_dars_cc_real <- function(
         scale_color_manual(values = c(
             "Active CRE (+)"  = "#E64B35FF",
             "Repressive CRE (-)" = "#4DBBD5FF",
+            "Neutral CRE"     = "#CFB53B",
             "Shared CRE"      = "#00A087FF",
             "Unlinked OCR"    = "#3C5488FF",
             "Non-significant" = "lightgrey"
@@ -264,6 +265,10 @@ message("========= Summary of candidate RE by category ============\n")
 # head(plot_data_full_df)
 table(plot_data_full_df$cell_type)
 table(plot_data_full_df$category)
+# Active CRE (+)        Neutral CRE    Non-significant Repressive CRE (-) 
+# 459                459                354                445 
+# Shared CRE       Unlinked OCR 
+# 420               1068 
 
 hb_related_df <- plot_data_full_df |>
     filter(grepl("MHb|LHb", cell_type))
@@ -300,7 +305,7 @@ scattered_plt_cell_type_real_values <- purrr::map(
         thr_fdr)
 )
 
-f_name = here(plotDir, paste0("ScatteredPlots_sig_categories_2sharedCT_DARs_criteria_FDR", FDR, ".pdf"))
+f_name = here(plotDir, paste0("ScatteredPlots_categories_2sharedCT_DARs_criteria_FDR", FDR, ".pdf"))
 pdf(f_name, width = 8, height = 6)
 walk(scattered_plt_cell_type_real_values, print)
 dev.off()
@@ -343,7 +348,7 @@ make_heatmap_cRE <- function(
         cluster_rows = FALSE, # FALSE to respect row_order_final
         cluster_cols = FALSE,
         main = paste0( 
-            "Top ", top_genes_heatmap, " Genes per Cell Type", #  by Max |CCscore|
+            "Top ", top_genes_heatmap, " Genes per Cell Type by Max |CCscore|",   
             "\n",
             subtitle_content
         ),
@@ -388,79 +393,80 @@ prepare_top_genes_heatmap <- function(data_list,
 ##  ============================================================================
 
 
-categories_to_plot <- c("Active CRE (+)", "Repressive CRE (-)", "Neutral CRE")
+categories_to_plot <- c("Active CRE (+)", "Repressive CRE (-)", "Neutral CRE", "Shared CRE")
 
 
-top_genes_list <- prepare_top_genes_heatmap(
-    plot_data_list,
-    "Active CRE (+)",
-    top_genes_heatmap
+for (cat_cRE in categories_to_plot) {
+    # cat_cRE = "Repressive CRE (-)"
+    
+    top_genes_list <- prepare_top_genes_heatmap(
+        plot_data_list,
+        cat_cRE,
+        top_genes_heatmap
+        )
+    
+    names(top_genes_list) <- names(plot_data_list)
+    top_genes <- unique(unlist(top_genes_list))
+    message("Total unique top genes: ", length(top_genes))
+    
+    # Prepare the data for dcast (ensure no duplicates and correct type)
+    wide_data_clean <- plot_data_full_df |>
+        dplyr::filter(gene_name %in% top_genes) |>
+        dplyr::select(gene_name, cell_type, CCscore) |>
+        dplyr::group_by(gene_name, cell_type) |>
+        # Keep the row with the largest absolute CCscore for each gene/cell pair
+        dplyr::slice_max(order_by = abs(CCscore), n = 1, with_ties = FALSE) |>
+        dplyr::ungroup()
+    
+    heatmap_mat <- reshape2::dcast(
+        data = wide_data_clean, 
+        formula = gene_name ~ cell_type, 
+        value.var = "CCscore"
+    )  |> dplyr::as_tibble()  # fun.aggregate is no longer needed
+    
+    # Set row names and remove the gene_name column
+    heatmap_mat_clean <- heatmap_mat |> 
+        # Move the 'gene_name' column to be the row names
+        tibble::column_to_rownames(var = "gene_name") |>
+        as.matrix()
+    
+    # Explicitly replace any lingering NAs with 0
+    heatmap_mat_final <- replace(heatmap_mat_clean, is.na(heatmap_mat_clean), 0)
+    
+    # build diagonal
+    max_col_index <- apply(abs(heatmap_mat_final), 1, which.max)
+    max_col_name <- colnames(heatmap_mat_final)[max_col_index]
+    # create a df for sorting
+    sort_df <- data.frame(
+        gene_name = rownames(heatmap_mat_final),
+        max_cell_type = max_col_name,
+        max_abs_score = apply(abs(heatmap_mat_final), 1, max) # include the max |CCscore| to break ties within the same cell type
+    ) |>
+        dplyr::arrange(max_cell_type, desc(max_abs_score))
+    # Row order
+    row_order_final <- sort_df$gene_name
+    col_order_final <- unique(sort_df$max_cell_type) 
+    heatmap_mat_ordered <- heatmap_mat_final[row_order_final, col_order_final]
+    
+    # make the plot
+    f_name <- paste0("heatmap_", stringr::word(cat_cRE, 1), "_CCscore_top", top_genes_heatmap, "genes.pdf")
+    f_name = here(plotDir, f_name)
+    pdf(f_name, width = 5, height = 8)
+    
+    subtitle_content <- paste0(
+        cat_cRE, "\n", 
+        "Total Genes Plotted: ", nrow(heatmap_mat_ordered) 
     )
+    
+    # plot the heatmap with cRE
+    tmp_h1 <- make_heatmap_cRE(
+        heatmap_mat_ordered,
+        subtitle_content)
+    print(tmp_h1)
+    
+    dev.off()
 
-# keep names for each cell_type
-names(top_genes_list) <- names(plot_data_list)
-# Combine all unique top genes across all cell types
-top_genes <- unique(unlist(top_genes_list))
-message("Total unique top genes: ", length(top_genes))
-
-# Prepare the data for dcast (ensure no duplicates and correct type)
-wide_data_clean <- plot_data_full_df |>
-    dplyr::filter(gene_name %in% top_genes) |>
-    dplyr::select(gene_name, cell_type, CCscore) |>
-    dplyr::group_by(gene_name, cell_type) |>
-    # Keep the row with the largest absolute CCscore for each gene/cell pair
-    dplyr::slice_max(order_by = abs(CCscore), n = 1, with_ties = FALSE) |>
-    dplyr::ungroup()
-
-# Then use dcast (or pivot_wider) on wide_data_clean without an aggregate function
-heatmap_mat <- reshape2::dcast(
-    data = wide_data_clean, 
-    formula = gene_name ~ cell_type, 
-    value.var = "CCscore"
-)  |> dplyr::as_tibble()  # fun.aggregate is no longer needed
-
-
-
-# Set row names and remove the gene_name column
-heatmap_mat_clean <- heatmap_mat |> 
-    # Move the 'gene_name' column to be the row names
-    tibble::column_to_rownames(var = "gene_name") |>
-    as.matrix()
-
-# Explicitly replace any lingering NAs with 0
-heatmap_mat_final <- replace(heatmap_mat_clean, is.na(heatmap_mat_clean), 0)
-
-# build diagonal
-max_col_index <- apply(abs(heatmap_mat_final), 1, which.max)
-max_col_name <- colnames(heatmap_mat_final)[max_col_index]
-# create a df for sorting
-sort_df <- data.frame(
-    gene_name = rownames(heatmap_mat_final),
-    max_cell_type = max_col_name,
-    max_abs_score = apply(abs(heatmap_mat_final), 1, max) # include the max |CCscore| to break ties within the same cell type
-) |>
-    dplyr::arrange(max_cell_type, desc(max_abs_score))
-# Row order
-row_order_final <- sort_df$gene_name
-col_order_final <- unique(sort_df$max_cell_type) 
-heatmap_mat_ordered <- heatmap_mat_final[row_order_final, col_order_final]
-
-# make the plot
-f_name = here(plotDir, paste0("heatmap_active_CCscore_top", top_genes_heatmap, "genes_FDR", thr_DAR,".pdf")) # FIX 4: Use thr_DAR
-pdf(f_name, width = 8, height = 8)
-
-subtitle_content <- paste0(
-    "Active CRE (+)' Category\n", 
-    "Total Genes Plotted: ", nrow(heatmap_mat_ordered) 
-)
-
-# plot the heatmap with cRE
-tmp_h1 <- make_heatmap_cRE(
-    heatmap_mat_ordered,
-    subtitle_content)
-print(tmp_h1)
-
-dev.off()
+}
 
 
 
