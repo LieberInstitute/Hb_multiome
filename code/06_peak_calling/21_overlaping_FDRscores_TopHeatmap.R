@@ -55,9 +55,6 @@ if (!dir.exists(plotDir)) { dir.create(plotDir) }
 
 message("Loading Unique-Overlap with directionality ...")
 
-cluster_specific = "LHb.4"
-top_scattered_plt = 20
-
 ## load raw overlaps and 2-shared ct overlaps 
 overlap_df <- read.csv(here(inputCSV_Overlaps_Dir, "19_Linkage_DARs_analysis", 
                              paste0("Overlaps_LinkPeak_DARs_FDR", FDR, ".csv")))
@@ -151,42 +148,22 @@ subset_cell_type <- function(unique_df, cluster_specific) {
 ## Generate scatterplot
 
 make_scattered_plot_dars_cc_real <- function(
-        subset_uniques,
+        plot_data,
         top_genes,
-        fdr_cutoff = 0.2 # used for labels
+        thr_CC,    # Thresh for Peak-Gene correlation
+        thr_DAR,   # Thresh for Differential Accessibility Regions (DARs)
+        thr_logFC, # Thresh for DARs Accessibility Direction
+        fdr_cutoff = 0.2 # FDR used in both ds to define significant peaks 
 ) {
-    # FDR thresholds for LinkPeaks (CC) and DARs
-    thr_CC <- 0.3  # threshold for correlation strength (|CCscore|)
-    thr_DAR <- 0.1 # log-FC threshold for accessibility significance
-    clus_name <- unique(subset_uniques[["cell_type"]])
+
+    clus_name <- unique(plot_data[["cell_type"]])
     
     message("Building plot for [", clus_name, "] (real FDR values)")
-    
-    # # Categorize points
-    # plot_data <- subset_uniques |>
-    #     mutate(
-    #         sig_CC  = abs(CCscore) > thr_CC,     # strong correlation in either direction
-    #         sig_DAR = fdr_dars < thr_DAR,        # significant accessibility (FDR)
-    #         category = case_when(
-    #             sig_CC & sig_DAR & logFC > 1  ~ "Active CRE (+)",
-    #             sig_CC & sig_DAR & logFC < 1  ~ "Repressive CRE (-)",
-    #             sig_CC & !sig_DAR              ~ "Shared CRE",
-    #             !sig_CC & sig_DAR              ~ "Unlinked OCR",
-    #             TRUE                           ~ "Non-significant"
-    #         )
-    #     )
-    # 
-    # nrow(plot_data)
-    # # save overlapping with classification
-    # f_name <- here(processedDir, paste0("overlaps_linkPeak_DARs_classified_FDR", FDR, ".csv"))
-    # write.csv(shared_2ct_df, f_name, row.names = FALSE)
-    
-    # message(nrow(shared_2ct_df), " passed threshold filters!")
     
     top_hits <- plot_data |>
         filter(category %in% c("Active CRE (+)", "Repressive CRE (-)")) |>
         arrange(FDR_CC) |>
-        head(15)
+        head(top_genes)
     
     x_max <- min(1, max(plot_data$FDR_CC, na.rm = TRUE) * 1.05)
     y_max <- min(1, max(plot_data$fdr_dars, na.rm = TRUE) * 1.05)
@@ -205,7 +182,7 @@ make_scattered_plot_dars_cc_real <- function(
             data = top_hits,
             aes(label = gene_name),
             size = 3,
-            max.overlaps = 15
+            max.overlaps = top_genes
         ) +
         scale_color_manual(values = c(
             "Active CRE (+)"  = "#E64B35FF",
@@ -215,11 +192,11 @@ make_scattered_plot_dars_cc_real <- function(
             "Non-significant" = "lightgrey"
         )) +
         labs(
-            title = paste(clus_name, " | Uniques & 2-Shared CellTypes"),
-            subtitle = paste0("Correlation Score vs logFC-DARs > ", thr_DAR, " | CC-Score > ", thr_CC, 
-                              " | FDR < ", fdr_cutoff),
-            x = "CC-Score",
-            y = "log2 FC (DARs)"
+            title = paste(clus_name, " | Peak-Gene Correlation vs DARs"),
+            subtitle = paste("Spearman CC |ρ| > ", thr_CC, 
+                             " |  FDR-DARs < ", thr_DAR, " &  log2FC ± ", thr_logFC), # |  FDR < ", fdr_cutoff
+            x = "Spearman CC |ρ|",
+            y = "log2FC (DARs)"
         ) +
         theme_minimal(base_size = 12) +
         theme(
@@ -228,7 +205,7 @@ make_scattered_plot_dars_cc_real <- function(
             legend.position = "bottom",
             legend.title = element_blank()
         ) +
-        plot_annotation(caption = paste("Top:", top_genes, "genes"))
+        plot_annotation(caption = paste("Uniques & 2-Shared CellTypes\nTop:", top_genes, "genes"))
     
     return(g1)
     
@@ -240,7 +217,7 @@ subsetted_df <- purrr::map_df(
     ~ subset_cell_type(unique_df, .x)
 )
 
-## verifications
+## verification
 table(subsetted_df$cell_type)
 summary(subsetted_df$cell_type)
 head(subsetted_df)
@@ -252,19 +229,23 @@ length(subsetted_list_df) # 15 ct
 
 ## make scattered plots using real values (non-normalized)
 
-## Categorize points
+## Categorize peaks
 
-# Set thresholds for LinkPeaks (CC) and DARs
+## Set thresholds for LinkPeaks (CC) and DARs
+# cluster_specific = "LHb.4"
+top_genes_scattered_plt = 20
 thr_CC = 0.3  # correlation strength
 thr_DAR = 0.1 # fdr_dars / accessibility significance
 thr_logFC = 0.5
+thr_fdr = 0.2
+
 plot_data_list <- purrr::map(subsetted_list_df, ~ .x |> 
     mutate(
         sig_CC  = abs(CCscore) > thr_CC,   # significant correlation
         sig_DAR = fdr_dars < thr_DAR,      # significant accessibility
         category = case_when(
             sig_CC & sig_DAR & logFC > thr_logFC  ~ "Active CRE (+)",      # positively correlated & accessible
-            sig_CC & sig_DAR & logFC < -thr_logFC  ~ "Repressive CRE (-)",  # negatively correlated & less accessible
+            sig_CC & sig_DAR & logFC < -thr_logFC  ~ "Repressive CRE (-)", # negatively correlated & less accessible
             sig_CC & sig_DAR               ~ "Neutral CRE",          # New category for highly significant elements with marginal gene change
             sig_CC & !sig_DAR               ~ "Shared CRE",          # correlated, not DAR
             !sig_CC & sig_DAR               ~ "Unlinked OCR",        # DAR, no correlation
@@ -293,7 +274,7 @@ message("Total Hb related [thr_CC=", thr_CC,
         " & thr_logFC=", thr_logFC, 
         "]: ", total_hb_related)
 message("Total Hb related significant: ", total_hb_related_signif)
-
+# Total Hb related significant: 413
 
 # save overlapping with classification
 f_name <- here(processedDir, paste0("overlaps_linkPeak_DARs_classified_thr_CC", thr_CC, "_thr_DAR", thr_DAR, ".csv"))
@@ -302,26 +283,13 @@ write.csv(plot_data_full_df, f_name, row.names = FALSE)
 message("Saved linkPeak_DARs categories!")
 
 scattered_plt_cell_type_real_values <- purrr::map(
-    #subsetted_list_df,
-    plot_data_list
-    ~ make_scattered_plot_dars_cc_real(.x, top_scattered_plt, 0.2)
+    plot_data_list, #     #subsetted_list_df
+    ~ make_scattered_plot_dars_cc_real(
+        .x, 
+        top_genes_scattered_plt,
+        thr_CC, thr_DAR, thr_logFC, 
+        thr_fdr)
 )
-
-# verify results
-# scattered_plt_cell_type_real_values[1]
-# subsetted_df |>
-#     mutate(
-#         sig_CC  = abs(CCscore) > 0.1,
-#         sig_DAR = fdr_dars < 0.05,
-#         category_check = case_when(
-#             sig_CC & sig_DAR & logFC > 0  ~ "Active CRE (+)",
-#             sig_CC & sig_DAR & logFC < 0  ~ "Repressive CRE (-)",
-#             sig_CC & !sig_DAR              ~ "Shared CRE",
-#             !sig_CC & sig_DAR              ~ "Unlinked OCR",
-#             TRUE                           ~ "Non-significant"
-#         )
-#     ) |>
-#     select(CCscore, fdr_dars, logFC, category_check)
 
 f_name = here(plotDir, paste0("ScatteredPlots_sig_categories_2shared_ct_by_CellType_FDR", FDR, ".pdf"))
 pdf(f_name, width = 8, height = 6)
