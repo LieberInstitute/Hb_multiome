@@ -251,11 +251,11 @@ length(subsetted_list_df) # 15 ct
 
 
 ## make scattered plots using real values (non-normalized)
+
 # Categorize points
-# fix strong negative correlation and significant DAR (logFC < -1)
 # FDR thresholds for LinkPeaks (CC) and DARs
-thr_CC <- 0.3  # thr for correlation strength
-thr_DAR <- 0.1 # thr for log-FC accessibility significance
+thr_CC <- 0.3  # correlation strength
+thr_DAR <- 0.2 # fdr_dars / accessibility significance
 plot_data_list <- purrr::map(subsetted_list_df, ~ .x |> 
     mutate(
         sig_CC  = abs(CCscore) > thr_CC,   # significant correlation
@@ -269,11 +269,31 @@ plot_data_list <- purrr::map(subsetted_list_df, ~ .x |>
         )
     )
 )
-names(plot_data_list)
+
+## Build a summary 
+
+plot_data_full_df <- bind_rows(plot_data_list, .id = "source_df")
+
+message("========= Summary of candidate RE by category ============\n")
+# head(plot_data_full_df)
+table(plot_data_full_df$cell_type)
+hb_related_df <- plot_data_full_df |>
+    filter(grepl("MHb|LHb", cell_type))
+total_hb_related <- nrow(hb_related_df)
+table(hb_related_df$category)
+hb_related_signif_df <- hb_related_df |>
+    filter(category %in% c("Active CRE (+)", "Repressive CRE (-)", "Shared CRE"))
+total_hb_related_signif <- nrow(hb_related_signif_df) 
+
+message("Total Hb related [thr_CC=", thr_CC, " & thr_DAR=", thr_DAR,"]: ", total_hb_related)
+message("Total Hb related significant: ", total_hb_related_signif)
+
 
 # save overlapping with classification
-f_name <- here(processedDir, paste0("overlaps_linkPeak_DARs_classified_FDR", FDR, ".csv"))
-write.csv(plot_data_list, f_name, row.names = FALSE)
+f_name <- here(processedDir, paste0("overlaps_linkPeak_DARs_classified_thr_CC", thr_CC, "_thr_DAR", thr_DAR, ".csv"))
+write.csv(plot_data_full_df, f_name, row.names = FALSE)
+
+message("Saved linkPeak_DARs categories!")
 
 scattered_plt_cell_type_real_values <- purrr::map(
     #subsetted_list_df,
@@ -315,7 +335,7 @@ top_genes_heatmap = 5
 # sig_CC & !sig_DAR              ~ "Shared CRE"
 
 top_genes_list <- map(
-    subsetted_list_df,
+    plot_data_list,
     ~ .x |>
         # filter first to only consider those genes classified as Active CRE (+)", "Repressive CRE (-)" and "Shared CRE"
         filter(
@@ -333,7 +353,7 @@ top_genes_list <- map(
 )
 
 # keep names for each cell_type
-names(top_genes_list) <- names(subsetted_list_df)
+names(top_genes_list) <- names(plot_data_list)
 # Combine all unique top genes across all cell types
 top_genes2 <- unique(unlist(top_genes_list))
 message("Total unique top genes: ", length(top_genes))
@@ -619,7 +639,7 @@ session_info()
 
 # # log10
 # scattered_plt_cell_type <- purrr::map(
-#     subsetted_list_df,
+#     plot_data_list,
 #     ~ make_scattered_plot_dars_cc(.x)
 # )
 
