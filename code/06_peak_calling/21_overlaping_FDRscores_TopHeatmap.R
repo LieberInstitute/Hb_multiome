@@ -252,17 +252,20 @@ length(subsetted_list_df) # 15 ct
 
 ## make scattered plots using real values (non-normalized)
 
-# Categorize points
-# FDR thresholds for LinkPeaks (CC) and DARs
-thr_CC <- 0.3  # correlation strength
-thr_DAR <- 0.2 # fdr_dars / accessibility significance
+## Categorize points
+
+# Set thresholds for LinkPeaks (CC) and DARs
+thr_CC = 0.3  # correlation strength
+thr_DAR = 0.1 # fdr_dars / accessibility significance
+thr_logFC = 0.5
 plot_data_list <- purrr::map(subsetted_list_df, ~ .x |> 
     mutate(
         sig_CC  = abs(CCscore) > thr_CC,   # significant correlation
         sig_DAR = fdr_dars < thr_DAR,      # significant accessibility
         category = case_when(
-            sig_CC & sig_DAR & logFC >  1  ~ "Active CRE (+)",      # positively correlated & accessible
-            sig_CC & sig_DAR & logFC < -1  ~ "Repressive CRE (-)",  # negatively correlated & less accessible
+            sig_CC & sig_DAR & logFC > thr_logFC  ~ "Active CRE (+)",      # positively correlated & accessible
+            sig_CC & sig_DAR & logFC < -thr_logFC  ~ "Repressive CRE (-)",  # negatively correlated & less accessible
+            sig_CC & sig_DAR               ~ "Neutral CRE",          # New category for highly significant elements with marginal gene change
             sig_CC & !sig_DAR               ~ "Shared CRE",          # correlated, not DAR
             !sig_CC & sig_DAR               ~ "Unlinked OCR",        # DAR, no correlation
             TRUE                            ~ "Non-significant"      # everything else
@@ -285,7 +288,10 @@ hb_related_signif_df <- hb_related_df |>
     filter(category %in% c("Active CRE (+)", "Repressive CRE (-)", "Shared CRE"))
 total_hb_related_signif <- nrow(hb_related_signif_df) 
 
-message("Total Hb related [thr_CC=", thr_CC, " & thr_DAR=", thr_DAR,"]: ", total_hb_related)
+message("Total Hb related [thr_CC=", thr_CC, 
+        " & thr_DAR=", thr_DAR,
+        " & thr_logFC=", thr_logFC, 
+        "]: ", total_hb_related)
 message("Total Hb related significant: ", total_hb_related_signif)
 
 
