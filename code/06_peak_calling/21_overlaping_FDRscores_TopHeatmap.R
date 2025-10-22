@@ -388,6 +388,9 @@ prepare_top_genes_heatmap <- function(data_list,
 ##  ============================================================================
 
 
+categories_to_plot <- c("Active CRE (+)", "Repressive CRE (-)", "Neutral CRE")
+
+
 top_genes_list <- prepare_top_genes_heatmap(
     plot_data_list,
     "Active CRE (+)",
