@@ -358,12 +358,12 @@ make_heatmap_cRE <- function(
         cluster_rows = FALSE, # FALSE to respect row_order_final
         cluster_cols = FALSE,
         main = paste0( 
-            "Top ", top_genes_heatmap, " Genes per Cell Type by Max |CCscore|",   
-            "\n",
+            #"Top ", top_genes_heatmap, " Genes per Cell Type by Max |CCscore|",   
+            #"\n",
             subtitle_content
         ),
         fontsize_row = 7,
-        fontsize_col = 10,
+        fontsize_col = 8,
         show_rownames = TRUE,
         show_colnames = TRUE
     )
@@ -403,7 +403,7 @@ prepare_top_genes_heatmap <- function(data_list,
 ##  ============================================================================
 
 
-categories_to_plot <- c("Active cCRE (+)", "Repressive cCRE (-)", "Neutral cCRE", "Linked OCR")
+categories_to_plot <- c("Active cCRE (+)", "Repressive cCRE (-)", "Linked OCR", "Unlinked OCR")
 
 
 for (cat_cRE in categories_to_plot) {
@@ -417,7 +417,7 @@ for (cat_cRE in categories_to_plot) {
     
     names(top_genes_list) <- names(plot_data_list)
     top_genes <- unique(unlist(top_genes_list))
-    message("Total unique top genes: ", length(top_genes))
+    message("[", cat_cRE,"] Total unique top genes: ", length(top_genes))
     
     # Prepare the data for dcast (ensure no duplicates and correct type)
     wide_data_clean <- plot_data_full_df |>
@@ -465,7 +465,7 @@ for (cat_cRE in categories_to_plot) {
     
     subtitle_content <- paste0(
         cat_cRE, "\n", 
-        "Total Genes Plotted: ", nrow(heatmap_mat_ordered) 
+        "Total Genes Plotted for: ", nrow(heatmap_mat_ordered) 
     )
     
     # plot the heatmap with cRE
