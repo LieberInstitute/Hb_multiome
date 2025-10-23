@@ -161,10 +161,10 @@ make_scattered_plot_dars_cc_real <- function(
     message("Building plot for [", clus_name, "] (real FDR values)")
     
     top_hits <- plot_data |>
-        #filter(category %in% c("Active CRE (+)", "Repressive CRE (-)")) |>
-        arrange(FDR_CC) |>
+        filter(category %in% c("Active cCRE (+)", "Repressive cCRE (-)", "Neutral cCRE", "Linked OCR")) |>
+        arrange(desc(abs(CCscore))) |> 
         head(top_genes)
-    
+
     x_max <- min(1, max(plot_data$FDR_CC, na.rm = TRUE) * 1.05)
     y_max <- min(1, max(plot_data$fdr_dars, na.rm = TRUE) * 1.05)
     # define tick units
@@ -185,10 +185,10 @@ make_scattered_plot_dars_cc_real <- function(
             max.overlaps = top_genes
         ) +
         scale_color_manual(values = c(
-            "Active CRE (+)"  = "#E64B35FF",
-            "Repressive CRE (-)" = "#4DBBD5FF",
-            "Neutral CRE"     = "#CFB53B",
-            "Shared CRE"      = "#00A087FF",
+            "Active cCRE (+)"  = "#E64B35FF",
+            "Repressive cCRE (-)" = "#4DBBD5FF",
+            "Neutral cCRE"     = "#CFB53B",
+            "Linked OCR"      = "#00A087FF",
             "Unlinked OCR"    = "#3C5488FF",
             "Non-significant" = "lightgrey"
         )) +
@@ -197,7 +197,7 @@ make_scattered_plot_dars_cc_real <- function(
             subtitle = expression(
                 paste("Spearman CC |", rho, "| > ", thr_CC,
                       " | FDR-DARs < ", thr_DAR, " & log2FC ", phantom(), pm, " ", thr_logFC)
-            ), # |  FDR < ", fdr_cutoff
+            ),
             x = expression("Spearman CC |" * rho * "|"),
             y = expression(log[2] * "FC (DARs)")
         ) +
@@ -239,7 +239,7 @@ length(subsetted_list_df) # 15 ct
 top_genes_scattered_plt = 20
 thr_CC = 0.3  # correlation strength
 thr_DAR = 0.1 # fdr_dars / accessibility significance
-thr_logFC = 0.5
+thr_logFC = 0
 thr_fdr = 0.2
 
 plot_data_list <- purrr::map(subsetted_list_df, ~ .x |> 
@@ -247,10 +247,11 @@ plot_data_list <- purrr::map(subsetted_list_df, ~ .x |>
         sig_CC  = abs(CCscore) > thr_CC,   # significant correlation
         sig_DAR = fdr_dars < thr_DAR,      # significant accessibility
         category = case_when(
-            sig_CC & sig_DAR & logFC > thr_logFC  ~ "Active CRE (+)",      # positively correlated & accessible
-            sig_CC & sig_DAR & logFC < -thr_logFC  ~ "Repressive CRE (-)", # negatively correlated & less accessible
-            sig_CC & sig_DAR               ~ "Neutral CRE",          # New category for highly significant elements with marginal gene change
-            sig_CC & !sig_DAR               ~ "Shared CRE",          # correlated, not DAR
+            sig_CC & sig_DAR & logFC > thr_logFC  ~ "Active cCRE (+)",      # positively correlated & accessible
+            sig_CC & sig_DAR & logFC < -thr_logFC  ~ "Repressive cCRE (-)", # negatively correlated & less accessible
+            # Neural category was used to identify "Significantly linked, Significant DAR, but logFC is too small", when set log_FC=0 we do not need it any more
+            # sig_CC & sig_DAR                ~ "Neutral cCRE",        # when other conditions not met  
+            sig_CC & !sig_DAR               ~ "Linked OCR",          # correlated, not DAR
             !sig_CC & sig_DAR               ~ "Unlinked OCR",        # DAR, no correlation
             TRUE                            ~ "Non-significant"      # everything else
         )
@@ -264,11 +265,15 @@ plot_data_full_df <- bind_rows(plot_data_list, .id = "source_df")
 message("========= Summary of candidate RE by category ============\n")
 # head(plot_data_full_df)
 table(plot_data_full_df$cell_type)
-table(plot_data_full_df$category)
-# Active CRE (+)        Neutral CRE    Non-significant Repressive CRE (-) 
-# 459                459                354                445 
-# Shared CRE       Unlinked OCR 
-# 420               1068 
+as.data.frame(table(plot_data_full_df$category))
+# Var1 Freq
+# 1     Active cCRE (+)  706
+# 2          Linked OCR  420
+# 3     Non-significant  354
+# 4 Repressive cCRE (-)  657
+# 5        Unlinked OCR 1068
+
+sum(table(plot_data_full_df$category)) #3205
 
 hb_related_df <- plot_data_full_df |>
     filter(grepl("MHb|LHb", cell_type))
@@ -277,7 +282,7 @@ total_hb_related <- nrow(hb_related_df)
 table(hb_related_df$category)
 
 hb_related_signif_df <- hb_related_df |>
-    filter(category %in% c("Active CRE (+)", "Repressive CRE (-)", "Neutral CRE", "Shared CRE"))
+    filter(category %in% c("Active cCRE (+)", "Repressive cCRE (-)", "Linked OCR", "Unlinked OCR"))
 
 total_hb_related_signif <- nrow(hb_related_signif_df) 
 
@@ -285,10 +290,8 @@ message("Total Hb related [thr_CC=", thr_CC,
         " & thr_DAR=", thr_DAR,
         " & thr_logFC=", thr_logFC, 
         "]: ", total_hb_related)
-# Total Hb related [thr_CC=0.3 & thr_DAR=0.1 & thr_logFC=0.5]: 936
 
 message("Total Hb related significant: ", total_hb_related_signif)
-# Total Hb related significant: 549
 
 # save overlapping with classification
 f_name <- here(processedDir, paste0("overlaps_linkPeak_DARs_classified_thr_CC", thr_CC, "_thr_DAR", thr_DAR, ".csv"))
@@ -393,7 +396,7 @@ prepare_top_genes_heatmap <- function(data_list,
 ##  ============================================================================
 
 
-categories_to_plot <- c("Active CRE (+)", "Repressive CRE (-)", "Neutral CRE", "Shared CRE")
+categories_to_plot <- c("Active cCRE (+)", "Repressive cCRE (-)", "Neutral cCRE", "Linked OCR")
 
 
 for (cat_cRE in categories_to_plot) {
