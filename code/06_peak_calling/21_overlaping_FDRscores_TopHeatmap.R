@@ -161,7 +161,7 @@ make_scattered_plot_dars_cc_real <- function(
     message("Building plot for [", clus_name, "] (real FDR values)")
     
     top_hits <- plot_data |>
-        filter(category %in% c("Active cCRE (+)", "Repressive cCRE (-)", "Neutral cCRE", "Linked OCR")) |>
+        filter(category %in% c("Active cCRE (+)", "Repressive cCRE (-)", "Linked OCR", "Unlinked OCR")) |>
         arrange(desc(abs(CCscore))) |> 
         head(top_genes)
 
@@ -171,9 +171,13 @@ make_scattered_plot_dars_cc_real <- function(
     axis_breaks <- seq(0, max(x_max, y_max), by = 0.05)
     axis_labels <- sprintf("%.2f", axis_breaks)
     
+    subtitle_text <- paste0(
+        "Spearman CC |p| > ", thr_CC,
+        " | FDR-DARs < ", thr_DAR,
+        " & log2FC ± ", thr_logFC
+    )
+    
     g1 <- ggplot(plot_data, aes(x = CCscore, y = logFC, color = category)) +
-        #geom_hline(yintercept = 0, linetype = "solid", color = "grey70") +
-        #geom_hline(yintercept = c(-log2(1 + thr_DAR), log2(1 + thr_DAR)), linetype = "dashed", color = "darkgrey") +
         geom_hline(yintercept = c(-thr_logFC, thr_logFC), linetype = "dashed", color = "darkgrey") +
         geom_vline(xintercept = 0, linetype = "solid", color = "grey70") +
         geom_vline(xintercept = c(-thr_CC, thr_CC), linetype = "dashed", color = "darkgrey") +
@@ -187,19 +191,15 @@ make_scattered_plot_dars_cc_real <- function(
         scale_color_manual(values = c(
             "Active cCRE (+)"  = "#E64B35FF",
             "Repressive cCRE (-)" = "#4DBBD5FF",
-            "Neutral cCRE"     = "#CFB53B",
             "Linked OCR"      = "#00A087FF",
             "Unlinked OCR"    = "#3C5488FF",
             "Non-significant" = "lightgrey"
         )) +
         labs(
             title = paste(clus_name, " | Peak-Gene Correlation vs DARs"),
-            subtitle = expression(
-                paste("Spearman CC |", rho, "| > ", thr_CC,
-                      " | FDR-DARs < ", thr_DAR, " & log2FC ", phantom(), pm, " ", thr_logFC)
-            ),
-            x = expression("Spearman CC |" * rho * "|"),
-            y = expression(log[2] * "FC (DARs)")
+            subtitle = subtitle_text,
+            x = expression("Spearman CC " * "|" * rho * "|"),
+            y = expression("log"[2] * "FC (DARs)")
         ) +
         theme_minimal(base_size = 12) +
         theme(
