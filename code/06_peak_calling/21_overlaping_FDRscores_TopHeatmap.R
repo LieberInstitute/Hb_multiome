@@ -194,6 +194,13 @@ make_scattered_plot_dars_cc_real <- function(
             "Linked OCR"      = "#00A087FF",
             "Unlinked OCR"    = "#3C5488FF",
             "Non-significant" = "lightgrey"
+        ),
+        breaks = c(
+            "Active cCRE (+)",
+            "Repressive cCRE (-)",
+            "Linked OCR",
+            "Unlinked OCR",
+            "Non-significant"
         )) +
         labs(
             title = paste(clus_name, " | Peak-Gene Correlation vs DARs"),
