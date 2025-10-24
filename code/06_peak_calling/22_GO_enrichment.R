@@ -18,6 +18,12 @@ library("tidyr")
 library("stringr")
 library("here")
 
+library("getopt")
+library("org.Hs.eg.db")
+library("clusterProfiler")
+library("rrvgo")
+library("ComplexHeatmap")
+
 #===============================================================================
 # resolution_level = "Mid"      # 18 cell-types
 #===============================================================================
@@ -54,6 +60,25 @@ f_name = "overlaps_linkPeak_DARs_classified_thr_CC0.3_thr_DAR0.1.csv"
 cCRE_df <- read.csv(here(inputCSV_cCRE_ORC_Dir, f_name))
 nrow(cCRE_df) # 5603
 head(cCRE_df)
+
+## validation
+unique(cCRE_df$type_classification)
+as.data.frame(table(cCRE_df$category))
+
+only_cCRE_df <- cCRE_df |> 
+    filter(category %in% c("cell-specific cCRE (-)", "cell-specific cCRE (+)"))
+
+table(only_cCRE_df$category)
+# cell-specific cCRE (-) cell-specific cCRE (+) 
+# 657                    706 
+table(only_cCRE_df$overlap_type)
+# Shared Unique 
+# 508    855 
+
+cluster_levels <- only_cCRE_df$cell_type |> unique()
+
+
+
 
 
 
