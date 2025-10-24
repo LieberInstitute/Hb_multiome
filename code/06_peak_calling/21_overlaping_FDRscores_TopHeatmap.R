@@ -161,7 +161,7 @@ make_scattered_plot_dars_cc_real <- function(
     message("Building plot for [", clus_name, "] (real FDR values)")
     
     top_hits <- plot_data |>
-        filter(category %in% c("Active cCRE (+)", "Repressive cCRE (-)", "Linked OCR", "Unlinked OCR")) |>
+        filter(category %in% c("cell-specific cCRE (+)", "cell-specific cCRE (-)", "Linked OCR", "Unlinked DAR")) |>
         arrange(desc(abs(CCscore))) |> 
         head(top_genes)
 
@@ -189,17 +189,17 @@ make_scattered_plot_dars_cc_real <- function(
             max.overlaps = top_genes
         ) +
         scale_color_manual(values = c(
-            "Active cCRE (+)"  = "#E64B35FF",
-            "Repressive cCRE (-)" = "#4DBBD5FF",
+            "cell-specific cCRE (+)"  = "#E64B35FF",
+            "cell-specific cCRE (-)" = "#800080",
             "Linked OCR"      = "#00A087FF",
-            "Unlinked OCR"    = "#3C5488FF",
+            "Unlinked DAR"    = "#3C5488FF",
             "Non-significant" = "lightgrey"
         ),
         breaks = c(
-            "Active cCRE (+)",
-            "Repressive cCRE (-)",
+            "cell-specific cCRE (+)",
+            "cell-specific cCRE (-)",
             "Linked OCR",
-            "Unlinked OCR",
+            "Unlinked DAR",
             "Non-significant"
         )) +
         labs(
@@ -239,7 +239,11 @@ length(subsetted_list_df) # 15 ct
 
 ## make scattered plots using real values (non-normalized)
 
-## Categorize peaks
+## Categorize peaks = Cynthia classification proposal ==========================
+
+subsetted_list_df <- purrr::map(subsetted_list_df, ~ 
+                                    .x |> mutate(type_classification = "std_classification")
+)
 
 ## Set thresholds for LinkPeaks (CC) and DARs
 # cluster_specific = "LHb.4"
@@ -254,12 +258,12 @@ plot_data_list <- purrr::map(subsetted_list_df, ~ .x |>
         sig_CC  = abs(CCscore) > thr_CC,   # significant correlation
         sig_DAR = fdr_dars < thr_DAR,      # significant accessibility
         category = case_when(
-            sig_CC & sig_DAR & logFC > thr_logFC  ~ "Active cCRE (+)",      # positively correlated & accessible
-            sig_CC & sig_DAR & logFC < -thr_logFC  ~ "Repressive cCRE (-)", # negatively correlated & less accessible
+            sig_CC & sig_DAR & logFC > thr_logFC  ~ "cell-specific cCRE (+)",      # positively correlated & accessible
+            sig_CC & sig_DAR & logFC < -thr_logFC  ~ "cell-specific cCRE (-)", # negatively correlated & less accessible
             # Neural category was used to identify "Significantly linked, Significant DAR, but logFC is too small", when set log_FC=0 we do not need it any more
             # sig_CC & sig_DAR                ~ "Neutral cCRE",        # when other conditions not met  
             sig_CC & !sig_DAR               ~ "Linked OCR",          # correlated, not DAR
-            !sig_CC & sig_DAR               ~ "Unlinked OCR",        # DAR, no correlation
+            !sig_CC & sig_DAR               ~ "Unlinked DAR",        # DAR, no correlation
             TRUE                            ~ "Non-significant"      # everything else
         )
     )
@@ -289,7 +293,7 @@ total_hb_related <- nrow(hb_related_df)
 table(hb_related_df$category)
 
 hb_related_signif_df <- hb_related_df |>
-    filter(category %in% c("Active cCRE (+)", "Repressive cCRE (-)", "Linked OCR", "Unlinked OCR"))
+    filter(category %in% c("cell-specific cCRE (+)", "cell-specific cCRE (-)", "Linked OCR", "Unlinked DAR"))
 
 total_hb_related_signif <- nrow(hb_related_signif_df) 
 
@@ -403,7 +407,7 @@ prepare_top_genes_heatmap <- function(data_list,
 ##  ============================================================================
 
 
-categories_to_plot <- c("Active cCRE (+)", "Repressive cCRE (-)", "Linked OCR", "Unlinked OCR")
+categories_to_plot <- c("cell-specific cCRE (+)", "cell-specific cCRE (-)", "Linked OCR", "Unlinked DAR")
 
 
 for (cat_cRE in categories_to_plot) {
@@ -654,7 +658,7 @@ session_info()
 #                 sig_CC & sig_DAR & logFC > 0  ~ "Active CRE (+)",
 #                 sig_CC & sig_DAR & logFC < 0  ~ "Repressive CRE (-)",
 #                 sig_CC & !sig_DAR              ~ "Shared CRE",
-#                 !sig_CC & sig_DAR              ~ "Unlinked OCR",
+#                 !sig_CC & sig_DAR              ~ "Unlinked DAR",
 #                 TRUE                           ~ "Non-significant"
 #             )
 #         )
@@ -678,7 +682,7 @@ session_info()
 #             "Active CRE (+)" = "#E64B35FF",
 #             "Repressive CRE (-)" = "#4DBBD5FF",
 #             "Shared CRE" = "#00A087FF",
-#             "Unlinked OCR" = "#3C5488FF",
+#             "Unlinked DAR" = "#3C5488FF",
 #             "Non-significant" = "lightgrey"
 #         )) +
 #         +
