@@ -1,6 +1,7 @@
 ########################################################################
 ## Explore FDR-Scores and Top overlapping (Heatmap)
-## - (1) Heatmap summarize accessibility (logFC, FDR, directionality) 
+## - (1) Build a class of overlapping peaks
+## - (2) Heatmap summarize accessibility (logFC, FDR, directionality) 
 ##    → Subset by cell_type, because visual goal centers on cell-type–specific regulatory accessibility
 ##
 ## Authors. CSC
@@ -26,16 +27,12 @@ library("here")
 
 ## setup variable names
 
-# resolution_level = "Mid" 
-FDR = 0.2 # actual value to run the DAR-Links
-# we do not use log FC for this exploratory analysis
+FDR = 0.2 # actual value to run the DAR-Links. We do not use log FC for this exploratory analysis
 
 ## Set directory names
 inputCSV_Overlaps_Dir <- here(
     "processed-data",
     "06_peak_calling"
-    #"20_explore_overlapping_linkpeaks_DARs"
-    #"19_Linkage_DARs_analysis"
 )
 processedDir <- here(
     "processed-data",
@@ -149,6 +146,7 @@ subset_cell_type <- function(unique_df, cluster_specific) {
 
 make_scattered_plot_dars_cc_real <- function(
         plot_data,
+        categories_to_plot,
         top_genes,
         thr_CC,    # Thresh for Peak-Gene correlation
         thr_DAR,   # Thresh for Differential Accessibility Regions (DARs)
@@ -161,7 +159,7 @@ make_scattered_plot_dars_cc_real <- function(
     message("Building plot for [", clus_name, "] (real FDR values)")
     
     top_hits <- plot_data |>
-        filter(category %in% c("cell-specific cCRE (+)", "cell-specific cCRE (-)", "Linked OCR", "Unlinked DAR")) |>
+        filter(category %in% c(categories_to_plot)) |>
         arrange(desc(abs(CCscore))) |> 
         head(top_genes)
 
@@ -239,12 +237,6 @@ length(subsetted_list_df) # 15 ct
 
 ## make scattered plots using real values (non-normalized)
 
-## Categorize peaks = Cynthia classification proposal ==========================
-
-subsetted_list_df <- purrr::map(subsetted_list_df, ~ 
-                                    .x |> mutate(type_classification = "std_classification")
-)
-
 ## Set thresholds for LinkPeaks (CC) and DARs
 # cluster_specific = "LHb.4"
 top_genes_scattered_plt = 20
@@ -253,36 +245,69 @@ thr_DAR = 0.1 # fdr_dars / accessibility significance
 thr_logFC = 0
 thr_fdr = 0.2
 
+
+## Categorize peaks overlaps ===================================================
+
+# (1) Standard classification (Cynthia): classification-1
+
+# (2) Leo's classification adapted to our current analysis: classification-2
+peaks_classification2 = c("cell-specific cCRE (+)", "cell-specific cCRE (-)", "Linked OCR", "Unlinked DAR", "Non-significant")
+        
+# (3) Cynthia+Nick classification adapted to our current analysis: classification-3
+peaks_classification3 = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted", "Linked OCR", "Unlinked DAR", "Non-significant")
+
+# ## Add peaks-classification name
+# subsetted_list_df <- purrr::map(subsetted_list_df, ~ 
+#                                     .x |> mutate(type_classification = "classification-2")  # you can change dynamically later
+# )
+
+## (A) Classification-2 logic  =================================================
 plot_data_list <- purrr::map(subsetted_list_df, ~ .x |> 
     mutate(
         sig_CC  = abs(CCscore) > thr_CC,   # significant correlation
         sig_DAR = fdr_dars < thr_DAR,      # significant accessibility
         category = case_when(
             sig_CC & sig_DAR & logFC > thr_logFC  ~ "cell-specific cCRE (+)",      # positively correlated & accessible
-            sig_CC & sig_DAR & logFC < -thr_logFC  ~ "cell-specific cCRE (-)", # negatively correlated & less accessible
+            sig_CC & sig_DAR & logFC < -thr_logFC  ~ "cell-specific cCRE (-)",     # negatively correlated & less accessible
             # Neural category was used to identify "Significantly linked, Significant DAR, but logFC is too small", when set log_FC=0 we do not need it any more
             # sig_CC & sig_DAR                ~ "Neutral cCRE",        # when other conditions not met  
             sig_CC & !sig_DAR               ~ "Linked OCR",          # correlated, not DAR
             !sig_CC & sig_DAR               ~ "Unlinked DAR",        # DAR, no correlation
             TRUE                            ~ "Non-significant"      # everything else
-        )
+        ),
+        type_classification = "classification-2"
     )
+)
+
+## (B) Classification-3 logic  =================================================
+plot_data_list_3 <- purrr::map(subsetted_list_df, ~ .x |> 
+   mutate(
+       sig_CC  = abs(CCscore) > thr_CC,
+       sig_DAR = fdr_dars < thr_DAR,
+       category = case_when(
+           sig_CC & sig_DAR & logFC > thr_logFC   ~ "Linked_DAR (+) enriched",   # positive correlation + open chromatin
+           sig_CC & sig_DAR & logFC < -thr_logFC  ~ "Linked_DAR (-) depleted",   # negative correlation + closed chromatin
+           sig_CC & !sig_DAR                      ~ "Linked OCR",
+           !sig_CC & sig_DAR                      ~ "Unlinked DAR",
+           TRUE                                   ~ "Non-significant"
+       ),
+       type_classification = "classification-3"
+   )
+)
+## ============/
+
+## Merge both classification versions for comparison
+plot_data_full_df <- bind_rows(
+    bind_rows(plot_data_list_2, .id = "source_df"),
+    bind_rows(plot_data_list_3, .id = "source_df")
 )
 
 ## Build a summary 
 
-plot_data_full_df <- bind_rows(plot_data_list, .id = "source_df")
-
 message("========= Summary of candidate RE by category ============\n")
-# head(plot_data_full_df)
+
 table(plot_data_full_df$cell_type)
-as.data.frame(table(plot_data_full_df$category))
-# Var1 Freq
-# 1     Active cCRE (+)  706
-# 2          Linked OCR  420
-# 3     Non-significant  354
-# 4 Repressive cCRE (-)  657
-# 5        Unlinked OCR 1068
+as.data.frame(table(plot_data_full_df$type_classification, plot_data_full_df$category))
 
 sum(table(plot_data_full_df$category)) #3205
 
@@ -290,19 +315,16 @@ hb_related_df <- plot_data_full_df |>
     filter(grepl("MHb|LHb", cell_type))
 
 total_hb_related <- nrow(hb_related_df)
-table(hb_related_df$category)
-
 hb_related_signif_df <- hb_related_df |>
-    filter(category %in% c("cell-specific cCRE (+)", "cell-specific cCRE (-)", "Linked OCR", "Unlinked DAR"))
+    filter(category %in% c(peaks_classification_2, peaks_classification_3))
+total_hb_related_signif <- nrow(hb_related_signif_df)
 
-total_hb_related_signif <- nrow(hb_related_signif_df) 
-
-message("Total Hb related [thr_CC=", thr_CC, 
+message("Total Hb related [thr_CC=", thr_CC,
         " & thr_DAR=", thr_DAR,
-        " & thr_logFC=", thr_logFC, 
-        "]: ", total_hb_related)
-
+        " & thr_logFC=", thr_logFC, "]: ", total_hb_related)
 message("Total Hb related significant: ", total_hb_related_signif)
+message("========================================================\n")
+
 
 # save overlapping with classification
 f_name <- here(processedDir, paste0("overlaps_linkPeak_DARs_classified_thr_CC", thr_CC, "_thr_DAR", thr_DAR, ".csv"))
@@ -310,19 +332,31 @@ write.csv(plot_data_full_df, f_name, row.names = FALSE)
 
 message("Saved linkPeak_DARs categories!")
 
+## Plot both classifications
 scattered_plt_cell_type_real_values <- purrr::map(
-    plot_data_list,
+    list(plot_data_list_2, plot_data_list_3),
     ~ make_scattered_plot_dars_cc_real(
         .x, 
+        peaks_classification_2,   # or switch dynamically per classification,
         top_genes_scattered_plt,
         thr_CC, thr_DAR, thr_logFC, 
         thr_fdr)
 )
+ 
+file_names <- c(
+    here(plotDir, paste0("ScatteredPlots_2sharedCT_class2_FDR", FDR, ".pdf")),
+    here(plotDir, paste0("ScatteredPlots_2sharedCT_class3_FDR", FDR, ".pdf"))
+)
 
-f_name = here(plotDir, paste0("ScatteredPlots_categories_2sharedCT_DARs_criteria_FDR", FDR, ".pdf"))
-pdf(f_name, width = 8, height = 6)
-walk(scattered_plt_cell_type_real_values, print)
-dev.off()
+walk2(
+    file_names,
+    scattered_plt_cell_type_real_values,
+    ~ {
+        pdf(.x, width = 8, height = 6)
+        walk(.y, print)
+        dev.off()
+    }
+)
 
 
 ## =============================================================================
@@ -333,21 +367,6 @@ dev.off()
 
 # (2) For summarizing correlation strength (CCscore) →
 # - if comparing co-regulated gene modules across clusters
-
-# Filter plot_data_list to only consider those genes classified as: 
-# categories:
-# "Active CRE (+)"         # positively correlated & accessible
-# “Repressive CRE (-)"     # negatively correlated & less accessible
-# "Neutral CRE"            # New category for highly significant elements with marginal gene change
-# "Shared CRE"             # correlated, not DAR
-# "Unlinked OCR”.          # DAR, no correlation
-# "Non-significant"        # everything else
-
-# Active CRE (+)        Neutral CRE    Non-significant Repressive CRE (-) 
-# 230                136                157                 13 
-# Shared CRE       Unlinked OCR 
-# 170                230
-
 
 ## =============================================================================
 ## Define functions to plot all the defined cRE classes 
@@ -483,150 +502,17 @@ for (cat_cRE in categories_to_plot) {
 }
 
 
-
-## =============================================================================
-## Classify links as within or cross: stacked bar (proportions and counts)
-
-# Each row in links_summary is a peak–gene pair labeled according to whether
-# the peak accessibility (cell_type) and correlated gene expression (cluster) belong to the same cluster.
-links_summary <- uniques_df |>
-    mutate(link_type = if_else(cell_type == cluster, "within_cluster", "cross_cluster"))
-head(links_summary)
-
-## Summarize counts per cell type
-summary_counts <- links_summary |>
-    count(cell_type, link_type) |>
-    group_by(cell_type) |>
-    mutate(
-        total = sum(n),
-        proportion = n / total
-    )
-summary_counts
-
-
-## stacked bar (proportions) show, for each cell_type what fraction of its significant LinkPeaks 
-## - connect to genes in the same cluster (green) vs other clusters
-
-g1 <- ggplot(summary_counts, aes(x = cell_type, y = proportion, fill = link_type)) +
-    geom_bar(stat = "identity", position = "stack") +
-    scale_fill_manual(values = c("within_cluster" = "#1b9e77", "cross_cluster" = "#d95f02")) +
-    labs(
-        title = "Within vs Cross-Cluster LinkPeaks-DARs overlaps by Cell Type",
-        x = "Cell Type",
-        y = "Proportion of Links",
-        fill = "Link Type"
-    ) +
-    theme_minimal(base_size = 12) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-f_name <- paste0("Cross-Cluster_proportions_FDR", FDR, ".pdf")
-ggsave(here(plotDir, f_name),
-       g1, width = 8, height = 8)
-
-
-## stacked bar (absolute counts)
-g1 <- ggplot(summary_counts, aes(x = cell_type, y = n, fill = link_type)) +
-    geom_bar(stat = "identity", position = "stack") +
-    labs(y = "Number of Links") +
-labs(
-    title = "Within- vs Cross-Cluster LinkPeaks-DARs overlaps by Cell Type",
-    x = "Cell Type",
-    y = "Number of Links",
-    fill = "Link Type"
-) +
-    theme_minimal(base_size = 12) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-f_name <- paste0("Cross-Cluster_abs_counts_FDR", FDR, ".pdf")
-ggsave(here(plotDir, f_name),
-       g1, width = 8, height = 8)
-
-
-## =============================================================================
-
-## Highlighting reciprocal relationships
-# matrix heatmap of regulatory interactions between cell-type pairs
-# directionality and strength of inter-cluster links.
-
-# heatmap h1:
-# How many cross-cluster connections exist? 
-# h1 - Excludes diagonal (cell_type != cluster), showing only cross-cluster links
-# Shows how much cross-regulation occurs between clusters
-
-pair_counts <- links_summary |>
-    count(cell_type, cluster) |>
-    filter(cell_type != cluster)
-head(pair_counts)
-
-f_name = here(plotDir, paste0("heatmap_CrossCluster_LinkCounts_h1_FDR", FDR,".pdf"))
-pdf(f_name, width = 7, height = 6)
-pheatmap::pheatmap(
-    pivot_wider(pair_counts, names_from = cluster, values_from = n, values_fill = 0)[,-1],
-    cluster_rows = TRUE, cluster_cols = TRUE,
-    main = "Cross-Cluster Link Counts (peaks→genes)"
-)
-dev.off()
-
-# ======
-
-# heatmap h2:
-# How strongly each cell type favors certain gene clusters?
-# h2 Keeps all pairs, including within-cluster (diagonal)
-# Highlights preferential link patterns (who regulates whom more strongly) across all clusters
-
-pair_counts <- links_summary |>
-    count(cell_type, cluster)
-mat <- pair_counts |>
-    pivot_wider(names_from = cluster, values_from = n, values_fill = 0)
-mat_norm <- mat |>
-    column_to_rownames("cell_type") |>
-    as.matrix()
-# normalize by row totals
-mat_prop <- mat_norm / rowSums(mat_norm)
-# # center/scale each row
-mat_z <- t(scale(t(mat_norm)))  
-
-# Y-axis (rows)	ATAC-defined cell_type	Where the open chromatin peak is located (e.g., LHb.4).
-# X-axis (columns)	RNA-defined cluster	Where the correlated gene expression occurs (e.g., Excit.Thal).
-# Color	Strength or proportion of links	Fraction (or Z-score) of LHb.4 peaks linked to genes in each expression cluster.
-# plot
-f_name = here(plotDir, paste0("heatmap_active_repressed_CCscore_top", top_genes_heatmap, "genes_FDR", thr_DAR,".pdf")) # FIX 4: Use thr_DAR
-pdf(f_name, width = 8, height = 8)
-
-subtitle_content <- paste0(
-    "Genes Selected from 'Active CRE (+)' Category (CCscore > ", thr_CC, ", FDR-DAR < ", thr_DAR, ", logFC > ", thr_logFC, ")\n", # Recommended to be more specific
-    "Total Genes Plotted: ", nrow(heatmap_mat_ordered) # Use ordered matrix size
-)
-
-pheatmap(
-    heatmap_mat_ordered, # FIX 1: Plot the ordered matrix
-    color = colorRampPalette(c("blue", "white", "red"))(100),
-    cluster_rows = FALSE, # FIX 2: Set to FALSE to respect row_order_final
-    cluster_cols = FALSE,
-    main = paste0( # FIX 3: Clean up the main title
-        "Top ", top_genes_heatmap, " Genes per Cell Type by Max |CCscore|",
-        "\n",
-        subtitle_content
-    ),
-    fontsize_row = 7,
-    fontsize_col = 10,
-    show_rownames = TRUE,
-    show_colnames = TRUE
-)
-
-dev.off()
-
 message("All plots done!!!")
 
 # library("slurmjobs")
 # job_single(
-#   "19_Linkage_DARs_analysis",
+#   "21_overlaping_FDRscores_TopHeatmap",
 #   create_shell = TRUE,
 #   partition = "katun",
 #   memory = "30G",
 #   cores = 2,
 #   logdir = "logs",
-#   command = "Rscript 19_Linkage_DARs_analysis.R",
+#   command = "Rscript 21_overlaping_FDRscores_TopHeatmap.R",
 #   create_logdir = FALSE
 # )
 
@@ -637,71 +523,3 @@ Sys.time()
 proc.time()
 options(width = 120)
 session_info()
-
-# ## compute log counts 
-# make_scattered_plot_dars_cc <- function(subset_uniques) {
-#     thr_CC <- 0.1
-#     thr_DAR <- 0.1
-#     thr_val <- thr_DAR
-#     clus_name <- unique(subset_uniques[["cell_type"]])
-#     
-#     message("Building plot for [", clus_name, "]")
-#     message("Using FDR threshold =", thr_val)
-#     
-#     plot_data <- subset_uniques |>
-#         mutate(
-#             neglog_FDR_CC = -log10(FDR_CC),
-#             neglog_fdr_dars = -log10(fdr_dars),
-#             sig_CC = FDR_CC < thr_CC,
-#             sig_DAR = fdr_dars < thr_DAR,
-#             category = case_when(
-#                 sig_CC & sig_DAR & logFC > 0  ~ "Active CRE (+)",
-#                 sig_CC & sig_DAR & logFC < 0  ~ "Repressive CRE (-)",
-#                 sig_CC & !sig_DAR              ~ "Shared CRE",
-#                 !sig_CC & sig_DAR              ~ "Unlinked DAR",
-#                 TRUE                           ~ "Non-significant"
-#             )
-#         )
-#     
-#     top_hits <- plot_data |>
-#         filter(category %in% c("Active CRE (+)", "Repressive CRE (-)")) |>
-#         arrange(FDR_CC) |>
-#         head(20)
-#     
-#     g1 <- ggplot(plot_data, aes(x = neglog_FDR_CC, y = neglog_fdr_dars, color = category)) +
-#         geom_point(alpha = 0.7, size = 1.6) +
-#         geom_text_repel(
-#             data = top_hits,
-#             aes(label = gene_name),
-#             size = 3,
-#             max.overlaps = 15
-#         ) +
-#         geom_vline(xintercept = -log10(thr_CC), linetype = "dashed", color = "darkgrey") +
-#         geom_hline(yintercept = -log10(thr_DAR), linetype = "dashed", color = "darkgrey") +
-#         scale_color_manual(values = c(
-#             "Active CRE (+)" = "#E64B35FF",
-#             "Repressive CRE (-)" = "#4DBBD5FF",
-#             "Shared CRE" = "#00A087FF",
-#             "Unlinked DAR" = "#3C5488FF",
-#             "Non-significant" = "lightgrey"
-#         )) +
-#         +
-#         scale_x_continuous(limits = c(0, 0.5)) +
-#         scale_y_continuous(limits = c(0, 0.5)) +
-#         labs(
-#             title = "Peak–Gene Correlation vs. Differential Accessibility",
-#             subtitle = paste0(clus_name, " | FDR = ", thr_val),
-#             x = expression(-log[10](FDR[CC])),
-#             y = expression(-log[10](FDR[DARs]))
-#         ) +
-#         theme_minimal(base_size = 12)
-#     
-#     return(g1)
-# }
-
-# # log10
-# scattered_plt_cell_type <- purrr::map(
-#     plot_data_list,
-#     ~ make_scattered_plot_dars_cc(.x)
-# )
-
