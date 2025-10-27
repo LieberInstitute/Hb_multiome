@@ -103,12 +103,16 @@ summary(cCRE_universe_df$fdr_dars)
 
 
 ## =============================================================================
+## Build DE_entrez dataframe for GO enrichment
+## =============================================================================
 
 ## ENTREZID look up
 names(cCRE_universe_df)
 ## gene symbol and gene entrez name
 cCRE_universe_df[c("gene_name", "gene_id")]
 
+## 
+# Convert ENSEMBL -> ENTREZID
 entrez_search <- bitr(cCRE_universe_df$gene_id, 
                       fromType = "ENSEMBL", 
                       toType = "ENTREZID", 
@@ -116,8 +120,9 @@ entrez_search <- bitr(cCRE_universe_df$gene_id,
 # Warning message:
 #     In bitr(cCRE_universe_df$gene_id, fromType = "ENSEMBL", toType = "ENTREZID",  :
 #                 1.43% of input gene IDs are fail to map.
-
-entrez_search |> count(ENSEMBL) |> count(n)
+head(entrez_search)
+message("Mapped ", nrow(entrez_search), " gene IDs to ENTREZID")
+# Mapped 1248 gene IDs to ENTREZID
 
 # DE_entrez <- DE_data |> 
 #     left_join(entrez_search, by = c("gene_id" = "ENSEMBL"), relationship = "many-to-many") |>
@@ -127,13 +132,39 @@ entrez_search |> count(ENSEMBL) |> count(n)
 #                                 TRUE ~ "None"),
 #            DE_class_cluster = paste0(gsub("\\.", "-", cluster), "_",DE_class)) ## doesn't like .  in cluster names
 
-DE_entrez <- cCRE_universe_df |> 
-    left_join(entrez_search, by = c("gene_id" = "ENSEMBL"), relationship = "many-to-many") |>
+## Merge back and define DE_class + DE_class_cluster
+
+DE_entrez <- cCRE_universe_df |>
+    # use this if duplicates are expected (because multiple peaks link to the same gene)
+    left_join(entrez_search,
+              by = c("gene_id" = "ENSEMBL"),
+              relationship = "many-to-many") |>
     filter(!is.na(ENTREZID)) |>
-    mutate(DE_class = case_when(logFC > 0 & fdr_dars < 0.05 ~ "up",
-                                    logFC < 0 & fdr_dars < 0.05 ~ "down",
-                                TRUE ~ "None"),
-           DE_class_cluster = paste0(gsub("\\.", "-", cell_type), "_",cCRE_universe_df)) ## doesn't like .  in cluster names
+    mutate(
+        ## Use logFC sign only — since FDR filtering was done upstream
+        DE_class = case_when(
+            logFC > 0 ~ "up",
+            logFC < 0 ~ "down",
+            TRUE ~ "None"
+        ),
+        ## Optionally keep the original category direction if meaningful
+        category_direction = case_when(
+            category == "Linked_DAR (+) enriched" ~ "up",
+            category == "Linked_DAR (-) depleted" ~ "down",
+            TRUE ~ "neutral"
+        ),
+        cell_type_clean = gsub("\\.", "-", cell_type),
+        DE_class_cluster = paste0(cell_type_clean, "_", DE_class)
+    ) %>%
+    distinct(ENTREZID, .keep_all = TRUE) %>%
+    select(cell_type, cell_type_clean, gene_name, gene_id, ENTREZID,
+           logFC, fdr_dars, category, DE_class, category_direction,
+           DE_class_cluster)
+
+## keep all mappings but avoid inflating the enrichment gene universe
+DE_entrez <- DE_entrez |>
+    distinct(cell_type, ENTREZID, .keep_all = TRUE)
+
 
 DE_entrez |> count(cluster)
 # DE_entrez |> filter(DE_class != "None") |> count(DE_class_cluster) |> head()
