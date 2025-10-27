@@ -262,7 +262,7 @@ peaks_classification3 = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted", 
 # )
 
 ## (A) Classification-2 logic  =================================================
-plot_data_list <- purrr::map(subsetted_list_df, ~ .x |> 
+plot_data_list_2 <- purrr::map(subsetted_list_df, ~ .x |> 
     mutate(
         sig_CC  = abs(CCscore) > thr_CC,   # significant correlation
         sig_DAR = fdr_dars < thr_DAR,      # significant accessibility
@@ -301,6 +301,10 @@ plot_data_full_df <- bind_rows(
     bind_rows(plot_data_list_2, .id = "source_df"),
     bind_rows(plot_data_list_3, .id = "source_df")
 )
+plot_data_full_df$type_classification <- factor(
+    plot_data_full_df$type_classification,
+    levels = c("classification-2", "classification-3")
+)
 
 ## Build a summary 
 
@@ -316,7 +320,7 @@ hb_related_df <- plot_data_full_df |>
 
 total_hb_related <- nrow(hb_related_df)
 hb_related_signif_df <- hb_related_df |>
-    filter(category %in% c(peaks_classification_2, peaks_classification_3))
+    filter(category %in% c(peaks_classification2, peaks_classification3))
 total_hb_related_signif <- nrow(hb_related_signif_df)
 
 message("Total Hb related [thr_CC=", thr_CC,
@@ -330,17 +334,21 @@ message("========================================================\n")
 f_name <- here(processedDir, paste0("overlaps_linkPeak_DARs_classified_thr_CC", thr_CC, "_thr_DAR", thr_DAR, ".csv"))
 write.csv(plot_data_full_df, f_name, row.names = FALSE)
 
-message("Saved linkPeak_DARs categories!")
+message("Saved linkPeak_DARs overlapings with categories!")
 
 ## Plot both classifications
-scattered_plt_cell_type_real_values <- purrr::map(
+scattered_plt_cell_type_real_values <- purrr::map2(
     list(plot_data_list_2, plot_data_list_3),
-    ~ make_scattered_plot_dars_cc_real(
-        .x, 
-        peaks_classification_2,   # or switch dynamically per classification,
-        top_genes_scattered_plt,
-        thr_CC, thr_DAR, thr_logFC, 
-        thr_fdr)
+    list(peaks_classification2, peaks_classification3),
+    ~ purrr::map(
+        .x,  # each element in plot_data_list_* (a data frame for one cell type) / inner map() generates a plot for each ct
+        ~ make_scattered_plot_dars_cc_real(
+            .x, 
+            .y,
+            top_genes_scattered_plt,
+            thr_CC, thr_DAR, thr_logFC, 
+            thr_fdr)
+    )
 )
  
 file_names <- c(
