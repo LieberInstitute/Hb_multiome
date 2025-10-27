@@ -66,6 +66,7 @@ unique(cCRE_df$type_classification)
 # [1] "classification-2" "classification-3"
 # as.data.frame(table(cCRE_df$type_classification, cCRE_df$category))
 
+peaks_classification_name = "peaks_classification3"
 peaks_classification3 = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted", "Linked OCR", "Unlinked DAR", "Non-significant")
 peaks_classification3_universe = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted")
 
@@ -165,48 +166,66 @@ DE_entrez <- cCRE_universe_df |>
 DE_entrez <- DE_entrez |>
     distinct(cell_type, ENTREZID, .keep_all = TRUE)
 
-
-DE_entrez |> count(cluster)
-# DE_entrez |> filter(DE_class != "None") |> count(DE_class_cluster) |> head()
+head(DE_entrez)
+nrow(DE_entrez)
 
 
 #### Run GO ####
+
 universe <- unique(DE_entrez$ENTREZID)
 length(universe)
+
+## verify we have large enough entries / usually ≥10 genes for GO
+unique(DE_class_cluster)
+
 
 ont_list <- c("CC","BP","MF")
 names(ont_list) <- ont_list
 
-go_result <- map(ont_list, ~compareCluster(ENTREZID ~ DE_class_cluster,
-                                           data = DE_entrez |> filter(DE_class != "None"), 
-                                           OrgDb = org.Hs.eg.db,
-                                           fun = enrichGO,
-                                           universe = universe,
-                                           ont = .x, ##ALL,CC,BP,MF
-                                           pAdjustMethod = "BH",
-                                           pvalueCutoff = 0.05,
-                                           # qvalueCutoff = 0.05,
-                                           readable = TRUE))
+go_result <- map(ont_list, 
+            ~compareCluster(ENTREZID ~ DE_class_cluster,
+               data = DE_entrez |> filter(DE_class != "None"), 
+               OrgDb = org.Hs.eg.db,
+               fun = enrichGO,
+               universe = universe,
+               ont = .x, ##ALL,CC,BP,MF
+               pAdjustMethod = "BH",
+               pvalueCutoff = 0.05,
+               readable = TRUE)
+            )
 
-## control point 
-saveRDS(go_result, file = here(processedDir, sprintf("GO_result_%s.rds", "cCRE")))
+go_result
 
+# Remove NULL entries (e.g., CC = NULL)
+go_result_valid <- discard(go_result, is.null)
 
+## convert to table & extract compareClusterResult from each valid ontology and tag with ontology name
+compare_clus <- map2_dfr(go_result_valid, names(go_result_valid), function(x, nm) {
+    x@compareClusterResult |> mutate(ONTOLOGY = nm)
+})
 
-go_result <- readRDS(here(data_dir, sprintf("GO_result_%s.rds", opt$datatype)))
+# verify classes that survive
+map(go_result, function(x) {
+    if (is.null(x)) "NULL" else nrow(x@compareClusterResult)
+})
 
-## convert to table
-compare_clus <- map2_dfr(go_result, names(go_result), ~.x@compareClusterResult |> mutate(ONTOLOGY = .y))
 compare_clus |> count(DE_class_cluster, ONTOLOGY)
+# DE_class_cluster ONTOLOGY n
+# 1       MHb-1-2_up       BP 1
+# 2       MHb-2_down       BP 2
+# 3       MHb-2_down       MF 7
 
-# Save 
-saveRDS(compare_clus, file = here(data_dir, sprintf("GO_compare_clus_%s.rds", opt$datatype)))
-write.csv(compare_clus, file = here(data_dir, sprintf("GO_results_%s.csv", opt$datatype)), row.names = FALSE)
+## Save 
+f_name <- here(processedDir, sprintf("GO_compare_clus_%s.rds", peaks_classification_name))
+saveRDS(compare_clus, f_name)
+f_name <- here(processedDir, sprintf("GO_results_%s.csv", peaks_classification_name))
+write.csv(compare_clus, f_name, row.names = FALSE)
 
 
 #### dot plots ####
 
-pdf(file = here(plot_dir, sprintf("GO_dotplot_%s.pdf", opt$datatype)), width = 10, height = 10)
+pdf(file = here(plot_dir, sprintf("GO_dotplot_%s.pdf", peaks_classification_name)), width = 10, height = 10)
+
 walk2(go_result, names(go_result), 
       ~print(
           dotplot(.x, 
