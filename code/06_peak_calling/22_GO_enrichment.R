@@ -63,13 +63,15 @@ unique(cCRE_df$type_classification)
 # [1] "classification-2" "classification-3"
 # as.data.frame(table(cCRE_df$type_classification, cCRE_df$category))
 
-peaks_classification_name = "peaks_classification3"
+peaks_classification_name = "peaks_classification3_hb"
 peaks_classification3 = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted", "Linked OCR", "Unlinked DAR", "Non-significant")
 peaks_classification3_universe = peaks_classification3 #c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted")
 
+## keep MHb / LHb
 cCRE_universe_df <- cCRE_df |> 
     filter(type_classification == "classification-3"
-           & category %in% peaks_classification3_universe)
+           & category %in% peaks_classification3_universe) |>
+    filter(grepl("MHb|LHb", cell_type))
 
 table(cCRE_universe_df$type_classification)
 table(cCRE_universe_df$category)
@@ -79,23 +81,23 @@ cluster_levels <- cCRE_universe_df$cell_type |> unique()
 
 cCRE_universe_df |> count(cluster)
 # cluster   n
-# 1   Astrocyte  19
-# 2        Endo   2
-# 3  Excit.Thal 213
-# 4  Inhib.Thal 278
-# 5       LHb.1  29
-# 6     LHb.1.3   6
-# 7   LHb.1.3.4  42
-# 8     LHb.2.7 161
-# 9       LHb.4 236
-# 10      MHb.1  30
-# 11    MHb.1.2   4
-# 12      MHb.2 323
-# 13      MHb.3   1
-# 14  Microglia   1
+# 1   Astrocyte  37
+# 2        Endo   3
+# 3  Excit.Thal 538
+# 4  Inhib.Thal 561
+# 5       LHb.1  77
+# 6     LHb.1.3  10
+# 7   LHb.1.3.4 110
+# 8     LHb.2.7 408
+# 9       LHb.4 753
+# 10      MHb.1  58
+# 11    MHb.1.2  13
+# 12      MHb.2 589
+# 13      MHb.3   2
+# 14  Microglia   2
 # 15        OPC   2
-# 16      Oligo  11
-# 17       Thal   5
+# 16      Oligo  33
+# 17       Thal   9
 
 
 ## =============================================================================
@@ -161,6 +163,9 @@ DE_entrez <- cCRE_universe_df |>
 DE_entrez <- DE_entrez |>
     distinct(cell_type, ENTREZID, .keep_all = TRUE)
 
+## verify we have large enough entries / usually ≥10 genes for GO
+unique(DE_entrez$cell_type)
+DE_entrez |> count(DE_class_cluster) |> arrange(desc(n))
 head(DE_entrez)
 nrow(DE_entrez)
 
@@ -168,12 +173,6 @@ nrow(DE_entrez)
 #### Run GO ####
 
 universe <- unique(DE_entrez$ENTREZID)
-length(universe)
-
-## verify we have large enough entries / usually ≥10 genes for GO
-unique(DE_entrez$DE_class_cluster)
-
-
 ont_list <- c("CC","BP","MF")
 names(ont_list) <- ont_list
 
@@ -249,6 +248,18 @@ walk2(go_result_valid, names(go_result_valid),
 )
 
 dev.off()
+
+library("slurmjobs")
+job_single(
+  "22_GO_enrichment",
+  create_shell = TRUE,
+  partition = "katun",
+  memory = "30G",
+  cores = 2,
+  logdir = "logs",
+  command = "Rscript 22_GO_enrichment.R",
+  create_logdir = FALSE
+)
 
 # 
 # pdf(file = here(plot_dir, sprintf("GO_dotplot_%s_2plus.pdf", opt$datatype)), width = 10, height = 10)
