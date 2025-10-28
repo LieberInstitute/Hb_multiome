@@ -133,10 +133,9 @@ clusters_sorted
 # unique_df |> filter(cell_type=="LHb.2.7") |> nrow() #203
     
 subset_cell_type <- function(unique_df, cluster_specific) {
-    message("Subsetting [", cluster_specific, "] cell_type")
     subset_uniques <- unique_df |> filter(cell_type == cluster_specific)
-    #message("Rows found: ", nrow(subset_uniques))
-    message("Unique peaks: ", length(unique(subset_uniques$peak_id_links)))
+    message("Subsetting [", cluster_specific, "]    ",
+            length(unique(subset_uniques$peak_id_links))," cell_type")
     return(subset_uniques)
 }
 
@@ -194,6 +193,7 @@ make_scattered_plot_dars_cc_real <- function(
         "cell-specific cCRE (-)"   = "#800080",
         "Linked_DAR (+) enriched"  = "#E64B35FF",  # reuse similar red for CSC+Nick version
         "Linked_DAR (-) depleted"  = "#800080",    # reuse purple for CSC+Nick version
+        "(-) Linked (+) DAR enriched" ="#0424DB",  # rare concordance
         "Linked OCR"               = "#00A087FF",
         "Unlinked DAR"             = "#3C5488FF",
         "Non-significant"          = "lightgrey"
@@ -204,6 +204,7 @@ make_scattered_plot_dars_cc_real <- function(
         "cell-specific cCRE (-)",
         "Linked_DAR (+) enriched",
         "Linked_DAR (-) depleted",
+        "(-) Linked (+) DAR enriched", 
         "Linked OCR",
         "Unlinked DAR",
         "Non-significant"
@@ -253,12 +254,11 @@ subsetted_df <- purrr::map_df(
 )
 
 ## verification
-table(subsetted_df$cell_type)
 summary(subsetted_df$cell_type)
 head(subsetted_df)
 subsetted_list_df <- split(subsetted_df, subsetted_df$cell_type)
+message("Peaks found for ", length(subsetted_list_df), " cell types")
 names(subsetted_list_df)
-length(subsetted_list_df) # 15 ct
 #table(subsetted_list_df[[8]]["overlap_type"])
 
 
@@ -275,13 +275,13 @@ thr_fdr = 0.2
 
 ## Categorize peaks overlaps ===================================================
 
-# (1) Standard classification (Cynthia): classification-1
+# (1) Standard classification (Cynthia): classification-1 - removed
 
 # (2) Leo's classification adapted to our current analysis: classification-2
 peaks_classification2 = c("cell-specific cCRE (+)", "cell-specific cCRE (-)", "Linked OCR", "Unlinked DAR", "Non-significant")
         
 # (3) Cynthia+Nick classification adapted to our current analysis: classification-3
-peaks_classification3 = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted", "Linked OCR", "Unlinked DAR", "Non-significant")
+peaks_classification3 = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted", "Linked OCR", "(-) Linked (+) DAR enriched", "Unlinked DAR", "Non-significant")
 
 # ## Add peaks-classification name
 # subsetted_list_df <- purrr::map(subsetted_list_df, ~ 
@@ -312,15 +312,24 @@ plot_data_list_3 <- purrr::map(subsetted_list_df, ~ .x |>
        sig_CC  = abs(CCscore) > thr_CC,
        sig_DAR = fdr_dars < thr_DAR,
        category = case_when(
+           # Primary interest: Concordant Linked DAR Categories plus secondary interest categories
            sig_CC & sig_DAR & logFC > thr_logFC   ~ "Linked_DAR (+) enriched",   # positive correlation + open chromatin
            sig_CC & sig_DAR & logFC < -thr_logFC  ~ "Linked_DAR (-) depleted",   # negative correlation + closed chromatin
+           # This "New" category of Non-Concordant Categories (Negative/Positive logFC mismatch with CCscore sign)
+           # - is rare and usually analyzed with co-accessibility or gene-silencing experiments
+           # - suggest Distant Regulation / These DARs may be driving the differential expression of non-coding RNAs 
+           (sig_CC < 0) & (sig_DAR & logFC > thr_logFC) ~ "(-) Linked (+) DAR enriched", 
+           # Secondary interest categories
            sig_CC & !sig_DAR                      ~ "Linked OCR",
            !sig_CC & sig_DAR                      ~ "Unlinked DAR",
+           # Nobody cares 
            TRUE                                   ~ "Non-significant"
        ),
        type_classification = "classification-3"
    )
 )
+
+
 ## ============/
 
 ## Merge both classification versions for comparison
@@ -343,6 +352,14 @@ plt_tmp |> count(category, name = "n")
 message("========= classification-3 ============\n")
 plt_tmp2 <- plot_data_full_df |> filter(type_classification=="classification-3")
 plt_tmp2 |> count(category, name = "n")
+
+# category                    n
+# 1              Linked OCR  420
+# 2 Linked_DAR (+) enriched  706
+# 3 Linked_DAR (-) depleted  657
+# 4         Non-significant  354
+# 5            Unlinked DAR 1068
+
 #table(plot_data_full_df$cell_type)
 #sum(table(plot_data_full_df$category)) #3205
 
@@ -407,37 +424,6 @@ pdf(f_name, width = 8, height = 6)
 walk(scattered_plt_cell_type_real_values_3, print)
 dev.off()
 
-# fails inner map
-# scattered_plt_cell_type_real_values <- purrr::map2(
-#     list(plot_data_list_2, plot_data_list_3),
-#     list(peaks_classification2, peaks_classification3),
-#     ~ purrr::map(
-#         .x,  # each element in plot_data_list_* (a data frame for one cell type) / inner map() generates a plot for each ct
-#         ~ make_scattered_plot_dars_cc_real(
-#             plot_data = .x,
-#             categories_to_plot = .y, 
-#             top_genes = top_genes_scattered_plt,
-#             thr_CC = thr_CC,
-#             thr_DAR = thr_DAR,
-#             thr_logFC = thr_logFC,
-#             fdr_cutoff = thr_fdr)
-#     )
-# )
-# file_names <- c(
-#     here(plotDir, paste0("ScatteredPlots_2sharedCT_class2_FDR", FDR, ".pdf")),
-#     here(plotDir, paste0("ScatteredPlots_2sharedCT_class3_FDR", FDR, ".pdf"))
-# )
-# walk2(
-#     file_names,
-#     scattered_plt_cell_type_real_values,
-#     ~ {
-#         pdf(.x, width = 8, height = 6)
-#         walk(.y, print)
-#         dev.off()
-#     }
-# )
-
-
 ## =============================================================================
 ## Heatmaps:
 
@@ -479,8 +465,7 @@ make_heatmap_cRE <- function(
 
 top_genes_heatmap = 5
 names(plot_data_list)
-head(plot_data_list[[1]])
-
+head(plot_data_list_3[[1]])
 
 prepare_top_genes_heatmap <- function(data_list,
                                       category_peaks,
@@ -500,7 +485,7 @@ prepare_top_genes_heatmap <- function(data_list,
     
     return(top_genes)
 
-    }
+}
 
 ##  ============================================================================
 
