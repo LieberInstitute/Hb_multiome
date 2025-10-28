@@ -165,6 +165,8 @@ DE_entrez <- DE_entrez |>
 
 ## verify we have large enough entries / usually ≥10 genes for GO
 unique(DE_entrez$cell_type)
+# # "LHb.1" "LHb.1.3" "LHb.1.3.4" "LHb.2.7" "LHb.4" "MHb.1" "MHb.1.2" "MHb.2" "MHb.3"
+
 DE_entrez |> count(DE_class_cluster) |> arrange(desc(n))
 head(DE_entrez)
 nrow(DE_entrez)
@@ -205,9 +207,9 @@ map(go_result, function(x) {
 
 compare_clus |> count(DE_class_cluster, ONTOLOGY)
 # DE_class_cluster ONTOLOGY n
-# 1       MHb-1-2_up       BP 1
-# 2       MHb-2_down       BP 2
-# 3       MHb-2_down       MF 7
+# 1   LHb-1-3-4_down       MF 8
+# 2       LHb-2-7_up       BP 2
+# 3       MHb-2_down       MF 2
 
 ## Save 
 f_name <- here(processedDir, sprintf("GO_compare_clus_%s.rds", peaks_classification_name))
@@ -218,48 +220,69 @@ write.csv(compare_clus, f_name, row.names = FALSE)
 
 #### dot plots ####
 
-pdf(file = here(processedDir, sprintf("GO_dotplot_%s.pdf", peaks_classification_name)), width = 10, height = 10)
-
 # Iterate over valid GO results (skip NULL or empty ones)
 go_result_valid <- discard(go_result, function(x) {
     is.null(x) || nrow(x@compareClusterResult) == 0
 })
 
+length(go_result_valid)
+map(go_result_valid, ~nrow(.@compareClusterResult))
+# pdf(f_name, width = 10, height = 10)
+# print(dotplot(go_result_valid[[2]])) # pass!
+# dev.off()
+
+f_name = here(processedDir, sprintf("GO_dotplot_%s.pdf", peaks_classification_name))
+pdf(f_name, width = 10, height = 10)
+
 ## one page per ontology 
-walk2(go_result_valid, names(go_result_valid), 
-      ~ {
-              message("Plotting ontology: ", .y)
-              # title pages
-              grid::grid.newpage()
-              grid::grid.text(.y, gp = grid::gpar(fontsize = 16, fontface = "bold"))
-              p <- dotplot(.x,
-                  x = "DE_class_cluster", 
-                  showCategory = 3, 
-                  label_format = 60)  +
-              ggtitle(paste("GO Enrichment:", .y)) +
-                  theme_bw(base_size = 12) +
-                  theme(
-                      axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 8),
-                      axis.text.y = element_text(size = 8),
-                      plot.title = element_text(hjust = 0.5, face = "bold")
-                  )
-              print(p)
-      }
-)
+if (length(go_result_valid) == 0) {
+    message("No valid GO results to plot.")
+    dev.off()
+} else {
+    walk2(go_result_valid, names(go_result_valid), function(x, nm) {
+        # Check if the result for this ontology contains enough data to attempt plotting
+        if(nrow(x@compareClusterResult) > 0) {
+            
+            message("Plotting ontology: ", nm, " (", nrow(x@compareClusterResult), " terms)")
+            
+            # Use tryCatch to prevent a single failing plot from crashing the entire PDF
+            tryCatch({
+                
+                p <- dotplot(x,
+                             x = "DE_class_cluster", 
+                             showCategory = 5, 
+                             label_format = 60) +
+                    ggtitle(paste("GO Enrichment:", nm)) +
+                    theme_bw(base_size = 12) +
+                    theme(
+                        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 8),
+                        axis.text.y = element_text(size = 8),
+                        plot.title = element_text(hjust = 0.5, face = "bold")
+                    )
+                print(p) 
+            }, error = function(e) {
+                message("Skipping plot for ", nm, " due to error: ", conditionMessage(e))
+            })
+        } else {
+            message("Skipping plot for ", nm, ": No terms remaining after filtering.")
+        }
+    })
+    
+    dev.off()
+    
+}
 
-dev.off()
-
-library("slurmjobs")
-job_single(
-  "22_GO_enrichment",
-  create_shell = TRUE,
-  partition = "katun",
-  memory = "30G",
-  cores = 2,
-  logdir = "logs",
-  command = "Rscript 22_GO_enrichment.R",
-  create_logdir = FALSE
-)
+# library("slurmjobs")
+# job_single(
+#   "22_GO_enrichment",
+#   create_shell = TRUE,
+#   partition = "katun",
+#   memory = "30G",
+#   cores = 2,
+#   logdir = "logs",
+#   command = "Rscript 22_GO_enrichment.R",
+#   create_logdir = FALSE
+# )
 
 # 
 # pdf(file = here(plot_dir, sprintf("GO_dotplot_%s_2plus.pdf", opt$datatype)), width = 10, height = 10)
