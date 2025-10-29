@@ -471,10 +471,15 @@ prepare_top_genes_heatmap <- function(data_list,
         data_list,
         ~ .x |>
             filter(category == !!category_peaks) |> 
+            # Aggregate to find the single best (highest abs CCscore) link per gene per cell type
+            group_by(gene_name, cell_type) |>
+            reframe(
+                CCscore = CCscore[which.max(abs(CCscore))]
+            ) |>
+            ungroup() |>
             arrange(desc(abs(CCscore))) |>
             slice_head(n = top_genes_heatmap) |>
-            select(gene_name, cell_type, CCscore) |>
-            distinct() |>
+
             pivot_wider(
                 names_from = cell_type,
                 values_from = CCscore,
@@ -493,10 +498,10 @@ prepare_top_genes_heatmap <- function(data_list,
 ## Plot classifiction-3 
 
 top_genes_heatmap = 5
-data_heatmap <- bind_rows(plot_data_list_3)
-message("Rows in data_heatmap: ", nrow(data_heatmap))
-print(table(data_heatmap$type_classification))
-print(table(data_heatmap$category))
+# data_heatmap <- bind_rows(plot_data_list_3)
+# message("Rows in data_heatmap: ", nrow(data_heatmap))
+# print(table(data_heatmap$type_classification))
+# print(table(data_heatmap$category))
 
 categories_to_plot <- c(
     "Linked_DAR (+) enriched",
@@ -506,8 +511,7 @@ categories_to_plot <- c(
 )
 
 #categories_to_plot <- c("cell-specific cCRE (+)", "cell-specific cCRE (-)", "Linked OCR", "Unlinked DAR")
-nrow(plot_data_full_df)
-table(plot_data_full_df$type_classification)
+
 for (cat_cRE in categories_to_plot) {
     # cat_cRE = "Linked_DAR (+) enriched"
     
