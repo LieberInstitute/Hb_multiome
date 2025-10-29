@@ -349,6 +349,7 @@ message("========= Summary of candidate RE by category ============\n")
 message("========= classification-2 ============\n")
 plt_tmp <- plot_data_full_df |> filter(type_classification=="classification-2")
 plt_tmp |> count(category, name = "n")
+plt_tmp |> count("n") #1967
 message("========= classification-3 ============\n")
 plt_tmp2 <- plot_data_full_df |> filter(type_classification=="classification-3")
 plt_tmp2 |> count(category, name = "n")
@@ -360,15 +361,14 @@ plt_tmp2 |> count(category, name = "n")
 # 4         Non-significant  354
 # 5            Unlinked DAR 1068
 
-#table(plot_data_full_df$cell_type)
-#sum(table(plot_data_full_df$category)) #3205
+#table(plot_data_full_df$cell_type) # includes both categories
 
 ## testing in one category only
-hb_related_df <- plt_tmp |>
+hb_related_df <- plt_tmp2 |>
     filter(grepl("MHb|LHb", cell_type))
 total_hb_related <- nrow(hb_related_df)
-hb_related_signif_df <- hb_related_df |>
-    filter(category %in% c(peaks_classification2, peaks_classification3))
+hb_related_signif_df <- hb_related_df |> 
+    filter(category %in% peaks_classification3[peaks_classification3 != "Non-significant"])
 total_hb_related_signif <- nrow(hb_related_signif_df)
 
 message("Total Hb related [thr_CC=", thr_CC,
@@ -434,7 +434,7 @@ dev.off()
 # - if comparing co-regulated gene modules across clusters
 
 ## =============================================================================
-## Define functions to plot all the defined cRE classes 
+## Define functions to plot heatmaps for specific categories 
 
 make_heatmap_cRE <- function(
         heatmap_mat_ordered,
@@ -459,14 +459,8 @@ make_heatmap_cRE <- function(
     
 }
 
-## ====
 
-## filter to consider those genes classified as Active CRE (+)"
-
-top_genes_heatmap = 5
-names(plot_data_list)
-head(plot_data_list_3[[1]])
-
+## function to plot heatmaps
 prepare_top_genes_heatmap <- function(data_list,
                                       category_peaks,
                                       top_genes_heatmap) 
@@ -476,11 +470,18 @@ prepare_top_genes_heatmap <- function(data_list,
     top_genes <- map(
         data_list,
         ~ .x |>
-            filter(category == category_peaks) |> 
+            filter(category == !!category_peaks) |> 
             arrange(desc(abs(CCscore))) |>
             slice_head(n = top_genes_heatmap) |>
-            pull(gene_name) |>
-            unique()
+            select(gene_name, cell_type, CCscore) |>
+            distinct() |>
+            pivot_wider(
+                names_from = cell_type,
+                values_from = CCscore,
+                values_fill = 0
+            ) |>
+            tibble::column_to_rownames("gene_name") |>
+            as.matrix()
     )
     
     return(top_genes)
@@ -489,18 +490,32 @@ prepare_top_genes_heatmap <- function(data_list,
 
 ##  ============================================================================
 
+## Plot classifiction-3 
 
-categories_to_plot <- c("cell-specific cCRE (+)", "cell-specific cCRE (-)", "Linked OCR", "Unlinked DAR")
+top_genes_heatmap = 5
+data_heatmap <- bind_rows(plot_data_list_3)
+message("Rows in data_heatmap: ", nrow(data_heatmap))
+print(table(data_heatmap$type_classification))
+print(table(data_heatmap$category))
 
+categories_to_plot <- c(
+    "Linked_DAR (+) enriched",
+    "Linked_DAR (-) depleted",
+    "Linked OCR",
+    "Unlinked DAR"
+)
 
+#categories_to_plot <- c("cell-specific cCRE (+)", "cell-specific cCRE (-)", "Linked OCR", "Unlinked DAR")
+nrow(plot_data_full_df)
+table(plot_data_full_df$type_classification)
 for (cat_cRE in categories_to_plot) {
-    # cat_cRE = "Repressive CRE (-)"
+    # cat_cRE = "Linked_DAR (+) enriched"
     
     top_genes_list <- prepare_top_genes_heatmap(
-        plot_data_list,
+        plot_data_list_3,
         cat_cRE,
         top_genes_heatmap
-        )
+    )
     
     names(top_genes_list) <- names(plot_data_list)
     top_genes <- unique(unlist(top_genes_list))
