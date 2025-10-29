@@ -495,22 +495,23 @@ prepare_top_genes_heatmap <- function(data_list,
 
 ##  ============================================================================
 
-## Plot classifiction-3 
+## Plot Heatmap with classifiction-3 
 
 top_genes_heatmap = 5
-# data_heatmap <- bind_rows(plot_data_list_3)
-# message("Rows in data_heatmap: ", nrow(data_heatmap))
-# print(table(data_heatmap$type_classification))
-# print(table(data_heatmap$category))
+plot_data_full_df <- plot_data_full_df |> filter(type_classification=="classification-3")
+table(plot_data_full_df$type_classification)
+# classification-2 classification-3 
+# 0             3205
+table(plot_data_full_df$category)
 
 categories_to_plot <- c(
     "Linked_DAR (+) enriched",
     "Linked_DAR (-) depleted",
+    "(-) Linked (+) DAR enriched",
     "Linked OCR",
     "Unlinked DAR"
 )
 
-#categories_to_plot <- c("cell-specific cCRE (+)", "cell-specific cCRE (-)", "Linked OCR", "Unlinked DAR")
 
 for (cat_cRE in categories_to_plot) {
     # cat_cRE = "Linked_DAR (+) enriched"
@@ -521,9 +522,17 @@ for (cat_cRE in categories_to_plot) {
         top_genes_heatmap
     )
     
-    names(top_genes_list) <- names(plot_data_list)
-    top_genes <- unique(unlist(top_genes_list))
-    message("[", cat_cRE,"] Total unique top genes: ", length(top_genes))
+    
+    names(plot_data_list_3) <- names(plot_data_list_3)
+    top_genes <- unique(unlist(purrr::map(top_genes_list, rownames)))
+    
+    if (length(top_genes) == 0) {
+        message("Skipping [", cat_cRE, "] because no top genes were found across all cell types.")
+        next
+    } else {
+        message("[", cat_cRE,"] Total unique top genes: ", length(top_genes))
+    }
+        
     
     # Prepare the data for dcast (ensure no duplicates and correct type)
     wide_data_clean <- plot_data_full_df |>
@@ -565,7 +574,14 @@ for (cat_cRE in categories_to_plot) {
     heatmap_mat_ordered <- heatmap_mat_final[row_order_final, col_order_final]
     
     # make the plot
-    f_name <- paste0("heatmap_", stringr::word(cat_cRE, 1), "_CCscore_top", top_genes_heatmap, "genes.pdf")
+    cat_name <- case_when(
+        cat_cRE == "Linked_DAR (+) enriched" ~ "Linked_DAR_enriched",
+        cat_cRE == "Linked_DAR (-) depleted" ~ "Linked_DAR_depleted",
+        cat_cRE == "(-) Linked (+) DAR enriched" ~ "NegLinked_DAR_enriched",
+        cat_cRE == "Linked OCR" ~ "Linked OCR", 
+        cat_cRE == "Unlinked DAR" ~ "Unlinked DAR"
+    )
+    f_name <- paste0("heatmap_", cat_name, "_CCscore_top", top_genes_heatmap, "genes.pdf")
     f_name = here(plotDir, f_name)
     pdf(f_name, width = 5, height = 8)
     
