@@ -222,17 +222,14 @@ names(ont_list) <- ont_list
 
 go_result <- map(ont_list, 
             ~compareCluster(
-                #ENTREZID ~ DE_class_cluster,
                ENTREZID ~ DE_group,
-               #data = DE_entrez |> filter(DE_class != "None"), 
                data = DE_entrez,  
                OrgDb = org.Hs.eg.db,
                fun = enrichGO,
                universe = universe,
-               ont = .x, ##ALL,CC,BP,MF
+               ont = .x,
                pAdjustMethod = "BH",
-               #pvalueCutoff = 0.05,
-               pvalueCutoff = 0.1,
+               pvalueCutoff = 0.1, # 0.5
                readable = TRUE)
 )
 
