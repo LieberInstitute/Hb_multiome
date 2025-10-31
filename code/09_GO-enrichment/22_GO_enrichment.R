@@ -34,17 +34,17 @@ inputCSV_cCRE_ORC_Dir <- here(
 )
 processedDir <- here(
     "processed-data",
-    "06_peak_calling",
+    "09_GO-enrichment",
     "22_GO_enrichment"
 )
 plotDir <- here(
     "plots",
-    "06_peak_calling",
+    "09_GO-enrichment",
     "22_GO_enrichment"
 )
 
-if (!dir.exists(processedDir)) { dir.create(processedDir) }
-if (!dir.exists(plotDir)) { dir.create(plotDir) }
+if (!dir.exists(processedDir)) { dir.create(processedDir, recursive = TRUE) }
+if (!dir.exists(plotDir)) { dir.create(plotDir, recursive = TRUE) }
 
 
 ##==============================================================================
@@ -57,47 +57,71 @@ f_name = "overlaps_linkPeak_DARs_classified_thr_CC0.3_thr_DAR0.1.csv"
 cCRE_df <- read.csv(here(inputCSV_cCRE_ORC_Dir, f_name))
 nrow(cCRE_df) # 6410
 head(cCRE_df)
+table(cCRE_df$type_classification)
+
+cCRE_df <- cCRE_df |> filter(type_classification=="classification-3")
 
 ## validation
 unique(cCRE_df$type_classification)
-# [1] "classification-2" "classification-3"
-# as.data.frame(table(cCRE_df$type_classification, cCRE_df$category))
+as.data.frame(table(cCRE_df$type_classification, cCRE_df$category))
+# Var1                    Var2 Freq
+# 1 classification-3              Linked OCR  420
+# 2 classification-3 Linked_DAR (-) depleted  657
+# 3 classification-3 Linked_DAR (+) enriched  706
+# 4 classification-3         Non-significant  354
+# 5 classification-3            Unlinked DAR 1068
 
 peaks_classification_name = "peaks_classification3_hb"
-peaks_classification3 = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted", "Linked OCR", "Unlinked DAR", "Non-significant")
-peaks_classification3_universe = peaks_classification3 #c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted")
+
+## =============================================================================
+## define GO universe 
+
+## Primary Interest.** Canonical enhancer or promoter activity
+go_universe1 = c(
+    "Linked_DAR (+) enriched",
+    "Linked_DAR (-) depleted"
+)
+
+## Primary + Secondary Interest.** Regulatory link exists, but the element is not a strong DAR
+go_universe2 = c(
+    "Linked_DAR (+) enriched",
+    "Linked_DAR (-) depleted",
+    "Linked OCR"
+)
+
+## **High Interest.** Potential for distal regulation or non-coding targets
+go_universe3 = c(
+    "Unlinked DAR"
+)
+
+## =========/
+
+peaks_classification3_universe = go_universe1
 
 ## keep MHb / LHb
 cCRE_universe_df <- cCRE_df |> 
     filter(type_classification == "classification-3"
-           & category %in% peaks_classification3_universe) |>
+           & category %in% peaks_classification3_universe) |> 
     filter(grepl("MHb|LHb", cell_type))
 
-table(cCRE_universe_df$type_classification)
+table(cCRE_universe_df$cell_type, cCRE_universe_df$category)
+table(cCRE_universe_df$cell_type)
 table(cCRE_universe_df$category)
+# Linked_DAR (-) depleted Linked_DAR (+) enriched 
+# 38                     341 
 head(cCRE_universe_df)
 
 cluster_levels <- cCRE_universe_df$cell_type |> unique()
 
-cCRE_universe_df |> count(cluster)
-# cluster   n
-# 1   Astrocyte  37
-# 2        Endo   3
-# 3  Excit.Thal 538
-# 4  Inhib.Thal 561
-# 5       LHb.1  77
-# 6     LHb.1.3  10
-# 7   LHb.1.3.4 110
-# 8     LHb.2.7 408
-# 9       LHb.4 753
-# 10      MHb.1  58
-# 11    MHb.1.2  13
-# 12      MHb.2 589
-# 13      MHb.3   2
-# 14  Microglia   2
-# 15        OPC   2
-# 16      Oligo  33
-# 17       Thal   9
+cCRE_universe_df |> count(cell_type)
+# cell_type   n
+# 1     LHb.1  29
+# 2 LHb.1.3.4  11
+# 3   LHb.2.7  78
+# 4     LHb.4  88
+# 5     MHb.1  33
+# 6   MHb.1.2  15
+# 7     MHb.2 125
 
 
 ## =============================================================================
@@ -120,7 +144,7 @@ entrez_search <- bitr(cCRE_universe_df$gene_id,
 #                 1.43% of input gene IDs are fail to map.
 head(entrez_search)
 message("Mapped ", nrow(entrez_search), " gene IDs to ENTREZID")
-# Mapped 1248 gene IDs to ENTREZID
+# Mapped 372 gene IDs to ENTREZID
 
 # DE_entrez <- DE_data |> 
 #     left_join(entrez_search, by = c("gene_id" = "ENSEMBL"), relationship = "many-to-many") |>
@@ -159,9 +183,15 @@ DE_entrez <- cCRE_universe_df |>
            logFC, fdr_dars, category, DE_class, category_direction,
            DE_class_cluster)
 
-## keep all mappings but avoid inflating the enrichment gene universe
+
+## NEW: group by cell_type for enrichment
 DE_entrez <- DE_entrez |>
-    distinct(cell_type, ENTREZID, .keep_all = TRUE)
+    mutate(DE_group = cell_type_clean) |>
+    distinct(DE_group, ENTREZID, .keep_all = TRUE)
+
+## keep groups with at least 10 genes
+group_sizes <- DE_entrez |> count(DE_group)
+DE_entrez <- DE_entrez |> semi_join(group_sizes |> filter(n >= 10), by = "DE_group")
 
 ## verify we have large enough entries / usually ≥10 genes for GO
 unique(DE_entrez$cell_type)
@@ -179,16 +209,20 @@ ont_list <- c("CC","BP","MF")
 names(ont_list) <- ont_list
 
 go_result <- map(ont_list, 
-            ~compareCluster(ENTREZID ~ DE_class_cluster,
-               data = DE_entrez |> filter(DE_class != "None"), 
+            ~compareCluster(
+                #ENTREZID ~ DE_class_cluster,
+               ENTREZID ~ DE_group,
+               #data = DE_entrez |> filter(DE_class != "None"), 
+               data = DE_entrez,  
                OrgDb = org.Hs.eg.db,
                fun = enrichGO,
                universe = universe,
                ont = .x, ##ALL,CC,BP,MF
                pAdjustMethod = "BH",
-               pvalueCutoff = 0.05,
+               #pvalueCutoff = 0.05,
+               pvalueCutoff = 0.1,
                readable = TRUE)
-            )
+)
 
 #go_result
 
