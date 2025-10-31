@@ -102,6 +102,7 @@ lst_universe <- list(
 
 # Display the resulting list
 lst_universe
+
 ## =========/
 
 
@@ -132,12 +133,24 @@ purrr::map(lst_universe, function(.x) {
 })
 
 
+## testing
+colnames(cCRE_df)
+table(cCRE_df$category)
+
+## subset the specific go_universe
+cCRE_universe_df <- cCRE_df |> 
+    filter(category %in% lst_universe[["Direct_Regulation"]]) 
+cCRE_universe_df |> nrow()
+# 1363
+
+
 ## =============================================================================
 ## Build DE_entrez dataframe for GO enrichment
 ## =============================================================================
 
 ## ENTREZID look up
 names(cCRE_universe_df)
+
 ## gene symbol and gene entrez name
 cCRE_universe_df[c("gene_name", "gene_id")]
 
@@ -152,17 +165,13 @@ entrez_search <- bitr(cCRE_universe_df$gene_id,
 #                 1.43% of input gene IDs are fail to map.
 head(entrez_search)
 message("Mapped ", nrow(entrez_search), " gene IDs to ENTREZID")
-# Mapped 372 gene IDs to ENTREZID
 
-# DE_entrez <- DE_data |> 
-#     left_join(entrez_search, by = c("gene_id" = "ENSEMBL"), relationship = "many-to-many") |>
-#     filter(!is.na(ENTREZID)) |>
-#     mutate(DE_class = case_when(vlmf_logFC > 0 & vlmf_adj.P.Val < 0.05 ~ "up",
-#                                 vlmf_logFC < 0 & vlmf_adj.P.Val < 0.05 ~ "down",
-#                                 TRUE ~ "None"),
-#            DE_class_cluster = paste0(gsub("\\.", "-", cluster), "_",DE_class)) ## doesn't like .  in cluster names
 
+
+##==============================================================================
 ## Merge back and define DE_class + DE_class_cluster
+
+########## Test "Direct_Regulation" ##########
 
 DE_entrez <- cCRE_universe_df |>
     # use this if duplicates are expected (because multiple peaks link to the same gene)
@@ -177,7 +186,7 @@ DE_entrez <- cCRE_universe_df |>
             logFC < 0 ~ "down",
             TRUE ~ "None"
         ),
-        ## Optionally keep the original category direction if meaningful
+        ## keep the original category direction
         category_direction = case_when(
             category == "Linked_DAR (+) enriched" ~ "up",
             category == "Linked_DAR (-) depleted" ~ "down",
@@ -192,23 +201,18 @@ DE_entrez <- cCRE_universe_df |>
            DE_class_cluster)
 
 
-## NEW: group by cell_type for enrichment
+## group by cell_type for enrichment
 DE_entrez <- DE_entrez |>
     mutate(DE_group = cell_type_clean) |>
     distinct(DE_group, ENTREZID, .keep_all = TRUE)
+head(DE_entrez)
+table(DE_entrez$DE_group, DE_entrez$DE_class)
 
 ## keep groups with at least 10 genes
 group_sizes <- DE_entrez |> count(DE_group)
 DE_entrez <- DE_entrez |> semi_join(group_sizes |> filter(n >= 10), by = "DE_group")
-
-## verify we have large enough entries / usually ≥10 genes for GO
+table(DE_entrez$DE_group, DE_entrez$DE_class)
 unique(DE_entrez$cell_type)
-# # "LHb.1" "LHb.1.3" "LHb.1.3.4" "LHb.2.7" "LHb.4" "MHb.1" "MHb.1.2" "MHb.2" "MHb.3"
-
-DE_entrez |> count(DE_class_cluster) |> arrange(desc(n))
-head(DE_entrez)
-nrow(DE_entrez)
-
 
 #### Run GO ####
 
