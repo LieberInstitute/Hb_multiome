@@ -36,10 +36,8 @@ pwd
 echo "===== Call macs2  ................."
 
 ## rm previous log files and output files
-# rm -f ${CODEDIR}/${SUBDIR}/logs/01_coverage_basic.txt
-# rm -f ${PLOTDIR}/${SUBDIR}/*.png
-# rm -f ${PLOTDIR}/${SUBDIR}/*.pdf
-
+rm -f ${CODEDIR}/${SUBDIR}/logs/01_call_peaks_MACS2*.txt
+rm -f ${PROCESSEDIR}/${SUBDIR}/macs_*.csv
 id1=$(sbatch --parsable 01_call_peaks_MACS2.sh)    
 echo $id1
 
@@ -55,7 +53,14 @@ echo $id3
 
 echo "===== LinkPeaks in pb assays with merge macs2 peaks / by cell-type  ................."
 
+rm -f ${CODEDIR}/${SUBDIR}/logs/13_pseudobulk_LinkPeaks_MACS2_split*.log
+rm -r ${PROCESSEDIR}/${SUBDIR}/links_ct_merged
+# rm -r ${PROCESSEDIR}/${SUBDIR}/links_ct_not_merged
+# rm -r ${PROCESSEDIR}/${SUBDIR}/links_global_regular # this are comming from cellRanger-ARC (global measures not split by ct)
+
 id4=$(sbatch --parsable --dependency=afterok:$id3 13_pseudobulk_LinkPeaks_MACS2_split_ct.sh)
+
+
 ## Make distribution plots to evaluate Peak scores
 sbatch --dependency=afterok:$id4 14_exploratory_pb_peak_scores_MACS2.sh
 
@@ -91,7 +96,7 @@ rm -f ${PROCESSEDIR}/${SUBDIR}/20_explore_overlapping_linkpeaks_DARs/overlaps*.c
 rm -f ${PLOTDIR}/${SUBDIR}/20_explore_overlapping_linkpeaks_DARs/overlaps*.pdf
 
 # sbatch 20_explore_overlapping_linkpeaks_DARs.sh
-id6=$(sbatch --parsable --dependency=afterok:$id6 18_pseudobulk_DARs_Volcano_Violin.sh)
+id6=$(sbatch --parsable --dependency=afterok:$id6 20_explore_overlapping_linkpeaks_DARs.sh)
 
 
 echo "Done!!-------------------------------------------------------------------"
