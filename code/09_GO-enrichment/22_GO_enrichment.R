@@ -94,34 +94,42 @@ go_universe3 = c(
     "Unlinked DAR"
 )
 
+lst_universe <- list(
+    "Direct_Regulation" = go_universe1,
+    "Primary_Secondary_Interest" = go_universe2,
+    "High_Interest_DARs" = go_universe3
+)
+
+# Display the resulting list
+lst_universe
 ## =========/
 
-peaks_classification3_universe = go_universe1
 
-## keep MHb / LHb
-cCRE_universe_df <- cCRE_df |> 
-    filter(type_classification == "classification-3"
-           & category %in% peaks_classification3_universe) |> 
-    filter(grepl("MHb|LHb", cell_type))
+## Summarize stats for Hb clusters
 
-table(cCRE_universe_df$cell_type, cCRE_universe_df$category)
-table(cCRE_universe_df$cell_type)
-table(cCRE_universe_df$category)
-# Linked_DAR (-) depleted Linked_DAR (+) enriched 
-# 38                     341 
-head(cCRE_universe_df)
+## Generate Summary Tables for cCRE Categories Across Habenula (MHb/LHb) Clusters
 
-cluster_levels <- cCRE_universe_df$cell_type |> unique()
-
-cCRE_universe_df |> count(cell_type)
-# cell_type   n
-# 1     LHb.1  29
-# 2 LHb.1.3.4  11
-# 3   LHb.2.7  78
-# 4     LHb.4  88
-# 5     MHb.1  33
-# 6   MHb.1.2  15
-# 7     MHb.2 125
+purrr::map(lst_universe, function(.x) {
+    # Filter the main data frame (cCRE_df) based on the current universe (.x)
+    #    and restrict to Habenula (MHb/LHb) cell types
+    cCRE_universe_df <- cCRE_df |>
+        dplyr::filter(category %in% .x) |>
+        dplyr::filter(grepl("MHb|LHb", cell_type))
+    
+    # Generate summary tables
+    cat("\n--- Counts by Cell Type and Category ---\n")
+    print(table(cCRE_universe_df$cell_type, cCRE_universe_df$category))
+    
+    cat("\n--- Total Counts by Cell Type (Cluster) ---\n")
+    print(table(cCRE_universe_df$cell_type))
+    
+    cat("\n--- Total Counts by Category ---\n")
+    print(table(cCRE_universe_df$category))
+    
+    # Return the count data frame
+    cCRE_universe_df |> dplyr::count(cell_type)
+    
+})
 
 
 ## =============================================================================
