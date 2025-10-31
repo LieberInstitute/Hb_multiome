@@ -1,4 +1,14 @@
-# Readme
+---
+title: ""
+output: html_document
+---
+
+
+## Candidate Regulatory Elements by Category
+
+![Classification of candidate cis-Regulatory Elements (ccREs)](./ccRE_classification.png)
+
+---
 
 ## Summary of Candidate Regulatory Elements by Category
 
@@ -25,7 +35,7 @@
 
 ---
 
-## 🔗 Linked File — Classified Overlaps
+## Linked File — Classified Overlaps
 
 **File name:**  
 [`overlaps_linkPeak_DARs_classified_thr_CC0.3_thr_DAR0.1.csv`](https://github.com/LieberInstitute/Hb_multiome/tree/acb22103843bfec1a538286d4a4c9d0a89e5c87c/processed-data/06_peak_calling/21_overlaping_FDRscores_TopHeatmap)
