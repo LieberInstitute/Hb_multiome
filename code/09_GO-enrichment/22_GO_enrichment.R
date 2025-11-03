@@ -56,15 +56,13 @@ if (!dir.exists(plotDir)) { dir.create(plotDir, recursive = TRUE) }
 
 # table containing all merged overlaps from 19 directory: all measurable genes
 
-# === all genes that have any peak overlap (linked or not, FDR ≤ 0.2) === is broad?
+##  Linkable genes universe
+universe_linkPeaks <- read.csv(here(inputCSV_merged_overlaps, "ALL_LinkPeaks_signif_FDR02.csv"))
+nrow(linkPeaks_results_all) # 10948 ok
+
 universe_overlaps_df <- read.csv(here(inputCSV_merged_overlaps, "Overlaps_LinkPeak_DARs_FDR0.2.csv"))
 colnames(universe_overlaps_df)
-# > colnames(universe_overlaps_df)
-# [1] "peak_id_links"    "CCscore"          "gene_name"        "gene_id"         
-# [5] "FDR_CC"           "cluster"          "tss"              "gene_strand"     
-# [9] "distance"         "distance_kb"      "signed_distance"  "signed_by_strand"
-# [13] "peak_id"          "cell_type"        "FDR_threshold"    "logFC"           
-# [17] "fdr_dars"  
+
 head(universe_overlaps_df)
 
 nrow(universe_overlaps_df)
@@ -137,10 +135,10 @@ go_directReg = c(
 )
 
 # add to the test
-# go_directReg = c(
+# go_directReg_enriched = c(
 #     "Linked_DAR (+) enriched"
 # )
-# go_directReg = c(
+# go_directReg_depleted = c(
 #     "Linked_DAR (-) depleted"
 # )
 
@@ -157,7 +155,7 @@ go_High_Interest_DARs = c(
 )
 
 # ## Secondary Interest.** Regulatory link exists, but not a strong DAR
-# go_Secondary_Interest = c(
+# go_Secondary_Linked_OCR = c(
 #     "Linked OCR"
 # )
 
