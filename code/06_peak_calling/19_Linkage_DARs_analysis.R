@@ -26,7 +26,11 @@ library("here")
 
 ## setup variable names
 resolution_level = "Mid" 
-# test 2 thresholds
+
+# test 1 thresholds on Links
+FDR_links = 0.2 
+
+# test 2 thresholds on DARs
 FDR = 0.2 # actual value to run the DAR-Links
 FDR_thresh = c(0.1, 0.2)
 # lfc_thresh = 0.2 # we do not use log FC for this exploratory analysis
@@ -77,6 +81,13 @@ message("Processing ", length(list_of_df), " LinkPeaks files for merged-peaks da
 message(nrow(linkPeaks_results_all), " total links") 
 
 head(linkPeaks_results_all)
+summary(linkPeaks_results_all$score)
+nrow(linkPeaks_results_all) # 10948
+# save LinkPeaks table 
+f_name <- here(processedDir, paste0("ALL_LinkPeaks_signif_FDR", gsub("\\.", "", as.character(FDR_links)), ".csv"))
+write.csv(linkPeaks_results_all, f_name, row.names = FALSE)
+
+message("LinkPeaks saved for FDR", gsub("\\.", "", as.character(FDR_links)), ".csv")
 
 
 #===========================================================================
