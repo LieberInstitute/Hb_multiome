@@ -216,7 +216,7 @@ map_int(list_df_cCRE, nrow)
 ## =============================================================================
 ## Merge Hb sub-types into broad groups (LHb, MHb)
 
-cCRE_universe_df <- cCRE_universe_df |>
+cCRE_df <- cCRE_df |>
     mutate(
         cell_type_broad = case_when(
             grepl("^LHb", cell_type) ~ "LHb",
@@ -225,9 +225,9 @@ cCRE_universe_df <- cCRE_universe_df |>
         )
     )
 
-table(cCRE_universe_df$cell_type)
+table(cCRE_df$cell_type)
 ## Check how many entries per broad group
-table(cCRE_universe_df$cell_type_broad)
+table(cCRE_df$cell_type_broad)
 
 
 ##==============================================================================
@@ -325,6 +325,10 @@ for (test_go in names(lst_go_tests)) {
     
     ## Prepare category-specific subset (use the correct one per test)
     cCRE_subset <- list_df_cCRE[[test_go]]
+    if (is.null(cCRE_subset) || nrow(cCRE_subset) == 0) {
+        message("No data found for ", test_go, " — skipping.")
+        next
+    }
     message("Subset size: ", nrow(cCRE_subset))
     
     ## prepare entrez df
@@ -437,282 +441,85 @@ for (test_go in names(lst_go_tests)) {
 
 
 
-
-
-
-
-# test_ids <- DE_entrez |> filter(DE_group == "LHb") |> pull(ENTREZID)
-# ego_test <- enrichGO(gene = test_ids, OrgDb = org.Hs.eg.db,
-#                      universe   = entrez_universe,   # correct background
-#                      ont = "BP", 
-#                      pvalueCutoff = 1, 
-#                      qvalueCutoff = 0.2,
-#                      readable = TRUE)
-# head(ego_test)
-
-
-
-
-
-
 ## =========
-
-
-
-# Remove NULL entries (e.g., CC = NULL)
-go_result_valid <- discard(go_result, is.null)
-
-## convert to table & extract compareClusterResult from each valid ontology and tag with ontology name
-compare_clus <- map2_dfr(go_result_valid, names(go_result_valid), function(x, nm) {
-    x@compareClusterResult |> mutate(ONTOLOGY = nm)
-})
-
-# verify classes that survive
-map(go_result, function(x) {
-    if (is.null(x)) "NULL" else nrow(x@compareClusterResult)
-})
-
-compare_clus |> count(DE_class_cluster, ONTOLOGY)
-# DE_class_cluster ONTOLOGY n
-# 1   LHb-1-3-4_down       MF 8
-# 2       LHb-2-7_up       BP 2
-# 3       MHb-2_down       MF 2
-
-## Save 
-f_name <- here(processedDir, sprintf("GO_compare_clus_%s.rds", peaks_classification_name))
-saveRDS(compare_clus, f_name)
-f_name <- here(processedDir, sprintf("GO_results_%s.csv", peaks_classification_name))
-write.csv(compare_clus, f_name, row.names = FALSE)
-
-
-#### dot plots ####
-
-# Iterate over valid GO results (skip NULL or empty ones)
-go_result_valid <- discard(go_result, function(x) {
-    is.null(x) || nrow(x@compareClusterResult) == 0
-})
-
-length(go_result_valid)
-map(go_result_valid, ~nrow(.@compareClusterResult))
+# 
+# # Remove NULL entries (e.g., CC = NULL)
+# go_result_valid <- discard(go_result, is.null)
+# 
+# ## convert to table & extract compareClusterResult from each valid ontology and tag with ontology name
+# compare_clus <- map2_dfr(go_result_valid, names(go_result_valid), function(x, nm) {
+#     x@compareClusterResult |> mutate(ONTOLOGY = nm)
+# })
+# 
+# # verify classes that survive
+# map(go_result, function(x) {
+#     if (is.null(x)) "NULL" else nrow(x@compareClusterResult)
+# })
+# 
+# compare_clus |> count(DE_class_cluster, ONTOLOGY)
+# # DE_class_cluster ONTOLOGY n
+# # 1   LHb-1-3-4_down       MF 8
+# # 2       LHb-2-7_up       BP 2
+# # 3       MHb-2_down       MF 2
+# 
+# ## Save 
+# f_name <- here(processedDir, sprintf("GO_compare_clus_%s.rds", peaks_classification_name))
+# saveRDS(compare_clus, f_name)
+# f_name <- here(processedDir, sprintf("GO_results_%s.csv", peaks_classification_name))
+# write.csv(compare_clus, f_name, row.names = FALSE)
+# 
+# 
+# #### dot plots ####
+# 
+# # Iterate over valid GO results (skip NULL or empty ones)
+# go_result_valid <- discard(go_result, function(x) {
+#     is.null(x) || nrow(x@compareClusterResult) == 0
+# })
+# 
+# length(go_result_valid)
+# map(go_result_valid, ~nrow(.@compareClusterResult))
+# # pdf(f_name, width = 10, height = 10)
+# # print(dotplot(go_result_valid[[2]])) # pass!
+# # dev.off()
+# 
+# f_name = here(processedDir, sprintf("GO_dotplot_%s.pdf", peaks_classification_name))
 # pdf(f_name, width = 10, height = 10)
-# print(dotplot(go_result_valid[[2]])) # pass!
-# dev.off()
-
-f_name = here(processedDir, sprintf("GO_dotplot_%s.pdf", peaks_classification_name))
-pdf(f_name, width = 10, height = 10)
-
-## one page per ontology 
-if (length(go_result_valid) == 0) {
-    message("No valid GO results to plot.")
-    dev.off()
-} else {
-    walk2(go_result_valid, names(go_result_valid), function(x, nm) {
-        # Check if the result for this ontology contains enough data to attempt plotting
-        if(nrow(x@compareClusterResult) > 0) {
-            
-            message("Plotting ontology: ", nm, " (", nrow(x@compareClusterResult), " terms)")
-            
-            # Use tryCatch to prevent a single failing plot from crashing the entire PDF
-            tryCatch({
-                
-                p <- dotplot(x,
-                             x = "DE_class_cluster", 
-                             showCategory = 5, 
-                             label_format = 60) +
-                    ggtitle(paste("GO Enrichment:", nm)) +
-                    theme_bw(base_size = 12) +
-                    theme(
-                        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 8),
-                        axis.text.y = element_text(size = 8),
-                        plot.title = element_text(hjust = 0.5, face = "bold")
-                    )
-                print(p) 
-            }, error = function(e) {
-                message("Skipping plot for ", nm, " due to error: ", conditionMessage(e))
-            })
-        } else {
-            message("Skipping plot for ", nm, ": No terms remaining after filtering.")
-        }
-    })
-    
-    dev.off()
-    
-}
-
-# library("slurmjobs")
-# job_single(
-#   "22_GO_enrichment",
-#   create_shell = TRUE,
-#   partition = "katun",
-#   memory = "30G",
-#   cores = 2,
-#   logdir = "logs",
-#   command = "Rscript 22_GO_enrichment.R",
-#   create_logdir = FALSE
-# )
-
 # 
-# pdf(file = here(plot_dir, sprintf("GO_dotplot_%s_2plus.pdf", opt$datatype)), width = 10, height = 10)
-# walk2(go_result, names(go_result), function(gr, ont){
-#     
-#     gr@compareClusterResult <- gr@compareClusterResult |> filter(!grepl("0", DE_class_cluster), Count >= 2)
-#     
-#     if(nrow(gr@compareClusterResult) == 0) return(NULL)
-#     
-#     print(
-#         dotplot(gr, 
-#                 x = "DE_class_cluster", 
-#                 showCategory = 3, 
-#                 label_format = 60)  +
-#             ggtitle(paste("GO Enrichment:", ont, " (2+ genes)")) +
-#             theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))
-#     )
-# })
-# dev.off()
-# 
-# pdf(file = here(plot_dir, sprintf("GO_dotplot_%s_5plus.pdf", opt$datatype)), width = 10, height = 10)
-# walk2(go_result, names(go_result), function(gr, ont){
-#     
-#     gr@compareClusterResult <- gr@compareClusterResult |> filter(!grepl("0", DE_class_cluster), Count >= 5)
-#     
-#     if(nrow(gr@compareClusterResult) == 0) return(NULL)
-#     
-#     print(
-#         dotplot(gr, 
-#                 x = "DE_class_cluster", 
-#                 showCategory = 3, 
-#                 label_format = 60)  +
-#             ggtitle(paste("GO Enrichment:", ont)) +
-#             theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))
-#     )
-# })
-# dev.off()
-# 
-# # for sn fine plot by cell type
-# if(opt$datatype == "sn_fine"){
-#     
-#     ## by broad cell types
-#     broad_cell_types <- unique(jaffelab::ss(cluster_levels, "\\."))
-#     
-#     pdf(file = here(plot_dir, sprintf("GO_dotplot_%s_cell_type.pdf", opt$datatype)), width = 10, height = 10)
-#     
-#     map(broad_cell_types, function(ct){
-#         go_result_ct <- map2(go_result, names(go_result), function(gr, ont){
-#             # subset
-#             gr@compareClusterResult <- gr@compareClusterResult |> filter(grepl(ct, Cluster))
+# ## one page per ontology 
+# if (length(go_result_valid) == 0) {
+#     message("No valid GO results to plot.")
+#     dev.off()
+# } else {
+#     walk2(go_result_valid, names(go_result_valid), function(x, nm) {
+#         # Check if the result for this ontology contains enough data to attempt plotting
+#         if(nrow(x@compareClusterResult) > 0) {
 #             
-#             if(nrow(gr@compareClusterResult ) > 1){
-#                 # dotplot
-#                 print(
-#                     dotplot(gr,
-#                             x = "DE_class_cluster",
-#                             showCategory = 5,
-#                             label_format = 60)  +
-#                         ggtitle(sprintf("GO Enrichment:%s - %s", ont, ct)) +
-#                         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))
-#                 )}
+#             message("Plotting ontology: ", nm, " (", nrow(x@compareClusterResult), " terms)")
 #             
-#             # return(gr@compareClusterResult |> nrow())
-#         })
-#         # return(go_result_ct)
+#             # Use tryCatch to prevent a single failing plot from crashing the entire PDF
+#             tryCatch({
+#                 
+#                 p <- dotplot(x,
+#                              x = "DE_class_cluster", 
+#                              showCategory = 5, 
+#                              label_format = 60) +
+#                     ggtitle(paste("GO Enrichment:", nm)) +
+#                     theme_bw(base_size = 12) +
+#                     theme(
+#                         axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 8),
+#                         axis.text.y = element_text(size = 8),
+#                         plot.title = element_text(hjust = 0.5, face = "bold")
+#                     )
+#                 print(p) 
+#             }, error = function(e) {
+#                 message("Skipping plot for ", nm, " due to error: ", conditionMessage(e))
+#             })
+#         } else {
+#             message("Skipping plot for ", nm, ": No terms remaining after filtering.")
+#         }
 #     })
 #     
 #     dev.off()
-#     
-#     pdf(file = here(plot_dir, sprintf("GO_dotplot_%s_cell_type_2plus.pdf", opt$datatype)), width = 10, height = 10)
-#     map(broad_cell_types, function(ct){
-#         go_result_ct <- map2(go_result, names(go_result), function(gr, ont){
-#             # subset
-#             gr@compareClusterResult <- gr@compareClusterResult |> filter(grepl(ct, Cluster), Count >2)
-#             
-#             if(nrow(gr@compareClusterResult ) > 1){
-#                 # dotplot
-#                 print(
-#                     dotplot(gr,
-#                             x = "DE_class_cluster",
-#                             showCategory = 5,
-#                             label_format = 60)  +
-#                         ggtitle(sprintf("GO Enrichment:%s - %s (2+ genes)", ont, ct)) +
-#                         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))
-#                 )}
-#             
-#             # return(gr@compareClusterResult |> nrow())
-#         })
-#         # return(go_result_ct)
-#     })
-#     dev.off()    
-#     
-#     pdf(file = here(plot_dir, sprintf("GO_dotplot_%s_cell_type_5plus.pdf", opt$datatype)), width = 10, height = 10)
-#     map(broad_cell_types, function(ct){
-#         go_result_ct <- map2(go_result, names(go_result), function(gr, ont){
-#             # subset
-#             gr@compareClusterResult <- gr@compareClusterResult |> filter(grepl(ct, Cluster), Count >5)
-#             
-#             if(nrow(gr@compareClusterResult ) > 1){
-#                 # dotplot
-#                 print(
-#                     dotplot(gr,
-#                             x = "DE_class_cluster",
-#                             showCategory = 5,
-#                             label_format = 60)  +
-#                         ggtitle(sprintf("GO Enrichment:%s - %s (5+ genes)", ont, ct)) +
-#                         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))
-#                 )}
-#             
-#             # return(gr@compareClusterResult |> nrow())
-#         })
-#         # return(go_result_ct)
-#     })
-#     dev.off()
-#     
-#     
-#     
-#     
-#     go_result_Oligo3 <- map(go_result, function(gr){
-#         gr@compareClusterResult <- gr@compareClusterResult |> filter(grepl("Oligo.3", Cluster) | grepl("Astro.3", Cluster))
-#         return(gr)
-#     })
-#     
-#     map(go_result_Oligo3, ~.x@compareClusterResult |> count(Cluster))
-#     
-#     pdf(file = here(plot_dir, sprintf("GO_dotplot_%s_Oligo.3.pdf", opt$datatype)), width = 6, height = 6)
-#     walk2(go_result_Oligo3, names(go_result_Oligo3), 
-#           ~print(
-#               dotplot(.x, 
-#                       x = "DE_class_cluster", 
-#                       showCategory = 5, 
-#                       label_format = 60)  +
-#                   ggtitle(paste("GO Enrichment:", .y)) +
-#                   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))
-#           )
-#     )
-#     dev.off()    
-#     
-#     ## select genes
-#     go_result_select_genes <- map(go_result, function(gr){
-#         gr@compareClusterResult <- gr@compareClusterResult  |> filter(grepl("FOS", geneID) |
-#                                                                           grepl("TLR2", geneID) | 
-#                                                                           grepl("STAT1", geneID) | 
-#                                                                           grepl("STAT4", geneID))
-#         
-#         return(gr)
-#     })
-#     
-#     map(go_result_select_genes, ~.x@compareClusterResult |> count(Cluster))
-#     
-#     pdf(file = here(plot_dir, sprintf("GO_dotplot_%s_select_genes.pdf", opt$datatype)), width = 8, height = 8)
-#     walk2(go_result_select_genes, names(go_result_select_genes), 
-#           ~print(
-#               dotplot(.x, 
-#                       x = "DE_class_cluster", 
-#                       showCategory = 10, 
-#                       label_format = 60)  +
-#                   ggtitle(paste("GO Enrichment:", .y, "FOS|TLR2|STAT1|STAT4")) +
-#                   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))
-#           )
-#     )
-#     dev.off()
-#     
 #     
 # }
 
@@ -720,6 +527,7 @@ if (length(go_result_valid) == 0) {
 
 
 ## Reproducibility information
+library(sessioninfo)
 print("Reproducibility information:")
 Sys.time()
 proc.time()
