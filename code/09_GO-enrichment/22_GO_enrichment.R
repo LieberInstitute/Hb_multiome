@@ -192,12 +192,12 @@ message("Direct_Regulation n = ", nrow(cCRE_universe_Direct_Regulation))
 
 cCRE_universe_Primary_Secondary_Interest <- cCRE_df |> 
     filter(category %in% lst_go_tests[["Primary_Secondary_Interest"]]) 
-message("Direct_Regulation n = ", nrow(cCRE_universe_Primary_Secondary_Interest))
+message("Primary_Secondary_Interest n = ", nrow(cCRE_universe_Primary_Secondary_Interest))
 # 1783
 
 cCRE_universe_df_High_Interest_DARs <- cCRE_df |> 
     filter(category %in% lst_go_tests[["High_Interest_DARs"]]) 
-message("Direct_Regulation n = ", nrow(cCRE_universe_df_High_Interest_DARs))
+message("High_Interest_DARs n = ", nrow(cCRE_universe_df_High_Interest_DARs))
 # 1068
 
 ## Combine all filtered data frames into a named list for iteration
@@ -213,21 +213,21 @@ map_int(list_df_cCRE, nrow)
 # High_Interest_DARs 
 # 1068 
 
-# ## =============================================================================
-# ## Merge Hb sub-types into broad groups (LHb, MHb)
-# 
-# cCRE_universe_df <- cCRE_universe_df |>
-#     mutate(
-#         cell_type_broad = case_when(
-#             grepl("^LHb", cell_type) ~ "LHb",
-#             grepl("^MHb", cell_type) ~ "MHb",
-#             TRUE ~ cell_type
-#         )
-#     )
-# 
-# table(cCRE_universe_df$cell_type)
-# ## Check how many entries per broad group
-# table(cCRE_universe_df$cell_type_broad)
+## =============================================================================
+## Merge Hb sub-types into broad groups (LHb, MHb)
+
+cCRE_universe_df <- cCRE_universe_df |>
+    mutate(
+        cell_type_broad = case_when(
+            grepl("^LHb", cell_type) ~ "LHb",
+            grepl("^MHb", cell_type) ~ "MHb",
+            TRUE ~ cell_type
+        )
+    )
+
+table(cCRE_universe_df$cell_type)
+## Check how many entries per broad group
+table(cCRE_universe_df$cell_type_broad)
 
 
 ##==============================================================================
@@ -265,7 +265,6 @@ make_DE_entrez_df <- function(
             ########## Test "Primary_Secondary_Interest" ########## 
             
             DE_entrez <- cCRE_df |>
-                # use this if duplicates are expected (because multiple peaks link to the same gene)
                 left_join(entrez_map,
                           by = c("gene_id" = "ENSEMBL"),
                           relationship = "many-to-many") |>
@@ -281,6 +280,25 @@ make_DE_entrez_df <- function(
                 ) |>
                 distinct(ENTREZID, .keep_all = TRUE)
         
+        } else if ((test_name=="High_Interest_DARs")) {
+        
+            ########## Test "DARs" ########## 
+            
+            DE_entrez <- cCRE_df |>
+                left_join(entrez_map,
+                          by = c("gene_id" = "ENSEMBL"),
+                          relationship = "many-to-many") |>
+                filter(!is.na(ENTREZID)) |>
+                mutate(
+                    category_direction = case_when(
+                        category == "Unlinked DAR" & logFC > 0  ~ "up",
+                        category == "Unlinked DAR" & logFC < 0  ~ "down",
+                        TRUE ~ "neutral"
+                    ),
+                    cell_type_clean = gsub("\\.", "-", cell_type)# ,
+                ) |>
+                distinct(ENTREZID, .keep_all = TRUE)
+            
         } else {
         
                 stop("Invalid test_name. Must be one of: 'Direct_Regulation', 'Primary_Secondary_Interest'")
@@ -291,54 +309,102 @@ make_DE_entrez_df <- function(
     
 }
            
-## testing one or another  ==========
 
-DE_entrez <- make_DE_entrez_df(
-    test_name = "Direct_Regulation",
-    cCRE_df = cCRE_universe_df,
-    entrez_map = entrez_map
-)
+## =============================================================================
+## Loop over each GO test definition
+## =============================================================================
 
-DE_entrez <- make_DE_entrez_df(
-    test_name = "Primary_Secondary_Interest",
-    cCRE_df = cCRE_universe_df,
-    entrez_map = entrez_map
-)
 
-## group by cell_type for enrichment
-DE_entrez <- DE_entrez |>
-    mutate(DE_group = cell_type_broad) |>
-    distinct(DE_group, ENTREZID, .keep_all = TRUE)
+for (test_go in names(lst_go_tests)) {
+   
+    message("\n==============================")
+    message("Running GO enrichment for: ", test_go)
+    message("==============================")
+    
+    ## prepare entrez df
+    DE_entrez <- make_DE_entrez_df(
+        test_name = test_go,
+        cCRE_df = cCRE_universe_df,
+        entrez_map = entrez_map
+    )
+    
+    ## group by broad_cell_type
+    DE_entrez <- DE_entrez |>
+        mutate(DE_group = cell_type_broad) |>
+        distinct(DE_group, ENTREZID, .keep_all = TRUE)
+    
+    message("Final DE_entrez dimensions: ", nrow(DE_entrez), " rows, ", 
+            length(unique(DE_entrez$DE_group)), " cell groups")
+    message("Background universe size: ", length(entrez_universe))
+    
+    ## keep groups with at least 10 genes
+    DE_entrez <- DE_entrez |>
+        group_by(DE_group) |>
+        filter(n() >= 10) |>
+        ungroup()
+    
+    group_sizes <- DE_entrez |> count(DE_group)
+    message("Groups retained (>=10 genes):")
+    print(group_sizes)
+    
+    ## checks: overlap with background
+    n_unique <- length(unique(DE_entrez$ENTREZID))
+    shared <- length(intersect(entrez_universe, DE_entrez$ENTREZID))
+    message("Unique ENTREZ IDs: ", n_unique)
+    message("Overlap with universe: ", shared, 
+            " (", round(100 * shared / length(entrez_universe), 1), "%)")
+    
+    message("Running GO enrichment using background universe of ", length(entrez_universe), " genes...")
+    
+    ont_list <- c("CC","BP","MF")
+    names(ont_list) <- ont_list
+    
+    ## GO terms summarized by broad cell types (LHb, MHb, Astrocyte, etc.) rather than by fine subclusters.
+    
+    go_result <- map(ont_list, ~compareCluster(
+        ENTREZID ~ DE_group,
+        data = DE_entrez,
+        OrgDb = org.Hs.eg.db,
+        fun = enrichGO,
+        universe = entrez_universe,
+        ont = .x,
+        pAdjustMethod = "BH",
+        pvalueCutoff = 0.1,
+        qvalueCutoff = 0.2,
+        readable = TRUE
+    ))
+    
+    # go_result for diagnostics: how many GO terms per ontology
+    message("\nSummary of enriched terms:")
+    map2(names(go_result), go_result, function(nm, x) {
+        n_terms <- if (is.null(x)) 0 else nrow(x@compareClusterResult)
+        message(sprintf("%s: %s terms", nm, n_terms))
+    })
+    
+    
+    ## testing: Preview & visualize top results for Biological Process
+    if (!is.null(go_result$BP) && nrow(go_result$BP@compareClusterResult) > 0) {
+        message("Top enriched BP terms:")
+        print(head(go_result$BP@compareClusterResult, 5))
+        
+        p <- dotplot(go_result$BP, showCategory = 15) +
+            ggtitle(paste("GO BP enrichment (", test_go, ")", sep = ""))
+        
+        print(p)
+    } else {
+        message("No significant BP terms for ", test_go)
+    }
+    
+    ## Save 
+    f_name <- here(processedDir, sprintf("GO_compare_clus_%s.rds", peaks_classification_name))
+    saveRDS(compare_clus, f_name)
+    f_name <- here(processedDir, sprintf("GO_results_%s.csv", peaks_classification_name))
+    write.csv(compare_clus, f_name, row.names = FALSE)
+    
+}
 
-# head(DE_entrez)
-# table(DE_entrez$cell_type_broad, DE_entrez$DE_group)
 
-message("Final DE_entrez dimensions: ", nrow(DE_entrez), " rows, ", length(unique(DE_entrez$DE_group)), " cell groups")
-# Final DE_entrez dimensions: 1248 rows, 9 cell groups
-message("Background universe size: ", length(entrez_universe))
 
-##  ========== ========== ==========/
-
-## keep groups with at least 10 genes
-DE_entrez <- DE_entrez |>
-    group_by(DE_group) |>
-    filter(n() >= 10) |>
-    ungroup()
-
-table(DE_entrez$DE_group)
-unique(DE_entrez$cell_type_broad)
-
-## checks
-# Check how many unique genes per DE_group
-DE_entrez |> count(DE_group)
-# DE_group       n
-# <chr>      <int>
-# 1 Astrocyte     86
-# 2 Excit.Thal   167
-# 3 Inhib.Thal   590
-# 4 LHb          179
-# 5 MHb          158
-# 6 Oligo         56
 
 
 # test_ids <- DE_entrez |> filter(DE_group == "LHb") |> pull(ENTREZID)
@@ -352,48 +418,6 @@ DE_entrez |> count(DE_group)
 
 
 
-#### Run GO ####
-
-message("Unique ENTREZ IDs in DE_entrez: ", length(unique(DE_entrez$ENTREZID)))
-shared <- length(intersect(entrez_universe, DE_entrez$ENTREZID))
-message("Overlap with universe: ", shared, " (", round(100 * shared / length(entrez_universe), 1), "%)")
-
-
-message("Running GO enrichment using background universe of ", length(entrez_universe), " genes...")
-ont_list <- c("CC","BP","MF")
-names(ont_list) <- ont_list
-
-## GO terms summarized by broad cell types (LHb, MHb, Astrocyte, etc.) rather than by fine subclusters.
-
-go_result <- map(ont_list, ~compareCluster(
-               ENTREZID ~ DE_group,
-               data = DE_entrez,
-               OrgDb = org.Hs.eg.db,
-               fun = enrichGO,
-               universe = entrez_universe,
-               ont = .x,
-               pAdjustMethod = "BH",
-               pvalueCutoff = 0.1,
-               qvalueCutoff = 0.2,
-               readable = TRUE
-               ))
-
-# go_result for diagnostics: how many GO terms per ontology
-map2(names(go_result), go_result, function(nm, x) {
-    n_terms <- if (is.null(x)) 0 else nrow(x@compareClusterResult)
-    message(sprintf("%s: %s terms", nm, n_terms))
-})
-
-
-# Top enriched terms in BP ontology
-head(go_result$BP@compareClusterResult, 10)
-
-# Plot overview
-dotplot(go_result$BP, showCategory = 15) + ggtitle("GO BP enrichment (Direct Regulation)")
-
-# confirm background is distinct
-length(intersect(entrez_universe, DE_entrez$ENTREZID)) / length(entrez_universe)
-# should be < 1 (≈0.2–0.3 typically)
 
 
 
