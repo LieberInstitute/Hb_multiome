@@ -282,12 +282,11 @@ DE_entrez <- cCRE_universe_df |>
         cell_type_clean = gsub("\\.", "-", cell_type)# ,
         # DE_class_cluster = paste0(cell_type_clean, "_", DE_class)
     ) %>%
-    distinct(ENTREZID, .keep_all = TRUE) #|> 
-    #select(cell_type, cell_type_clean, cell_type_broad, gene_name, gene_id, ENTREZID,
-    #       logFC, fdr_dars, category, category_direction) # DE_class, DE_class_cluster
+    distinct(ENTREZID, .keep_all = TRUE)
            
 
-universe <- unique(DE_entrez$ENTREZID)
+message("Final DE_entrez dimensions: ", nrow(DE_entrez), " rows, ", length(unique(DE_entrez$DE_group)), " cell groups")
+message("Background universe size: ", length(entrez_universe))
 
 
 ## group by cell_type for enrichment
@@ -344,7 +343,6 @@ DE_entrez |> count(DE_group)
 
 #### Run GO ####
 
-universe <- unique(DE_entrez$ENTREZID)
 ont_list <- c("CC","BP","MF")
 names(ont_list) <- ont_list
 
@@ -359,14 +357,14 @@ go_result <- map(ont_list, ~compareCluster(
                ont = .x,
                pAdjustMethod = "BH",
                pvalueCutoff = 0.1,
-               qvalueCutoff = 0.2
+               qvalueCutoff = 0.2,
                readable = TRUE
                ))
 
-#go_result
-map(go_result, function(x) {
-    if (is.null(x)) return("NULL")
-    nrow(x@compareClusterResult)
+# go_result for diagnostics: how many GO terms per ontology
+map2(names(go_result), go_result, function(nm, x) {
+    n_terms <- if (is.null(x)) 0 else nrow(x@compareClusterResult)
+    message(sprintf("%s: %s terms", nm, n_terms))
 })
 
 
