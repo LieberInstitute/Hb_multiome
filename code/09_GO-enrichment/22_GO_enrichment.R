@@ -408,7 +408,12 @@ for (test_go in names(lst_go_tests)) {
         p <- dotplot(go_result$BP, showCategory = 15) +
             ggtitle(paste("GO BP enrichment (", test_go, ")", sep = ""))
         
-        print(p)
+        #print(p)
+        plot_base <- sprintf("GO_BP_dotplot_%s_%s", peaks_classification_name, test_go)
+        plot_pdf <- here(plotDir, paste0(plot_base, ".pdf"))
+        ggsave(plot_pdf, plot = p, width = 8, height = 6)
+        message("Saved plots: ", plot_pdf)
+        
     } else {
         message("No significant BP terms for ", test_go)
     }
