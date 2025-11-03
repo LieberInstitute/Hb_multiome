@@ -65,27 +65,7 @@ colnames(universe_overlaps_df)
 # [13] "peak_id"          "cell_type"        "FDR_threshold"    "logFC"           
 # [17] "fdr_dars"  
 head(universe_overlaps_df)
-# peak_id_links     CCscore  gene_name         gene_id     FDR_CC
-# 1 chr1-1745993-1746550 -0.40853659 AL645728.1 ENSG00000279244 0.02898562
-# 2 chr1-1745993-1746550 -0.40853659 AL645728.1 ENSG00000279244 0.02898562
-# 3 chr1-3910780-3911122  0.03048837       DFFB ENSG00000169598 0.16370976
-# 4 chr1-3910780-3911122  0.03048837       DFFB ENSG00000169598 0.16370976
-# 5 chr1-3910780-3911122  0.03048837       DFFB ENSG00000169598 0.16370976
-# 6 chr1-3910780-3911122  0.03048837       DFFB ENSG00000169598 0.16370976
-# cluster     tss gene_strand distance distance_kb signed_distance
-# 1 Astrocyte 1579756           +    83258      83.258           83258
-# 2 Astrocyte 1579756           +    83258      83.258           83258
-# 3 Astrocyte 3857267           +    26842      26.842           26842
-# 4 Astrocyte 3857267           +    26842      26.842           26842
-# 5 Astrocyte 3857267           +    26842      26.842           26842
-# 6 Astrocyte 3857267           +    26842      26.842           26842
-# signed_by_strand              peak_id  cell_type FDR_threshold      logFC
-# 1            83258 chr1-1745993-1746550  Astrocyte        FDR0.2  0.4569419
-# 2            83258 chr1-1745993-1746550  Microglia        FDR0.2  1.1139565
-# 3            26842 chr1-3910780-3911122  Astrocyte        FDR0.2 -0.9013231
-# 4            26842 chr1-3910780-3911122 Inhib.Thal        FDR0.2 -0.3233352
-# 5            26842 chr1-3910780-3911122      LHb.4        FDR0.2  0.2851914
-# 6            26842 chr1-3910780-3911122      Oligo        FDR0.2 -1.4320263
+
 nrow(universe_overlaps_df)
 # 23691
 
@@ -103,20 +83,16 @@ entrez_map <- bitr(universe_df1$gene_id,
                         fromType = "ENSEMBL",
                         toType = "ENTREZID",
                         OrgDb = org.Hs.eg.db) 
-# |> pull(ENTREZID) |> unique()
 
 entrez_universe <- unique(entrez_map$ENTREZID)
 message("Universe size: ", length(entrez_universe))
 # 5817
 # Warning message:
-#     In bitr(universe_df2$gene_id, fromType = "ENSEMBL", toType = "ENTREZID",  :
+#     In bitr(universe_df1$gene_id, fromType = "ENSEMBL", toType = "ENTREZID",  :
 #                 1.33% of input gene IDs are fail to map...
 
 
-
-
-
-## Build a background universe before subsetting for Direct_Regulation
+## =====
 
 message("Loading cCRE and ORC file ...")
 
@@ -141,15 +117,14 @@ as.data.frame(table(cCRE_df$type_classification, cCRE_df$category))
 
 peaks_classification_name = "peaks_classification3_hb"
 
+
 ## =============================================================================
 ## define GO universe 
 
 ## Primary Interest.** Canonical enhancer or promoter activity
-
 go_directReg = c(
     "Linked_DAR (+) enriched",
     "Linked_DAR (-) depleted"
-    ## need to add non-signifcance to the entrez universe 
 )
 
 ## Primary + Secondary Interest.** Regulatory link exists, but the element is not a strong DAR
@@ -177,11 +152,7 @@ lst_go_tests
 
 
 ## Summarize stats for Hb clusters
-
 ## Generate Summary Tables for cCRE Categories Across Habenula (MHb/LHb) Clusters
-
-# tests
-cCRE_df
 
 purrr::map(lst_go_tests, function(.x) {
     # Filter the main data frame (cCRE_df) based on the current universe (.x)
@@ -206,21 +177,24 @@ purrr::map(lst_go_tests, function(.x) {
 })
 
 
-## testing
+## checks
 colnames(cCRE_df)
 table(cCRE_df$category)
 
 ## subset the specific go_universe
+
+names(lst_go_tests)
+
 cCRE_universe_df <- cCRE_df |> 
     filter(category %in% lst_go_tests[["Direct_Regulation"]]) 
-cCRE_universe_df |> nrow()
 # 1363
-
-# ## subset the specific go_universe
-# cCRE_universe_df <- cCRE_df |> 
-#     filter(category %in% lst_go_tests[["Primary_Secondary_Interest"]]) 
-# cCRE_universe_df |> nrow()
-# # 1783
+cCRE_universe_df <- cCRE_df |> 
+    filter(category %in% lst_go_tests[["Primary_Secondary_Interest"]]) 
+# 1783
+cCRE_universe_df <- cCRE_df |> 
+    filter(category %in% lst_go_tests[["High_Interest_DARs"]]) 
+# 1068
+nrow(cCRE_universe_df)
 
 
 ## =============================================================================
@@ -240,73 +214,94 @@ table(cCRE_universe_df$cell_type)
 table(cCRE_universe_df$cell_type_broad)
 
 
-## =============================================================================
-## Build DE_entrez dataframe for GO enrichment
-## =============================================================================
-
-# ## ENTREZID look up
-# names(cCRE_universe_df)
-# 
-# ## gene symbol and gene entrez name
-# cCRE_universe_df[c("gene_name", "gene_id")]
-# 
-# # Convert ENSEMBL -> ENTREZID
-# entrez_search <- bitr(cCRE_universe_df$gene_id, 
-#                       fromType = "ENSEMBL", 
-#                       toType = "ENTREZID", 
-#                       OrgDb = "org.Hs.eg.db")
-# # Warning message:
-# #     In bitr(cCRE_universe_df$gene_id, fromType = "ENSEMBL", toType = "ENTREZID",  :
-# #                 1.43% of input gene IDs are fail to map.
-
-
-
 ##==============================================================================
 ## Merge back and define DE_class + DE_class_cluster
 
-########## Test "Direct_Regulation" ##########
 
-DE_entrez <- cCRE_universe_df |>
-    # use this if duplicates are expected (because multiple peaks link to the same gene)
-    left_join(entrez_map,
-              by = c("gene_id" = "ENSEMBL"),
-              relationship = "many-to-many") |>
-    filter(!is.na(ENTREZID)) |>
-    mutate(
-        ## keep the original category direction
-        category_direction = case_when(
-            category == "Linked_DAR (+) enriched" ~ "up",
-            category == "Linked_DAR (-) depleted" ~ "down"#,
-            #TRUE ~ "neutral"
-        ),
-        cell_type_clean = gsub("\\.", "-", cell_type)# ,
-        # DE_class_cluster = paste0(cell_type_clean, "_", DE_class)
-    ) %>%
-    distinct(ENTREZID, .keep_all = TRUE)
+make_DE_entrez_df <- function(
+        test_name="Direct_Regulation",
+        cCRE_df,
+        entrez_map)
+    {
+    
+    if (test_name=="Direct_Regulation") {
+     
+        ########## Test "Direct_Regulation" ##########
+        
+        DE_entrez <- cCRE_df |>
+            # use this if duplicates are expected (because multiple peaks link to the same gene)
+            left_join(entrez_map,
+                      by = c("gene_id" = "ENSEMBL"),
+                      relationship = "many-to-many") |>
+            filter(!is.na(ENTREZID)) |>
+            mutate(
+                ## keep the original category direction
+                category_direction = case_when(
+                    category == "Linked_DAR (+) enriched" ~ "up",
+                    category == "Linked_DAR (-) depleted" ~ "down"
+                ),
+                cell_type_clean = gsub("\\.", "-", cell_type)# ,
+            ) |>
+            distinct(ENTREZID, .keep_all = TRUE)
+        
+        } else if ((test_name=="Primary_Secondary_Interest")) {
+            
+            ########## Test "Primary_Secondary_Interest" ########## 
+            
+            DE_entrez <- cCRE_df |>
+                # use this if duplicates are expected (because multiple peaks link to the same gene)
+                left_join(entrez_map,
+                          by = c("gene_id" = "ENSEMBL"),
+                          relationship = "many-to-many") |>
+                filter(!is.na(ENTREZID)) |>
+                mutate(
+                    category_direction = case_when(
+                        category == "Linked_DAR (+) enriched" ~ "up",
+                        category == "Linked_DAR (-) depleted" ~ "down",
+                        category == "Linked OCR" & CCscore > 0 ~ "up",
+                        category == "Linked OCR" & CCscore < 0 ~ "down"
+                    ),
+                    cell_type_clean = gsub("\\.", "-", cell_type)# ,
+                ) |>
+                distinct(ENTREZID, .keep_all = TRUE)
+        
+        } else {
+        
+                stop("Invalid test_name. Must be one of: 'Direct_Regulation', 'Primary_Secondary_Interest'")
+        
+        }
+    
+    return(DE_entrez)
+    
+}
            
+## testing one or another  ==========
 
-message("Final DE_entrez dimensions: ", nrow(DE_entrez), " rows, ", length(unique(DE_entrez$DE_group)), " cell groups")
-message("Background universe size: ", length(entrez_universe))
+DE_entrez <- make_DE_entrez_df(
+    test_name = "Direct_Regulation",
+    cCRE_df = cCRE_universe_df,
+    entrez_map = entrez_map
+)
 
+DE_entrez <- make_DE_entrez_df(
+    test_name = "Primary_Secondary_Interest",
+    cCRE_df = cCRE_universe_df,
+    entrez_map = entrez_map
+)
 
 ## group by cell_type for enrichment
 DE_entrez <- DE_entrez |>
-    # mutate(DE_group = cell_type_clean) |>
     mutate(DE_group = cell_type_broad) |>
     distinct(DE_group, ENTREZID, .keep_all = TRUE)
-head(DE_entrez)
-table(DE_entrez$cell_type_broad, DE_entrez$DE_group)
-# down  up
-# Astrocyte    68  18
-# Endo          0   1
-# Excit.Thal   66 101
-# Inhib.Thal  407 183
-# LHb          10 169
-# MHb          23 135
-# Microglia     0   5
-# Oligo        41  15
-# OPC           0   6
 
+# head(DE_entrez)
+# table(DE_entrez$cell_type_broad, DE_entrez$DE_group)
+
+message("Final DE_entrez dimensions: ", nrow(DE_entrez), " rows, ", length(unique(DE_entrez$DE_group)), " cell groups")
+# Final DE_entrez dimensions: 1248 rows, 9 cell groups
+message("Background universe size: ", length(entrez_universe))
+
+##  ========== ========== ==========/
 
 ## keep groups with at least 10 genes
 DE_entrez <- DE_entrez |>
@@ -343,6 +338,12 @@ DE_entrez |> count(DE_group)
 
 #### Run GO ####
 
+message("Unique ENTREZ IDs in DE_entrez: ", length(unique(DE_entrez$ENTREZID)))
+shared <- length(intersect(entrez_universe, DE_entrez$ENTREZID))
+message("Overlap with universe: ", shared, " (", round(100 * shared / length(entrez_universe), 1), "%)")
+
+
+message("Running GO enrichment using background universe of ", length(entrez_universe), " genes...")
 ont_list <- c("CC","BP","MF")
 names(ont_list) <- ont_list
 
@@ -366,6 +367,21 @@ map2(names(go_result), go_result, function(nm, x) {
     n_terms <- if (is.null(x)) 0 else nrow(x@compareClusterResult)
     message(sprintf("%s: %s terms", nm, n_terms))
 })
+
+
+# Top enriched terms in BP ontology
+head(go_result$BP@compareClusterResult, 10)
+
+# Plot overview
+dotplot(go_result$BP, showCategory = 15) + ggtitle("GO BP enrichment (Direct Regulation)")
+
+# confirm background is distinct
+length(intersect(entrez_universe, DE_entrez$ENTREZID)) / length(entrez_universe)
+# should be < 1 (≈0.2–0.3 typically)
+
+
+
+## =========
 
 
 
