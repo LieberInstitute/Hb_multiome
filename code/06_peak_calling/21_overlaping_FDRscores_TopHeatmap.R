@@ -318,7 +318,7 @@ plot_data_list_3 <- purrr::map(subsetted_list_df, ~ .x |>
            # This "New" category of Non-Concordant Categories (Negative/Positive logFC mismatch with CCscore sign)
            # - is rare and usually analyzed with co-accessibility or gene-silencing experiments
            # - suggest Distant Regulation / These DARs may be driving the differential expression of non-coding RNAs 
-           (sig_CC < 0) & (sig_DAR & logFC > thr_logFC) ~ "(-) Linked (+) DAR enriched", 
+           (sig_CC < -thr_CC) & (sig_DAR & logFC > thr_logFC) ~ "(-) Linked (+) DAR enriched", 
            # Secondary interest categories
            sig_CC & !sig_DAR                      ~ "Linked OCR",
            !sig_CC & sig_DAR                      ~ "Unlinked DAR",
