@@ -314,6 +314,8 @@ make_DE_entrez_df <- function(
 ## Loop over each GO test definition
 ## =============================================================================
 
+ont_list <- c("CC","BP","MF")
+names(ont_list) <- ont_list
 
 for (test_go in names(lst_go_tests)) {
    
@@ -321,16 +323,27 @@ for (test_go in names(lst_go_tests)) {
     message("Running GO enrichment for: ", test_go)
     message("==============================")
     
+    ## Prepare category-specific subset (use the correct one per test)
+    cCRE_subset <- list_df_cCRE[[test_go]]
+    message("Subset size: ", nrow(cCRE_subset))
+    
     ## prepare entrez df
     DE_entrez <- make_DE_entrez_df(
         test_name = test_go,
-        cCRE_df = cCRE_universe_df,
+        cCRE_df = cCRE_subset,
         entrez_map = entrez_map
     )
     
-    ## group by broad_cell_type
+    ## Merge Hb subtypes into broad groups (LHb, MHb)
     DE_entrez <- DE_entrez |>
-        mutate(DE_group = cell_type_broad) |>
+        mutate(
+            cell_type_broad = case_when(
+                grepl("^LHb", cell_type) ~ "LHb",
+                grepl("^MHb", cell_type) ~ "MHb",
+                TRUE ~ cell_type
+            ),
+            DE_group = cell_type_broad
+        ) |>
         distinct(DE_group, ENTREZID, .keep_all = TRUE)
     
     message("Final DE_entrez dimensions: ", nrow(DE_entrez), " rows, ", 
@@ -347,7 +360,13 @@ for (test_go in names(lst_go_tests)) {
     message("Groups retained (>=10 genes):")
     print(group_sizes)
     
-    ## checks: overlap with background
+    ## test after filtering
+    if (nrow(DE_entrez) == 0 || n_distinct(DE_entrez$DE_group) == 0) {
+        message("No groups with >=10 genes for ", test_go, " — skipping enrichment.")
+        next
+    }
+    
+    ## checks: diagnostics vs universe
     n_unique <- length(unique(DE_entrez$ENTREZID))
     shared <- length(intersect(entrez_universe, DE_entrez$ENTREZID))
     message("Unique ENTREZ IDs: ", n_unique)
@@ -356,23 +375,22 @@ for (test_go in names(lst_go_tests)) {
     
     message("Running GO enrichment using background universe of ", length(entrez_universe), " genes...")
     
-    ont_list <- c("CC","BP","MF")
-    names(ont_list) <- ont_list
-    
     ## GO terms summarized by broad cell types (LHb, MHb, Astrocyte, etc.) rather than by fine subclusters.
     
-    go_result <- map(ont_list, ~compareCluster(
-        ENTREZID ~ DE_group,
-        data = DE_entrez,
-        OrgDb = org.Hs.eg.db,
-        fun = enrichGO,
-        universe = entrez_universe,
-        ont = .x,
-        pAdjustMethod = "BH",
-        pvalueCutoff = 0.1,
-        qvalueCutoff = 0.2,
-        readable = TRUE
-    ))
+    suppressWarnings({
+        go_result <- map(ont_list, ~compareCluster(
+            ENTREZID ~ DE_group,
+            data = DE_entrez,
+            OrgDb = org.Hs.eg.db,
+            fun = enrichGO,
+            universe = entrez_universe,
+            ont = .x,
+            pAdjustMethod = "BH",
+            pvalueCutoff = 0.1,
+            qvalueCutoff = 0.2,
+            readable = TRUE
+        ))
+    })
     
     # go_result for diagnostics: how many GO terms per ontology
     message("\nSummary of enriched terms:")
@@ -395,13 +413,24 @@ for (test_go in names(lst_go_tests)) {
         message("No significant BP terms for ", test_go)
     }
     
-    ## Save 
-    f_name <- here(processedDir, sprintf("GO_compare_clus_%s.rds", peaks_classification_name))
-    saveRDS(compare_clus, f_name)
-    f_name <- here(processedDir, sprintf("GO_results_%s.csv", peaks_classification_name))
-    write.csv(compare_clus, f_name, row.names = FALSE)
+    ## Save results
+    go_rds_name <- here(processedDir, sprintf("GO_results_%s_%s.rds", peaks_classification_name, test_go))
+    saveRDS(go_result, go_rds_name)
+    message("Saved RDS: ", go_rds_name)
     
+    ## Save summary table (flattened BP results if available)
+    if (!is.null(go_result$BP) && nrow(go_result$BP@compareClusterResult) > 0) {
+        bp_df <- go_result$BP@compareClusterResult
+        go_csv_name <- here(processedDir, sprintf("GO_results_BP_%s_%s.csv", peaks_classification_name, test_go))
+        write.csv(bp_df, go_csv_name, row.names = FALSE)
+        message("Saved CSV: ", go_csv_name)
+    }
+
+    message("Completed GO enrichment for ", test_go)    
+
 }
+
+
 
 
 
