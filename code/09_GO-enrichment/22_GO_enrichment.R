@@ -185,33 +185,49 @@ table(cCRE_df$category)
 
 names(lst_go_tests)
 
-cCRE_universe_df <- cCRE_df |> 
+cCRE_universe_Direct_Regulation <- cCRE_df |> 
     filter(category %in% lst_go_tests[["Direct_Regulation"]]) 
+message("Direct_Regulation n = ", nrow(cCRE_universe_Direct_Regulation))
 # 1363
-cCRE_universe_df <- cCRE_df |> 
+
+cCRE_universe_Primary_Secondary_Interest <- cCRE_df |> 
     filter(category %in% lst_go_tests[["Primary_Secondary_Interest"]]) 
+message("Direct_Regulation n = ", nrow(cCRE_universe_Primary_Secondary_Interest))
 # 1783
-cCRE_universe_df <- cCRE_df |> 
+
+cCRE_universe_df_High_Interest_DARs <- cCRE_df |> 
     filter(category %in% lst_go_tests[["High_Interest_DARs"]]) 
+message("Direct_Regulation n = ", nrow(cCRE_universe_df_High_Interest_DARs))
 # 1068
-nrow(cCRE_universe_df)
 
+## Combine all filtered data frames into a named list for iteration
+list_df_cCRE <- list(
+    Direct_Regulation = cCRE_universe_Direct_Regulation,
+    Primary_Secondary_Interest = cCRE_universe_Primary_Secondary_Interest,
+    High_Interest_DARs = cCRE_universe_df_High_Interest_DARs
+)
+## Check summary of list content
+map_int(list_df_cCRE, nrow)
+# Direct_Regulation Primary_Secondary_Interest 
+# 1363                       1783 
+# High_Interest_DARs 
+# 1068 
 
-## =============================================================================
-## Merge Hb sub-types into broad groups (LHb, MHb)
-
-cCRE_universe_df <- cCRE_universe_df |>
-    mutate(
-        cell_type_broad = case_when(
-            grepl("^LHb", cell_type) ~ "LHb",
-            grepl("^MHb", cell_type) ~ "MHb",
-            TRUE ~ cell_type
-        )
-    )
-
-table(cCRE_universe_df$cell_type)
-## Check how many entries per broad group
-table(cCRE_universe_df$cell_type_broad)
+# ## =============================================================================
+# ## Merge Hb sub-types into broad groups (LHb, MHb)
+# 
+# cCRE_universe_df <- cCRE_universe_df |>
+#     mutate(
+#         cell_type_broad = case_when(
+#             grepl("^LHb", cell_type) ~ "LHb",
+#             grepl("^MHb", cell_type) ~ "MHb",
+#             TRUE ~ cell_type
+#         )
+#     )
+# 
+# table(cCRE_universe_df$cell_type)
+# ## Check how many entries per broad group
+# table(cCRE_universe_df$cell_type_broad)
 
 
 ##==============================================================================
