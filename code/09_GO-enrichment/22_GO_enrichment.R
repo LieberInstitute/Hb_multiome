@@ -14,7 +14,6 @@ library("tidyverse")
 library("tidyr")
 library("stringr")
 library("here")
-
 library("getopt")
 library("org.Hs.eg.db")
 library("clusterProfiler")
@@ -27,7 +26,12 @@ library("ComplexHeatmap")
 
 
 ## Set directory names
-inputCSV_cCRE_ORC_Dir <- here(
+inputCSV_merged_overlaps <- here(
+    "processed-data",
+    "06_peak_calling",
+    "19_Linkage_DARs_analysis"
+)
+inputCSV_merged_classified <- here(
     "processed-data",
     "06_peak_calling",
     "21_overlaping_FDRscores_TopHeatmap"
@@ -48,13 +52,77 @@ if (!dir.exists(plotDir)) { dir.create(plotDir, recursive = TRUE) }
 
 
 ##==============================================================================
+## defining universe from merged overlaps
+
+# table containing all merged overlaps from 19 directory: all measurable genes
+
+universe_overlaps_df <- read.csv(here(inputCSV_merged_overlaps, "Overlaps_LinkPeak_DARs_FDR0.2.csv"))
+colnames(universe_overlaps_df)
+# > colnames(universe_overlaps_df)
+# [1] "peak_id_links"    "CCscore"          "gene_name"        "gene_id"         
+# [5] "FDR_CC"           "cluster"          "tss"              "gene_strand"     
+# [9] "distance"         "distance_kb"      "signed_distance"  "signed_by_strand"
+# [13] "peak_id"          "cell_type"        "FDR_threshold"    "logFC"           
+# [17] "fdr_dars"  
+head(universe_overlaps_df)
+# peak_id_links     CCscore  gene_name         gene_id     FDR_CC
+# 1 chr1-1745993-1746550 -0.40853659 AL645728.1 ENSG00000279244 0.02898562
+# 2 chr1-1745993-1746550 -0.40853659 AL645728.1 ENSG00000279244 0.02898562
+# 3 chr1-3910780-3911122  0.03048837       DFFB ENSG00000169598 0.16370976
+# 4 chr1-3910780-3911122  0.03048837       DFFB ENSG00000169598 0.16370976
+# 5 chr1-3910780-3911122  0.03048837       DFFB ENSG00000169598 0.16370976
+# 6 chr1-3910780-3911122  0.03048837       DFFB ENSG00000169598 0.16370976
+# cluster     tss gene_strand distance distance_kb signed_distance
+# 1 Astrocyte 1579756           +    83258      83.258           83258
+# 2 Astrocyte 1579756           +    83258      83.258           83258
+# 3 Astrocyte 3857267           +    26842      26.842           26842
+# 4 Astrocyte 3857267           +    26842      26.842           26842
+# 5 Astrocyte 3857267           +    26842      26.842           26842
+# 6 Astrocyte 3857267           +    26842      26.842           26842
+# signed_by_strand              peak_id  cell_type FDR_threshold      logFC
+# 1            83258 chr1-1745993-1746550  Astrocyte        FDR0.2  0.4569419
+# 2            83258 chr1-1745993-1746550  Microglia        FDR0.2  1.1139565
+# 3            26842 chr1-3910780-3911122  Astrocyte        FDR0.2 -0.9013231
+# 4            26842 chr1-3910780-3911122 Inhib.Thal        FDR0.2 -0.3233352
+# 5            26842 chr1-3910780-3911122      LHb.4        FDR0.2  0.2851914
+# 6            26842 chr1-3910780-3911122      Oligo        FDR0.2 -1.4320263
+nrow(universe_overlaps_df)
+# 23691
+
+universe_df1 <- universe_overlaps_df |>
+    filter(!is.na(gene_id)) |>
+    distinct()
+nrow(universe_df1)
+# 23666
+
+
+## ======
+
+## Testing universe.  Map these to ENTREZ IDs
+entrez_map <- bitr(universe_df1$gene_id,
+                        fromType = "ENSEMBL",
+                        toType = "ENTREZID",
+                        OrgDb = org.Hs.eg.db) 
+# |> pull(ENTREZID) |> unique()
+
+entrez_universe <- unique(entrez_map$ENTREZID)
+message("Universe size: ", length(entrez_universe))
+# 5817
+# Warning message:
+#     In bitr(universe_df2$gene_id, fromType = "ENSEMBL", toType = "ENTREZID",  :
+#                 1.33% of input gene IDs are fail to map...
+
+
+
+
+
+## Build a background universe before subsetting for Direct_Regulation
 
 message("Loading cCRE and ORC file ...")
 
 f_name = "overlaps_linkPeak_DARs_classified_thr_CC0.3_thr_DAR0.1.csv"
-
 ## load raw overlaps and 2-shared ct overlaps 
-cCRE_df <- read.csv(here(inputCSV_cCRE_ORC_Dir, f_name))
+cCRE_df <- read.csv(here(inputCSV_merged_classified, f_name))
 nrow(cCRE_df) # 6410
 head(cCRE_df)
 table(cCRE_df$type_classification)
@@ -77,31 +145,33 @@ peaks_classification_name = "peaks_classification3_hb"
 ## define GO universe 
 
 ## Primary Interest.** Canonical enhancer or promoter activity
-go_universe1 = c(
+
+go_directReg = c(
     "Linked_DAR (+) enriched",
     "Linked_DAR (-) depleted"
+    ## need to add non-signifcance to the entrez universe 
 )
 
 ## Primary + Secondary Interest.** Regulatory link exists, but the element is not a strong DAR
-go_universe2 = c(
+go_Primary_Secondary_Interest = c(
     "Linked_DAR (+) enriched",
     "Linked_DAR (-) depleted",
     "Linked OCR"
 )
 
 ## **High Interest.** Potential for distal regulation or non-coding targets
-go_universe3 = c(
+go_High_Interest_DARs = c(
     "Unlinked DAR"
 )
 
-lst_universe <- list(
-    "Direct_Regulation" = go_universe1,
-    "Primary_Secondary_Interest" = go_universe2,
-    "High_Interest_DARs" = go_universe3
+lst_go_tests <- list(
+    "Direct_Regulation" = go_directReg,
+    "Primary_Secondary_Interest" = go_Primary_Secondary_Interest,
+    "High_Interest_DARs" = go_High_Interest_DARs
 )
 
 # Display the resulting list
-lst_universe
+lst_go_tests
 
 ## =========/
 
@@ -110,7 +180,10 @@ lst_universe
 
 ## Generate Summary Tables for cCRE Categories Across Habenula (MHb/LHb) Clusters
 
-purrr::map(lst_universe, function(.x) {
+# tests
+cCRE_df
+
+purrr::map(lst_go_tests, function(.x) {
     # Filter the main data frame (cCRE_df) based on the current universe (.x)
     #    and restrict to Habenula (MHb/LHb) cell types
     cCRE_universe_df <- cCRE_df |>
@@ -139,32 +212,52 @@ table(cCRE_df$category)
 
 ## subset the specific go_universe
 cCRE_universe_df <- cCRE_df |> 
-    filter(category %in% lst_universe[["Direct_Regulation"]]) 
+    filter(category %in% lst_go_tests[["Direct_Regulation"]]) 
 cCRE_universe_df |> nrow()
 # 1363
+
+# ## subset the specific go_universe
+# cCRE_universe_df <- cCRE_df |> 
+#     filter(category %in% lst_go_tests[["Primary_Secondary_Interest"]]) 
+# cCRE_universe_df |> nrow()
+# # 1783
+
+
+## =============================================================================
+## Merge Hb sub-types into broad groups (LHb, MHb)
+
+cCRE_universe_df <- cCRE_universe_df |>
+    mutate(
+        cell_type_broad = case_when(
+            grepl("^LHb", cell_type) ~ "LHb",
+            grepl("^MHb", cell_type) ~ "MHb",
+            TRUE ~ cell_type
+        )
+    )
+
+table(cCRE_universe_df$cell_type)
+## Check how many entries per broad group
+table(cCRE_universe_df$cell_type_broad)
 
 
 ## =============================================================================
 ## Build DE_entrez dataframe for GO enrichment
 ## =============================================================================
 
-## ENTREZID look up
-names(cCRE_universe_df)
-
-## gene symbol and gene entrez name
-cCRE_universe_df[c("gene_name", "gene_id")]
-
-## 
-# Convert ENSEMBL -> ENTREZID
-entrez_search <- bitr(cCRE_universe_df$gene_id, 
-                      fromType = "ENSEMBL", 
-                      toType = "ENTREZID", 
-                      OrgDb = "org.Hs.eg.db")
-# Warning message:
-#     In bitr(cCRE_universe_df$gene_id, fromType = "ENSEMBL", toType = "ENTREZID",  :
-#                 1.43% of input gene IDs are fail to map.
-head(entrez_search)
-message("Mapped ", nrow(entrez_search), " gene IDs to ENTREZID")
+# ## ENTREZID look up
+# names(cCRE_universe_df)
+# 
+# ## gene symbol and gene entrez name
+# cCRE_universe_df[c("gene_name", "gene_id")]
+# 
+# # Convert ENSEMBL -> ENTREZID
+# entrez_search <- bitr(cCRE_universe_df$gene_id, 
+#                       fromType = "ENSEMBL", 
+#                       toType = "ENTREZID", 
+#                       OrgDb = "org.Hs.eg.db")
+# # Warning message:
+# #     In bitr(cCRE_universe_df$gene_id, fromType = "ENSEMBL", toType = "ENTREZID",  :
+# #                 1.43% of input gene IDs are fail to map.
 
 
 
@@ -175,44 +268,79 @@ message("Mapped ", nrow(entrez_search), " gene IDs to ENTREZID")
 
 DE_entrez <- cCRE_universe_df |>
     # use this if duplicates are expected (because multiple peaks link to the same gene)
-    left_join(entrez_search,
+    left_join(entrez_map,
               by = c("gene_id" = "ENSEMBL"),
               relationship = "many-to-many") |>
     filter(!is.na(ENTREZID)) |>
     mutate(
-        ## Use logFC sign only — since FDR filtering was done upstream
-        DE_class = case_when(
-            logFC > 0 ~ "up",
-            logFC < 0 ~ "down",
-            TRUE ~ "None"
-        ),
         ## keep the original category direction
         category_direction = case_when(
             category == "Linked_DAR (+) enriched" ~ "up",
-            category == "Linked_DAR (-) depleted" ~ "down",
-            TRUE ~ "neutral"
+            category == "Linked_DAR (-) depleted" ~ "down"#,
+            #TRUE ~ "neutral"
         ),
-        cell_type_clean = gsub("\\.", "-", cell_type),
-        DE_class_cluster = paste0(cell_type_clean, "_", DE_class)
+        cell_type_clean = gsub("\\.", "-", cell_type)# ,
+        # DE_class_cluster = paste0(cell_type_clean, "_", DE_class)
     ) %>%
-    distinct(ENTREZID, .keep_all = TRUE) %>%
-    select(cell_type, cell_type_clean, gene_name, gene_id, ENTREZID,
-           logFC, fdr_dars, category, DE_class, category_direction,
-           DE_class_cluster)
+    distinct(ENTREZID, .keep_all = TRUE) #|> 
+    #select(cell_type, cell_type_clean, cell_type_broad, gene_name, gene_id, ENTREZID,
+    #       logFC, fdr_dars, category, category_direction) # DE_class, DE_class_cluster
+           
+
+universe <- unique(DE_entrez$ENTREZID)
 
 
 ## group by cell_type for enrichment
 DE_entrez <- DE_entrez |>
-    mutate(DE_group = cell_type_clean) |>
+    # mutate(DE_group = cell_type_clean) |>
+    mutate(DE_group = cell_type_broad) |>
     distinct(DE_group, ENTREZID, .keep_all = TRUE)
 head(DE_entrez)
-table(DE_entrez$DE_group, DE_entrez$DE_class)
+table(DE_entrez$cell_type_broad, DE_entrez$DE_group)
+# down  up
+# Astrocyte    68  18
+# Endo          0   1
+# Excit.Thal   66 101
+# Inhib.Thal  407 183
+# LHb          10 169
+# MHb          23 135
+# Microglia     0   5
+# Oligo        41  15
+# OPC           0   6
+
 
 ## keep groups with at least 10 genes
-group_sizes <- DE_entrez |> count(DE_group)
-DE_entrez <- DE_entrez |> semi_join(group_sizes |> filter(n >= 10), by = "DE_group")
-table(DE_entrez$DE_group, DE_entrez$DE_class)
-unique(DE_entrez$cell_type)
+DE_entrez <- DE_entrez |>
+    group_by(DE_group) |>
+    filter(n() >= 10) |>
+    ungroup()
+
+table(DE_entrez$DE_group)
+unique(DE_entrez$cell_type_broad)
+
+## checks
+# Check how many unique genes per DE_group
+DE_entrez |> count(DE_group)
+# DE_group       n
+# <chr>      <int>
+# 1 Astrocyte     86
+# 2 Excit.Thal   167
+# 3 Inhib.Thal   590
+# 4 LHb          179
+# 5 MHb          158
+# 6 Oligo         56
+
+
+# test_ids <- DE_entrez |> filter(DE_group == "LHb") |> pull(ENTREZID)
+# ego_test <- enrichGO(gene = test_ids, OrgDb = org.Hs.eg.db,
+#                      universe   = entrez_universe,   # correct background
+#                      ont = "BP", 
+#                      pvalueCutoff = 1, 
+#                      qvalueCutoff = 0.2,
+#                      readable = TRUE)
+# head(ego_test)
+
+
 
 #### Run GO ####
 
@@ -220,20 +348,28 @@ universe <- unique(DE_entrez$ENTREZID)
 ont_list <- c("CC","BP","MF")
 names(ont_list) <- ont_list
 
-go_result <- map(ont_list, 
-            ~compareCluster(
+## GO terms summarized by broad cell types (LHb, MHb, Astrocyte, etc.) rather than by fine subclusters.
+
+go_result <- map(ont_list, ~compareCluster(
                ENTREZID ~ DE_group,
-               data = DE_entrez,  
+               data = DE_entrez,
                OrgDb = org.Hs.eg.db,
                fun = enrichGO,
-               universe = universe,
+               universe = entrez_universe,
                ont = .x,
                pAdjustMethod = "BH",
-               pvalueCutoff = 0.1, # 0.5
-               readable = TRUE)
-)
+               pvalueCutoff = 0.1,
+               qvalueCutoff = 0.2
+               readable = TRUE
+               ))
 
 #go_result
+map(go_result, function(x) {
+    if (is.null(x)) return("NULL")
+    nrow(x@compareClusterResult)
+})
+
+
 
 # Remove NULL entries (e.g., CC = NULL)
 go_result_valid <- discard(go_result, is.null)
