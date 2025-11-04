@@ -102,8 +102,8 @@ g1 <- ggplot(cluster_counts, aes(x = reorder(cluster, n), y = n)) +
     geom_col(fill = "steelblue") +
     geom_text(aes(label = n), hjust = -0.2, size = 3) +
     labs(
-        title = "Links by Cell Type",
-        subtitle = paste0(sum(cluster_counts$n), " unique links | FDR thr = ", FDR),
+        title = "LinkPeaks by Cell Type",
+        subtitle = paste0(sum(cluster_counts$n), " unique | FDR = ", FDR),
         x = NULL, # "Cell Type",
         y = "Number of Links"
     ) +
@@ -133,7 +133,7 @@ lst_DARs_files_cellType
 
 #===========================================================================
 
-message("Parsing DARs for each cellType at FDR ", paste("FDR=", FDR_thresh, " "))
+message("Parsing DARs for each cellType at ", paste("FDR=", FDR_thresh, " "))
 
 #DARS_signif_df_lst = list()
 # FDR_thresh = c(0.1, 0.2)
@@ -209,7 +209,7 @@ table(DARs_results_all$FDR_threshold)
 # 257010 325580 
 # 266011 349352
 DARs_results_all |> head()
-# nrow(DARs_results_all[DARs_results_all$cell_type == "LHb.7", ])
+
 
 #===========================================================================
 
@@ -270,7 +270,7 @@ g2 <- lapply(thresholds, function(th) {
             geom_text(aes(label = n), hjust = -0.2, size = 3) +
             labs(
                 title = paste("DARs by Cell Type"),
-                subtitle = paste0(sum(DARs_counts$n), " unique DARs | FDR thr = ", FDR),
+                subtitle = paste0(sum(DARs_counts$n), " unique | FDR = ", gsub("FDR","", th)),
                 x = NULL,
                 y = "Number of DARs"
             ) +
@@ -291,9 +291,13 @@ walk2(
 )
 
 
-# only for FDR=0.2
+## only for linkpeaks with FDR=0.2 and dars with FDR=0.1 (first filter for both)
 combined_LinkPeaks_DARs <- g1 + g2[[1]]
 f_name <- paste0("LinkPeaks_DARs_combined_barplot_FDR0.2.pdf")
+ggsave(here(plotDir, f_name),
+       combined_LinkPeaks_DARs, width = 7, height = 7)
+combined_LinkPeaks_DARs <- g1 + g2[[2]]
+f_name <- paste0("LinkPeaks_DARs_combined_barplot_FDR02_FDR01.pdf")
 ggsave(here(plotDir, f_name),
        combined_LinkPeaks_DARs, width = 7, height = 7)
 
