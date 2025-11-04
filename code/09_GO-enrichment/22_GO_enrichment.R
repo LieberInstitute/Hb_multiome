@@ -231,9 +231,9 @@ make_DE_entrez_df <- function(
         entrez_map)
     {
     
-    if (test_name=="Direct_Regulation") {
+    if (test_name=="Direct_Regulation" || test_name=="Direct_Regulation_Enriched" || test_name=="Direct_Regulation_Depleted") {
      
-        ########## Test "Direct_Regulation" ##########
+        ########## Test "Direct_Regulation (s) " ##########
         
         DE_entrez <- cCRE_df |>
             # use this if duplicates are expected (because multiple peaks link to the same gene)
@@ -251,50 +251,50 @@ make_DE_entrez_df <- function(
             ) |>
             distinct(ENTREZID, .keep_all = TRUE)
         
-        } else if ((test_name=="Primary_Secondary_Interest")) {
-            
-            ########## Test "Primary_Secondary_Interest" ########## 
-            
-            DE_entrez <- cCRE_df |>
-                left_join(entrez_map,
-                          by = c("gene_id" = "ENSEMBL"),
-                          relationship = "many-to-many") |>
-                filter(!is.na(ENTREZID)) |>
-                mutate(
-                    category_direction = case_when(
-                        category == "Linked_DAR (+) enriched" ~ "up",
-                        category == "Linked_DAR (-) depleted" ~ "down",
-                        category == "Linked OCR" & CCscore > 0 ~ "up",
-                        category == "Linked OCR" & CCscore < 0 ~ "down"
-                    ),
-                    cell_type_clean = gsub("\\.", "-", cell_type)# ,
-                ) |>
-                distinct(ENTREZID, .keep_all = TRUE)
+    } else if ((test_name=="Primary_Secondary_Interest")) {
         
-        } else if ((test_name=="High_Interest_DARs")) {
+        ########## Test "Primary_Secondary_Interest" ########## 
         
-            ########## Test "DARs" ########## 
-            
-            DE_entrez <- cCRE_df |>
-                left_join(entrez_map,
-                          by = c("gene_id" = "ENSEMBL"),
-                          relationship = "many-to-many") |>
-                filter(!is.na(ENTREZID)) |>
-                mutate(
-                    category_direction = case_when(
-                        category == "Unlinked DAR" & logFC > 0  ~ "up",
-                        category == "Unlinked DAR" & logFC < 0  ~ "down",
-                        TRUE ~ "neutral"
-                    ),
-                    cell_type_clean = gsub("\\.", "-", cell_type)# ,
-                ) |>
-                distinct(ENTREZID, .keep_all = TRUE)
-            
-        } else {
+        DE_entrez <- cCRE_df |>
+            left_join(entrez_map,
+                      by = c("gene_id" = "ENSEMBL"),
+                      relationship = "many-to-many") |>
+            filter(!is.na(ENTREZID)) |>
+            mutate(
+                category_direction = case_when(
+                    category == "Linked_DAR (+) enriched" ~ "up",
+                    category == "Linked_DAR (-) depleted" ~ "down",
+                    category == "Linked OCR" & CCscore > 0 ~ "up",
+                    category == "Linked OCR" & CCscore < 0 ~ "down"
+                ),
+                cell_type_clean = gsub("\\.", "-", cell_type)# ,
+            ) |>
+            distinct(ENTREZID, .keep_all = TRUE)
+    
+    } else if ((test_name=="High_Interest_DARs")) {
+    
+        ########## Test "DARs" ########## 
         
-                stop("Invalid test_name. Must be one of: 'Direct_Regulation', 'Primary_Secondary_Interest'")
+        DE_entrez <- cCRE_df |>
+            left_join(entrez_map,
+                      by = c("gene_id" = "ENSEMBL"),
+                      relationship = "many-to-many") |>
+            filter(!is.na(ENTREZID)) |>
+            mutate(
+                category_direction = case_when(
+                    category == "Unlinked DAR" & logFC > 0  ~ "up",
+                    category == "Unlinked DAR" & logFC < 0  ~ "down",
+                    TRUE ~ "neutral"
+                ),
+                cell_type_clean = gsub("\\.", "-", cell_type)# ,
+            ) |>
+            distinct(ENTREZID, .keep_all = TRUE)
         
-        }
+    } else {
+    
+            stop("Invalid test_name. Must be one of: 'Direct_Regulation', 'Primary_Secondary_Interest'")
+    
+    }
     
     return(DE_entrez)
     
@@ -333,7 +333,7 @@ for (test_go in names(lst_go_tests)) {
         entrez_map = entrez_map
     )
     
-    ## Merge Hb subtypes into broad groups (LHb, MHb) ==========================
+    ## Merge Hb sub-types into broad groups (LHb, MHb) ==========================
     for (hb_merged_ct in clustering_levels) {
         
         message("\n--- Running Hb merge mode: ", hb_merged_ct, " ---")
