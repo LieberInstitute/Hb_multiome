@@ -99,7 +99,7 @@ cluster_counts <- linkPeaks_results_all |>
     count(cluster, sort = TRUE)
 
 g1 <- ggplot(cluster_counts, aes(x = reorder(cluster, n), y = n)) +
-    geom_col(fill = "steelblue") +
+    geom_col(fill = "grey") +
     geom_text(aes(label = n), hjust = -0.2, size = 3) +
     labs(
         title = "LinkPeaks by Cell Type",
@@ -266,7 +266,7 @@ g2 <- lapply(thresholds, function(th) {
         ggplot(df_sub,
                aes(x = factor(cell_type, levels = reversed_order), y = n)) +
             
-            geom_col(fill = "steelblue") +
+            geom_col(fill = "grey") +
             geom_text(aes(label = n), hjust = -0.2, size = 3) +
             labs(
                 title = paste("DARs by Cell Type"),
