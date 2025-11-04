@@ -9,7 +9,6 @@
 library("dplyr")
 library("purrr")
 library("ggplot2")
-library("patchwork")
 library("tidyverse")
 library("tidyr")
 library("stringr")
@@ -17,8 +16,6 @@ library("here")
 library("getopt")
 library("org.Hs.eg.db")
 library("clusterProfiler")
-library("rrvgo")
-library("ComplexHeatmap")
 
 #===============================================================================
 # resolution_level = "Mid"      # 18 cell-types
@@ -126,31 +123,13 @@ as.data.frame(table(cCRE_df$type_classification, cCRE_df$category))
 ## define GO dataset to test
 
 ## Primary Interest.** Canonical enhancer or promoter activity
-go_directReg = c(
-    "Linked_DAR (+) enriched",
-    "Linked_DAR (-) depleted"
-)
-
-go_directReg_enriched = c(
-    "Linked_DAR (+) enriched"
-)
-
-go_directReg_depleted = c(
-    "Linked_DAR (-) depleted"
-)
-
+go_directReg = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted")
+go_directReg_enriched = c("Linked_DAR (+) enriched")
+go_directReg_depleted = c("Linked_DAR (-) depleted")
 ## Primary + Secondary Interest.** Regulatory link exists, but the element is not a strong DAR necessarly
-go_Primary_Secondary_Interest = c(
-    "Linked_DAR (+) enriched",
-    "Linked_DAR (-) depleted",
-    "Linked OCR"
-)
-
+go_Primary_Secondary_Interest = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted","Linked OCR")
 ## **High Interest.** Potential for distal regulation or non-coding targets
-go_High_Interest_DARs = c(
-    "Unlinked DAR"
-)
-
+go_High_Interest_DARs = c("Unlinked DAR")
 # ## Secondary Interest.** Regulatory link exists, but not a strong DAR
 # go_Secondary_Linked_OCR = c(
 #     "Linked OCR"
@@ -167,12 +146,11 @@ lst_go_tests <- list(
 # Display the resulting list
 lst_go_tests
 
-## =========/
 
-
+## =============================================================================
 ## Summarize stats for Hb clusters
-## Generate Summary Tables for cCRE Categories Across Habenula (MHb/LHb) Clusters
 
+## Generate Summary Tables for cCRE Categories Across Habenula (MHb/LHb) Clusters
 purrr::map(lst_go_tests, function(.x) {
     # Filter the main data frame (cCRE_df) based on the current universe (.x)
     #    and restrict to Habenula (MHb/LHb) cell types
@@ -206,11 +184,6 @@ list_df_cCRE <- lst_go_tests |>
             filter(category %in% filter_vector)
     })
 
-list_df_cCRE <- list(
-    Direct_Regulation = cCRE_universe_Direct_Regulation,
-    Primary_Secondary_Interest = cCRE_universe_Primary_Secondary_Interest,
-    High_Interest_DARs = cCRE_universe_df_High_Interest_DARs
-)
 ## Check summary of list content
 map_int(list_df_cCRE, nrow)
 # Direct_Regulation_Enriched Direct_Regulation_Depleted 
@@ -222,7 +195,7 @@ map_int(list_df_cCRE, nrow)
 
 
 ##==============================================================================
-## Merge back and define DE_class + DE_class_cluster
+## Make DE_entrez data frame accordingly with the go-test to compute
 
 
 make_DE_entrez_df <- function(
@@ -291,9 +264,9 @@ make_DE_entrez_df <- function(
             distinct(ENTREZID, .keep_all = TRUE)
         
     } else {
-    
-            stop("Invalid test_name. Must be one of: 'Direct_Regulation', 'Primary_Secondary_Interest'")
-    
+        
+        stop("Invalid test_name. Must be one of exixting tests!")
+        
     }
     
     return(DE_entrez)
@@ -307,10 +280,8 @@ make_DE_entrez_df <- function(
 
 ont_list <- c("CC","BP","MF")
 names(ont_list) <- ont_list
-
 clustering_levels <- c("broad", "semi_broad", "mid")
-## testing
-# clustering_levels = "broad"
+
 
 for (test_go in names(lst_go_tests)) {
    
