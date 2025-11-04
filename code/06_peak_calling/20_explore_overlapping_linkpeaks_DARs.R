@@ -175,11 +175,11 @@ plt_divergence_stacked <- function(
     g_divergence_stacked <- ggplot(combined_summary,
                                    aes(x = cell_type, y = n_signed, fill = fill_group)) +
         geom_col(color = "black", linewidth = 0.3) + 
-        geom_text(
-            aes(label = n), # raw count to display
-            position = position_stack(vjust = 0.5), 
-            size = 3
-        ) +
+        # geom_text(
+        #     aes(label = n), # raw count to display
+        #     position = position_stack(vjust = 0.5),
+        #     size = 3
+        # ) +
         coord_flip() +
         scale_fill_manual(
             values = color_palette,
@@ -195,8 +195,13 @@ plt_divergence_stacked <- function(
             x = NULL,
             y = "Number of Overlaps"
         ) +
-        theme_minimal()
-    # g_divergence_stacked
+        theme_minimal() +
+        theme(
+            axis.text.y = element_text(size = 11), 
+            axis.title.y = element_text(size = 12),
+            axis.text.x = element_text(size = 11),
+            axis.title.x = element_text(size = 12)
+        )
     
     f_name <- paste0("overlaps_unique_and_", ct_level, "_shared_stackedbar_", FDR, ".pdf")
     ggsave(here(plotDir, f_name),
@@ -255,7 +260,7 @@ total_counts <- plot_df_ct |>
     group_by(overlap_type) |>
     summarise(total_n = sum(n_links))
 # Create named vectors for colors and labels
-overlap_colors <- c("Shared" = "#FFB6C1", "Unique" = "#1f78b4")
+overlap_colors <- c("Shared" = "#ad1d8c", "Unique" = "#1f78b4")
 # Define the custom labels using the calculated totals
 overlap_labels <- c(
     "Shared" = paste0("Shared (N=", total_counts$total_n[total_counts$overlap_type == "Shared"], ")"),
@@ -459,7 +464,7 @@ g_uniques <- uniques_df |>
 
 f_name <- paste0("overlaps_unique_ct_FDR", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
-       g_uniques, width = 4, height = 8)
+       g_uniques, width = 6, height = 8)
 
 
 
