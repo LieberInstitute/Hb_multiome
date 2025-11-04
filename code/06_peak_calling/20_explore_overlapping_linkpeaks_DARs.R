@@ -356,7 +356,7 @@ g_overlap_type <- link_summary |>
     labs(
         #title = "LinkPeak Overlap: Unique vs. Multi-Cell Type DARs",
         x = "Classification",
-        y = NULL,
+        y = "Number of LinkPeaks-DARs",
         fill = "Overlap Type"
     ) +
     theme_minimal() +
@@ -386,8 +386,7 @@ g_multiplicity <- link_summary |>
         size = 4
     ) +
     labs(
-        #title = "Multiplicity of Cell Type Overlap (DARs per LinkPeak)",
-        x = "Number of Distinct Cell-Types Overlapping",
+        x = "Cell-Type Overlapping Levels",
         y = NULL
     ) +
     scale_y_continuous(limits = c(0, 4000)) +
@@ -412,8 +411,7 @@ combined_plot <- (g_overlap_type + g_multiplicity) + plot_layout(widths = c(1, 3
         theme = theme(
             plot.margin = margin(5, 5, 5, 5)
         )
-    ) &
-    labs(y = "Number of LinkPeaks-DARs")
+    )
 
 f_name <- paste0("overlaps_combined_unique_distinct_shared_ct_FDR", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
