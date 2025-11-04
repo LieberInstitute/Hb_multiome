@@ -269,22 +269,17 @@ plot_df_ct <- plot_df_ct |>
     ungroup()
 
 g_cell_type_overlap <- plot_df_ct |>
-    ggplot(aes(
-        # Order cell types by the total number of links (sum of Unique + Shared)
+    ggplot(aes( # Order cell types by the total number of links (sum of Unique + Shared)
         x = fct_reorder(cell_type, n_links, .fun = sum), 
         y = n_links, 
         fill = overlap_type
     )) +
     # Use geom_col (or geom_bar(stat="identity")) for counts
     geom_col(position = position_stack(reverse = TRUE), color = "black") +
-    # geom_text(
-    #     aes(label = n_links), 
-    #     position = position_stack(vjust = 0.5, reverse = TRUE), # Center the labels
-    #     size = 4
-    # ) +
     geom_text( # Add total labels per cell type (outside bars)
         data = plot_df_ct |> distinct(cell_type, total_links),
         aes(
+            x = cell_type, 
             y = total_links,
             label = total_links
         ),
@@ -308,7 +303,11 @@ g_cell_type_overlap <- plot_df_ct |>
     theme( # legend right / bottom 
         legend.position.inside = c(0.95, 0.05), 
         legend.justification = c("right", "bottom"), 
-        legend.background = element_rect(colour = "gray80", fill = "white") 
+        legend.background = element_rect(colour = "gray80", fill = "white"), 
+        axis.text.y = element_text(size = 11), 
+        axis.title.y = element_text(size = 12),
+        axis.text.x = element_text(size = 11),
+        axis.title.x = element_text(size = 12)
     )
 
 f_name = paste0("overlaps_unique_shared_ct_FDR", FDR, ".pdf")
@@ -499,6 +498,9 @@ shared_2ct_df_colored <- shared_2ct_df |>
 
 ## All shared `cell_types` 
 g1_ove_all <- plt_shared_overlaps(shared_2ct_df_colored, FDR, all_shared=TRUE)
+f_name = paste0("overlaps_shared_2ct_FDR", FDR, ".pdf")
+ggsave(here(plotDir, f_name),
+       g1_ove_all, width = 7, height = 8)
 
 ## only those shared `cell_types` that are MHb or LHb related 
 shared_2_Hb_ct_df_colored <- shared_2ct_df_colored |>
@@ -511,7 +513,7 @@ combined_2ct_plot <- (g1_ove_all | g2_ove_hb) +
         guides = "collect",
         axis = "collect" )
 
-f_name = paste0("overlaps_shared_2ct_FDR", FDR, ".pdf")
+f_name = paste0("overlaps_shared_2ct_FDR", FDR, "_combined.pdf")
 ggsave(here(plotDir, f_name),
        combined_2ct_plot, width = 9, height = 8)
 
