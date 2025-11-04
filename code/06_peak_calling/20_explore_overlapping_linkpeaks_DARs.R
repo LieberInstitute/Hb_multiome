@@ -71,7 +71,7 @@ plt_shared_overlaps <- function(
     }
     
     color_vector <- c(
-        "MHb/LHb Related" = "green4", 
+        "MHb/LHb Related" = "#ad1d8c", 
         "Other Cell Types" = "grey70"
     )
     
@@ -98,12 +98,7 @@ plt_shared_overlaps <- function(
             y = "Number of Overlaps"
         ) +
         theme_minimal() +
-        theme(
-            legend.position = "none"
-            # legend.position.inside = c(0.95, 0.05),
-            # legend.justification = c("right", "bottom"), 
-            # legend.background = element_rect(colour = "gray80", fill = "white") 
-        )
+        theme(legend.position = "none")
     
     return(g_shared_2ct)
     
@@ -167,12 +162,14 @@ plt_divergence_stacked <- function(
 ){
     
     plot_title = paste("LinkPeaks-DARs: Unique vs. ", ct_level, "Shared Cell-Types")
-    
     color_palette <- c(
-        "Unique More" = "#D62728",
-        "Shared More" = "#FF9896",
-        "Unique Less" = "#1F77B4",
-        "Shared Less" = "#AEC7E8"
+        # Unique Group (Blue Tones) - to fit with Hb pilot colors 
+        "Unique More" = "#1f78b4",  # Medium Blue (Original)
+        "Unique Less" = "#AEC7E8",  # Light Blue (Lighter tint of #1f78b4)
+        
+        # Shared Group (Red/Teal Tones for better distinction)
+        "Shared More" = "#ad1d8c",  # Rich Red/Crimson (Highly distinct from blue)
+        "Shared Less" = "#FFB6C1"   # Light Pink/Rose (Lighter tint of the Rich Red)
     )
     
     g_divergence_stacked <- ggplot(combined_summary,
@@ -258,12 +255,18 @@ total_counts <- plot_df_ct |>
     group_by(overlap_type) |>
     summarise(total_n = sum(n_links))
 # Create named vectors for colors and labels
-overlap_colors <- c("Shared" = "grey", "Unique" = "#D62728")
+overlap_colors <- c("Shared" = "#FFB6C1", "Unique" = "#1f78b4")
 # Define the custom labels using the calculated totals
 overlap_labels <- c(
     "Shared" = paste0("Shared (N=", total_counts$total_n[total_counts$overlap_type == "Shared"], ")"),
     "Unique" = paste0("Unique (N=", total_counts$total_n[total_counts$overlap_type == "Unique"], ")")
 )
+
+# Compute total_links first
+plot_df_ct <- plot_df_ct |>
+    group_by(cell_type) |>
+    mutate(total_links = sum(n_links)) |>
+    ungroup()
 
 g_cell_type_overlap <- plot_df_ct |>
     ggplot(aes(
@@ -274,10 +277,20 @@ g_cell_type_overlap <- plot_df_ct |>
     )) +
     # Use geom_col (or geom_bar(stat="identity")) for counts
     geom_col(position = position_stack(reverse = TRUE), color = "black") +
-    geom_text(
-        aes(label = n_links), 
-        position = position_stack(vjust = 0.5, reverse = TRUE), # Center the labels
-        size = 4
+    # geom_text(
+    #     aes(label = n_links), 
+    #     position = position_stack(vjust = 0.5, reverse = TRUE), # Center the labels
+    #     size = 4
+    # ) +
+    geom_text( # Add total labels per cell type (outside bars)
+        data = plot_df_ct |> distinct(cell_type, total_links),
+        aes(
+            y = total_links,
+            label = total_links
+        ),
+        nudge_y = 150,   # Move text slightly to the right
+        size = 4,
+        inherit.aes = FALSE
     ) +
     labs(
         title = "Unique vs. Shared Overlaps by Cell Type",
@@ -300,7 +313,7 @@ g_cell_type_overlap <- plot_df_ct |>
 
 f_name = paste0("overlaps_unique_shared_ct_FDR", FDR, ".pdf")
 ggsave(here(plotDir, f_name),
-       g_cell_type_overlap, width = 8, height = 8)
+       g_cell_type_overlap, width = 6, height = 8)
 
 
 ##==============================================================================
@@ -339,7 +352,7 @@ g_overlap_type <- link_summary |>
     geom_bar(color = "black") +
     geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
     scale_fill_manual(
-        values = c("Unique" = "#D62728", "Shared" = "grey") 
+        values = c("Unique" = "#1f78b4", "Shared" = "#ad1d8c") 
     ) +
     labs(
         #title = "LinkPeak Overlap: Unique vs. Multi-Cell Type DARs",
@@ -358,8 +371,8 @@ g_multiplicity <- link_summary |>
     # create the color classification column, I want first red
     mutate(
         bar_color = case_when(
-            n_cell_types == 1 ~ "#D62728",  
-            n_cell_types == 2 ~ "#147507",  
+            n_cell_types == 1 ~ "#1f78b4",  
+            n_cell_types == 2 ~ "#ad1d8c",  
             TRUE ~ "grey"                   
         )
     ) |>
@@ -426,7 +439,7 @@ g_uniques <- uniques_df |>
         x = fct_reorder(cell_types, cell_types, .fun = length, .desc = FALSE), 
         fill = cell_types
     )) + 
-    geom_bar(color = "black",  fill = "#D62728") +
+    geom_bar(color = "black",  fill = "#1f78b4") +
     geom_text(
         stat = "count", 
         aes(label = after_stat(count)), 
@@ -436,10 +449,10 @@ g_uniques <- uniques_df |>
     coord_flip() + # Flip coordinates for readable cell type labels
     scale_y_continuous(expand = expansion(mult = c(0, 0.25))) + # add 10% space on right
     labs(
-        title = "Cell Type-Specific Unique LinkPeaks-DARs",
+        title = "Cell Type-Specific LinkPeaks-DARs",
         subtitle = paste0("Total Overlaps: ", nrow(uniques_df), " | FDR thr = ", FDR),
         x = NULL,
-        y = "Number of Overlaps"
+        y = "Number of Unique Overlaps"
     ) +
     theme_minimal() +
     theme(
