@@ -126,10 +126,10 @@ as.data.frame(table(cCRE_df$type_classification, cCRE_df$category))
 go_directReg = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted")
 go_directReg_enriched = c("Linked_DAR (+) enriched")
 go_directReg_depleted = c("Linked_DAR (-) depleted")
-## Primary + Secondary Interest.** Regulatory link exists, but the element is not a strong DAR necessarly
-go_Primary_Secondary_Interest = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted","Linked OCR")
+## Primary + Secondary Interest.** Regulatory link exists, but the element is not a strong DAR necessary
+go_all_Linked = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted","Linked OCR")
 ## **High Interest.** Potential for distal regulation or non-coding targets
-go_High_Interest_DARs = c("Unlinked DAR")
+go_only_DARs = c("Unlinked DAR")
 # ## Secondary Interest.** Regulatory link exists, but not a strong DAR
 # go_Secondary_Linked_OCR = c(
 #     "Linked OCR"
@@ -139,8 +139,8 @@ lst_go_tests <- list(
     "Direct_Regulation_Enriched" = go_directReg_enriched,
     "Direct_Regulation_Depleted" = go_directReg_depleted,  
     "Direct_Regulation" = go_directReg,
-    "Primary_Secondary_Interest" = go_Primary_Secondary_Interest,
-    "High_Interest_DARs" = go_High_Interest_DARs
+    "Primary_Secondary_Interest" = go_all_Linked,
+    "High_Interest_DARs" = go_only_DARs
 )
 
 # Display the resulting list
@@ -277,6 +277,8 @@ make_DE_entrez_df <- function(
 ## =============================================================================
 ## Loop over each GO test definition
 ## =============================================================================
+## Run enrichment separately for each distinct value of DE_group
+## Each GO enrichment is computed per cell-type (or per merged cell-type group) - not as one pooled dataset.
 
 ont_list <- c("CC","BP","MF")
 names(ont_list) <- ont_list
