@@ -47,6 +47,8 @@ plotDir <- here(
 if (!dir.exists(processedDir)) { dir.create(processedDir, recursive = TRUE) }
 if (!dir.exists(plotDir)) { dir.create(plotDir, recursive = TRUE) }
 
+timestamp <- format(Sys.time(), "%Y%m%d_%H%M")
+
 
 ##==============================================================================
 ## Define universe genes for the different categories
@@ -448,8 +450,7 @@ for (test_go in names(lst_go_tests)) {
                         subtitle = paste("Category: ", test_go))
                 # ggtitle(paste("GO BP enrichment (", test_go, " — ", hb_merged_ct, ")", sep = ""))
             
-            
-            plot_base <- sprintf("%s_GO_BP_%s", hb_merged_ct, test_go)
+            plot_base <- sprintf("%s_GO_BP_%s_%s", hb_merged_ct, test_go, timestamp)
             plot_pdf <- here(plotDir, paste0(plot_base, ".pdf"))
             ggsave(plot_pdf, plot = p, width = 8, height = 6)
             message("Saved plots: ", plot_pdf)
@@ -459,14 +460,14 @@ for (test_go in names(lst_go_tests)) {
         }
         
         ## Save results
-        go_rds_name <- here(processedDir, sprintf("%s_GO_results_%s.rds", hb_merged_ct, test_go))
+        go_rds_name <- here(processedDir, sprintf("%s_GO_results_%s_%s.rds", hb_merged_ct, test_go, timestamp))
         saveRDS(go_result, go_rds_name)
         message("Saved RDS: ", go_rds_name)
         
         ## Save summary table (flattened BP results if available)
         if (!is.null(go_result$BP) && nrow(go_result$BP@compareClusterResult) > 0) {
             bp_df <- go_result$BP@compareClusterResult
-            go_csv_name <- here(processedDir, sprintf("%s_GO_results_BP_%s.csv", hb_merged_ct, test_go))
+            go_csv_name <- here(processedDir, sprintf("%s_GO_results_BP_%s_%s.csv", hb_merged_ct, test_go, timestamp))
             write.csv(bp_df, go_csv_name, row.names = FALSE)
             message("Saved CSV: ", go_csv_name)
         }
