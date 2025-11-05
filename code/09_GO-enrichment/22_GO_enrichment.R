@@ -49,52 +49,117 @@ if (!dir.exists(plotDir)) { dir.create(plotDir, recursive = TRUE) }
 
 
 ##==============================================================================
-## defining universe from merged overlaps
+## Define universe genes for the different categories
+##==============================================================================
 
-# table containing all merged overlaps from 19 directory: all measurable genes
+## For Direct-Regulation Categories (all measurable genes prefiltered) =========
+## LinkPeaks with cc |p| > 0.2 (first filter)
 
-###### LinkPeaks genes universe: all linkpeaks with cc |p| > 0.2 (first filter)
-universe_linkPeaks <- read.csv(here(inputCSV_merged_overlaps, "ALL_LinkPeaks_signif_FDR02.csv"))
-colnames(universe_linkPeaks)
-head(universe_linkPeaks)
-nrow(universe_linkPeaks) # 10948 ok
-
-#universe_overlaps_df
-###### DARs genes universe: all DARs with fdr < 0.1 (first filter)
-universe_dars <- read.csv(here(inputCSV_merged_overlaps, "ALL_DARs_signif_FDR01.csv"))
-colnames(universe_dars)
-head(universe_dars)
-nrow(universe_dars)
-## DARs Ref:
-# FDR0.1 FDR0.2 
-# 257010 325580 
-# 266011 349352
-
-## Fpr testing datasets with LinkPeaks Signif
-universe_df <- universe_linkPeaks |>
+universe_linkPeaks <- read.csv(here(inputCSV_merged_overlaps, "ALL_LinkPeaks_signif_FDR02.csv")) |>
     filter(!is.na(gene_id)) |>
     distinct()
-nrow(universe_df)
-head(universe_df)
+
+message("====================================================================\n")
+message("Universe: LinkPeaks-based regulatory genes = ", nrow(universe_linkPeaks))
+head(universe_linkPeaks)
+
+entrez_map_linkPeaks <- bitr(
+    unique(universe_linkPeaks$gene_id),
+    fromType = "ENSEMBL",
+    toType = "ENTREZID",
+    OrgDb = org.Hs.eg.db
+)
+entrez_universe_linkPeaks <- unique(entrez_map_linkPeaks$ENTREZID)
+message("Mapped to ", length(entrez_universe_linkPeaks), " Entrez IDs (LinkPeaks universe).")
 
 
-## ======
+## For DARs Category (all measurable genes prefiltered) ========================
+## all DARs with fdr < 0.1 (first filter)
 
-## Testing universe.  Map these to ENTREZ IDs
-entrez_map <- bitr(universe_df$gene_id,
-                        fromType = "ENSEMBL",
-                        toType = "ENTREZID",
-                        OrgDb = org.Hs.eg.db) 
+# universe_dars <- read.csv(here(inputCSV_merged_overlaps, "ALL_DARs_signif_FDR01.csv")) |>
+#     filter(!is.na(gene_id)) |>
+#     distinct()
+# 
+# message("====================================================================\n")
+# message("Universe: DARs-based regulatory genes = ", nrow(universe_dars))
+#
+# ## raw links reference to pull gene names
+# raw_links_for_dars_path <- here("processed-data", "06_peak_calling", "14_exploratory_pb_peak_scores_MACS2", "links_ct_merged", "all_links")
+# pattern <- paste0("^Mid.*\\.csv$")
+# lst_peak_files <- list.files(
+#     path = raw_links_for_dars_path,
+#     pattern = pattern,
+#     full.names = TRUE
+# )
+# #lst_peak_files = list.files(path = input_cvsDir)
+# message("Link peak-genes raw files found:")
+# lst_peak_files
+# 
+# raw_links_df <- lst_peak_files |>
+#     map_dfr(read_csv, .id = "source_file",
+#             show_col_types = FALSE)
+# 
+# universe_dars_cat <- raw_links_df # need to merge with universe_dars_cat to pull gene names --- in progress
 
-entrez_universe <- unique(entrez_map$ENTREZID)
-message("Universe size: ", length(entrez_universe))
-# 6744
-# Warning message:
-#     In bitr(universe_df1$gene_id, fromType = "ENSEMBL", toType = "ENTREZID",  :
-#                 1.4% of input gene IDs are fail to map...
+# entrez_map_dars <- bitr(
+#     unique(universe_dars$gene_id),
+#     fromType = "ENSEMBL",
+#     toType = "ENTREZID",
+#     OrgDb = org.Hs.eg.db
+# )
+# entrez_universe_dars <- unique(entrez_map_dars$ENTREZID)
+# message("Mapped to ", length(entrez_universe_dars), " Entrez IDs (DARs universe).")
+
+## Combine all universes into one structured list
+
+lst_go_universes <- list(
+    Direct_Regulation = list(
+        df = universe_linkPeaks,
+        entrez_map = entrez_map_linkPeaks,
+        entrez_universe = entrez_universe_linkPeaks
+    ),
+    LinkPeaks_OCRs = list(
+        df = universe_linkPeaks,
+        entrez_map = entrez_map_linkPeaks,
+        entrez_universe = entrez_universe_linkPeaks
+    ),
+    High_Interest_DARs = list(
+        df = universe_linkPeaks, # temporal assignation (universe_dars)
+        entrez_map = entrez_map_linkPeaks, # entrez_map_dars
+        entrez_universe = entrez_universe_linkPeaks #entrez_universe_dars
+    )
+)
+
+names(lst_go_universes)
+# [1] "Direct_Regulation"  "LinkPeaks_OCRs"     "High_Interest_DARs"
 
 
-## =====
+## =============================================================================
+
+## Function to Set go-universe depending on go-test category dataset
+
+select_specific_go_universe <- function(test_name, go_universes) {
+    
+    if (test_name %in% c("Direct_Regulation_all", "Direct_Regulation_Enriched",
+                         "Direct_Regulation_Depleted", "LinkPeaks_OCRs")) {
+        selected <- go_universes$Direct_Regulation
+        
+    } else if (test_name == "High_Interest_DARs") {
+        selected <- go_universes$High_Interest_DARs
+        
+    } else {
+        stop(paste("Unknown test category:", test_name))
+    }
+    
+    return(selected)
+
+}
+
+
+
+## =============================================================================
+## Define GO Classification and Categories to test
+## =============================================================================
 
 message(" \n==== GO enrichment test for Classification-3 =====\n")
 message("Loading cCRE and ORC file ...")
@@ -106,7 +171,7 @@ nrow(cCRE_df) # 6410
 head(cCRE_df)
 table(cCRE_df$type_classification)
 
-cCRE_df <- cCRE_df |> filter(type_classification=="classification-3")
+cCRE_df <- cCRE_df |> dplyr::filter(type_classification=="classification-3")
 nrow(cCRE_df) # 3205
 
 ## validation
@@ -119,36 +184,27 @@ as.data.frame(table(cCRE_df$type_classification, cCRE_df$category))
 # 4 classification-3         Non-significant  354
 # 5 classification-3            Unlinked DAR 1068
 
-## =============================================================================
-## define GO dataset to test
 
-## Primary Interest.** Canonical enhancer or promoter activity
 go_directReg = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted")
 go_directReg_enriched = c("Linked_DAR (+) enriched")
 go_directReg_depleted = c("Linked_DAR (-) depleted")
-## Primary + Secondary Interest.** Regulatory link exists, but the element is not a strong DAR necessary
-go_all_Linked = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted","Linked OCR")
-## **High Interest.** Potential for distal regulation or non-coding targets
-go_only_DARs = c("Unlinked DAR")
-# ## Secondary Interest.** Regulatory link exists, but not a strong DAR
-# go_Secondary_Linked_OCR = c(
-#     "Linked OCR"
-# )
+go_all_Linked = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted", "Linked OCR")
+go_linked_OCRs = "Linked OCR"
+go_only_DARs = "Unlinked DAR"
 
 lst_go_tests <- list(
     "Direct_Regulation_Enriched" = go_directReg_enriched,
     "Direct_Regulation_Depleted" = go_directReg_depleted,  
-    "Direct_Regulation" = go_directReg,
-    "Primary_Secondary_Interest" = go_all_Linked,
+    "Direct_Regulation_all" = go_directReg,
+    "LinkPeaks_OCRs" = go_all_Linked,
     "High_Interest_DARs" = go_only_DARs
 )
 
-# Display the resulting list
-lst_go_tests
 
 
 ## =============================================================================
-## Summarize stats for Hb clusters
+## Summarize stats for Hb clusters (validations)
+## =============================================================================
 
 ## Generate Summary Tables for cCRE Categories Across Habenula (MHb/LHb) Clusters
 purrr::map(lst_go_tests, function(.x) {
@@ -181,14 +237,14 @@ purrr::map(lst_go_tests, function(.x) {
 list_df_cCRE <- lst_go_tests |>
     purrr::map(\(filter_vector) {
         cCRE_df |>
-            filter(category %in% filter_vector)
+            dplyr::filter(category %in% filter_vector)
     })
 
 ## Check summary of list content
 map_int(list_df_cCRE, nrow)
 # Direct_Regulation_Enriched Direct_Regulation_Depleted 
 # 706                        657 
-# Direct_Regulation Primary_Secondary_Interest 
+# Direct_Regulation_all LinkPeaks_OCRs 
 # 1363                       1783 
 # High_Interest_DARs 
 # 1068 
@@ -199,34 +255,33 @@ map_int(list_df_cCRE, nrow)
 
 
 make_DE_entrez_df <- function(
-        test_name="Direct_Regulation",
+        test_name, # ge: "Direct_Regulation_all"
         cCRE_df,
         entrez_map)
     {
     
-    if (test_name=="Direct_Regulation" || test_name=="Direct_Regulation_Enriched" || test_name=="Direct_Regulation_Depleted") {
+    if (test_name=="Direct_Regulation_all" || test_name=="Direct_Regulation_Enriched" || test_name=="Direct_Regulation_Depleted") {
      
-        ########## Test "Direct_Regulation (s) " ##########
+        ########## Test "Direct_Regulation_all (s) " ##########
         
         DE_entrez <- cCRE_df |>
             # use this if duplicates are expected (because multiple peaks link to the same gene)
             left_join(entrez_map,
-                      by = c("gene_id" = "ENSEMBL"),
-                      relationship = "many-to-many") |>
+                      by = c("gene_id" = "ENSEMBL"), 
+                      relationship = "many-to-many") |> 
             filter(!is.na(ENTREZID)) |>
             mutate(
                 ## keep the original category direction
                 category_direction = case_when(
                     category == "Linked_DAR (+) enriched" ~ "up",
                     category == "Linked_DAR (-) depleted" ~ "down"
-                ),
-                cell_type_clean = gsub("\\.", "-", cell_type)# ,
-            ) |>
+                #),cell_type_clean = gsub("\\.", "-", cell_type)# ,
+            )) |>
             distinct(ENTREZID, .keep_all = TRUE)
         
-    } else if ((test_name=="Primary_Secondary_Interest")) {
+    } else if ((test_name=="LinkPeaks_OCRs")) {
         
-        ########## Test "Primary_Secondary_Interest" ########## 
+        ########## Test "LinkPeaks_OCRs" ########## 
         
         DE_entrez <- cCRE_df |>
             left_join(entrez_map,
@@ -284,13 +339,25 @@ ont_list <- c("CC","BP","MF")
 names(ont_list) <- ont_list
 clustering_levels <- c("broad", "semi_broad", "mid")
 
+# Tests: names(lst_go_tests)
+# [1] "Direct_Regulation_Enriched" "Direct_Regulation_Depleted"
+# [3] "Direct_Regulation_all"      "LinkPeaks_OCRs"            
+# [5] "High_Interest_DARs"   
 
 for (test_go in names(lst_go_tests)) {
-   
+    # testing: test_go = names(lst_go_tests)[[1]]
+    
+    
     message("\n==============================")
     message("Running GO enrichment for: ", test_go)
     message("==============================")
     
+    
+    ## Select GO universe and mappings for this test
+    go_univ <- select_specific_go_universe(test_name = test_go, go_universes = lst_go_universes)
+    entrez_universe <- go_univ$entrez_universe
+    entrez_map <- go_univ$entrez_map
+
     ## Prepare category-specific subset (use the correct one per test)
     cCRE_subset <- list_df_cCRE[[test_go]]
     if (is.null(cCRE_subset) || nrow(cCRE_subset) == 0) {
@@ -377,7 +444,10 @@ for (test_go in names(lst_go_tests)) {
             print(head(go_result$BP@compareClusterResult, 5))
             
             p <- dotplot(go_result$BP, showCategory = 15) +
-                ggtitle(paste("GO BP enrichment (", test_go, " — ", hb_merged_ct, ")", sep = ""))
+                ggtitle(paste(hb_merged_ct, " GO BP enrichment"), 
+                        subtitle = paste("Category: ", test_go))
+                # ggtitle(paste("GO BP enrichment (", test_go, " — ", hb_merged_ct, ")", sep = ""))
+            
             
             plot_base <- sprintf("%s_GO_BP_%s", hb_merged_ct, test_go)
             plot_pdf <- here(plotDir, paste0(plot_base, ".pdf"))
@@ -406,6 +476,9 @@ for (test_go in names(lst_go_tests)) {
     }
     
 }
+
+
+message("GO-Enrichment completed!")
 
 
 
