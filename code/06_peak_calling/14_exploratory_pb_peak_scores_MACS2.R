@@ -65,9 +65,6 @@ processed_csvDir <- here(
 )
 
 ## set specific peaks pb dataset
-# input_cvsDir <- here(input_cvsDir, paste0("links_ct_", peaks_ds))
-# plotDir <- here(plotDir, paste0("links_ct_", peaks_ds))
-# processed_csvDir <- here(processed_csvDir, paste0("links_ct_", peaks_ds))
 plotDir_raw <- here(plotDir, "all_links")
 csvDir_raw <- here(processed_csvDir, "all_links")
 
@@ -131,7 +128,7 @@ nrow(tss_df) # [1] 56747
 ## check duplicates
 dup_pairs <- tss_df %>%
     count(gene_name, seqnames, name = "n") %>%
-    filter(n > 1)
+    dplyr::filter(n > 1)
 
 if (nrow(dup_pairs) > 0) {
     print(head(dup_pairs, 10))
@@ -457,8 +454,6 @@ for (ct in lst_peak_files) {
     # Extract text between first and second "_"
     ct_name <- sub("^[^_]*_([^_]*)_.*", "\\1", ct) #ge. [1] "LHb.2.7"
     
-    #=========================================
-    # prepare df
     message("Processing ", nrow(link_df), " links found in ", ct_name, " ...")
     
     link_df <- link_df |>
@@ -470,13 +465,9 @@ for (ct in lst_peak_files) {
         )
     head(link_df)
     
-    #=========================================
-    
     message("Computing distance between peaks and TSS ...")
     
     # Join by gene + chromosome to avoid many-to-many 
-    colnames(link_df)
-    colnames(tss_df)
     link_df2 <- link_df %>%
         left_join(tss_df, by = c("gene" = "gene_name", "seqnames" = "seqnames"))
     colnames(link_df2)
@@ -484,7 +475,7 @@ for (ct in lst_peak_files) {
     
     # drop rows with no TSS match
     n_before <- nrow(link_df2)
-    link_df2 <- link_df2 %>% filter(!is.na(tss))
+    link_df2 <- link_df2 %>% dplyr::filter(!is.na(tss))
     message("Dropped ", n_before - nrow(link_df2), " rows with no TSS match.")
     
     message("Computing Peak center and distance to TSS ...")
@@ -526,8 +517,6 @@ for (ct in lst_peak_files) {
     nrow(link_df2)
     filtered_links <- link_df2 |>
         dplyr::filter(FDR <= FDR_thresh)
-        #dplyr::filter(FDR <= FDR_thresh, score >= score_thresh)
-        #dplyr::filter(FDR <= FDR_thresh, abs(score) >= score_thresh)
     total_lk_filtered <- nrow(filtered_links)    
     nrow(filtered_links)
     head(filtered_links)    
@@ -540,7 +529,6 @@ for (ct in lst_peak_files) {
                 nrow(filtered_links), " putative links")
         
         # save filtered links
-        # FDR_CC_thr = paste0("FDR", FDR_thresh, "_score", score_thresh)
         # we are using only FDR as first filtering to intersect with DARs
         FDR_CC_thr = paste0("FDR", FDR_thresh, "_score", score_thresh) 
         f_name <- here(processed_csvDir, paste0(resolution_level, "_", ct_name,
