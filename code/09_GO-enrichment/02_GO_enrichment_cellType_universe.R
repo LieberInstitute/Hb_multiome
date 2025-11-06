@@ -23,10 +23,16 @@ library("clusterProfiler")
 
 
 ## Set directory names
-inputCSV_merged_overlaps <- here(
+# inputCSV_merged_overlaps <- here(
+#     "processed-data",
+#     "06_peak_calling",
+#     "19_Linkage_DARs_analysis"
+# )
+input_rawLinks <- here(
     "processed-data",
     "06_peak_calling",
-    "19_Linkage_DARs_analysis"
+    "13_pseudobulk_LinkPeaks_MACS2_split_ct",
+    "links_ct_merged" # refers only to merged peaks - done to have idential genomic regions among datasets 
 )
 inputCSV_merged_classified <- here(
     "processed-data",
@@ -55,11 +61,24 @@ timestamp <- format(Sys.time(), "%Y%m%d_%H%M")
 ##==============================================================================
 
 ## For Direct-Regulation Categories (all measurable genes prefiltered) =========
-## LinkPeaks with cc |p| > 0.2 (first filter)
 
-universe_linkPeaks <- read.csv(here(inputCSV_merged_overlaps, "ALL_LinkPeaks_signif_FDR02.csv")) |>
-    filter(!is.na(gene_id)) |>
-    distinct()
+# universe_linkPeaks <- read.csv(here(inputCSV_merged_overlaps, "ALL_LinkPeaks_signif_FDR02.csv")) |>
+#     filter(!is.na(gene_id)) |>
+#     distinct()
+
+message("Loading raw links ...")
+
+## List all files matching the specific clustering resolution level
+pattern = paste0("^Mid.*\\.csv$")
+lst_peak_files <- list.files(
+    path = input_rawLinks,
+    pattern = pattern,
+    full.names = TRUE
+)
+
+message("Found ", length(lst_peak_files), " raw links files:")
+basename(lst_peak_files)
+
 
 message("====================================================================\n")
 message("Universe: LinkPeaks-based regulatory genes = ", nrow(universe_linkPeaks))
