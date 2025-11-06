@@ -81,17 +81,59 @@ basename(lst_peak_files)
 
 
 message("====================================================================\n")
-message("Universe: LinkPeaks-based regulatory genes = ", nrow(universe_linkPeaks))
-head(universe_linkPeaks)
+message("Making Gene Universe for LinkPeaks Categories ...")
 
-entrez_map_linkPeaks <- bitr(
-    unique(universe_linkPeaks$gene_id),
-    fromType = "ENSEMBL",
-    toType = "ENTREZID",
-    OrgDb = org.Hs.eg.db
-)
-entrez_universe_linkPeaks <- unique(entrez_map_linkPeaks$ENTREZID)
-message("Mapped to ", length(entrez_universe_linkPeaks), " Entrez IDs (LinkPeaks universe).")
+# message("Universe: LinkPeaks-based regulatory genes = ", nrow(universe_linkPeaks))
+# head(universe_linkPeaks)
+# 
+# entrez_map_linkPeaks <- bitr(
+#     unique(universe_linkPeaks$gene_id),
+#     fromType = "ENSEMBL",
+#     toType = "ENTREZID",
+#     OrgDb = org.Hs.eg.db
+# )
+# entrez_universe_linkPeaks <- unique(entrez_map_linkPeaks$ENTREZID)
+# message("Mapped to ", length(entrez_universe_linkPeaks), " Entrez IDs (LinkPeaks universe).")
+
+load_cellType_universe <- function(
+    clusterRes,
+    ct, 
+    lst_peak_paths
+    ) 
+{
+    clusterRes = "Mid"
+    lst_peak_paths = lst_peak_files
+    ct="MHb.2"
+    basename(lst_peak_paths)
+    
+    message("Processing universe for ct: ", ct)
+    # c("broad", "semi_broad", "mid")
+    if (clusterRes=="broad") {
+        
+    } else if (clusterRes=="semi-broad") {
+    
+    
+    } else if (clusterRes=="mid") {
+        f_name 
+        grep( paste0("^Mid\\_", ct, "*.csv"), lst_peak_paths) 
+        ct="MHb.2"
+        pattern <- paste0("Mid_", ct, "_pseudobulk_link_peak_genes\\.csv$")
+        link_df <- read.csv(lst_peak_paths[[grep(pattern, lst_peak_paths)]])[c("cluster", "gene")]
+        unique(link_df$cluster)
+        #head(link_df)
+        
+    } else {
+        stop("No cluster resolution provided to select go-universe!!!")
+        message()
+    }
+    
+    unique_genes_vector <- link_df |>
+        dplyr::pull(gene) |>
+        unique()
+    message(length(unique_genes_vector), " unique raw links for [", ct , "] loaded!")
+    
+}
+
 
 
 ## For DARs Category (all measurable genes prefiltered) ========================
