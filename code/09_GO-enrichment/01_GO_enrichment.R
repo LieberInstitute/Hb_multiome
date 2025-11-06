@@ -36,12 +36,12 @@ inputCSV_merged_classified <- here(
 processedDir <- here(
     "processed-data",
     "09_GO-enrichment",
-    "22_GO_enrichment"
+    "01_GO_enrichment"
 )
 plotDir <- here(
     "plots",
     "09_GO-enrichment",
-    "22_GO_enrichment"
+    "01_GO_enrichment"
 )
 
 if (!dir.exists(processedDir)) { dir.create(processedDir, recursive = TRUE) }

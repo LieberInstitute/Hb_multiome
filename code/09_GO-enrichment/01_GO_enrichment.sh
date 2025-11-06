@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=30G
-#SBATCH --job-name=22_GO_enrichment
+#SBATCH --job-name=01_GO_enrichment
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
-#SBATCH -o logs/22_GO_enrichment.txt
-#SBATCH -e logs/22_GO_enrichment.txt
+#SBATCH -o logs/01_GO_enrichment.txt
+#SBATCH -e logs/01_GO_enrichment.txt
 #SBATCH --mail-type=ALL
 
 set -e
@@ -27,7 +27,7 @@ module load conda_R/4.4.x
 module list
 
 ## Edit with your job command
-Rscript 22_GO_enrichment.R
+Rscript 01_GO_enrichment.R
 
 echo "**** Job ends ****"
 date
