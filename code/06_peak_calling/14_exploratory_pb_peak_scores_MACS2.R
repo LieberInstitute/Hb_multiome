@@ -146,7 +146,7 @@ make_width_plots <- function(
         resolution_lev,
         ct_name,
         plotDir,
-        ds_name = "",     # identify ds: merged/regular
+        ds_name = "",  # identify dataset: merged/regular
         FDR_thr = 0,   # labels for plots/cvs
         CC_thr = 0
 ) {
@@ -220,7 +220,7 @@ make_exploratory_plots <- function(
         resolution_lev,
         ct_name,
         plotDir,
-        ds_name = "",     # identify ds: merged/regular
+        ds_name = "",     # identify dataset: merged/regular
         FDR_CC_thr = ""   # labels for plots/cvs
 ){
     
@@ -356,7 +356,7 @@ make_tier_peak_gene_hist <- function(
         resolution_lev,
         ct_name,
         pltDir,
-        ds_name = "",     # identify ds: merged/regular
+        ds_name = "",  # identify dataset: merged/regular
         FDR_thr = 0,   # labels for plots/cvs
         CC_thr = 0
 ){
