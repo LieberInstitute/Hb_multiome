@@ -31,8 +31,10 @@ library("clusterProfiler")
 input_rawLinks <- here(
     "processed-data",
     "06_peak_calling",
-    "13_pseudobulk_LinkPeaks_MACS2_split_ct",
-    "links_ct_merged" # refers only to merged peaks - done to have idential genomic regions among datasets 
+    #"13_pseudobulk_LinkPeaks_MACS2_split_ct",
+    "14_exploratory_pb_peak_scores_MACS2", # has ensembl id names
+    "links_ct_merged",
+    "all_links" 
 )
 inputCSV_merged_classified <- here(
     "processed-data",
@@ -95,20 +97,19 @@ message("Making Gene Universe for LinkPeaks Categories ...")
 # entrez_universe_linkPeaks <- unique(entrez_map_linkPeaks$ENTREZID)
 # message("Mapped to ", length(entrez_universe_linkPeaks), " Entrez IDs (LinkPeaks universe).")
 
-load_cellType_universe <- function(
+load_entrez_cellType_universe <- function(
     clusterRes,  # Could be any of c("broad", "semi_broad", "mid")
-    ct, 
-    lst_peak_paths
-    ) 
+    ct,
+    lst_peak_paths) 
 {
-    # clusterRes = "Mid"
+    # clusterRes = "Broad"
     # lst_peak_paths = lst_peak_files
     # ct="MHb.2"
     # ct="MHb.1.2"
     # ct="LHb.2"
     # ct="Oligo"
 
-    message("Processing universe for ct: ", ct)
+    message("Processing universe for clusterig resolution [", clusterRes, "]")
     pattern_hb <- str_extract(ct, "(M|L)Hb")
     # Extract the target pattern from ALL file names (e.g., "Astrocyte", "MHb.2")
     target_patterns <- sub("^[^_]+_([^_]+)_.*$", "\\1", basename(lst_peak_paths))
@@ -120,7 +121,7 @@ load_cellType_universe <- function(
         # Identify files matching the exact non-Hb cell type
         is_target_file <- grepl(paste0("^", ct, "$"), target_patterns)
     
-    } else { ## # It is Habenula cell type (e.g., "MHb.2", "LHb.1.3")
+    } else { ## It is Habenula cell type (e.g., "MHb.2", "LHb.1.3")
         
         if (clusterRes=="broad") { ## we only have one Hb cell-type
             # Identify all "MHb" and "LHb" 
@@ -131,13 +132,17 @@ load_cellType_universe <- function(
             if (pattern_hb=="MHb") {
                 is_target_file <- grepl("^MHb.*$", target_patterns)
                 
-            } else (pattern_hb=="LHb") {
+            } else if (pattern_hb=="LHb") {
                 is_target_file <- grepl("^LHb.*$", target_patterns)
                 
             }
-        } else if  (clusterRes=="mid") {
+        } else if (clusterRes=="mid") {
             # Identify files matching the exact Habenula sub-cluster
             is_target_file <- grepl(paste0("^", ct, "$"), target_patterns)
+            
+        } else {
+            stop("Invalid clusterRes value provided.")
+            
         }
 
     }
@@ -146,57 +151,31 @@ load_cellType_universe <- function(
     # load, combine and extract unique genes
     filtered_files <- lst_peak_paths[is_target_file]
     link_df <- filtered_files |>
-        map(~ read.csv(.x) |> select(cluster, gene)) |>
+        map(~ read.csv(.x) |> select(cluster, gene_id)) |>
         list_rbind()
-    table(link_df$cluster)
+    # table(link_df$cluster)
     link_genes <- link_df |> 
-        distinct(gene) |> 
-        pull(gene)
-    head(link_genes)
-    
+        distinct(gene_id) |> 
+        pull(gene_id)
+    # head(link_genes)
     message("Total raw-links for [", ct , "] - ", clusterRes," level\n", length(link_genes))
-    return(link_genes)
+    
+    # === Entrez ID Mapping Section ===
+    entrez_map <- clusterProfiler::bitr(
+        link_genes,
+        fromType = "ENSEMBL",
+        toType = "ENTREZID",
+        OrgDb = org.Hs.eg.db,
+        drop = TRUE # Only keep mapped IDs
+    )
+    entrez_universe <- unique(entrez_map$ENTREZID)
+
+    message("Mapped to ", length(entrez_universe), " Entrez IDs (DARs universe).")
+    
+    return(entrez_map)
     
 }
 
-
-
-## For DARs Category (all measurable genes prefiltered) ========================
-## all DARs with fdr < 0.1 (first filter)
-
-# universe_dars <- read.csv(here(inputCSV_merged_overlaps, "ALL_DARs_signif_FDR01.csv")) |>
-#     filter(!is.na(gene_id)) |>
-#     distinct()
-# 
-# message("====================================================================\n")
-# message("Universe: DARs-based regulatory genes = ", nrow(universe_dars))
-#
-# ## raw links reference to pull gene names
-# raw_links_for_dars_path <- here("processed-data", "06_peak_calling", "14_exploratory_pb_peak_scores_MACS2", "links_ct_merged", "all_links")
-# pattern <- paste0("^Mid.*\\.csv$")
-# lst_peak_files <- list.files(
-#     path = raw_links_for_dars_path,
-#     pattern = pattern,
-#     full.names = TRUE
-# )
-# #lst_peak_files = list.files(path = input_cvsDir)
-# message("Link peak-genes raw files found:")
-# lst_peak_files
-# 
-# raw_links_df <- lst_peak_files |>
-#     map_dfr(read_csv, .id = "source_file",
-#             show_col_types = FALSE)
-# 
-# universe_dars_cat <- raw_links_df # need to merge with universe_dars_cat to pull gene names --- in progress
-
-# entrez_map_dars <- bitr(
-#     unique(universe_dars$gene_id),
-#     fromType = "ENSEMBL",
-#     toType = "ENTREZID",
-#     OrgDb = org.Hs.eg.db
-# )
-# entrez_universe_dars <- unique(entrez_map_dars$ENTREZID)
-# message("Mapped to ", length(entrez_universe_dars), " Entrez IDs (DARs universe).")
 
 ## Combine all universes into one structured list
 
@@ -232,11 +211,11 @@ select_specific_go_universe <- function(test_name, go_universes) {
                          "Direct_Regulation_Depleted", "LinkPeaks_OCRs")) {
         selected <- go_universes$Direct_Regulation
         
-    } else if (test_name == "High_Interest_DARs") {
-        selected <- go_universes$High_Interest_DARs
-        
-    } else {
-        stop(paste("Unknown test category:", test_name))
+    # } else if (test_name == "High_Interest_DARs") {
+    #     selected <- go_universes$High_Interest_DARs
+    #     
+    # } else {
+    #     stop(paste("Unknown test category:", test_name))
     }
     
     return(selected)
@@ -278,14 +257,14 @@ go_directReg_enriched = c("Linked_DAR (+) enriched")
 go_directReg_depleted = c("Linked_DAR (-) depleted")
 go_all_Linked = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted", "Linked OCR")
 go_linked_OCRs = "Linked OCR"
-go_only_DARs = "Unlinked DAR"
+# go_only_DARs = "Unlinked DAR"
 
 lst_go_tests <- list(
     "Direct_Regulation_Enriched" = go_directReg_enriched,
     "Direct_Regulation_Depleted" = go_directReg_depleted,  
     "Direct_Regulation_all" = go_directReg,
-    "LinkPeaks_OCRs" = go_all_Linked,
-    "High_Interest_DARs" = go_only_DARs
+    "LinkPeaks_OCRs" = go_all_Linked #,
+    # "High_Interest_DARs" = go_only_DARs
 )
 
 
@@ -363,7 +342,6 @@ make_DE_entrez_df <- function(
                 category_direction = case_when(
                     category == "Linked_DAR (+) enriched" ~ "up",
                     category == "Linked_DAR (-) depleted" ~ "down"
-                #),cell_type_clean = gsub("\\.", "-", cell_type)# ,
             )) |>
             distinct(ENTREZID, .keep_all = TRUE)
         
@@ -425,7 +403,8 @@ make_DE_entrez_df <- function(
 
 ont_list <- c("CC","BP","MF")
 names(ont_list) <- ont_list
-clustering_levels <- c("broad", "semi_broad", "mid")
+# clustering_levels <- c("broad", "semi_broad", "mid")
+clustering_levels <- c("broad")
 
 # Tests: names(lst_go_tests)
 # [1] "Direct_Regulation_Enriched" "Direct_Regulation_Depleted"
@@ -441,10 +420,17 @@ for (test_go in names(lst_go_tests)) {
     message("==============================")
     
     
-    ## Select GO universe and mappings for this test
-    go_univ <- select_specific_go_universe(test_name = test_go, go_universes = lst_go_universes)
-    entrez_universe <- go_univ$entrez_universe
-    entrez_map <- go_univ$entrez_map
+    # ## Select GO universe and mappings for this test
+    # go_univ <- select_specific_go_universe(test_name = test_go, go_universes = lst_go_universes)
+    # entrez_universe <- go_univ$entrez_universe
+    # entrez_map <- go_univ$entrez_map
+    ## my proposed function to load dynamically the go-universes +++++++++++++++
+    load_entrez_cellType_universe(
+        clusterRes = hb_merged_ct,
+        ct = "Hb",
+        lst_peak_files
+    )
+    ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     ## Prepare category-specific subset (use the correct one per test)
     cCRE_subset <- list_df_cCRE[[test_go]]
