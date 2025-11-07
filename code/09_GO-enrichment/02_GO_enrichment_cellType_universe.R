@@ -96,42 +96,66 @@ message("Making Gene Universe for LinkPeaks Categories ...")
 # message("Mapped to ", length(entrez_universe_linkPeaks), " Entrez IDs (LinkPeaks universe).")
 
 load_cellType_universe <- function(
-    clusterRes,
+    clusterRes,  # Could be any of c("broad", "semi_broad", "mid")
     ct, 
     lst_peak_paths
     ) 
 {
-    clusterRes = "Mid"
-    lst_peak_paths = lst_peak_files
-    ct="MHb.2"
-    basename(lst_peak_paths)
-    
+    # clusterRes = "Mid"
+    # lst_peak_paths = lst_peak_files
+    # ct="MHb.2"
+    # ct="MHb.1.2"
+    # ct="LHb.2"
+    # ct="Oligo"
+
     message("Processing universe for ct: ", ct)
-    # c("broad", "semi_broad", "mid")
+    pattern_hb <- str_extract(ct, "(M|L)Hb")
+    # Extract the target pattern from ALL file names (e.g., "Astrocyte", "MHb.2")
+    target_patterns <- sub("^[^_]+_([^_]+)_.*$", "\\1", basename(lst_peak_paths))
+
+    ## Determine which files to merge based on the cell type (ct) ==============
     
-    pattern <- sub("\\.\\d+$", "", ct) 
+    ## If pattern_hb is NA, it's an OTHER cell type (e.g., "Oligo")
+    if (is.na(pattern_hb)) { 
+        # Identify files matching the exact non-Hb cell type
+        is_target_file <- grepl(paste0("^", ct, "$"), target_patterns)
+    
+    } else { ## # It is Habenula cell type (e.g., "MHb.2", "LHb.1.3")
         
-    if (pattern=="MHb|LHb") {
         if (clusterRes=="broad") { ## we only have one Hb cell-type
-            pattern <- gsub("M|L", "", pattern)
-        } 
-        if (clusterRes=="semi-broad") {
-            
+            # Identify all "MHb" and "LHb" 
+            is_target_file <- grepl("^(M|L)Hb.*$", target_patterns)
+                        
+        } else if (clusterRes=="semi-broad") {
+            # Identify "MHb" or "LHb"
+            if (pattern_hb=="MHb") {
+                is_target_file <- grepl("^MHb.*$", target_patterns)
+                
+            } else (pattern_hb=="LHb") {
+                is_target_file <- grepl("^LHb.*$", target_patterns)
+                
+            }
+        } else if  (clusterRes=="mid") {
+            # Identify files matching the exact Habenula sub-cluster
+            is_target_file <- grepl(paste0("^", ct, "$"), target_patterns)
         }
-        if (clusterRes=="mid") {        
-            pattern <- paste0("Mid_", ct, "_pseudobulk_link_peak_genes\\.csv$")
-        }
-    } else  { ## other cellType
-        pattern <- paste0("Mid_", ct, "_pseudobulk_link_peak_genes\\.csv$")
+
     }
+    ## =========================================================================
         
-    link_df <- read.csv(lst_peak_paths[[grep(pattern, lst_peak_paths)]])[c("cluster", "gene")]
-    unique(link_df$cluster)
+    # load, combine and extract unique genes
+    filtered_files <- lst_peak_paths[is_target_file]
+    link_df <- filtered_files |>
+        map(~ read.csv(.x) |> select(cluster, gene)) |>
+        list_rbind()
+    table(link_df$cluster)
+    link_genes <- link_df |> 
+        distinct(gene) |> 
+        pull(gene)
+    head(link_genes)
     
-    unique_genes_vector <- link_df |>
-        dplyr::pull(gene) |>
-        unique()
-    message(length(unique_genes_vector), " unique raw links for [", ct , "] loaded!")
+    message("Total raw-links for [", ct , "] - ", clusterRes," level\n", length(link_genes))
+    return(link_genes)
     
 }
 
