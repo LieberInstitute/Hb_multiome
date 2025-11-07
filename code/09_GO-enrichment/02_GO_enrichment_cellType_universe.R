@@ -108,24 +108,25 @@ load_cellType_universe <- function(
     
     message("Processing universe for ct: ", ct)
     # c("broad", "semi_broad", "mid")
-    if (clusterRes=="broad") {
+    
+    pattern <- sub("\\.\\d+$", "", ct) 
         
-    } else if (clusterRes=="semi-broad") {
-    
-    
-    } else if (clusterRes=="mid") {
-        f_name 
-        grep( paste0("^Mid\\_", ct, "*.csv"), lst_peak_paths) 
-        ct="MHb.2"
+    if (pattern=="MHb|LHb") {
+        if (clusterRes=="broad") { ## we only have one Hb cell-type
+            pattern <- gsub("M|L", "", pattern)
+        } 
+        if (clusterRes=="semi-broad") {
+            
+        }
+        if (clusterRes=="mid") {        
+            pattern <- paste0("Mid_", ct, "_pseudobulk_link_peak_genes\\.csv$")
+        }
+    } else  { ## other cellType
         pattern <- paste0("Mid_", ct, "_pseudobulk_link_peak_genes\\.csv$")
-        link_df <- read.csv(lst_peak_paths[[grep(pattern, lst_peak_paths)]])[c("cluster", "gene")]
-        unique(link_df$cluster)
-        #head(link_df)
-        
-    } else {
-        stop("No cluster resolution provided to select go-universe!!!")
-        message()
     }
+        
+    link_df <- read.csv(lst_peak_paths[[grep(pattern, lst_peak_paths)]])[c("cluster", "gene")]
+    unique(link_df$cluster)
     
     unique_genes_vector <- link_df |>
         dplyr::pull(gene) |>
