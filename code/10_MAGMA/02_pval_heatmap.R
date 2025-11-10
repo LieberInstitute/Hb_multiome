@@ -11,6 +11,7 @@ gene_sets_path = here(
     'processed-data', '10_MAGMA', 'first_test', 'input_gene_sets.tsv'
 )
 plot_dir = here('plots', '10_MAGMA')
+sig_cutoff = 0.05
 
 dir.create(plot_dir, showWarnings = FALSE)
 
@@ -79,7 +80,14 @@ results_mat = results_mat[
     sort(rownames(results_mat)), sort(colnames(results_mat))
 ]
 
-pdf(file.path(plot_dir, 'test_pval_heatmap.pdf'))
+#   Annotate significant p-values only
+anno_mat = ifelse(
+    !is.na(results_mat) & (results_mat >= -log10(sig_cutoff)),
+    round(results_mat, 2),
+    ''
+)
+
+pdf(file.path(plot_dir, 'test_pval_heatmap.pdf'), width = 5)
 Heatmap(
     results_mat,
     name = '-log10(p)',
@@ -89,7 +97,10 @@ Heatmap(
     cluster_columns = FALSE,
     top_annotation = col_anno,
     right_annotation = row_anno,
-    col = c("white", colorRampPalette(brewer.pal(9, "YlOrRd"))(50))
+    col = c("white", colorRampPalette(brewer.pal(9, "YlOrRd"))(50)),
+    cell_fun = function(j, i, x, y, width, height, fill) {
+        grid.text(anno_mat[i, j], x, y, gp = gpar(fontsize = 10))
+    }
 )
 dev.off()
 
