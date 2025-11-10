@@ -49,6 +49,12 @@ magma \
     --gene-annot $out_dir/first_test.genes.annot \
     --out $out_dir/first_test
 
+#   Gene set analysis step
+magma \
+    --gene-results $out_dir/first_test.genes.raw \
+    --set-annot $out_dir/input_gene_sets.tsv gene-col=gene_id set-col=set_id \
+    --out $out_dir/first_test
+
 echo "**** Job ends ****"
 date
 
