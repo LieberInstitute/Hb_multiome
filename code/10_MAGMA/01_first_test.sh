@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=25G
-#SBATCH --job-name=01_test_annotate
+#SBATCH --job-name=01_test
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../processed-data/10_MAGMA/logs/01_test_annotate.txt
-#SBATCH -e ../../processed-data/10_MAGMA/logs/01_test_annotate.txt
+#SBATCH -o ../../processed-data/10_MAGMA/logs/01_test.txt
+#SBATCH -e ../../processed-data/10_MAGMA/logs/01_test.txt
 
 set -e
 
@@ -25,7 +25,10 @@ module load magma/1.10
 module list
 
 snp_loc=/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/13_MAGMA/GWAS/sud2020op/opi.DEPvEXP_EUR.noAF.snploc
+pval_file=/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/13_MAGMA/GWAS/sud2020op/opi.DEPvEXP_EUR.noAF.pval
 gene_loc=/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/13_MAGMA/geneloc/GRCh38_Ensembl-93_GENES_chr-x-y-mt.gene.loc
+bfile=/dcs04/lieber/lcolladotor/with10x_LIBD001/HumanPilot/Analysis/Layer_Guesses/MAGMA/g1000_eur
+N=1154267
 
 repo_dir=$(git rev-parse --show-toplevel)
 out_dir=${repo_dir}/processed-data/10_MAGMA/first_test
@@ -37,6 +40,13 @@ magma \
     --annotate \
     --snp-loc $snp_loc \
     --gene-loc $gene_loc \
+    --out $out_dir/first_test
+
+#   Gene analysis step
+magma \
+    --bfile $bfile \
+    --pval $pval_file N=$N \
+    --gene-annot $out_dir/first_test.genes.annot \
     --out $out_dir/first_test
 
 echo "**** Job ends ****"
