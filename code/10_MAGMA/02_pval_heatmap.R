@@ -14,6 +14,7 @@ plot_dir = here('plots', '10_MAGMA')
 
 dir.create(plot_dir, showWarnings = FALSE)
 
+#   Read in and clean MAGMA results
 results_df = read_table(results_path, skip = 3, show_col_types = FALSE) |>
     mutate(
         cell_type = str_extract(FULL_NAME, '^[^_]+'),
@@ -22,6 +23,8 @@ results_df = read_table(results_path, skip = 3, show_col_types = FALSE) |>
     ) |>
     select(cell_type, peak_category, neg_log_p)
 
+#   Read in the actual gene sets, since we'll later count the size of the union
+#   of genes across cell types and peak categories
 gene_sets_df = read_tsv(gene_sets_path, show_col_types = FALSE) |>
     mutate(
         cell_type = str_extract(set_id, '^[^_]+'),
@@ -33,6 +36,8 @@ gene_sets_df = read_tsv(gene_sets_path, show_col_types = FALSE) |>
         peak_category %in% results_df$peak_category
     )
 
+#   Number of genes per cell type (note sorting ensure proper ordering of cell
+#   types)
 row_anno = HeatmapAnnotation(
     n_genes = anno_barplot(
         gene_sets_df |>
@@ -44,6 +49,8 @@ row_anno = HeatmapAnnotation(
     which = 'row'
 )
 
+#   Number of genes per peak category (note sorting ensure proper ordering of
+#   peak categories)
 col_anno = HeatmapAnnotation(
     n_genes = anno_barplot(
         gene_sets_df |>
@@ -55,8 +62,9 @@ col_anno = HeatmapAnnotation(
     which = 'column'
 )
 
-pdf(file.path(plot_dir, 'test_pval_heatmap.pdf'))
-results_df |>
+#   Form a matrix of p-values, filling in NAs for missing combos of cell type
+#   and peak category
+results_mat = results_df |>
     arrange(cell_type, peak_category) |>
     pivot_wider(
         names_from = peak_category,
@@ -64,17 +72,25 @@ results_df |>
         values_fill = NA_real_
     ) |>
     column_to_rownames('cell_type') |>
-    as.matrix() |>
-    Heatmap(
-        name = '-log10(p)',
-        row_title = 'Cell Type',
-        column_title = 'Peak Category',
-        cluster_rows = FALSE,
-        cluster_columns = FALSE,
-        top_annotation = col_anno,
-        right_annotation = row_anno,
-        col = c("white", colorRampPalette(brewer.pal(9, "YlOrRd"))(50))
-    )
+    as.matrix()
+
+#   Ensure ordering matches row and column annotations
+results_mat = results_mat[
+    sort(rownames(results_mat)), sort(colnames(results_mat))
+]
+
+pdf(file.path(plot_dir, 'test_pval_heatmap.pdf'))
+Heatmap(
+    results_mat,
+    name = '-log10(p)',
+    row_title = 'Cell Type',
+    column_title = 'Peak Category',
+    cluster_rows = FALSE,
+    cluster_columns = FALSE,
+    top_annotation = col_anno,
+    right_annotation = row_anno,
+    col = c("white", colorRampPalette(brewer.pal(9, "YlOrRd"))(50))
+)
 dev.off()
 
 session_info()
