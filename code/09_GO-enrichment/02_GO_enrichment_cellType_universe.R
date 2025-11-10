@@ -23,15 +23,9 @@ library("clusterProfiler")
 
 
 ## Set directory names
-# inputCSV_merged_overlaps <- here(
-#     "processed-data",
-#     "06_peak_calling",
-#     "19_Linkage_DARs_analysis"
-# )
 input_rawLinks <- here(
     "processed-data",
     "06_peak_calling",
-    #"13_pseudobulk_LinkPeaks_MACS2_split_ct",
     "14_exploratory_pb_peak_scores_MACS2", # has ensembl id names
     "links_ct_merged",
     "all_links" 
@@ -62,12 +56,6 @@ timestamp <- format(Sys.time(), "%Y%m%d_%H%M")
 ## Define universe genes for the different categories
 ##==============================================================================
 
-## For Direct-Regulation Categories (all measurable genes prefiltered) =========
-
-# universe_linkPeaks <- read.csv(here(inputCSV_merged_overlaps, "ALL_LinkPeaks_signif_FDR02.csv")) |>
-#     filter(!is.na(gene_id)) |>
-#     distinct()
-
 message("Loading raw links ...")
 
 ## List all files matching the specific clustering resolution level
@@ -82,20 +70,33 @@ message("Found ", length(lst_peak_files), " raw links files:")
 basename(lst_peak_files)
 
 
-message("====================================================================\n")
-message("Making Gene Universe for LinkPeaks Categories ...")
+message("Making MASTER Entrez Map (Used for initial data conversion)...")
 
-# message("Universe: LinkPeaks-based regulatory genes = ", nrow(universe_linkPeaks))
-# head(universe_linkPeaks)
-# 
-# entrez_map_linkPeaks <- bitr(
-#     unique(universe_linkPeaks$gene_id),
-#     fromType = "ENSEMBL",
-#     toType = "ENTREZID",
-#     OrgDb = org.Hs.eg.db
-# )
-# entrez_universe_linkPeaks <- unique(entrez_map_linkPeaks$ENTREZID)
-# message("Mapped to ", length(entrez_universe_linkPeaks), " Entrez IDs (LinkPeaks universe).")
+# Combine ALL gene_ids from ALL files to create the master map
+master_link_df <- lst_peak_files |>
+    purrr::map(~ read.csv(.x) |> select(cluster, gene_id)) |>
+    list_rbind()
+master_link_genes <- master_link_df |> 
+    distinct(gene_id) |> 
+    pull(gene_id)
+# table(master_link_df$cluster)
+# Astrocyte       Endo Excit.Thal Inhib.Thal      LHb.1    LHb.1.3  LHb.1.3.4 
+# 334319      48030    1231642     982150     308624      28244     242985 
+# LHb.2.7      LHb.4      LHb.7      MHb.1    MHb.1.2      MHb.2      MHb.3 
+# 484856     914230      45796     266637     187704     394229      27774 
+# Microglia      Oligo        OPC       Thal 
+# 126002     419582     167940      76426 
+# Perform the comprehensive mapping once
+master_entrez_map <- clusterProfiler::bitr(
+    master_link_genes,
+    fromType = "ENSEMBL",
+    toType = "ENTREZID",
+    OrgDb = org.Hs.eg.db,
+    drop = TRUE
+)
+
+
+## Declare functions ===========================================================
 
 load_entrez_cellType_universe <- function(
     clusterRes,  # Could be any of c("broad", "semi_broad", "mid")
@@ -104,51 +105,28 @@ load_entrez_cellType_universe <- function(
 {
     # clusterRes = "Broad"
     # lst_peak_paths = lst_peak_files
-    # ct="MHb.2"
-    # ct="MHb.1.2"
-    # ct="LHb.2"
-    # ct="Oligo"
-
+    # ct = "LHb.2"
+    
     message("Processing universe for clusterig resolution [", clusterRes, "]")
-    pattern_hb <- str_extract(ct, "(M|L)Hb")
+    #pattern_hb <- str_extract(ct, "(M|L)Hb")
     # Extract the target pattern from ALL file names (e.g., "Astrocyte", "MHb.2")
     target_patterns <- sub("^[^_]+_([^_]+)_.*$", "\\1", basename(lst_peak_paths))
 
-    ## Determine which files to merge based on the cell type (ct) ==============
-    
-    ## If pattern_hb is NA, it's an OTHER cell type (e.g., "Oligo")
-    if (is.na(pattern_hb)) { 
-        # Identify files matching the exact non-Hb cell type
-        is_target_file <- grepl(paste0("^", ct, "$"), target_patterns)
-    
-    } else { ## It is Habenula cell type (e.g., "MHb.2", "LHb.1.3")
+    ## Determine which files to merge based on the cell type (ct) 
+ 
+    if (clusterRes == "broad") { 
+        # Identify ALL Habenula files (MHb and LHb) to merge for the 'broad' universe
+        is_target_file <- grepl("^(M|L)Hb.*$", target_patterns)
         
-        if (clusterRes=="broad") { ## we only have one Hb cell-type
-            # Identify all "MHb" and "LHb" 
-            is_target_file <- grepl("^(M|L)Hb.*$", target_patterns)
-                        
-        } else if (clusterRes=="semi-broad") {
-            # Identify "MHb" or "LHb"
-            if (pattern_hb=="MHb") {
-                is_target_file <- grepl("^MHb.*$", target_patterns)
-                
-            } else if (pattern_hb=="LHb") {
-                is_target_file <- grepl("^LHb.*$", target_patterns)
-                
-            }
-        } else if (clusterRes=="mid") {
-            # Identify files matching the exact Habenula sub-cluster
-            is_target_file <- grepl(paste0("^", ct, "$"), target_patterns)
-            
-        } else {
-            stop("Invalid clusterRes value provided.")
-            
-        }
-
+    } else if (clusterRes == "semi_broad" || clusterRes == "mid") { 
+        # For semi_broad and mid, the universe is ALL linked genes (no filtering by ct)
+        is_target_file <- rep(TRUE, length(target_patterns))
+        
+    } else {
+        stop("Invalid clusterRes value provided.")
     }
-    ## =========================================================================
         
-    # load, combine and extract unique genes
+    ## load, combine and extract unique genes
     filtered_files <- lst_peak_paths[is_target_file]
     link_df <- filtered_files |>
         map(~ read.csv(.x) |> select(cluster, gene_id)) |>
@@ -158,7 +136,7 @@ load_entrez_cellType_universe <- function(
         distinct(gene_id) |> 
         pull(gene_id)
     # head(link_genes)
-    message("Total raw-links for [", ct , "] - ", clusterRes," level\n", length(link_genes))
+    #message("Total raw-links for [", ct , "] - ", clusterRes," level\n", length(link_genes))
     
     # === Entrez ID Mapping Section ===
     entrez_map <- clusterProfiler::bitr(
@@ -177,30 +155,6 @@ load_entrez_cellType_universe <- function(
 }
 
 
-## Combine all universes into one structured list
-
-lst_go_universes <- list(
-    Direct_Regulation = list(
-        df = universe_linkPeaks,
-        entrez_map = entrez_map_linkPeaks,
-        entrez_universe = entrez_universe_linkPeaks
-    ),
-    LinkPeaks_OCRs = list(
-        df = universe_linkPeaks,
-        entrez_map = entrez_map_linkPeaks,
-        entrez_universe = entrez_universe_linkPeaks
-    ),
-    High_Interest_DARs = list(
-        df = universe_linkPeaks, # temporal assignation (universe_dars)
-        entrez_map = entrez_map_linkPeaks, # entrez_map_dars
-        entrez_universe = entrez_universe_linkPeaks #entrez_universe_dars
-    )
-)
-
-names(lst_go_universes)
-# [1] "Direct_Regulation"  "LinkPeaks_OCRs"     "High_Interest_DARs"
-
-
 ## =============================================================================
 
 ## Function to Set go-universe depending on go-test category dataset
@@ -209,7 +163,7 @@ select_specific_go_universe <- function(test_name, go_universes) {
     
     if (test_name %in% c("Direct_Regulation_all", "Direct_Regulation_Enriched",
                          "Direct_Regulation_Depleted", "LinkPeaks_OCRs")) {
-        selected <- go_universes$Direct_Regulation
+        selected <- go_universes[[test_name]]
         
     # } else if (test_name == "High_Interest_DARs") {
     #     selected <- go_universes$High_Interest_DARs
@@ -251,7 +205,6 @@ as.data.frame(table(cCRE_df$type_classification, cCRE_df$category))
 # 4 classification-3         Non-significant  354
 # 5 classification-3            Unlinked DAR 1068
 
-
 go_directReg = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted")
 go_directReg_enriched = c("Linked_DAR (+) enriched")
 go_directReg_depleted = c("Linked_DAR (-) depleted")
@@ -267,6 +220,14 @@ lst_go_tests <- list(
     # "High_Interest_DARs" = go_only_DARs
 )
 
+# Initialize lst_go_universes with the master map (used by select_specific_go_universe)
+lst_go_universes <- purrr::map(names(lst_go_tests), ~list(entrez_map = master_entrez_map))
+names(lst_go_universes) <- names(lst_go_tests)
+names(lst_go_universes)
+# [1] "Direct_Regulation_Enriched" "Direct_Regulation_Depleted"
+# [3] "Direct_Regulation_all"      "LinkPeaks_OCRs"
+
+message("Master Map generated. Total unique Ensembl IDs mapped: ", nrow(master_entrez_map))
 
 
 ## =============================================================================
@@ -280,13 +241,6 @@ purrr::map(lst_go_tests, function(.x) {
     cCRE_universe_df <- cCRE_df |>
         dplyr::filter(category %in% .x) |>
         dplyr::filter(grepl("MHb|LHb", cell_type))
-    
-    # # Generate summary tables
-    # cat("\n--- Counts by Cell Type and Category ---\n")
-    # print(table(cCRE_universe_df$cell_type, cCRE_universe_df$category))
-    # 
-    # cat("\n--- Total Counts by Cell Type (Cluster) ---\n")
-    # print(table(cCRE_universe_df$cell_type))
     
     cat("\n--- Total Counts by Category ---\n")
     print(table(cCRE_universe_df$category))
@@ -313,8 +267,6 @@ map_int(list_df_cCRE, nrow)
 # 706                        657 
 # Direct_Regulation_all LinkPeaks_OCRs 
 # 1363                       1783 
-# High_Interest_DARs 
-# 1068 
 
 
 ##==============================================================================
@@ -396,71 +348,74 @@ make_DE_entrez_df <- function(
            
 
 ## =============================================================================
-## Loop over each GO test definition
+## Loop over each GO test by cell-type definition (UPDATED to use enrichGO per group)
 ## =============================================================================
 ## Run enrichment separately for each distinct value of DE_group
 ## Each GO enrichment is computed per cell-type (or per merged cell-type group) - not as one pooled dataset.
 
 ont_list <- c("CC","BP","MF")
 names(ont_list) <- ont_list
-# clustering_levels <- c("broad", "semi_broad", "mid")
-clustering_levels <- c("broad")
+clustering_levels <- c("broad", "semi_broad", "mid")
+# clustering_levels <- c("broad", "semi_broad")
 
 # Tests: names(lst_go_tests)
 # [1] "Direct_Regulation_Enriched" "Direct_Regulation_Depleted"
 # [3] "Direct_Regulation_all"      "LinkPeaks_OCRs"            
 # [5] "High_Interest_DARs"   
 
+# Initialize list to store all results across all levels and tests
+all_go_results <- list()
+
 for (test_go in names(lst_go_tests)) {
     # testing: test_go = names(lst_go_tests)[[1]]
-    
     
     message("\n==============================")
     message("Running GO enrichment for: ", test_go)
     message("==============================")
     
-    
-    # ## Select GO universe and mappings for this test
-    # go_univ <- select_specific_go_universe(test_name = test_go, go_universes = lst_go_universes)
-    # entrez_universe <- go_univ$entrez_universe
-    # entrez_map <- go_univ$entrez_map
-    ## my proposed function to load dynamically the go-universes +++++++++++++++
-    load_entrez_cellType_universe(
-        clusterRes = hb_merged_ct,
-        ct = "Hb",
-        lst_peak_files
-    )
-    ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-    ## Prepare category-specific subset (use the correct one per test)
+    ## Prepare category-specific subset
     cCRE_subset <- list_df_cCRE[[test_go]]
     if (is.null(cCRE_subset) || nrow(cCRE_subset) == 0) {
         message("No data found for ", test_go, " — skipping.")
         next
     }
     message("Subset size: ", nrow(cCRE_subset))
+    # Subset size: 706
     
-    ## prepare entrez df
+    ## Use the MASTER Entrez Map for initial gene ID conversion regardless of universe
+    go_univ <- select_specific_go_universe(test_name = test_go, go_universes = lst_go_universes)
+    ## Prepare entrez df
     DE_entrez <- make_DE_entrez_df(
         test_name = test_go,
         cCRE_df = cCRE_subset,
-        entrez_map = entrez_map
+        entrez_map = go_univ$entrez_map
     )
     
-    ## Merge Hb sub-types into broad groups (LHb, MHb) ==========================
-    for (hb_merged_ct in clustering_levels) {
+    ## Loop over clustering resolution levels  =================================
+    
+    for (res_level in clustering_levels) {
         
-        message("\n--- Running Hb merge mode: ", hb_merged_ct, " ---")
+        message("\n--- Running Clustering Resolution: ", res_level, " ---")
+        
         if (hb_merged_ct == "mid") message("Using full mid-resolution clustering - no merging applied.")
         
-        DE_entrez_tmp <- DE_entrez |>
+        # # Load the universe based on the current clustering resolution
+        # universe_map <- load_entrez_cellType_universe(
+        #     clusterRes = hb_merged_ct, 
+        #     lst_peak_paths = lst_peak_files
+        # )
+        # entrez_universe <- unique(universe_map$ENTREZID) # Dynamic universe
+        
+        ## Define Cell-Type Groups based on resolution
+        DE_entrez_grouped <- DE_entrez |>
             mutate(
                 cell_type_broad = case_when(
-                    hb_merged_ct == "broad" & grepl("^(LHb|MHb)", cell_type) ~ "Hb",
-                    hb_merged_ct == "semi_broad" & grepl("^LHb", cell_type) ~ "LHb",
-                    hb_merged_ct == "semi_broad" & grepl("^MHb", cell_type) ~ "MHb",
-                    hb_merged_ct == "mid" ~ cell_type,
-                    TRUE ~ cell_type
+                    res_level == "broad" & grepl("^(LHb|MHb)", cell_type) ~ "Hb",
+                    res_level == "semi_broad" & grepl("^LHb", cell_type) ~ "LHb",
+                    res_level == "semi_broad" & grepl("^MHb", cell_type) ~ "MHb",
+                    # # For mid, keep the original cell_type
+                    res_level == "mid" ~ cell_type,
+                    TRUE ~ cell_type # Fallback for non-Hb clusters if they were included
                 ),
                 DE_group = cell_type_broad
             ) |>
@@ -469,14 +424,38 @@ for (test_go in names(lst_go_tests)) {
             filter(n() >= 10) |> 
             ungroup()
         
-        message("Final DE_entrez dimensions: ", nrow(DE_entrez_tmp), " rows, ", 
-                length(unique(DE_entrez_tmp$DE_group)), " cell groups")
+        ## verifications
+        ## table(DE_entrez_grouped$DE_group)
+        # Astrocyte Excit.Thal Inhib.Thal      LHb.1  LHb.1.3.4    LHb.2.7      LHb.4 
+        # 18        102        192         25         10         69         77 
+        # MHb.1    MHb.1.2      MHb.2      Oligo 
+        # 27         11        102         17
+        # Filter the tibble to only show rows where DE_group is "LHb.1"
+        # DE_entrez_grouped |>
+        #     dplyr::filter(DE_group == "LHb.4") |>
+        #     head()
         
-        ## test after filtering
-        if (nrow(DE_entrez_tmp) == 0 || n_distinct(DE_entrez_tmp$DE_group) == 0) {
-            message("No groups with >=10 genes for ", test_go, " — skipping enrichment.")
+        if (nrow(DE_entrez_grouped) == 0 || n_distinct(DE_entrez_grouped$DE_group) == 0) {
+            message("No groups with >=10 genes for ", test_go, " at ", res_level, " — skipping.")
             next
         }
+        
+        # Extract list of unique cell groups/types to test
+        cell_groups_to_test <- unique(DE_entrez_grouped$DE_group)
+        
+        # **Dynamically load the GO Universe for the current resolution level**
+        # Since 'load_entrez_cellType_universe' function defines the universe 
+        # based on the clustering resolution ('broad' is Habenula-only, 'mid/semi_broad' is all), 
+        # I will use this resolution-specific universe for the enrichment of all groups
+        # defined at that resolution. This correctly implements the 'cell-type has its own go-universe'
+        
+        universe_map <- load_entrez_cellType_universe(
+            clusterRes = res_level, 
+            lst_peak_paths = lst_peak_files 
+        )
+        entrez_universe <- unique(universe_map$ENTREZID)
+        
+        message("Using resolution-specific universe of ", length(entrez_universe), " genes for **ALL** groups at [", res_level, "].")
         
         ## checks: diagnostics vs universe
         n_unique <- length(unique(DE_entrez_tmp$ENTREZID))
@@ -518,11 +497,11 @@ for (test_go in names(lst_go_tests)) {
             print(head(go_result$BP@compareClusterResult, 5))
             
             p <- dotplot(go_result$BP, showCategory = 15) +
-                ggtitle(paste(hb_merged_ct, " GO BP enrichment"), 
+                ggtitle(paste(res_level, " GO BP enrichment"), 
                         subtitle = paste("Category: ", test_go))
-                # ggtitle(paste("GO BP enrichment (", test_go, " — ", hb_merged_ct, ")", sep = ""))
+                # ggtitle(paste("GO BP enrichment (", test_go, " — ", res_level, ")", sep = ""))
             
-            plot_base <- sprintf("%s_GO_BP_%s_%s", hb_merged_ct, test_go, timestamp)
+            plot_base <- sprintf("%s_GO_BP_%s_%s", res_level, test_go, timestamp)
             plot_pdf <- here(plotDir, paste0(plot_base, ".pdf"))
             ggsave(plot_pdf, plot = p, width = 8, height = 6)
             message("Saved plots: ", plot_pdf)
@@ -532,19 +511,19 @@ for (test_go in names(lst_go_tests)) {
         }
         
         ## Save results
-        go_rds_name <- here(processedDir, sprintf("%s_GO_results_%s_%s.rds", hb_merged_ct, test_go, timestamp))
+        go_rds_name <- here(processedDir, sprintf("%s_GO_results_%s_%s.rds", res_level, test_go, timestamp))
         saveRDS(go_result, go_rds_name)
         message("Saved RDS: ", go_rds_name)
         
         ## Save summary table (flattened BP results if available)
         if (!is.null(go_result$BP) && nrow(go_result$BP@compareClusterResult) > 0) {
             bp_df <- go_result$BP@compareClusterResult
-            go_csv_name <- here(processedDir, sprintf("%s_GO_results_BP_%s_%s.csv", hb_merged_ct, test_go, timestamp))
+            go_csv_name <- here(processedDir, sprintf("%s_GO_results_BP_%s_%s.csv", res_level, test_go, timestamp))
             write.csv(bp_df, go_csv_name, row.names = FALSE)
             message("Saved CSV: ", go_csv_name)
         }
     
-        message("Completed GO enrichment for ", hb_merged_ct, " [test: ", test_go, "]")
+        message("Completed GO enrichment for ", res_level, " [test: ", test_go, "]")
 
     }
     
