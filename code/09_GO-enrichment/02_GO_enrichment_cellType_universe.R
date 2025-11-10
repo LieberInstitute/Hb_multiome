@@ -401,7 +401,7 @@ for (test_go in names(lst_go_tests)) {
     ## Loop over clustering resolution levels  =================================
     
     for (res_level in clustering_levels) {
-        
+        # res_level = "mid"
         message("\n--- Running Clustering Resolution: ", res_level, " ---")
         
         if (hb_merged_ct == "mid") message("Using full mid-resolution clustering - no merging applied.")
@@ -450,87 +450,95 @@ for (test_go in names(lst_go_tests)) {
         # Extract list of unique cell groups/types to test
         cell_groups_to_test <- unique(DE_entrez_grouped$DE_group)
         
-        # **Dynamically load the GO Universe for the current resolution level**
-        # Since 'load_entrez_cellType_universe' function defines the universe 
-        # based on the clustering resolution ('broad' is Habenula-only, 'mid/semi_broad' is all), 
-        # I will use this resolution-specific universe for the enrichment of all groups
-        # defined at that resolution. This correctly implements the 'cell-type has its own go-universe'
+        ## starts enrichment test ====>
         
-        universe_map <- load_entrez_cellType_universe(
-            clusterRes = res_level, 
-            lst_peak_paths = lst_peak_files 
-        )
-        entrez_universe <- unique(universe_map$ENTREZID)
+        # **Dynamically load the GO Universe for the current resolution level and cell-type**
+        # Run individual enrichGO tests per DE_group with its unique universe
         
-        message("Using resolution-specific universe of ", length(entrez_universe), " genes for **ALL** groups at [", res_level, "].")
-        
-        ## checks: diagnostics vs universe
-        n_unique <- length(unique(DE_entrez_tmp$ENTREZID))
-        shared <- length(intersect(entrez_universe, DE_entrez_tmp$ENTREZID))
-        message("Unique ENTREZ IDs: ", n_unique)
-        message("Overlap with universe: ", shared, 
-                " (", round(100 * shared / length(entrez_universe), 1), "%)")
-        
-        message("Running GO enrichment using background universe of ", length(entrez_universe), " genes...")
-        
-        ## GO terms summarized by broad cell types (LHb, MHb, Astrocyte, etc.) rather than by fine subclusters.
-        
-        suppressWarnings({
-            go_result <- map(ont_list, ~compareCluster(
-                ENTREZID ~ DE_group,
-                data = DE_entrez_tmp,
-                OrgDb = org.Hs.eg.db,
-                fun = enrichGO,
-                universe = entrez_universe,
-                ont = .x,
-                pAdjustMethod = "BH",
-                pvalueCutoff = 0.1,
-                qvalueCutoff = 0.2,
-                readable = TRUE
-            ))
+        go_result <- map(ont_list, function(ont_type) {
+            
+            # Run enrichGO for each group and ontology type
+            list_of_enrichments <- map(cell_groups_to_test, function(group_name) {
+                # group_name = "Excit.Thal"
+                # Critical Step!!! - Load the universe specific to the current 'group_name' and 'res_level'
+                universe_map <- load_entrez_cellType_universe(
+                    clusterRes = res_level, 
+                    ct = group_name, # specific cell group name. ge. LHb.4
+                    lst_peak_paths = lst_peak_files 
+                )
+                entrez_universe <- unique(universe_map$ENTREZID) 
+                
+                # Subset genes for the current group
+                genes_to_test <- DE_entrez_grouped |>
+                    filter(DE_group == group_name) |>
+                    pull(ENTREZID)
+                
+                # Check for empty universe or insufficient test genes
+                if(length(entrez_universe) == 0 || length(genes_to_test) < 5) {
+                    message(sprintf("  -> Skipping %s (%s genes, Universe size: %s)...", 
+                                    group_name, length(genes_to_test), length(entrez_universe)))
+                    return(NULL) 
+                }
+                
+                # Ensure the genes to test are present in the universe (required by enrichGO)
+                genes_to_test <- intersect(genes_to_test, entrez_universe)
+                
+                if(length(genes_to_test) < 5) return(NULL) # Skip if too few genes after filtering
+                
+                message(sprintf("Testing %s (%s genes/Universe %s) for %s...", 
+                                group_name, length(genes_to_test), 
+                                length(entrez_universe), ont_type))
+                
+                suppressWarnings({
+                    enrich_res <- enrichGO(
+                        gene = genes_to_test,
+                        OrgDb = org.Hs.eg.db,
+                        keyType = "ENTREZID",
+                        universe = entrez_universe, # Use the now-specific universe
+                        ont = ont_type,
+                        pAdjustMethod = "BH",
+                        pvalueCutoff = 0.1,
+                        qvalueCutoff = 0.2,
+                        readable = TRUE
+                    )
+                })
+                
+                # Tag the result with the group name before combining
+                if (!is.null(enrich_res) && nrow(enrich_res) > 0) {
+                    enrich_res@result$Cluster <- group_name
+                    # Only return the data frame result, merge_result can combine data frames
+                    return(enrich_res@result)
+                } else {
+                    return(NULL)
+                }
+            }) |> compact() # Remove NULL results (groups with no enrichment)
+            
+            # Combine all enrichments for this ontology into a single compareClusterResult
+            if (length(list_of_enrichments) > 0) {
+                # Combine all result data frames into one large data frame
+                combined_df <- do.call(rbind, list_of_enrichments)
+                # Create a *mock* compareClusterResult object from the combined data frame
+                final_result <- new("compareClusterResult",
+                                    .cluster.compare.result = combined_df,
+                                    fun = "enrichGO",
+                                    gene = list())
+                
+                # Rename the 'Cluster' column to 'DE_group' to match expectations for plotting
+                colnames(final_result@compareClusterResult)[
+                    colnames(final_result@compareClusterResult) == "Cluster"
+                ] <- "DE_group"
+                
+                return(final_result)
+            } else {
+                return(NULL)
+            }
+            
         })
+        ## ends enrichment test ====/
         
-        # go_result for diagnostics: how many GO terms per ontology
-        message("\nSummary of enriched terms:")
-        map2(names(go_result), go_result, function(nm, x) {
-            n_terms <- if (is.null(x)) 0 else nrow(x@compareClusterResult)
-            message(sprintf("%s: %s terms", nm, n_terms))
-        })
+        names(go_result) <- ont_list
         
-        
-        ## testing: Preview & visualize top results for Biological Process
-        if (!is.null(go_result$BP) && nrow(go_result$BP@compareClusterResult) > 0) {
-            message("Top enriched BP terms:")
-            print(head(go_result$BP@compareClusterResult, 5))
-            
-            p <- dotplot(go_result$BP, showCategory = 15) +
-                ggtitle(paste(res_level, " GO BP enrichment"), 
-                        subtitle = paste("Category: ", test_go))
-                # ggtitle(paste("GO BP enrichment (", test_go, " — ", res_level, ")", sep = ""))
-            
-            plot_base <- sprintf("%s_GO_BP_%s_%s", res_level, test_go, timestamp)
-            plot_pdf <- here(plotDir, paste0(plot_base, ".pdf"))
-            ggsave(plot_pdf, plot = p, width = 8, height = 6)
-            message("Saved plots: ", plot_pdf)
-            
-        } else {
-            message("No significant BP terms for ", test_go)
-        }
-        
-        ## Save results
-        go_rds_name <- here(processedDir, sprintf("%s_GO_results_%s_%s.rds", res_level, test_go, timestamp))
-        saveRDS(go_result, go_rds_name)
-        message("Saved RDS: ", go_rds_name)
-        
-        ## Save summary table (flattened BP results if available)
-        if (!is.null(go_result$BP) && nrow(go_result$BP@compareClusterResult) > 0) {
-            bp_df <- go_result$BP@compareClusterResult
-            go_csv_name <- here(processedDir, sprintf("%s_GO_results_BP_%s_%s.csv", res_level, test_go, timestamp))
-            write.csv(bp_df, go_csv_name, row.names = FALSE)
-            message("Saved CSV: ", go_csv_name)
-        }
-    
-        message("Completed GO enrichment for ", res_level, " [test: ", test_go, "]")
+
 
     }
     
