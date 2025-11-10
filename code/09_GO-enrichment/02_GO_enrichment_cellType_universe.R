@@ -377,7 +377,6 @@ check_go_results_validity <- function(go_result_list) {
 ont_list <- c("CC","BP","MF")
 names(ont_list) <- ont_list
 clustering_levels <- c("broad", "semi_broad", "mid")
-# clustering_levels <- c("broad", "semi_broad")
 
 # Tests: names(lst_go_tests)
 # [1] "Direct_Regulation_Enriched" "Direct_Regulation_Depleted"
@@ -418,14 +417,7 @@ for (test_go in names(lst_go_tests)) {
         # res_level = "mid"
         message("\n--- Running Clustering Resolution: ", res_level, " ---")
         
-        if (hb_merged_ct == "mid") message("Using full mid-resolution clustering - no merging applied.")
-        
-        # # Load the universe based on the current clustering resolution
-        # universe_map <- load_entrez_cellType_universe(
-        #     clusterRes = hb_merged_ct, 
-        #     lst_peak_paths = lst_peak_files
-        # )
-        # entrez_universe <- unique(universe_map$ENTREZID) # Dynamic universe
+        if (res_level == "mid") message("Using full mid-resolution clustering - no merging applied.")
         
         ## Define Cell-Type Groups based on resolution
         DE_entrez_grouped <- DE_entrez |>
@@ -548,8 +540,61 @@ for (test_go in names(lst_go_tests)) {
         
         names(go_result) <- ont_list
         
+        ## Save and plot results
         is_valid_go_result <- check_go_results_validity(go_result)
         
+        if (is_valid_go_result) {
+            message("\nValid GO enrichment results found. Proceeding with saving and plotting.")
+            
+            ## Save Full Results (All Ontologies: RDS)
+            go_rds_name <- here::here(processedDir, 
+                                      sprintf("%s_GO_results_ALL_ONTOLOGIES_%s_%s.rds", clustering_levels, test_go, timestamp))
+            saveRDS(go_result, go_rds_name)
+            message("Saved full GO results object (ALL ontologies): ", go_rds_name)
+            
+            ## Plot Biological Process (BP) Results (PDF)
+            # Check specifically for BP before plotting
+            if (!is.null(go_result$BP) && nrow(go_result$BP@compareClusterResult) > 0) {
+                message("Generating and saving GO BP dot plot...")
+                
+                p <- clusterProfiler::dotplot(go_result$BP, showCategory = 15) +
+                    ggplot2::ggtitle(paste(clustering_levels, " GO BP enrichment"),
+                                     subtitle = paste("Category:", test_go)) +
+                    ggplot2::theme(plot.title = ggplot2::element_text(face = "bold"))
+                
+                plot_base <- sprintf("%s_GO_BP_%s_%s", clustering_levels, test_go, timestamp)
+                plot_pdf <- here::here(plotDir, paste0(plot_base, ".pdf"))
+                
+                ggplot2::ggsave(plot_pdf, plot = p, width = 8, height = 6)
+                message("Saved plot: ", plot_pdf)
+            } else {
+                message("Skipping BP plot: No significant BP terms found.")
+            }
+            
+            ## Save Flattened Summary Tables (All Ontologies: CSV) - Ignore by now, I will fix later
+            
+        #     # Extract and combine results from all ontologies
+        #     go_summary_list <- purrr::map2(go_result, names(go_result), function(res_obj, ontology_name) {
+        #         if (is.null(res_obj) || !methods::is(res_obj, "compareClusterResult") || nrow(res_obj@compareClusterResult) == 0) {
+        #             return(NULL) # Return NULL to be filtered out later
+        #         }
+        #         return(
+        #             res_obj@compareClusterResult |>
+        #                 # Ensure the table is clean and add the ONTOLOGY column
+        #                 dplyr::mutate(ONTOLOGY = ontology_name)
+        #         )
+        #     })
+        #     
+        #     if (nrow(go_summary_df) > 0) {
+        #         go_csv_name <- here::here(processedDir, 
+        #                                   sprintf("%s_GO_results_Summary_%s_%s.csv", res_level, test_go, timestamp))
+        #         write.csv(go_summary_df, go_csv_name, row.names = FALSE)
+        #         message("Saved combined GO results table (BP, CC, MF): ", go_csv_name)
+        #     }
+            
+        } else {
+            message("Skipping saving and plotting: No significant GO terms found across any ontology.")
+        }
 
 
     }
@@ -558,91 +603,6 @@ for (test_go in names(lst_go_tests)) {
 
 
 message("GO-Enrichment completed!")
-
-
-
-## =========
-# 
-# # Remove NULL entries (e.g., CC = NULL)
-# go_result_valid <- discard(go_result, is.null)
-# 
-# ## convert to table & extract compareClusterResult from each valid ontology and tag with ontology name
-# compare_clus <- map2_dfr(go_result_valid, names(go_result_valid), function(x, nm) {
-#     x@compareClusterResult |> mutate(ONTOLOGY = nm)
-# })
-# 
-# # verify classes that survive
-# map(go_result, function(x) {
-#     if (is.null(x)) "NULL" else nrow(x@compareClusterResult)
-# })
-# 
-# compare_clus |> count(DE_class_cluster, ONTOLOGY)
-# # DE_class_cluster ONTOLOGY n
-# # 1   LHb-1-3-4_down       MF 8
-# # 2       LHb-2-7_up       BP 2
-# # 3       MHb-2_down       MF 2
-# 
-# ## Save 
-# f_name <- here(processedDir, sprintf("GO_compare_clus_%s.rds", peaks_classification_name))
-# saveRDS(compare_clus, f_name)
-# f_name <- here(processedDir, sprintf("GO_results_%s.csv", peaks_classification_name))
-# write.csv(compare_clus, f_name, row.names = FALSE)
-# 
-# 
-# #### dot plots ####
-# 
-# # Iterate over valid GO results (skip NULL or empty ones)
-# go_result_valid <- discard(go_result, function(x) {
-#     is.null(x) || nrow(x@compareClusterResult) == 0
-# })
-# 
-# length(go_result_valid)
-# map(go_result_valid, ~nrow(.@compareClusterResult))
-# # pdf(f_name, width = 10, height = 10)
-# # print(dotplot(go_result_valid[[2]])) # pass!
-# # dev.off()
-# 
-# f_name = here(processedDir, sprintf("GO_dotplot_%s.pdf", peaks_classification_name))
-# pdf(f_name, width = 10, height = 10)
-# 
-# ## one page per ontology 
-# if (length(go_result_valid) == 0) {
-#     message("No valid GO results to plot.")
-#     dev.off()
-# } else {
-#     walk2(go_result_valid, names(go_result_valid), function(x, nm) {
-#         # Check if the result for this ontology contains enough data to attempt plotting
-#         if(nrow(x@compareClusterResult) > 0) {
-#             
-#             message("Plotting ontology: ", nm, " (", nrow(x@compareClusterResult), " terms)")
-#             
-#             # Use tryCatch to prevent a single failing plot from crashing the entire PDF
-#             tryCatch({
-#                 
-#                 p <- dotplot(x,
-#                              x = "DE_class_cluster", 
-#                              showCategory = 5, 
-#                              label_format = 60) +
-#                     ggtitle(paste("GO Enrichment:", nm)) +
-#                     theme_bw(base_size = 12) +
-#                     theme(
-#                         axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 8),
-#                         axis.text.y = element_text(size = 8),
-#                         plot.title = element_text(hjust = 0.5, face = "bold")
-#                     )
-#                 print(p) 
-#             }, error = function(e) {
-#                 message("Skipping plot for ", nm, " due to error: ", conditionMessage(e))
-#             })
-#         } else {
-#             message("Skipping plot for ", nm, ": No terms remaining after filtering.")
-#         }
-#     })
-#     
-#     dev.off()
-#     
-# }
-
 
 
 
