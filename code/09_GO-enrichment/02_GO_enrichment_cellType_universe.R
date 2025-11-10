@@ -100,15 +100,15 @@ master_entrez_map <- clusterProfiler::bitr(
 
 load_entrez_cellType_universe <- function(
     clusterRes,  # Could be any of c("broad", "semi_broad", "mid")
-    ct,
+    ct,          # for specific cell type filtering
     lst_peak_paths) 
 {
     # clusterRes = "Broad"
     # lst_peak_paths = lst_peak_files
     # ct = "LHb.2"
     
-    message("Processing universe for clusterig resolution [", clusterRes, "]")
-    #pattern_hb <- str_extract(ct, "(M|L)Hb")
+    message("Processing universe for clusterig resolution [", clusterRes, "] and cell type [", ct, "]")
+    
     # Extract the target pattern from ALL file names (e.g., "Astrocyte", "MHb.2")
     target_patterns <- sub("^[^_]+_([^_]+)_.*$", "\\1", basename(lst_peak_paths))
 
@@ -118,26 +118,33 @@ load_entrez_cellType_universe <- function(
         # Identify ALL Habenula files (MHb and LHb) to merge for the 'broad' universe
         is_target_file <- grepl("^(M|L)Hb.*$", target_patterns)
         
-    } else if (clusterRes == "semi_broad" || clusterRes == "mid") { 
-        # For semi_broad and mid, the universe is ALL linked genes (no filtering by ct)
-        is_target_file <- rep(TRUE, length(target_patterns))
+    } else if (clusterRes == "semi_broad") { 
+        # Semi-Broad: Merge files that match the broad LHb or MHb group (e.g., 'LHb' or 'MHb')
+        # Here, 'ct' is expected to be 'LHb' or 'MHb'
+        pattern <- paste0("^", ct, ".*$")
+        is_target_file <- grepl(pattern, target_patterns)
+        
+    } else if (clusterRes == "mid") {
+        # Mid: Use ONLY the file corresponding to the specific cell type (ct)
+        is_target_file <- target_patterns == ct
         
     } else {
         stop("Invalid clusterRes value provided.")
+        
     }
         
     ## load, combine and extract unique genes
     filtered_files <- lst_peak_paths[is_target_file]
+    
     link_df <- filtered_files |>
         map(~ read.csv(.x) |> select(cluster, gene_id)) |>
         list_rbind()
-    # table(link_df$cluster)
+    
+    ## Filter by cluster if necessary (ensuring only linked genes relevant to 'ct' are used)
     link_genes <- link_df |> 
         distinct(gene_id) |> 
         pull(gene_id)
-    # head(link_genes)
-    #message("Total raw-links for [", ct , "] - ", clusterRes," level\n", length(link_genes))
-    
+
     # === Entrez ID Mapping Section ===
     entrez_map <- clusterProfiler::bitr(
         link_genes,
@@ -148,7 +155,7 @@ load_entrez_cellType_universe <- function(
     )
     entrez_universe <- unique(entrez_map$ENTREZID)
 
-    message("Mapped to ", length(entrez_universe), " Entrez IDs (DARs universe).")
+    message("Mapped to ", length(entrez_universe), " Entrez IDs (", ct, " specific universe)")
     
     return(entrez_map)
     
