@@ -353,6 +353,20 @@ make_DE_entrez_df <- function(
     
 }
            
+check_go_results_validity <- function(go_result_list) {
+    # Check if any ontology result is an S4 object and has rows in compareClusterResult
+    has_valid_data <- purrr::map_lgl(go_result_list, function(res_obj) {
+        if (is.null(res_obj)) {
+            return(FALSE)
+        }
+        # Check if it has the required slot and if that slot has more than 0 rows
+        return(methods::is(res_obj, "compareClusterResult") && 
+                   methods::slot(res_obj, "compareClusterResult") |> nrow() > 0)
+    })
+    
+    # Return TRUE if at least one ontology has valid data
+    return(any(has_valid_data))
+}
 
 ## =============================================================================
 ## Loop over each GO test by cell-type definition (UPDATED to use enrichGO per group)
@@ -533,7 +547,8 @@ for (test_go in names(lst_go_tests)) {
         ## ends enrichment test ====/
         
         names(go_result) <- ont_list
-        class(go_result)
+        
+        is_valid_go_result <- check_go_results_validity(go_result)
         
 
 
