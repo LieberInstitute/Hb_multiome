@@ -10,7 +10,7 @@ pair_path = here(
     'overlaps_linkPeak_DARs_classified_thr_CC0.3_thr_DAR0.1.csv'
 )
 out_path = here(
-    'processed-data', '10_MAGMA', 'first_test', 'input_gene_sets.csv'
+    'processed-data', '10_MAGMA', 'first_test', 'input_gene_sets.tsv'
 )
 
 read_csv(pair_path, show_col_types = FALSE) |>
@@ -28,6 +28,6 @@ read_csv(pair_path, show_col_types = FALSE) |>
     ) |>
     arrange(set_id) |>
     select(set_id, gene_id) |>
-    write_csv(out_path)
+    write_tsv(out_path)
 
 session_info()
