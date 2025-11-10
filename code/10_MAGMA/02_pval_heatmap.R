@@ -37,7 +37,7 @@ row_anno = HeatmapAnnotation(
     n_genes = anno_barplot(
         gene_sets_df |>
             group_by(cell_type) |>
-            summarise(n = n()) |>
+            summarise(n = length(unique(gene_id))) |>
             arrange(cell_type) |>
             pull(n)
     ),
@@ -48,7 +48,7 @@ col_anno = HeatmapAnnotation(
     n_genes = anno_barplot(
         gene_sets_df |>
             group_by(peak_category) |>
-            summarise(n = n()) |>
+            summarise(n = length(unique(gene_id))) |>
             arrange(peak_category) |>
             pull(n)
     ),
