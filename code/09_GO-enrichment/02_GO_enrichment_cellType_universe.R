@@ -457,8 +457,11 @@ for (test_go in names(lst_go_tests)) {
         
         go_result <- map(ont_list, function(ont_type) {
             
+            # Generate a named list of cell groups to ensure proper naming of results
+            named_groups <- set_names(cell_groups_to_test)
+            
             # Run enrichGO for each group and ontology type
-            list_of_enrichments <- map(cell_groups_to_test, function(group_name) {
+            list_of_enrichments <- map(named_groups, function(group_name) {
                 # group_name = "Excit.Thal"
                 # Critical Step!!! - Load the universe specific to the current 'group_name' and 'res_level'
                 universe_map <- load_entrez_cellType_universe(
@@ -503,11 +506,11 @@ for (test_go in names(lst_go_tests)) {
                     )
                 })
                 
-                # Tag the result with the group name before combining
+                # Tag the result with the group name (return full S4 to before combining)
                 if (!is.null(enrich_res) && nrow(enrich_res) > 0) {
                     enrich_res@result$Cluster <- group_name
                     # Only return the data frame result, merge_result can combine data frames
-                    return(enrich_res@result)
+                    return(enrich_res)
                 } else {
                     return(NULL)
                 }
@@ -515,14 +518,7 @@ for (test_go in names(lst_go_tests)) {
             
             # Combine all enrichments for this ontology into a single compareClusterResult
             if (length(list_of_enrichments) > 0) {
-                # Combine all result data frames into one large data frame
-                combined_df <- do.call(rbind, list_of_enrichments)
-                # Create a *mock* compareClusterResult object from the combined data frame
-                final_result <- new("compareClusterResult",
-                                    .cluster.compare.result = combined_df,
-                                    fun = "enrichGO",
-                                    gene = list())
-                
+                final_result <- clusterProfiler::merge_result(list_of_enrichments)
                 # Rename the 'Cluster' column to 'DE_group' to match expectations for plotting
                 colnames(final_result@compareClusterResult)[
                     colnames(final_result@compareClusterResult) == "Cluster"
@@ -537,6 +533,7 @@ for (test_go in names(lst_go_tests)) {
         ## ends enrichment test ====/
         
         names(go_result) <- ont_list
+        class(go_result)
         
 
 
