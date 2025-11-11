@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH -p katun
-#SBATCH --mem=40G
-#SBATCH --job-name=09_GO_Enrich
+#SBATCH -p shared
+#SBATCH --mem=20G
+#SBATCH --job-name=02_GO_enrichment_cellType_universe
 #SBATCH -c 2
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
-#SBATCH --array=1-3%3  # Run 3 tasks (1=broad, 2=semi_broad, 3=mid)
+#SBATCH --array=1-3%3
 
 # Define an array mapping task ID to resolution level
 # Task 1 -> broad
@@ -19,7 +19,7 @@ RESOLUTIONS=( "broad" "semi_broad" "mid" )
 RES_LEVEL=${RESOLUTIONS[${SLURM_ARRAY_TASK_ID}-1]}
 
 # Explicitly pipe script output to a log, using the resolution level in the name
-log_path=logs/09_GO_enrich_${RES_LEVEL}.txt
+log_path=logs/02_GO_enrichment_cellType_universe_${RES_LEVEL}.txt
 
 {
 set -e
@@ -41,9 +41,7 @@ module load conda_R/4.4.x
 ## List current modules for reproducibility
 module list
 
-# Execute the R script, passing the resolution level using the -r argument
-# NOTE: Replace 'your_go_enrichment_script.R' with your actual R file name
-Rscript your_go_enrichment_script.R -r $RES_LEVEL
+Rscript 02_GO_enrichment_cellType_universe.R -r $RES_LEVEL
 
 echo "**** Job ends ****"
 date
