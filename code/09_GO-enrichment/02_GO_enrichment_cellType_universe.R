@@ -568,13 +568,28 @@ for (test_go in names(lst_go_tests)) {
             message("Generating and saving GO BP dot plot...")
             
             bp_df <- bp_result@compareClusterResult # access df
-            bp_df$GeneRatio <- as.character(bp_df$GeneRatio)
-            bp_df_clean <- bp_df[!is.na(bp_df$GeneRatio) & bp_df$GeneRatio != "", ]
+            cols_to_keep <- c("DE_group", "Description", "Count", "p.adjust", "GeneRatio")
+            bp_df_clean <- bp_df |>
+                # select only the columns needed for plotting
+                select(dplyr::any_of(cols_to_keep)) |>
+                mutate(GeneRatio = as.character(GeneRatio)) |>
+                filter(!is.na(GeneRatio) & GeneRatio != "")
+            
+            # ## --- Summary printout ---
+            # message("-------------------------------------------------------")
+            # message("Summary of current GO BP enrichment:")
+            # message("Total enriched terms: ", nrow(bp_df))
+            # message("Distinct clusters (DE_groups): ", length(unique(bp_df$DE_group))) 
+            # message("Top 5 enriched terms by lowest p.adjust:")
+            # print(bp_df |> arrange(p.adjust) |> head(5) |> 
+            #           select(DE_group, Description, GeneRatio, p.adjust))
+            # message("-------------------------------------------------------")
             
             if (nrow(bp_df_clean) == 0) {
                 message("Warning: All GO BP results were removed during cleanup; cannot plot.")
                 next # Skip plotting and move to next resolution/test if inside a loop
             } 
+            
             p <- ggplot(bp_df_clean, 
                         aes(x = DE_group, 
                             y = reorder(Description, Count), 
