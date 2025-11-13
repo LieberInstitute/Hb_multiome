@@ -514,7 +514,7 @@ for (test_go in names(lst_go_tests)) {
                     universe = entrez_universe, # Use the now-specific universe
                     ont = ont_type,
                     pAdjustMethod = "BH",
-                    pvalueCutoff = 0.1,
+                    pvalueCutoff = 1,
                     qvalueCutoff = 0.2,
                     readable = TRUE
                 )
