@@ -328,6 +328,15 @@ plot_data_list_3 <- purrr::map(subsetted_list_df, ~ .x |>
                ((CCscore >  thr_CC & logFC <  thr_logFC) |
                     (CCscore < -thr_CC & logFC >  thr_logFC)) ~ "Discordant Linked DAR",
            
+           # ============================================================
+           # 3. Linked OCR (+) enriched & depleted (gene strength)
+           #    correlated but NOT a DAR
+           # ============================================================
+           # Asjusted categories correlated AND none DARs.  It will replace "Linked OCR"
+           sig_CC & !sig_DAR &
+               (CCscore > thr_CC) ~ "Linked OCR (+) enriched",
+           sig_CC & !sig_DAR &
+               (CCscore < -thr_CC) ~ "Linked OCR (-) depleted",
            
            # ============================================================
            # 4. Unlinked DAR (DAR but no correlation)
