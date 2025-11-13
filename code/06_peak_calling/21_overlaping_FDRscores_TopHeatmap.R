@@ -275,18 +275,14 @@ thr_fdr = 0.2
 
 ## Categorize peaks overlaps ===================================================
 
-# (1) Standard classification (Cynthia): classification-1 - removed
-
 # (2) Leo's classification adapted to our current analysis: classification-2
 peaks_classification2 = c("cell-specific cCRE (+)", "cell-specific cCRE (-)", "Linked OCR", "Unlinked DAR", "Non-significant")
         
 # (3) Cynthia+Nick classification adapted to our current analysis: classification-3
-peaks_classification3 = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted", "Linked OCR", "(-) Linked (+) DAR enriched", "Unlinked DAR", "Non-significant")
+peaks_classification3 = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted", 
+                          "Linked (+) OCR enriched", "Linked (-) OCR_depleted", 
+                          "(-) Linked (+) DAR enriched", "Unlinked DAR", "Non-significant")
 
-# ## Add peaks-classification name
-# subsetted_list_df <- purrr::map(subsetted_list_df, ~ 
-#                                     .x |> mutate(type_classification = "classification-2")  # you can change dynamically later
-# )
 
 ## (A) Classification-2 logic  =================================================
 plot_data_list_2 <- purrr::map(subsetted_list_df, ~ .x |> 
@@ -295,7 +291,7 @@ plot_data_list_2 <- purrr::map(subsetted_list_df, ~ .x |>
         sig_DAR = fdr_dars < thr_DAR,      # significant accessibility
         category = case_when(
             sig_CC & sig_DAR & logFC > thr_logFC  ~ "cell-specific cCRE (+)",      # positively correlated & accessible
-            sig_CC & sig_DAR & logFC < -thr_logFC  ~ "cell-specific cCRE (-)",     # negatively correlated & less accessible
+            sig_CC & sig_DAR & logFC < thr_logFC  ~ "cell-specific cCRE (-)",      # negatively correlated & less accessible
             # Neural category was used to identify "Significantly linked, Significant DAR, but logFC is too small", when set log_FC=0 we do not need it any more
             # sig_CC & sig_DAR                ~ "Neutral cCRE",        # when other conditions not met  
             sig_CC & !sig_DAR               ~ "Linked OCR",          # correlated, not DAR
@@ -311,17 +307,34 @@ plot_data_list_3 <- purrr::map(subsetted_list_df, ~ .x |>
    mutate(
        sig_CC  = abs(CCscore) > thr_CC,
        sig_DAR = fdr_dars < thr_DAR,
+
        category = case_when(
+           # ============================================================
+           # 1. Concordant Linked DAR (+) enriched & depleted
+           # ============================================================
            # Primary interest: Concordant Linked DAR Categories plus secondary interest categories
-           sig_CC & sig_DAR & logFC > thr_logFC   ~ "Linked_DAR (+) enriched",   # positive correlation + open chromatin
-           sig_CC & sig_DAR & logFC < -thr_logFC  ~ "Linked_DAR (-) depleted",   # negative correlation + closed chromatin
-           # This "New" category of Non-Concordant Categories (Negative/Positive logFC mismatch with CCscore sign)
+           sig_CC & sig_DAR &
+               (CCscore > thr_CC) & (logFC > thr_logFC)  ~ "Linked_DAR (+) enriched", 
+           sig_CC & sig_DAR &
+               (CCscore < -thr_CC) & (logFC < thr_logFC) ~ "Linked_DAR (-) depleted",   # negative correlation + closed chromatin
+           
+           # ============================================================
+           # 2. Discordant Linked DAR (opposite signs!)
+           # ============================================================
+           # Non-Concordant Category (Negative/Positive logFC mismatch with CCscore sign)
            # - is rare and usually analyzed with co-accessibility or gene-silencing experiments
-           # - suggest Distant Regulation / These DARs may be driving the differential expression of non-coding RNAs 
-           (sig_CC < -thr_CC) & (sig_DAR & logFC > thr_logFC) ~ "(-) Linked (+) DAR enriched", 
+           # - suggest Distant Regulation or these DARs may be driving the differential expression of non-coding RNAs 
+           sig_CC & sig_DAR &
+               ((CCscore >  thr_CC & logFC <  thr_logFC) |
+                    (CCscore < -thr_CC & logFC >  thr_logFC)) ~ "Discordant Linked DAR",
+           
+           
+           # ============================================================
+           # 4. Unlinked DAR (DAR but no correlation)
+           # ============================================================
            # Secondary interest categories
-           sig_CC & !sig_DAR                      ~ "Linked OCR",
            !sig_CC & sig_DAR                      ~ "Unlinked DAR",
+           
            # Nobody cares 
            TRUE                                   ~ "Non-significant"
        ),
