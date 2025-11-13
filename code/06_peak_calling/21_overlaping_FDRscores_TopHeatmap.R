@@ -193,8 +193,11 @@ make_scattered_plot_dars_cc_real <- function(
         "cell-specific cCRE (-)"   = "#800080",
         "Linked_DAR (+) enriched"  = "#E64B35FF",  # reuse similar red for CSC+Nick version
         "Linked_DAR (-) depleted"  = "#800080",    # reuse purple for CSC+Nick version
-        "(-) Linked (+) DAR enriched" ="#0424DB",  # rare concordance
-        "Linked OCR"               = "#00A087FF",
+        ## "(-) Linked (+) DAR enriched" ="#0424DB",  # rare concordance
+        ## "Linked OCR"               = "#00A087FF",
+        "Discordant Linked DAR"    = "#0424DB",  
+        "Linked OCR (+) enriched"  = "#00A087FF",
+        "Linked OCR (-) depleted"  = "#3B7000FF",
         "Unlinked DAR"             = "#3C5488FF",
         "Non-significant"          = "lightgrey"
     )
@@ -204,8 +207,11 @@ make_scattered_plot_dars_cc_real <- function(
         "cell-specific cCRE (-)",
         "Linked_DAR (+) enriched",
         "Linked_DAR (-) depleted",
-        "(-) Linked (+) DAR enriched", 
-        "Linked OCR",
+        #"(-) Linked (+) DAR enriched", 
+        #"Linked OCR",
+        "Discordant Linked DAR",
+        "Linked OCR (+) enriched",
+        "Linked OCR (-) depleted",
         "Unlinked DAR",
         "Non-significant"
     )
@@ -280,9 +286,9 @@ peaks_classification2 = c("cell-specific cCRE (+)", "cell-specific cCRE (-)", "L
         
 # (3) Cynthia+Nick classification adapted to our current analysis: classification-3
 peaks_classification3 = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted", 
-                          "Linked (+) OCR enriched", "Linked (-) OCR_depleted", 
-                          "(-) Linked (+) DAR enriched", "Unlinked DAR", "Non-significant")
-
+                          "Discordant Linked DAR",
+                          "Linked OCR (+) enriched", "Linked OCR (-) depleted", 
+                          "Non-significant")
 
 ## (A) Classification-2 logic  =================================================
 plot_data_list_2 <- purrr::map(subsetted_list_df, ~ .x |> 
