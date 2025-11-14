@@ -1,25 +1,25 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=25G
-#SBATCH --job-name=01_first_test_template
+#SBATCH --mem=10G
+#SBATCH --job-name=05_gene_set_analysis
 #SBATCH -c 1
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
-#SBATCH --array=1-21%20
+#SBATCH --array=1-15%10
 
 #   Using pre-computed gene-level statistics from the habenula pilot project,
 #   just run the gene-set analysis step from MAGMA
 
 ## Define loops and appropriately subset each variable for the array task ID
-all_gwas=(MDD MDD2019 OUD panic SCZ SUD SUD2020)
-gwas=${all_gwas[$(( $SLURM_ARRAY_TASK_ID / 3 % 7 ))]}
+all_gwas=(MDD MDD2019 panic SCZ SUD2020)
+gwas=${all_gwas[$(( $SLURM_ARRAY_TASK_ID / 3 % 5 ))]}
 
 all_cell_type_group=(broad semi_broad mid)
 cell_type_group=${all_cell_type_group[$(( $SLURM_ARRAY_TASK_ID / 1 % 3 ))]}
 
 ## Explicitly pipe script output to a log
-log_path=../../processed-data/10_MAGMA/logs/01_first_test_template_${gwas}_${cell_type_group}_${SLURM_ARRAY_TASK_ID}.txt
+log_path=../../processed-data/10_MAGMA/logs/05_gene_set_analysis_${gwas}_${cell_type_group}_${SLURM_ARRAY_TASK_ID}.txt
 
 {
 set -e
@@ -50,17 +50,11 @@ case ${gwas} in
     MDD2019)
         gene_results_path=${hb_gwas_dir}/mdd2019edinburgh/PGC_UKB_depression_genome-wide.genes.raw
         ;;
-    OUD)
-        #   TODO: don't have path yet
-        ;;
     panic)
         gene_results_path=${hb_gwas_dir}/panic2019/pgc-panic2019.genes.raw
         ;;
     SCZ)
         gene_results_path=${hb_gwas_dir}/scz2022/PGC3_SCZ_wave3.european.autosome.public.v3.ensembl.genes.raw
-        ;;
-    SUD)
-        #   Might remove this
         ;;
     SUD2020)
         gene_results_path=${hb_gwas_dir}/sud2020op/opi.DEPvEXP_EUR.noAF.genes.raw
