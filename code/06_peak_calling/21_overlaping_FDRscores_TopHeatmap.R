@@ -470,14 +470,13 @@ make_heatmap_cRE <- function(
         cluster_rows = FALSE, # FALSE to respect row_order_final
         cluster_cols = FALSE,
         main = paste0( 
-            #"Top ", top_genes_heatmap, " Genes per Cell Type by Max |CCscore|",   
-            #"\n",
             subtitle_content
         ),
         fontsize_row = 7,
         fontsize_col = 8,
         show_rownames = TRUE,
-        show_colnames = TRUE
+        show_colnames = TRUE,
+        silent = TRUE 
     )
     return(h1)
     
@@ -524,16 +523,16 @@ prepare_top_genes_heatmap <- function(data_list,
 top_genes_heatmap = 5
 plot_data_full_df <- plot_data_full_df |> filter(type_classification=="classification-3")
 table(plot_data_full_df$type_classification)
-# classification-2 classification-3 
-# 0             3205
 table(plot_data_full_df$category)
 
 categories_to_plot <- c(
     "Linked_DAR (+) enriched",
     "Linked_DAR (-) depleted",
-    "(-) Linked (+) DAR enriched",
-    "Linked OCR",
-    "Unlinked DAR"
+    "Linked OCR (+) enriched",
+    "Linked OCR (-) depleted",
+    "Discordant Linked DAR",
+    "Unlinked DAR",
+    "Non-significant"
 )
 
 
@@ -557,7 +556,6 @@ for (cat_cRE in categories_to_plot) {
         message("[", cat_cRE,"] Total unique top genes: ", length(top_genes))
     }
         
-    
     # Prepare the data for dcast (ensure no duplicates and correct type)
     wide_data_clean <- plot_data_full_df |>
         dplyr::filter(gene_name %in% top_genes) |>
@@ -601,24 +599,29 @@ for (cat_cRE in categories_to_plot) {
     cat_name <- case_when(
         cat_cRE == "Linked_DAR (+) enriched" ~ "Linked_DAR_enriched",
         cat_cRE == "Linked_DAR (-) depleted" ~ "Linked_DAR_depleted",
-        cat_cRE == "(-) Linked (+) DAR enriched" ~ "NegLinked_DAR_enriched",
-        cat_cRE == "Linked OCR" ~ "Linked OCR", 
-        cat_cRE == "Unlinked DAR" ~ "Unlinked DAR"
+        cat_cRE == "Linked OCR (+) enriched" ~ "Linked_OCR_enriched",
+        cat_cRE == "Linked OCR (-) depleted" ~ "Linked_OCR_depleted",
+        cat_cRE == "Discordant Linked DAR" ~ "Discordant_Linked_DAR",
+        cat_cRE == "Unlinked DAR" ~ "Unlinked_DAR",
+        cat_cRE == "Non-significant" ~ "Non_significant"
     )
     f_name <- paste0("heatmap_", cat_name, "_CCscore_top", top_genes_heatmap, "genes.pdf")
     f_name = here(plotDir, f_name)
     pdf(f_name, width = 5, height = 8)
     
     subtitle_content <- paste0(
-        cat_cRE, "\n", 
-        "Total Genes Plotted for: ", nrow(heatmap_mat_ordered) 
+        cat_cRE, "/n", 
+        "Plotted ", nrow(heatmap_mat_ordered), " OCRs" 
     )
     
     # plot the heatmap with cRE
     tmp_h1 <- make_heatmap_cRE(
         heatmap_mat_ordered,
         subtitle_content)
-    print(tmp_h1)
+    # print(tmp_h1)
+    # this is the correct print method for pheatmap
+    grid::grid.newpage()
+    grid::grid.draw(tmp_h1$gtable)
     
     dev.off()
 
