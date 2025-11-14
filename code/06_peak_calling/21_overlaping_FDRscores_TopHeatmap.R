@@ -189,29 +189,29 @@ make_scattered_plot_dars_cc_real <- function(
     
     # Define the full palette (master color map) - we have 2 categories
     color_map <- c(
-        "cell-specific cCRE (+)"   = "#E64B35FF",
-        "cell-specific cCRE (-)"   = "#800080",
+        # "cell-specific cCRE (+)"   = "#E64B35FF",
+        # "cell-specific cCRE (-)"   = "#800080",
         "Linked_DAR (+) enriched"  = "#E64B35FF",  # reuse similar red for CSC+Nick version
         "Linked_DAR (-) depleted"  = "#800080",    # reuse purple for CSC+Nick version
         ## "(-) Linked (+) DAR enriched" ="#0424DB",  # rare concordance
         ## "Linked OCR"               = "#00A087FF",
-        "Discordant Linked DAR"    = "#0424DB",  
         "Linked OCR (+) enriched"  = "#00A087FF",
         "Linked OCR (-) depleted"  = "#3B7000FF",
+        "Discordant Linked DAR"    = "#0424DB",  
         "Unlinked DAR"             = "#3C5488FF",
         "Non-significant"          = "lightgrey"
     )
     
     desired_order <- c(
-        "cell-specific cCRE (+)",
-        "cell-specific cCRE (-)",
+        # "cell-specific cCRE (+)",
+        # "cell-specific cCRE (-)",
         "Linked_DAR (+) enriched",
         "Linked_DAR (-) depleted",
         #"(-) Linked (+) DAR enriched", 
         #"Linked OCR",
-        "Discordant Linked DAR",
         "Linked OCR (+) enriched",
         "Linked OCR (-) depleted",
+        "Discordant Linked DAR",
         "Unlinked DAR",
         "Non-significant"
     )
