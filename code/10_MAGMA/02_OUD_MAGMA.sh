@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=25G
-#SBATCH --job-name=04_OUD_MAGMA
+#SBATCH --job-name=02_OUD_MAGMA
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../processed-data/10_MAGMA/logs/04_OUD_MAGMA.txt
-#SBATCH -e ../../processed-data/10_MAGMA/logs/04_OUD_MAGMA.txt
+#SBATCH -o ../../processed-data/10_MAGMA/logs/02_OUD_MAGMA.txt
+#SBATCH -e ../../processed-data/10_MAGMA/logs/02_OUD_MAGMA.txt
 
 set -e
 
