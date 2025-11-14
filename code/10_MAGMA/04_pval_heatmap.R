@@ -34,8 +34,16 @@ sig_cutoff = 0.05
 
 dir.create(plot_dir, showWarnings = FALSE, recursive = TRUE)
 
+#   MAGMA outputs have a variable amount of header lines. Auto-detect then
+#   header length and read in dynamically
+read_table_auto_skip = function(path, check_lines = 100) {
+    n_skip = sum(grepl('^#', readLines(path, n = check_lines)))
+    clean_df = read_table(path, skip = n_skip, show_col_types = FALSE)
+    return(clean_df)
+}
+
 #   Read in and clean MAGMA results
-results_df = read_table(results_path, skip = 3, show_col_types = FALSE) |>
+results_df = read_table_auto_skip(results_path) |>
     mutate(
         cell_type = str_extract(FULL_NAME, '^[^_]+'),
         peak_category = str_extract(FULL_NAME, '(?<=_).+'),
