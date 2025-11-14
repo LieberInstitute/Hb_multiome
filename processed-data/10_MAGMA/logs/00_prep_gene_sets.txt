@@ -1,10 +1,10 @@
 **** Job starts ****
-Mon Nov 10 02:37:31 PM EST 2025
+Fri Nov 14 11:25:39 AM EST 2025
 **** JHPCE info ****
 User: neagles
-Job id: 24080524
+Job id: 24142473
 Job name: 00_prep_gene_sets
-Node name: compute-168
+Node name: compute-169
 Task id: 
 Loading conda_R/4.5
 
@@ -35,7 +35,7 @@ here() starts at /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2025-11-10
+ date     2025-11-14
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   NA
 
@@ -87,4 +87,4 @@ here() starts at /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Mon Nov 10 02:37:34 PM EST 2025
+Fri Nov 14 11:25:41 AM EST 2025
