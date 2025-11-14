@@ -3,17 +3,36 @@ library(here)
 library(ComplexHeatmap)
 library(RColorBrewer)
 library(sessioninfo)
+library(getopt)
+
+# Import command-line parameters
+spec <- matrix(
+    c(
+        c("gwas", "cell_type_group"),
+        c("g", "c"),
+        rep("1", 2),
+        rep("character", 2),
+        rep("Add variable description here", 2)
+    ),
+    ncol = 5
+)
+opt <- getopt(spec)
+
+message("Using the following parameters:")
+print(opt)
 
 results_path = here(
-    'processed-data', '10_MAGMA', 'first_test', 'first_test.gsa.out'
+    'processed-data', '10_MAGMA', opt$gwas,
+    sprintf('%s.gsa.out', opt$cell_type_group)
 )
 gene_sets_path = here(
-    'processed-data', '10_MAGMA', 'first_test', 'input_gene_sets.tsv'
+    'processed-data', '10_MAGMA', 'gene_sets',
+    sprintf('%s.tsv', opt$cell_type_group)
 )
-plot_dir = here('plots', '10_MAGMA')
+plot_dir = here('plots', '10_MAGMA', opt$gwas)
 sig_cutoff = 0.05
 
-dir.create(plot_dir, showWarnings = FALSE)
+dir.create(plot_dir, showWarnings = FALSE, recursive = TRUE)
 
 #   Read in and clean MAGMA results
 results_df = read_table(results_path, skip = 3, show_col_types = FALSE) |>
@@ -87,7 +106,10 @@ anno_mat = ifelse(
     ''
 )
 
-pdf(file.path(plot_dir, 'test_pval_heatmap.pdf'), width = 5)
+pdf(
+    file.path(plot_dir, sprintf('%s_pval_heatmap.pdf', opt$cell_type_group)),
+    width = 5
+)
 Heatmap(
     results_mat,
     name = '-log10(p)',
