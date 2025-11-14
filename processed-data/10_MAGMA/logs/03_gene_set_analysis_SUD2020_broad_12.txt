@@ -1,0 +1,58 @@
+**** Job starts ****
+Fri Nov 14 11:26:38 AM EST 2025
+**** JHPCE info ****
+User: neagles
+Job id: 24142486
+Job name: 03_gene_set_analysis
+Node name: compute-168
+Task id: 12
+Loading LIBD SLURM module for magma/1.10
+
+Currently Loaded Modules:
+  1) JHPCE_ROCKY9_DEFAULT_ENV   2) JHPCE_tools/3.0   3) magma/1.10
+
+ 
+
+Welcome to MAGMA v1.10 (linux/s)
+Using flags:
+	--gene-results /dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/13_MAGMA/GWAS/sud2020op/opi.DEPvEXP_EUR.noAF.genes.raw
+	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv gene-col=gene_id set-col=set_id
+	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SUD2020/broad
+
+Start time is 11:26:38, Friday 14 Nov 2025
+
+Reading file /dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/13_MAGMA/GWAS/sud2020op/opi.DEPvEXP_EUR.noAF.genes.raw... 
+	24906 genes read from file
+Loading gene-set annotation...
+Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv... 
+	detected 2 variables in file
+	using variable: gene_id (gene ID)
+	using variable: set_id (set ID)
+	WARNING: gene set Endo_Linked_DAR_enriched contains no genes defined in genotype data
+	39 gene-set definitions read from file
+	found 38 gene sets containing genes defined in genotype data (containing a total of 2194 unique genes)
+Preparing variables for analysis...
+	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
+	WARNING: discarding gene set 'OPC_Discordant_Linked_DAR' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv, variance is too low (set contains only one gene used in analysis)
+	WARNING: discarding gene set 'OPC_Linked_OCR_enriched' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv, variance is too low (set contains only one gene used in analysis)
+	WARNING: discarding gene set 'Thal_Linked_OCR_depleted' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv, variance is too low (set contains only one gene used in analysis)
+	truncating covariate values more than 5 standard deviations from the mean
+	total variables available for analysis: 35 gene sets
+
+Parsing model specifications...
+Inverting gene-gene correlation matrix...
+	processing block 1 of 26	processing block 2 of 26	processing block 3 of 26	processing block 4 of 26	processing block 5 of 26	processing block 6 of 26	processing block 7 of 26	processing block 8 of 26	processing block 9 of 26	processing block 10 of 26	processing block 11 of 26	processing block 12 of 26	processing block 13 of 26	processing block 14 of 26	processing block 15 of 26	processing block 16 of 26	processing block 17 of 26	processing block 18 of 26	processing block 19 of 26	processing block 20 of 26	processing block 21 of 26	processing block 22 of 26	processing block 23 of 26	processing block 24 of 26	processing block 25 of 26	processing block 26 of 26                                                                                                                   Performing regression analysis...
+	testing direction: one-sided, positive (sets), two-sided (covar)
+	conditioning on internal variables:
+		gene size, log(gene size)
+		gene density, log(gene density)
+		sample size, log(sample size)
+		inverse mac, log(inverse mac)
+	analysing individual variables
+
+	analysing single-variable models (number of models: 35)
+                                                                                                                   	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SUD2020/broad.gsa.out
+
+End time is 11:27:03, Friday 14 Nov 2025 (elapsed: 00:00:25)
+**** Job ends ****
+Fri Nov 14 11:27:03 AM EST 2025
