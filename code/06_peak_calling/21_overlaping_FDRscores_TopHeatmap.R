@@ -189,12 +189,8 @@ make_scattered_plot_dars_cc_real <- function(
     
     # Define the full palette (master color map) - we have 2 categories
     color_map <- c(
-        # "cell-specific cCRE (+)"   = "#E64B35FF",
-        # "cell-specific cCRE (-)"   = "#800080",
         "Linked_DAR (+) enriched"  = "#E64B35FF",  # reuse similar red for CSC+Nick version
         "Linked_DAR (-) depleted"  = "#800080",    # reuse purple for CSC+Nick version
-        ## "(-) Linked (+) DAR enriched" ="#0424DB",  # rare concordance
-        ## "Linked OCR"               = "#00A087FF",
         "Linked OCR (+) enriched"  = "#00A087FF",
         "Linked OCR (-) depleted"  = "#3B7000FF",
         "Discordant Linked DAR"    = "#0424DB",  
@@ -203,12 +199,8 @@ make_scattered_plot_dars_cc_real <- function(
     )
     
     desired_order <- c(
-        # "cell-specific cCRE (+)",
-        # "cell-specific cCRE (-)",
         "Linked_DAR (+) enriched",
         "Linked_DAR (-) depleted",
-        #"(-) Linked (+) DAR enriched", 
-        #"Linked OCR",
         "Linked OCR (+) enriched",
         "Linked OCR (-) depleted",
         "Discordant Linked DAR",
@@ -280,33 +272,12 @@ thr_fdr = 0.2
 
 
 ## Categorize peaks overlaps ===================================================
-
-# # (2) Leo's classification adapted to our current analysis: classification-2
-# peaks_classification2 = c("cell-specific cCRE (+)", "cell-specific cCRE (-)", "Linked OCR", "Unlinked DAR", "Non-significant")
-        
 # (3) Cynthia+Nick classification adapted to our current analysis: classification-3
+
 peaks_classification3 = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted", 
                           "Discordant Linked DAR",
                           "Linked OCR (+) enriched", "Linked OCR (-) depleted", 
                           "Non-significant")
-
-# ## (A) Classification-2 logic  =================================================
-# plot_data_list_2 <- purrr::map(subsetted_list_df, ~ .x |> 
-#     mutate(
-#         sig_CC  = abs(CCscore) > thr_CC,   # significant correlation
-#         sig_DAR = fdr_dars < thr_DAR,      # significant accessibility
-#         category = case_when(
-#             sig_CC & sig_DAR & logFC > thr_logFC  ~ "cell-specific cCRE (+)",      # positively correlated & accessible
-#             sig_CC & sig_DAR & logFC < thr_logFC  ~ "cell-specific cCRE (-)",      # negatively correlated & less accessible
-#             # Neural category was used to identify "Significantly linked, Significant DAR, but logFC is too small", when set log_FC=0 we do not need it any more
-#             # sig_CC & sig_DAR                ~ "Neutral cCRE",        # when other conditions not met  
-#             sig_CC & !sig_DAR               ~ "Linked OCR",          # correlated, not DAR
-#             !sig_CC & sig_DAR               ~ "Unlinked DAR",        # DAR, no correlation
-#             TRUE                            ~ "Non-significant"      # everything else
-#         ),
-#         type_classification = "classification-2"
-#     )
-# )
 
 ## (B) Classification-3 logic  =================================================
 plot_data_list_3 <- purrr::map(subsetted_list_df, ~ .x |> 
@@ -374,16 +345,9 @@ plot_data_full_df$type_classification <- factor(
 ## Build a summary 
 
 message("========= Summary of candidate RE by category ============\n")
-
-# message("========= classification-2 ============\n")
-# plt_tmp <- plot_data_full_df |> filter(type_classification=="classification-2")
-# plt_tmp |> count(category, name = "n")
-# plt_tmp |> count("n") #1967
 message("========= classification-3 ============\n")
 plt_tmp2 <- plot_data_full_df |> filter(type_classification=="classification-3")
 plt_tmp2 |> count(category, name = "n")
-
-#table(plot_data_full_df$cell_type) # includes both categories
 
 ## testing in one category only
 hb_related_df <- plt_tmp2 |>
@@ -407,28 +371,6 @@ f_name <- here(processedDir, paste0("overlaps_linkPeak_DARs_classified_thr_CC", 
 write.csv(plot_data_full_df, f_name, row.names = FALSE)
 
 message("Saved linkPeak_DARs overlapings with categories!")
-
-## Plot both classifications
-# plot_data_list_2 → list of 15 data frames 
-# peaks_classification3 → character vectors (5 elements each)
-
-# scattered_plt_cell_type_real_values_2 <- purrr::map(
-#     plot_data_list_2,
-#     ~ make_scattered_plot_dars_cc_real(
-#         plot_data = .x,
-#         categories_to_plot = peaks_classification2,
-#         top_genes = top_genes_scattered_plt,
-#         thr_CC = thr_CC,
-#         thr_DAR = thr_DAR,
-#         thr_logFC = thr_logFC,
-#         fdr_cutoff = thr_fdr
-#     )
-# )
-# #scattered_plt_cell_type_real_values_2[2]
-# f_name = here(plotDir, paste0("ScatteredPlots_2sharedCT_class2_FDR", FDR, ".pdf"))
-# pdf(f_name, width = 8, height = 6)
-# walk(scattered_plt_cell_type_real_values_2, print)
-# dev.off()
 
 scattered_plt_cell_type_real_values_3 <- purrr::map(
     plot_data_list_3,
