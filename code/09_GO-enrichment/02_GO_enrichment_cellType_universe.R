@@ -46,6 +46,7 @@ message("Processing job array for resolution level: ", res_level_arg)
 
 # Define the single-element vector for the inner loop
 res_level <- c(res_level_arg)
+# test: res_level = "mid"
 
 # ==============================================================================
 
@@ -110,7 +111,7 @@ master_link_genes <- master_link_df |>
     pull(gene_id)
 
 message("Total raw links by cell-type ....")
-table(master_link_df$cluster)
+as.data.frame(table(master_link_df$cluster))
 
 # Perform the comprehensive mapping once
 master_entrez_map <- clusterProfiler::bitr(
@@ -200,17 +201,12 @@ load_entrez_cellType_universe <- function(
 
 select_specific_go_universe <- function(test_name, go_universes) {
     
-    if (test_name %in% c("Direct_Regulation_all", "Direct_Regulation_Enriched",
-                         "Direct_Regulation_Depleted", "LinkPeaks_OCRs")) {
+    if (test_name %in% c("Grouped_linked_DARs", "Grouped_linked_OCR", "Grouped_all_Linked_DARs_OCRs",
+                         "Linked_DARs_enriched", "Linked_DARs_depleted", "Linked_OCR_enriched", "Linked_OCR_depleted",
+                         "Discordant_linked_DARs"
+    )) {
         selected <- go_universes[[test_name]]
-        
-    # } else if (test_name == "High_Interest_DARs") {
-    #     selected <- go_universes$High_Interest_DARs
-    #     
-    # } else {
-    #     stop(paste("Unknown test category:", test_name))
     }
-    
     return(selected)
 
 }
@@ -227,7 +223,6 @@ message("Loading cCRE and ORC file ...")
 f_name = "overlaps_linkPeak_DARs_classified_thr_CC0.3_thr_DAR0.1.csv"
 ## load raw overlaps and 2-shared ct overlaps 
 cCRE_df <- read.csv(here(inputCSV_merged_classified, f_name))
-#nrow(cCRE_df) # 6410
 #head(cCRE_df)
 #table(cCRE_df$type_classification)
 
@@ -237,34 +232,36 @@ nrow(cCRE_df) # 3205
 ## validation
 unique(cCRE_df$type_classification)
 as.data.frame(table(cCRE_df$type_classification, cCRE_df$category))
-# Var1                    Var2 Freq
-# 1 classification-3              Linked OCR  420
-# 2 classification-3 Linked_DAR (-) depleted  657
-# 3 classification-3 Linked_DAR (+) enriched  706
-# 4 classification-3         Non-significant  354
-# 5 classification-3            Unlinked DAR 1068
 
-go_directReg = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted")
-go_directReg_enriched = c("Linked_DAR (+) enriched")
-go_directReg_depleted = c("Linked_DAR (-) depleted")
-go_all_Linked = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted", "Linked OCR")
-go_linked_OCRs = "Linked OCR"
+go_grp_linked_DARs = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted")
+go_grp_linked_OCR = c("Linked OCR (+) enriched", "Linked OCR (-) depleted")
+go_grp_all_Linked = c(go_grp_linked_DARs, go_grp_linked_OCR)
+
+go_linked_DARs_enriched = c("Linked_DAR (+) enriched")
+go_linked_DARs_depleted = c("Linked_DAR (-) depleted")
+
+go_linked_OCR_enriched = "Linked OCR (+) enriched"
+go_linked_OCR_depleted = "Linked OCR (-) depleted"
+
+go_discordant_linked_DARs = "Discordant Linked DAR"
+
 # go_only_DARs = "Unlinked DAR"
 
 lst_go_tests <- list(
-    "Direct_Regulation_Enriched" = go_directReg_enriched,
-    "Direct_Regulation_Depleted" = go_directReg_depleted,  
-    "Direct_Regulation_all" = go_directReg,
-    "LinkPeaks_OCRs" = go_all_Linked #,
-    # "High_Interest_DARs" = go_only_DARs
+    "Grouped_linked_DARs" = go_grp_linked_DARs,
+    "Grouped_linked_OCR" = go_grp_linked_OCR,
+    "Grouped_all_Linked_DARs_OCRs" = go_grp_all_Linked,    
+    "Linked_DARs_enriched" = go_linked_DARs_enriched, 
+    "Linked_DARs_depleted" = go_linked_DARs_depleted, 
+    "Linked_OCR_enriched" = go_linked_OCR_enriched,    
+    "Linked_OCR_depleted" = go_linked_OCR_depleted,
+    "Discordant_linked_DARs" = go_discordant_linked_DARs
 )
 
 # Initialize lst_go_universes with the master map (used by select_specific_go_universe)
 lst_go_universes <- purrr::map(names(lst_go_tests), ~list(entrez_map = master_entrez_map))
 names(lst_go_universes) <- names(lst_go_tests)
 names(lst_go_universes)
-# [1] "Direct_Regulation_Enriched" "Direct_Regulation_Depleted"
-# [3] "Direct_Regulation_all"      "LinkPeaks_OCRs"
 
 message("Master Map generated. Total unique Ensembl IDs mapped: ", nrow(master_entrez_map))
 
@@ -301,11 +298,12 @@ list_df_cCRE <- lst_go_tests |>
     })
 
 ## Check summary of list content
-map_int(list_df_cCRE, nrow)
+as.data.frame(map_int(list_df_cCRE, nrow))
 
 
 ##==============================================================================
 ## Make DE_entrez data frame accordingly with the go-test to compute
+
 
 make_DE_entrez_df <- function(
         test_name, # ge: "Direct_Regulation_all"
@@ -313,75 +311,41 @@ make_DE_entrez_df <- function(
         entrez_map)
     {
     
-    if (test_name=="Direct_Regulation_all" || test_name=="Direct_Regulation_Enriched" || test_name=="Direct_Regulation_Depleted") {
-     
-        ########## Test "Direct_Regulation_all (s) " ##########
-        
-        DE_entrez <- cCRE_df |>
-            # use this if duplicates are expected (because multiple peaks link to the same gene)
-            left_join(entrez_map,
-                      by = c("gene_id" = "ENSEMBL"), 
-                      relationship = "many-to-many") |> 
-            filter(!is.na(ENTREZID)) |>
-            mutate(
-                ## keep the original category direction
-                category_direction = case_when(
-                    category == "Linked_DAR (+) enriched" ~ "up",
-                    category == "Linked_DAR (-) depleted" ~ "down"
-            )) |>
-            distinct(ENTREZID, .keep_all = TRUE)
-        
-    } else if ((test_name=="LinkPeaks_OCRs")) {
-        
-        ########## Test "LinkPeaks_OCRs" ########## 
-        
-        DE_entrez <- cCRE_df |>
-            left_join(entrez_map,
-                      by = c("gene_id" = "ENSEMBL"),
-                      relationship = "many-to-many") |>
-            filter(!is.na(ENTREZID)) |>
-            mutate(
-                category_direction = case_when(
-                    category == "Linked_DAR (+) enriched" ~ "up",
-                    category == "Linked_DAR (-) depleted" ~ "down",
-                    category == "Linked OCR" & CCscore > 0 ~ "up",
-                    category == "Linked OCR" & CCscore < 0 ~ "down"
-                ),
-                cell_type_clean = gsub("\\.", "-", cell_type)# ,
-            ) |>
-            distinct(ENTREZID, .keep_all = TRUE)
-    
-    } else if ((test_name=="High_Interest_DARs")) {
-    
-        ########## Test "DARs" ########## 
-        
-        DE_entrez <- cCRE_df |>
-            left_join(entrez_map, by = c("gene_id" = "ENSEMBL")) |> #,
-                      #relationship = "many-to-many") |> it is ignored in newer versions
-            filter(!is.na(ENTREZID)) |>
-            mutate(
-                category_direction = case_when(
-                    category == "Unlinked DAR" & logFC > 0  ~ "up",
-                    category == "Unlinked DAR" & logFC < 0  ~ "down",
-                    TRUE ~ "neutral"
-                ),
-                cell_type_clean = gsub("\\.", "-", cell_type)# ,
-            ) |>
-            distinct(ENTREZID, .keep_all = TRUE)
-        
-    } else {
-        
-        stop("Invalid test_name. Must be one of exixting tests!")
-        
-    }
+    DE_entrez <- cCRE_df |>
+        left_join(entrez_map, by = c("gene_id" = "ENSEMBL")) |>
+        filter(!is.na(ENTREZID)) |>
+        mutate(
+            category_direction = case_when(
+                # --- Linked DARs (direct differential accessibility) ---
+                category == "Linked_DAR (+) enriched" ~ "up",
+                category == "Linked_DAR (-) depleted" ~ "down",
+                
+                # --- Linked OCRs (direction from correlation) ---
+                category == "Linked OCR (+) enriched" ~ "up",
+                category == "Linked OCR (-) depleted" ~ "down",
+                
+                # --- Grouped categories, infer direction by CCscore ---
+                category %in% c("Grouped_linked_DARs", "Grouped_all_Linked_DARs_OCRs",
+                                "Grouped_linked_OCR") & CCscore > 0 ~ "up",
+                category %in% c("Grouped_linked_DARs", "Grouped_all_Linked_DARs_OCRs",
+                                "Grouped_linked_OCR") & CCscore < 0 ~ "down",
+                
+                # --- Discordant linked DARs ---
+                category == "Discordant Linked DAR" ~ "discordant",
+                
+                TRUE ~ "neutral"
+            ),
+            cell_type_clean = gsub("\\.", "-", cell_type)
+        ) |>
+        distinct(ENTREZID, .keep_all = TRUE)
     
     return(DE_entrez)
-    
+
 }
   
          
 check_go_results_validity <- function(go_result_list) {
-    # Check if any ontology result is an S4 object and has rows in compareClusterResult
+    # Check if any ontology result is an S4 object and has rows in the integrate df with go results
     has_valid_data <- purrr::map_lgl(go_result_list, function(res_obj) {
         if (is.null(res_obj)) {
             return(FALSE)
@@ -416,7 +380,6 @@ for (test_go in names(lst_go_tests)) {
         next
     }
     message("Subset size: ", nrow(cCRE_subset))
-    # Subset size: 706
     
     ## Use the MASTER Entrez Map for initial gene ID conversion regardless of universe
     go_univ <- select_specific_go_universe(test_name = test_go, go_universes = lst_go_universes)
@@ -575,20 +538,13 @@ for (test_go in names(lst_go_tests)) {
                 mutate(GeneRatio = as.character(GeneRatio)) |>
                 filter(!is.na(GeneRatio) & GeneRatio != "")
             
-            # ## --- Summary printout ---
-            # message("-------------------------------------------------------")
-            # message("Summary of current GO BP enrichment:")
-            # message("Total enriched terms: ", nrow(bp_df))
-            # message("Distinct clusters (DE_groups): ", length(unique(bp_df$DE_group))) 
-            # message("Top 5 enriched terms by lowest p.adjust:")
-            # print(bp_df |> arrange(p.adjust) |> head(5) |> 
-            #           select(DE_group, Description, GeneRatio, p.adjust))
-            # message("-------------------------------------------------------")
-            
             if (nrow(bp_df_clean) == 0) {
                 message("Warning: All GO BP results were removed during cleanup; cannot plot.")
                 next # Skip plotting and move to next resolution/test if inside a loop
             } 
+            
+
+            
             
             p <- ggplot(bp_df_clean, 
                         aes(x = DE_group, 
