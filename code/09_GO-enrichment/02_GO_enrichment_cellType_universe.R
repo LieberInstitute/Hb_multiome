@@ -551,9 +551,27 @@ for (test_go in names(lst_go_tests)) {
             write.csv(bp_df_clean, bp_csv_full, row.names = FALSE)
             message("Saved full GO BP enrichment table: ", bp_csv_full)
             
-
+            ## filter top10 terms by DE_group
+            bp_df_top10 <- bp_df_clean |>
+                arrange(DE_group, p.adjust) |>
+                group_by(DE_group) |>
+                slice_head(n = 10) |>
+                ungroup() |>
+                select(DE_group, Description, Count, p.adjust, GeneRatio)
+            print(
+                bp_df_top10 |>
+                    dplyr::arrange(DE_group, p.adjust) |>
+                    as.data.frame() |> head(n=5)
+            )
+            bp_csv_top10 <- here::here(
+                processedDir,
+                sprintf("top10_%s_GO_BP_%s_%s.csv", res_level, test_go, timestamp)
+            )
+            write.csv(bp_df_top10, bp_csv_top10, row.names = FALSE)
+            message("Saved GO BP top-10 table per DE_group: ", bp_csv_top10)
             
-            p <- ggplot(bp_df_clean, 
+            ## Plot top 10 terms by group
+            p <- ggplot(bp_df_top10, 
                         aes(x = DE_group, 
                             y = reorder(Description, Count), 
                             size = Count, 
@@ -564,12 +582,12 @@ for (test_go in names(lst_go_tests)) {
                     title = paste(res_level, "GO BP enrichment"),
                     subtitle = paste("Category:", test_go),
                     x = "Cell Type",
-                    y = "GO Biological Process"
+                    y = "Top 10 GO Biological Process"
                 ) +
                 theme_minimal(base_size = 11) +
                 theme(plot.title = element_text(face = "bold"))
                 
-            plot_base <- sprintf("%s_GO_BP_%s_%s", res_level, test_go, timestamp)
+            plot_base <- sprintf("top10_%s_GO_BP_%s_%s", res_level, test_go, timestamp)
             plot_pdf <- here(plotDir, paste0(plot_base, ".pdf"))
             ggsave(plot_pdf, plot = p, width = 8, height = 6)
             message("Saved plot: ", plot_pdf)
