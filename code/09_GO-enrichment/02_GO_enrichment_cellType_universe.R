@@ -543,8 +543,15 @@ for (test_go in names(lst_go_tests)) {
                 next # Skip plotting and move to next resolution/test if inside a loop
             } 
             
-
+            ## Save full BP CSV enrichment results
+            bp_csv_full <- here::here(
+                processedDir,
+                sprintf("%s_GO_BP_fullResults_%s_%s.csv", res_level, test_go, timestamp)
+            )
+            write.csv(bp_df_clean, bp_csv_full, row.names = FALSE)
+            message("Saved full GO BP enrichment table: ", bp_csv_full)
             
+
             
             p <- ggplot(bp_df_clean, 
                         aes(x = DE_group, 
