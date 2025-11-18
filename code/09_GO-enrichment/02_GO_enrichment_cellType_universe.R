@@ -519,7 +519,7 @@ for (test_go in names(lst_go_tests)) {
         
         ## Save Full Results (All Ontologies: RDS)
         go_rds_name <- here::here(processedDir, 
-                                  sprintf("%s_GO_results_ALL_ONTOLOGIES_%s_%s.rds", res_level, test_go))
+                                  sprintf("%s_GO_results_ALL_ONTOLOGIES_%s.rds", res_level, test_go))
         saveRDS(go_result, go_rds_name)
         message("Saved full GO results object (ALL ontologies): ", go_rds_name)
         
@@ -546,7 +546,7 @@ for (test_go in names(lst_go_tests)) {
             ## Save full BP CSV enrichment results
             bp_csv_full <- here::here(
                 processedDir,
-                sprintf("%s_GO_BP_fullResults_%s_%s.csv", res_level, test_go)
+                sprintf("%s_GO_BP_fullResults_%s.csv", res_level, test_go)
             )
             write.csv(bp_df_clean, bp_csv_full, row.names = FALSE)
             message("Saved full GO BP enrichment table: ", bp_csv_full)
@@ -571,7 +571,7 @@ for (test_go in names(lst_go_tests)) {
             
             bp_csv_top10 <- here::here(
                 processedDir,
-                sprintf("top10_%s_GO_BP_%s_%s.csv", res_level, test_go)
+                sprintf("top10_%s_GO_BP_%s.csv", res_level, test_go)
             )
             write.csv(bp_df_top10, bp_csv_top10, row.names = FALSE)
             message("Saved GO BP top-10 table per DE_group: ", bp_csv_top10)
@@ -593,7 +593,7 @@ for (test_go in names(lst_go_tests)) {
                 theme_minimal(base_size = 11) +
                 theme(plot.title = element_text(face = "bold"))
                 
-            plot_base <- sprintf("top10_%s_GO_BP_%s_%s", res_level, test_go)
+            plot_base <- sprintf("top10_%s_GO_BP_%s", res_level, test_go)
             plot_pdf <- here(plotDir, paste0(plot_base, ".pdf"))
             ggsave(plot_pdf, plot = p, width = 8, height = 8)
             message("Saved plot: ", plot_pdf)
