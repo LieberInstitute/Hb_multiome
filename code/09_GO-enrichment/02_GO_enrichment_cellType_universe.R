@@ -557,12 +557,18 @@ for (test_go in names(lst_go_tests)) {
                 group_by(DE_group) |>
                 slice_head(n = 10) |>
                 ungroup() |>
+                mutate(
+                    Description = stringr::str_trunc(Description, width = 50, side = "right")
+                ) |>
+                slice_head(n = 50) |>   # limit total rows to 50
                 select(DE_group, Description, Count, p.adjust, GeneRatio)
+            
             print(
                 bp_df_top10 |>
                     dplyr::arrange(DE_group, p.adjust) |>
                     as.data.frame() |> head(n=5)
             )
+            
             bp_csv_top10 <- here::here(
                 processedDir,
                 sprintf("top10_%s_GO_BP_%s_%s.csv", res_level, test_go, timestamp)
@@ -589,7 +595,7 @@ for (test_go in names(lst_go_tests)) {
                 
             plot_base <- sprintf("top10_%s_GO_BP_%s_%s", res_level, test_go, timestamp)
             plot_pdf <- here(plotDir, paste0(plot_base, ".pdf"))
-            ggsave(plot_pdf, plot = p, width = 8, height = 6)
+            ggsave(plot_pdf, plot = p, width = 8, height = 8)
             message("Saved plot: ", plot_pdf)
         }
 
