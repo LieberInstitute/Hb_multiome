@@ -531,11 +531,15 @@ for (test_go in names(lst_go_tests)) {
             message("Generating and saving GO BP dot plot...")
             
             bp_df <- bp_result@compareClusterResult # access df
-            cols_to_keep <- c("DE_group", "Description", "Count", "p.adjust", "GeneRatio")
+            cols_to_keep <- c("DE_group", "Description", "Count", "p.adjust", "qvalue", "GeneRatio", "BgRatio", "geneID")
             bp_df_clean <- bp_df |>
-                # select only the columns needed for plotting
+                # select columns needed for plotting and csv file
                 select(dplyr::any_of(cols_to_keep)) |>
-                mutate(GeneRatio = as.character(GeneRatio)) |>
+                mutate(
+                    GeneRatio = as.character(GeneRatio) # ,
+                    # Extract gene names (clusterProfiler stores "/"-separated ENTREZ IDs, already readable=TRUE)
+                    #Genes = strsplit(as.character(geneID), "/")
+                ) |>
                 filter(!is.na(GeneRatio) & GeneRatio != "")
             
             if (nrow(bp_df_clean) == 0) {
@@ -559,6 +563,8 @@ for (test_go in names(lst_go_tests)) {
                 ungroup() |>
                 mutate(
                     Description = stringr::str_trunc(Description, width = 50, side = "right")
+                    ## Add and expand gene list 
+                    # Genes = strsplit(as.character(geneID), "/")
                 ) |>
                 slice_head(n = 50) |>   # limit total rows to 50
                 select(DE_group, Description, Count, p.adjust, GeneRatio)
@@ -569,12 +575,12 @@ for (test_go in names(lst_go_tests)) {
                     as.data.frame() |> head(n=5)
             )
             
-            bp_csv_top10 <- here::here(
-                processedDir,
-                sprintf("top10_%s_GO_BP_%s.csv", res_level, test_go)
-            )
-            write.csv(bp_df_top10, bp_csv_top10, row.names = FALSE)
-            message("Saved GO BP top-10 table per DE_group: ", bp_csv_top10)
+            # bp_csv_top10 <- here::here(
+            #     processedDir,
+            #     sprintf("top10_%s_GO_BP_%s.csv", res_level, test_go)
+            # )
+            # write.csv(bp_df_top10, bp_csv_top10, row.names = FALSE)
+            # message("Saved GO BP top-10 table per DE_group: ", bp_csv_top10)
             
             ## Plot top 10 terms by group or restricted to maximun 50 rows
             p <- ggplot(bp_df_top10, 
