@@ -557,16 +557,16 @@ for (test_go in names(lst_go_tests)) {
             
             ## filter top10 terms by DE_group
             bp_df_top10 <- bp_df_clean |>
-                arrange(DE_group, p.adjust, qvalue) |>
+                arrange(DE_group, p.adjust) |>
                 group_by(DE_group) |>
                 slice_head(n = 10) |>
                 ungroup() |>
+                arrange(p.adjust) |>    # sort by global signifance 
+                slice_head(n = 50) |>   # limit total rows to 50
                 mutate(
                     Description = stringr::str_trunc(Description, width = 50, side = "right")
-                    ## Add and expand gene list 
                     # Genes = strsplit(as.character(geneID), "/")
                 ) |>
-                slice_head(n = 50) |>   # limit total rows to 50
                 select(DE_group, Description, Count, p.adjust, qvalue, GeneRatio)
             
             print(
@@ -575,7 +575,7 @@ for (test_go in names(lst_go_tests)) {
                     as.data.frame() |> head(n=5)
             )
             
-            ## Plot top 10 terms by group or restricted to maximun 50 rows
+            ## Plot top 50 terms withing groups
             p <- ggplot(bp_df_top10, 
                         aes(x = DE_group, 
                             y = reorder(Description, -log10(p.adjust)), # Reorders by smallest p.adjust
@@ -587,7 +587,7 @@ for (test_go in names(lst_go_tests)) {
                     title = paste(res_level, "GO BP enrichment"),
                     subtitle = paste("Category:", test_go),
                     x = "Cell Type",
-                    y = "Top 10 GO Biological Process"
+                    y = "Top 50 Enriched GO Biological Process"
                 ) +
                 theme_minimal(base_size = 11) +
                 theme(plot.title = element_text(face = "bold"))
@@ -595,27 +595,6 @@ for (test_go in names(lst_go_tests)) {
             plot_base <- sprintf("top10_pvalue_%s_GO_BP_%s", res_level, test_go)
             plot_pdf <- here(plotDir, paste0(plot_base, ".pdf"))
             ggsave(plot_pdf, plot = p, width = 8, height = 8)
-            message("Saved plot: ", plot_pdf)
-            
-            p2 <- ggplot(bp_df_top10, 
-                         aes(x = DE_group, 
-                             y = reorder(Description, -log10(qvalue)), 
-                             size = Count, 
-                             color = p.adjust)) +
-                geom_point() +
-                scale_color_gradient(low = "red", high = "blue", name = "q-value") + # here, should we print the qvalue??
-                labs(
-                    title = paste(res_level, "GO BP enrichment"),
-                    subtitle = paste("Category:", test_go),
-                    x = "Cell Type",
-                    y = "Top 10 GO Biological Process"
-                ) +
-                theme_minimal(base_size = 11) +
-                theme(plot.title = element_text(face = "bold"))
-            
-            plot_base <- sprintf("top10_q_value_%s_GO_BP_%s", res_level, test_go)
-            plot_pdf <- here(plotDir, paste0(plot_base, ".pdf"))
-            ggsave(plot_pdf, plot = p2, width = 8, height = 8)
             message("Saved plot: ", plot_pdf)
             
         }
