@@ -1,0 +1,3 @@
+"DE_group","Description","Count","p.adjust","qvalue","GeneRatio","BgRatio","geneID"
+"Oligo","nuclear receptor-mediated glucocorticoid signaling pathway",2,0.107077632186866,0.100229801861153,"2/25","12/11584","NEDD4/BMAL1"
+"Oligo","nuclear receptor-mediated corticosteroid signaling pathway",2,0.107077632186866,0.100229801861153,"2/25","13/11584","NEDD4/BMAL1"

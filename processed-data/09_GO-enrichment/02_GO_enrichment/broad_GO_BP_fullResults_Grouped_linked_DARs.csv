@@ -1,0 +1,5 @@
+"DE_group","Description","Count","p.adjust","qvalue","GeneRatio","BgRatio","geneID"
+"Excit.Thal","negative regulation of intracellular signal transduction",11,0.200603300448009,0.197583365127926,"11/71","499/11672","PAQR3/FHL2/PLAUR/FLCN/TRIM67/RACK1/WNK2/DUSP16/ARHGAP35/ASXL1/DEPDC5"
+"Excit.Thal","positive regulation of catabolic process",10,0.200603300448009,0.197583365127926,"10/71","438/11672","SMURF1/WIPI1/FLCN/PIP4K2A/CPT1A/TRIM67/ALKBH5/RACK1/PIAS1/DEPDC5"
+"Oligo","nuclear receptor-mediated glucocorticoid signaling pathway",2,0.055562777763059,0.0490670827381276,"2/19","12/11584","NEDD4/BMAL1"
+"Oligo","nuclear receptor-mediated corticosteroid signaling pathway",2,0.055562777763059,0.0490670827381276,"2/19","13/11584","NEDD4/BMAL1"
