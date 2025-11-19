@@ -599,7 +599,7 @@ for (test_go in names(lst_go_tests)) {
                 theme_minimal(base_size = 11) +
                 theme(plot.title = element_text(face = "bold"))
                 
-            plot_base <- sprintf("top10_pvalue_%s_GO_BP_%s", res_level, test_go)
+            plot_base <- sprintf("top50_pvalue_%s_GO_BP_%s", res_level, test_go)
             plot_pdf <- here(plotDir, paste0(plot_base, ".pdf"))
             ggsave(plot_pdf, plot = p, width = 8, height = 8)
             message("Saved plot: ", plot_pdf)
