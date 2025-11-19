@@ -68,6 +68,12 @@ processedDir <- here(
     "09_GO-enrichment",
     "02_GO_enrichment"
 )
+processedDir_RDS <- here(
+    "processed-data",
+    "09_GO-enrichment",
+    "02_GO_enrichment",
+    "RDS_objects"
+)
 plotDir <- here(
     "plots",
     "09_GO-enrichment",
@@ -75,6 +81,7 @@ plotDir <- here(
 )
 
 if (!dir.exists(processedDir)) { dir.create(processedDir, recursive = TRUE) }
+if (!dir.exists(processedDir_RDS)) { dir.create(processedDir_RDS, recursive = TRUE) }
 if (!dir.exists(plotDir)) { dir.create(plotDir, recursive = TRUE) }
 
 timestamp <- format(Sys.time(), "%Y%m%d_%H%M")
@@ -518,7 +525,7 @@ for (test_go in names(lst_go_tests)) {
         message("\nValid GO enrichment results found. Proceeding with saving and plotting.")
         
         ## Save Full Results (All Ontologies: RDS)
-        go_rds_name <- here::here(processedDir, 
+        go_rds_name <- here::here(processedDir_RDS, 
                                   sprintf("%s_GO_results_ALL_ONTOLOGIES_%s.rds", res_level, test_go))
         saveRDS(go_result, go_rds_name)
         message("Saved full GO results object (ALL ontologies): ", go_rds_name)
