@@ -1,5 +1,6 @@
 
 library(tidyverse)
+library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(forcats)
@@ -62,54 +63,112 @@ re_colors <- c(
 ## summarize counts per category × RE_type
 count_plot_df_category <- function(
         overlap_df,
-        RE_type
+        group_by_column # ge. category, cell_type
     ) {
+    
     plot_df_category <- overlap_df |>
-        count(category, RE_type) |>
-        group_by(category) |>
+        count({{ group_by_column }}, RE_type) |>
+        group_by({{ group_by_column }}) |>
         mutate(percentage = 100 * n / sum(n)) |>
         ungroup()
     
-    ## order categories by total number of peaks
-    plot_df_category$category <- fct_reorder(plot_df_category$category, plot_df_category$n, .fun = sum)
+    print(head(plot_df_category))
+    
+    # plot_df_category[[as.character(group_by_column)]]
+    # ## order categories by total number of peaks
+    # plot_df_category[[as.character(group_by_column)]] <- forcats::fct_reorder(
+    #     .f = plot_df_category[[group_by_column]],
+    #     .x = plot_df_category$n,
+    #     .fun = sum
+    # )
+    
     return(plot_df_category)
+    
 }
 
 
 ## =============================================================================
 
-## stacked bar plot for category
-plot_df_category <- count_plot_df_category(overlap_df, RE_type)
+## stacked bar plot for category & RE
+#colnames(overlap_df)
+#table(overlap_df$category)
 
-p1 <- ggplot(plot_df_category, aes(x = category, y = percentage, fill = RE_type)) +
-    geom_bar(stat = "identity", width = 0.75, color = "black", linewidth = 0.2) +
-    scale_y_continuous(expand = c(0, 0), limits = c(0, 100)) +
-    scale_fill_manual(values = re_colors) +
-    labs(
-        title = "Regulatory Element Composition per Category",
-        x = "Peak Category",
-        y = "Percentage (%)",
-        fill = "Regulatory Element Type"
-    ) +
-    theme_bw(base_size = 12) +
-    theme(
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        panel.grid.major.x = element_blank(),
-        plot.title = element_text(face = "bold")
-    )
-p1
+plot_composition_bar <- function(data_df, x_column_name, color_palette) {
+    
+    message("Plotting RE by ", x_column_name," category...")
+    
+    #p1 <- ggplot(plot_df_category, aes(x = category, y = percentage, fill = RE_type)) +
+    #p1 <- ggplot(plot_cell_type_category, aes(x = cell_type, y = percentage, fill = RE_type)) +
+    p1 <- ggplot(data_df, 
+                 aes(x = .data[[x_column_name]], , 
+                     y = percentage, 
+                     fill = RE_type
+                     )
+                 ) +
+                geom_bar(stat = "identity", width = 0.75, color = "black", linewidth = 0.2) +
+                scale_y_continuous(expand = c(0, 0), limits = c(0, 100)) +
+                scale_fill_manual(values = re_colors) +
+                labs(
+                    title = "Regulatory Element Composition per Category",
+                    x = x_column_name,
+                    y = "Percentage (%)",
+                    fill = "Regulatory Element Type"
+                ) +
+                theme_bw(base_size = 12) +
+                theme(
+                    axis.text.x = element_text(angle = 45, hjust = 1),
+                    panel.grid.major.x = element_blank(),
+                    plot.title = element_text(face = "bold")
+                )
+    
+    return(p1)
+}
+
+plot_main_category <- count_plot_df_category(overlap_df, category)
+# category                RE_type                     n percentage
+# <chr>                   <fct>                   <int>      <dbl>
+# 1 Discordant Linked DAR   Promoter (±2 kb)           11       1.78
+# 2 Discordant Linked DAR   Near-Promoter (2–10 kb)    20       3.24
+# 3 Discordant Linked DAR   Enhancer (10–100 kb)      221      35.8 
+p_main_type <- plot_composition_bar(plot_main_category, "category", re_colors)
+print(p_main_type)
+
+plot_cell_type_category <- count_plot_df_category(overlap_df, cell_type)
+# cell_type  RE_type                     n percentage
+# <chr>      <fct>                   <int>      <dbl>
+# 1 Astrocyte  Promoter (±2 kb)            5       2.58
+# 2 Astrocyte  Near-Promoter (2–10 kb)     8       4.12
+# 3 Astrocyte  Enhancer (10–100 kb)       68      35.1 
+p_cell_type <- plot_composition_bar(plot_cell_type_category, "cell_type", re_colors)
+print(p_cell_type)
 
 
 ## =============================================================================
 
-# Recompute stacked cumulative percentages to make a pecentiage composition plot, due some RE categories have percentage = 0
+# Recompute stacked cumulative percentages to make a percentage composition plot, due some RE categories have percentage = 0
+
+## summarize counts per category × RE_type
+plot_main_cum_category <- count_cumsum_category(overlap_df, category)
+
+plot_df_category <- overlap_df |>
+    count(category, RE_type) |>
+    group_by(category) |>
+    mutate(percentage = 100 * n / sum(n)) |>
+    ungroup()
+
+## order categories by total number of peaks
+plot_df_category$category <- fct_reorder(plot_df_category$category, plot_df_category$n, .fun = sum)
+
+## convert to wide cumulative for area stacking
 plot_wide <- plot_df_category |>
     arrange(category, RE_type) |>
+    mutate(idx = as.numeric(category)) |>
     group_by(category) |>
-    mutate(cum_low  = cumsum(percentage) - percentage,
-           cum_high = cumsum(percentage)) |>
-    ungroup() |> 
-    mutate(idx = as.numeric(category))
+    mutate(
+        cum_high = cumsum(percentage),
+        cum_low = lag(cum_high, default = 0) # The start point of the ribbon is the end point of the previous segment
+    ) |>
+    ungroup()
 
 ## Ribbon plot across categories 
 p2 <- ggplot(plot_wide, aes(x = idx)) +
@@ -136,6 +195,8 @@ p2 <- ggplot(plot_wide, aes(x = idx)) +
         title = "Regulatory Element Composition Across Categories"
     )
 p2
+
+
 
 
 library(sessioninfo)
