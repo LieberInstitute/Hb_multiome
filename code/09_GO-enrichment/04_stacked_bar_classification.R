@@ -1,8 +1,12 @@
+## Classify Linked DAR overlaps associated Regulatory Element (RE) types (Promoter, Enhancer, Long-range) based on distance to the Transcription Start Site (TSS). It then generates dynamic stacked bar plots and a cumulative area plot
+## CSC
+## Date: Nov, 2025
 
 library(tidyverse)
 library(tidyr)
 library(dplyr)
 library(ggplot2)
+library(patchwork)
 library(forcats)
 library(here)
 
@@ -13,6 +17,13 @@ inputCSV_Overlaps_Dir <- here(
     "processed-data",
     "06_peak_calling"
 )
+
+plotDir <- here(
+    "plots",
+    "09_GO-enrichment",
+    "04_stacked_bar_classification"
+)
+if (!dir.exists(plotDir)) { dir.create(plotDir) }
 
 message("Loading Overlap ...")
 
@@ -31,18 +42,18 @@ overlap_df <- overlap_df |>
     mutate(
         RE_type = case_when(
             abs(distance_kb) <= 2 ~ "Promoter (±2 kb)",
-            abs(distance_kb) <= 10 ~ "Near-Promoter (2–10 kb)",
-            abs(distance_kb) <= 100 ~ "Enhancer (10–100 kb)",
-            abs(distance_kb) <= 500 ~ "Long-range (100–500 kb)",
+            abs(distance_kb) <= 10 ~ "Near-Promoter (2-10 kb)",
+            abs(distance_kb) <= 100 ~ "Enhancer (10-100 kb)",
+            abs(distance_kb) <= 500 ~ "Long-range (100-500 kb)",
             TRUE ~ "Distal (>500 kb)"
         ),
         RE_type = factor(
             RE_type,
             levels = c(
                 "Promoter (±2 kb)",
-                "Near-Promoter (2–10 kb)",
-                "Enhancer (10–100 kb)",
-                "Long-range (100–500 kb)",
+                "Near-Promoter (2-10 kb)",
+                "Enhancer (10-100 kb)",
+                "Long-range (100-500 kb)",
                 "Distal (>500 kb)"
             )
         )
@@ -51,9 +62,9 @@ head(overlap_df)
 
 re_colors <- c(
     "Promoter (±2 kb)"          = "#E69F00",
-    "Near-Promoter (2–10 kb)"   = "#56B4E9",
-    "Enhancer (10–100 kb)"      = "#009E73",
-    "Long-range (100–500 kb)"   = "#CC79A7",
+    "Near-Promoter (2-10 kb)"   = "#56B4E9",
+    "Enhancer (10-100 kb)"      = "#009E73",
+    "Long-range (100-500 kb)"   = "#CC79A7",
     "Distal (>500 kb)"          = "grey70"
 )
 
@@ -109,7 +120,7 @@ plot_composition_bar <- function(data_df, x_column_name, color_palette) {
                 scale_y_continuous(expand = c(0, 0), limits = c(0, 100)) +
                 scale_fill_manual(values = re_colors) +
                 labs(
-                    title = "Regulatory Element Composition per Category",
+                    title = "",
                     x = x_column_name,
                     y = "Percentage (%)",
                     fill = "Regulatory Element Type"
@@ -131,7 +142,6 @@ plot_main_category <- count_plot_df_category(overlap_df, category)
 # 2 Discordant Linked DAR   Near-Promoter (2–10 kb)    20       3.24
 # 3 Discordant Linked DAR   Enhancer (10–100 kb)      221      35.8 
 p_main_type <- plot_composition_bar(plot_main_category, "category", re_colors)
-print(p_main_type)
 
 plot_cell_type_category <- count_plot_df_category(overlap_df, cell_type)
 # cell_type  RE_type                     n percentage
@@ -140,7 +150,26 @@ plot_cell_type_category <- count_plot_df_category(overlap_df, cell_type)
 # 2 Astrocyte  Near-Promoter (2–10 kb)     8       4.12
 # 3 Astrocyte  Enhancer (10–100 kb)       68      35.1 
 p_cell_type <- plot_composition_bar(plot_cell_type_category, "cell_type", re_colors)
-print(p_cell_type)
+
+
+## combined plots
+
+p_combined <- p_main_type + p_cell_type
+p_combined_merged <- p_combined + 
+    patchwork::plot_layout(guides = "collect") + 
+    plot_annotation(
+        title = 'Regulatory Elements (RE) across categories and cell types', 
+        theme = theme(plot.title = element_text(face = 'bold', size = 16)) # Optional: Style the title
+    )
+
+f_name <- paste0("combined_barplot_RE_categories_by_cell_type.pdf")
+
+ggsave(here(plotDir, f_name), 
+       plot = p_combined_merged, 
+       width = 12, 
+       height = 8)
+
+message("Combined plot saved successfully to ", here(plotDir, f_name))
 
 
 ## =============================================================================
@@ -196,7 +225,14 @@ p2 <- ggplot(plot_wide, aes(x = idx)) +
     )
 p2
 
+f_name <- paste0("cumm_areaplot_RE_categories.pdf")
 
+ggsave(here(plotDir, f_name), 
+       plot = p2, 
+       width = 8, 
+       height = 8)
+
+message("Cummulative plot saved successfully to ", here(plotDir, f_name))
 
 
 library(sessioninfo)
