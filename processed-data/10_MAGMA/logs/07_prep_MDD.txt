@@ -1,10 +1,10 @@
 **** Job starts ****
-Mon Nov 24 04:05:07 PM EST 2025
+Mon Nov 24 04:47:32 PM EST 2025
 **** JHPCE info ****
 User: neagles
-Job id: 24864327
+Job id: 24864531
 Job name: 07_prep_MDD
-Node name: compute-168
+Node name: compute-169
 Task id: 
 Loading conda_R/4.5
 
@@ -215,4 +215,4 @@ Lifted over 11699 of 11700 SNPs to hg19
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Mon Nov 24 04:05:16 PM EST 2025
+Mon Nov 24 04:48:08 PM EST 2025
