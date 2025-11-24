@@ -5,6 +5,7 @@ library(ggplot2)
 library(forcats)
 library(here)
 
+## =============================================================================
 ## setup variables and file names
 FDR = 0.2
 inputCSV_Overlaps_Dir <- here(
@@ -21,6 +22,7 @@ overlap_df <- read.csv(here(inputCSV_Overlaps_Dir, "21_overlaping_FDRscores_TopH
 nrow(overlap_df) #3205
 colnames(overlap_df)
 
+## =============================================================================
 ## Classify Regulatory Element Types
 ## Uses strand-aware distance (in kb) to assign RE categories
 
@@ -46,22 +48,6 @@ overlap_df <- overlap_df |>
     )
 head(overlap_df)
 
-## =============================================================================
-# paper_theme <- theme_minimal(base_size = 13) +
-#     theme(
-#         panel.grid.major.x = element_blank(),
-#         panel.grid.minor.x = element_blank(),
-#         panel.grid.minor.y = element_blank(),
-#         panel.grid.major.y = element_blank(),
-#         axis.title.x = element_blank(),
-#         axis.text.x = element_blank(),  # remove category labels
-#         axis.ticks.x = element_blank(),
-#         legend.position = c(0.88, 0.70),
-#         legend.background = element_rect(fill = "white", color = "black", linewidth = 0.4),
-#         legend.title = element_text(face = "bold", size = 11),
-#         legend.text = element_text(size = 10),
-#         plot.title = element_text(face = "bold", hjust = 0.5)
-#     )
 re_colors <- c(
     "Promoter (±2 kb)"          = "#E69F00",
     "Near-Promoter (2–10 kb)"   = "#56B4E9",
@@ -70,32 +56,32 @@ re_colors <- c(
     "Distal (>500 kb)"          = "grey70"
 )
 
+
 ## =============================================================================
+
 ## summarize counts per category × RE_type
-plot_df_category <- overlap_df |>
-    count(category, RE_type) |>
-    group_by(category) |>
-    mutate(percentage = 100 * n / sum(n)) |>
-    ungroup()
+count_plot_df_category <- function(
+        overlap_df,
+        RE_type
+    ) {
+    plot_df_category <- overlap_df |>
+        count(category, RE_type) |>
+        group_by(category) |>
+        mutate(percentage = 100 * n / sum(n)) |>
+        ungroup()
+    
+    ## order categories by total number of peaks
+    plot_df_category$category <- fct_reorder(plot_df_category$category, plot_df_category$n, .fun = sum)
+    return(plot_df_category)
+}
 
-## order categories by total number of peaks
-plot_df_category$category <- fct_reorder(plot_df_category$category, plot_df_category$n, .fun = sum)
 
-## convert to wide cumulative for area stacking
-plot_wide <- plot_df_category |>
-    arrange(category, RE_type) |>
-    group_by(category) |>
-    mutate(cum_pct = cumsum(percentage)) |>
-    ungroup()
-dim(plot_wide)
-head(plot_wide)
-table(plot_wide$RE_type)
-table(plot_wide$category)
-summary(plot_wide$cum_pct)
-
+## =============================================================================
 
 ## stacked bar plot for category
-p1 <- ggplot(plot_df, aes(x = category, y = percentage, fill = RE_type)) +
+plot_df_category <- count_plot_df_category(overlap_df, RE_type)
+
+p1 <- ggplot(plot_df_category, aes(x = category, y = percentage, fill = RE_type)) +
     geom_bar(stat = "identity", width = 0.75, color = "black", linewidth = 0.2) +
     scale_y_continuous(expand = c(0, 0), limits = c(0, 100)) +
     scale_fill_manual(values = re_colors) +
@@ -122,9 +108,8 @@ plot_wide <- plot_df_category |>
     group_by(category) |>
     mutate(cum_low  = cumsum(percentage) - percentage,
            cum_high = cumsum(percentage)) |>
-    ungroup()
-
-plot_wide <- plot_wide |> mutate(idx = as.numeric(factor(category)))
+    ungroup() |> 
+    mutate(idx = as.numeric(category))
 
 ## Ribbon plot across categories 
 p2 <- ggplot(plot_wide, aes(x = idx)) +
@@ -132,7 +117,7 @@ p2 <- ggplot(plot_wide, aes(x = idx)) +
                 color = "black", linewidth = 0.15, alpha = 0.95) +
     scale_x_continuous(
         breaks = unique(plot_wide$idx),
-        labels = levels(plot_wide$category)   # <-- display category names
+        labels = levels(plot_df_category$category)   # display category names
     ) +
     scale_y_continuous(
         labels = scales::percent_format(scale = 1),
@@ -141,17 +126,16 @@ p2 <- ggplot(plot_wide, aes(x = idx)) +
     scale_fill_manual(values = re_colors) +
     theme_minimal(base_size = 13) +
     theme(
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),  # <-- now visible
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
         axis.title.x = element_blank(),
         panel.grid.minor = element_blank(),
-        panel.grid.major.x = element_blank(),
-        # legend.position = c(0.88, 0.70),
-        # legend.background = element_rect(fill = "white", color = "black")
+        panel.grid.major.x = element_blank()
     ) +
     labs(
         y = "% Composition",
         title = "Regulatory Element Composition Across Categories"
     )
+p2
 
 
 library(sessioninfo)
