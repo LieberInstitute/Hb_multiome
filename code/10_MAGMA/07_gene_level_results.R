@@ -42,8 +42,8 @@ for (gwas in names(gene_stat_paths)) {
         set_df = sprintf(set_stat_paths, gwas, cell_type_group) |>
             read_table_auto_skip() |>
             mutate(
-                cell_type = str_extract(set_id, '^[^_]+'),
-                peak_category = str_extract(set_id, '(?<=_).+'),
+                cell_type = str_extract(FULL_NAME, '^[^_]+'),
+                peak_category = str_extract(FULL_NAME, '(?<=_).+'),
                 set_is_sig = P < sig_cutoff
             ) |>
             select(cell_type, peak_category, set_is_sig)
@@ -60,7 +60,7 @@ for (gwas in names(gene_stat_paths)) {
             ) |>
             left_join(set_df, by = c('cell_type', 'peak_category')) |>
             dplyr::rename(p = P) |>
-            select(gene_id, cell_type, peak_category, gwas, p)
+            select(gene_id, cell_type, peak_category, gwas, p, set_is_sig)
         
         #   Cell-type resolutions only differ in how they treat habenula types,
         #   which means there would be plenty of duplicated information if we
