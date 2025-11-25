@@ -15,11 +15,20 @@ gene_stat_paths = here(
     'processed-data', '10_MAGMA', gwas_groups,
     sprintf('%s.genes.out', gwas_groups)
 )
+set_stat_paths = here('processed-data', '10_MAGMA', '%s', '%s.gsa.out')
 out_path = here('processed-data', '10_MAGMA', 'top_genes.csv')
 reference_gtf = '/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-gex-GRCh38-2024-A/genes/genes.gtf.gz'
 names(gene_set_paths) = cell_type_groups
 names(gene_stat_paths) = gwas_groups
 sig_cutoff = 0.05
+
+#   MAGMA set-level outputs have a variable amount of header lines. Auto-detect
+#   the header length and read in dynamically
+read_table_auto_skip = function(path, check_lines = 100) {
+    n_skip = sum(grepl('^#', readLines(path, n = check_lines)))
+    clean_df = read_table(path, skip = n_skip, show_col_types = FALSE)
+    return(clean_df)
+}
 
 gene_df_list = list()
 for (gwas in names(gene_stat_paths)) {
@@ -29,6 +38,18 @@ for (gwas in names(gene_stat_paths)) {
         mutate(gwas = gwas) |>
         select(GENE, P, gwas)
     for (cell_type_group in cell_type_groups) {
+        #   Read in set-level stats to identify significant sets
+        set_df = sprintf(set_stat_paths, gwas, cell_type_group) |>
+            read_table_auto_skip() |>
+            mutate(
+                cell_type = str_extract(set_id, '^[^_]+'),
+                peak_category = str_extract(set_id, '(?<=_).+'),
+                set_is_sig = P < sig_cutoff
+            ) |>
+            select(cell_type, peak_category, set_is_sig)
+
+        #   Read in gene sets themselves and merge with gene- and set-level
+        #   stats
         gene_df = read_table(
                 gene_set_paths[[cell_type_group]], show_col_types = FALSE
             ) |>
@@ -37,6 +58,7 @@ for (gwas in names(gene_stat_paths)) {
                 cell_type = str_extract(set_id, '^[^_]+'),
                 peak_category = str_extract(set_id, '(?<=_).+')
             ) |>
+            left_join(set_df, by = c('cell_type', 'peak_category')) |>
             dplyr::rename(p = P) |>
             select(gene_id, cell_type, peak_category, gwas, p)
         
@@ -72,8 +94,11 @@ gtf = gtf[gtf$type == 'gene'] |>
     as_tibble() |>
     select(gene_id = gene_id, gene_name = gene_name)
 
+#   Export final gene sets with top 5 significant genes per
+#   (gwas, cell type, peak category) combination. Only include genes if the set
+#   as a whole was significant
 gene_df |>
-    filter(!is.na(p), p < sig_cutoff) |>
+    filter(!is.na(p), p < sig_cutoff, set_is_sig) |>
     group_by(gwas, cell_type, peak_category) |>
     arrange(p) |>
     slice_head(n = 5) |>
