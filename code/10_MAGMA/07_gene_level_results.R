@@ -1,5 +1,6 @@
 library(tidyverse)
 library(here)
+library(rtracklayer)
 library(ComplexHeatmap)
 library(RColorBrewer)
 library(sessioninfo)
@@ -14,7 +15,7 @@ gene_stat_paths = here(
     'processed-data', '10_MAGMA', gwas_groups,
     sprintf('%s.genes.out', gwas_groups)
 )
-out_path = here('processed-data', '10_MAGMA', 'gene_level_results.csv')
+out_path = here('processed-data', '10_MAGMA', 'top_genes.csv')
 reference_gtf = '/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-gex-GRCh38-2024-A/genes/genes.gtf.gz'
 names(gene_set_paths) = cell_type_groups
 names(gene_stat_paths) = gwas_groups
@@ -36,7 +37,7 @@ for (gwas in names(gene_stat_paths)) {
                 cell_type = str_extract(set_id, '^[^_]+'),
                 peak_category = str_extract(set_id, '(?<=_).+')
             ) |>
-            rename(p = P) |>
+            dplyr::rename(p = P) |>
             select(gene_id, cell_type, peak_category, gwas, p)
         
         #   Cell-type resolutions only differ in how they treat habenula types,
@@ -57,19 +58,28 @@ gene_df = bind_rows(gene_df_list)
 for (gwas in names(gene_stat_paths)) {
     message(
         sprintf(
-            'Dropping %d%% of genes for GWAS %s missing MAGMA stats',
+            'Dropping %d%% of genes for %s GWAS missing MAGMA stats',
             round(100 * mean(is.na(gene_df$p[gene_df$gwas == gwas]))),
             gwas
         )
     )
 }
 
+#   Read in the GTF to get gene symbols
+gtf = import(reference_gtf)
+gtf = gtf[gtf$type == 'gene'] |>
+    as.data.frame() |>
+    as_tibble() |>
+    select(gene_id = gene_id, gene_name = gene_name)
+
 gene_df |>
-    filter(!is.na(p)) |>
+    filter(!is.na(p), p < sig_cutoff) |>
     group_by(gwas, cell_type, peak_category) |>
     arrange(p) |>
     slice_head(n = 5) |>
     ungroup() |>
+    left_join(gtf, by = 'gene_id') |>
+    select(gwas, cell_type, peak_category, gene_id, gene_name, p) |>
     write_csv(out_path)
 
 session_info()
