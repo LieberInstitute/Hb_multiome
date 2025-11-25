@@ -1,9 +1,10 @@
 #   Take the GTF used for the multiome data and lift it over to hg19. Everything
 #   must be in hg19 for MAGMA (hg38 seems better, but it seems extremely
 #   complicated to get the 1000 Genomes European plink files needed for MAGMA in
-#   hg38)
+#   hg38). The geneloc file in the habenula pilot project was missing chr22
 library(rtracklayer)
 library(here)
+library(tidyverse)
 library(sessioninfo)
 
 reference_gtf = '/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0/genes/genes.gtf.gz'
@@ -19,6 +20,11 @@ liftOver(gtf, chain) |>
     as.data.frame() |>
     as_tibble() |>
     mutate(chr = gsub("chr", "", seqnames)) |>
+    #   In the case of duplicate mappings, take the largest interval
+    group_by(gene_id) |>
+    arrange(desc(end - start)) |>
+    slice_head(n = 1) |>
+    ungroup() |>
     select(gene_id, chr, start, end) |>
     write_tsv(out_path, col_names = FALSE)
 
