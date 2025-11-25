@@ -8,8 +8,8 @@
 #SBATCH -e /dev/null
 #SBATCH --array=1-15%10
 
-#   Using pre-computed gene-level statistics from the habenula pilot project,
-#   just run the gene-set analysis step from MAGMA
+#   Run just the gene-set-analysis step from MAGMA for each GWAS and cell-type
+#   resolution
 
 ## Define loops and appropriately subset each variable for the array task ID
 all_gwas=(MDD MDD2019 panic SCZ SUD2020)
@@ -35,36 +35,9 @@ echo "Node name: ${HOSTNAME}"
 echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 
 repo_dir=$(git rev-parse --show-toplevel)
-
-hb_gwas_dir=/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/13_MAGMA/GWAS
 out_prefix=${repo_dir}/processed-data/10_MAGMA/$gwas/$cell_type_group
 gene_set_path=${repo_dir}/processed-data/10_MAGMA/gene_sets/${cell_type_group}.tsv
-
-mkdir -p $(dirname $out_prefix)
-
-#   Processed gene-level statistics from MAGMA in the habenula pilot project
-case ${gwas} in
-    MDD)
-        gene_results_path=${hb_gwas_dir}/MDD/MDD.phs001672.pha005122.genes.raw
-        ;;
-    MDD2019)
-        gene_results_path=${hb_gwas_dir}/mdd2019edinburgh/PGC_UKB_depression_genome-wide.genes.raw
-        ;;
-    panic)
-        gene_results_path=${hb_gwas_dir}/panic2019/pgc-panic2019.genes.raw
-        ;;
-    SCZ)
-        gene_results_path=${hb_gwas_dir}/scz2022/PGC3_SCZ_wave3.european.autosome.public.v3.ensembl.genes.raw
-        ;;
-    SUD2020)
-        gene_results_path=${hb_gwas_dir}/sud2020op/opi.DEPvEXP_EUR.noAF.genes.raw
-        ;;
-    *)
-        #   Unexpected values
-        echo "Unknown GWAS: ${gwas}"
-        exit 1
-        ;;
-esac
+gene_results_path=${repo_dir}/processed-data/10_MAGMA/$gwas/${gwas}.genes.raw
 
 module load magma/1.10
 
@@ -84,4 +57,3 @@ date
 
 ## This script was made using slurmjobs version 1.3.0
 ## available from http://research.libd.org/slurmjobs/
-

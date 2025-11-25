@@ -1,10 +1,10 @@
 **** Job starts ****
-Fri Nov 14 11:26:37 AM EST 2025
+Tue Nov 25 10:58:38 AM EST 2025
 **** JHPCE info ****
 User: neagles
-Job id: 24142480
-Job name: 03_gene_set_analysis
-Node name: compute-169
+Job id: 24973547
+Job name: 05_gene_set_analysis
+Node name: compute-178
 Task id: 6
 Loading LIBD SLURM module for magma/1.10
 
@@ -15,21 +15,21 @@ Currently Loaded Modules:
 
 Welcome to MAGMA v1.10 (linux/s)
 Using flags:
-	--gene-results /dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/13_MAGMA/GWAS/panic2019/pgc-panic2019.genes.raw
+	--gene-results /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/panic/panic.genes.raw
 	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv gene-col=gene_id set-col=set_id
 	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/panic/broad
 
-Start time is 11:26:37, Friday 14 Nov 2025
+Start time is 10:58:38, Tuesday 25 Nov 2025
 
-Reading file /dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/13_MAGMA/GWAS/panic2019/pgc-panic2019.genes.raw... 
-	28384 genes read from file
+Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/panic/panic.genes.raw... 
+	33733 genes read from file
 Loading gene-set annotation...
 Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv... 
 	detected 2 variables in file
 	using variable: gene_id (gene ID)
 	using variable: set_id (set ID)
 	39 gene-set definitions read from file
-	found 39 gene sets containing genes defined in genotype data (containing a total of 2311 unique genes)
+	found 39 gene sets containing genes defined in genotype data (containing a total of 2363 unique genes)
 Preparing variables for analysis...
 	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
 	WARNING: discarding gene set 'Endo_Linked_DAR_enriched' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv, variance is too low (set contains only one gene used in analysis)
@@ -52,6 +52,6 @@ Inverting gene-gene correlation matrix...
 	analysing single-variable models (number of models: 36)
                                                                                                                    	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/panic/broad.gsa.out
 
-End time is 11:27:14, Friday 14 Nov 2025 (elapsed: 00:00:37)
+End time is 11:00:31, Tuesday 25 Nov 2025 (elapsed: 00:01:53)
 **** Job ends ****
-Fri Nov 14 11:27:14 AM EST 2025
+Tue Nov 25 11:00:31 AM EST 2025
