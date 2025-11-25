@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=10G
-#SBATCH --job-name=05_gene_level_results
+#SBATCH --job-name=01_prep_gene_sets
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../processed-data/10_MAGMA/logs/05_gene_level_results.txt
-#SBATCH -e ../../processed-data/10_MAGMA/logs/05_gene_level_results.txt
+#SBATCH -o ../../processed-data/10_MAGMA/logs/01_prep_gene_sets.txt
+#SBATCH -e ../../processed-data/10_MAGMA/logs/01_prep_gene_sets.txt
 
 set -e
 
@@ -24,7 +24,7 @@ module load conda_R/4.5
 ## List current modules for reproducibility
 module list
 
-Rscript 05_gene_level_results.R
+Rscript 01_prep_gene_sets.R
 
 echo "**** Job ends ****"
 date

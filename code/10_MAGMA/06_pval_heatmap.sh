@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=10G
-#SBATCH --job-name=04_pval_heatmap
+#SBATCH --job-name=06_pval_heatmap
 #SBATCH -c 1
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
@@ -16,7 +16,7 @@ all_cell_type_group=(broad semi_broad mid)
 cell_type_group=${all_cell_type_group[$(( $SLURM_ARRAY_TASK_ID / 1 % 3 ))]}
 
 ## Explicitly pipe script output to a log
-log_path=../../processed-data/10_MAGMA/logs/04_pval_heatmap_${gwas}_${cell_type_group}_${SLURM_ARRAY_TASK_ID}.txt
+log_path=../../processed-data/10_MAGMA/logs/06_pval_heatmap_${gwas}_${cell_type_group}_${SLURM_ARRAY_TASK_ID}.txt
 
 {
 set -e
@@ -38,7 +38,7 @@ module load conda_R/4.5
 module list
 
 ## Edit with your job command
-Rscript 04_pval_heatmap.R --gwas ${gwas} --cell_type_group ${cell_type_group}
+Rscript 06_pval_heatmap.R --gwas ${gwas} --cell_type_group ${cell_type_group}
 
 echo "**** Job ends ****"
 date

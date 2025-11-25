@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=10G
-#SBATCH --job-name=00_prep_gene_sets
+#SBATCH --job-name=02_prep_geneloc
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../processed-data/10_MAGMA/logs/00_prep_gene_sets.txt
-#SBATCH -e ../../processed-data/10_MAGMA/logs/00_prep_gene_sets.txt
+#SBATCH -o ../../processed-data/10_MAGMA/logs/02_prep_geneloc.txt
+#SBATCH -e ../../processed-data/10_MAGMA/logs/02_prep_geneloc.txt
 
 set -e
 
@@ -19,15 +19,13 @@ echo "Job name: ${SLURM_JOB_NAME}"
 echo "Node name: ${HOSTNAME}"
 echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 
+## Load the R module
 module load conda_R/4.5
 
 ## List current modules for reproducibility
 module list
 
-Rscript 00_prep_gene_sets.R
+Rscript 02_prep_geneloc.R
 
 echo "**** Job ends ****"
 date
-
-## This script was made using slurmjobs version 1.2.4
-## available from http://research.libd.org/slurmjobs/

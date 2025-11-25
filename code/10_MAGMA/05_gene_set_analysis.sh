@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=10G
-#SBATCH --job-name=03_gene_set_analysis
+#SBATCH --job-name=05_gene_set_analysis
 #SBATCH -c 1
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
@@ -19,7 +19,7 @@ all_cell_type_group=(broad semi_broad mid)
 cell_type_group=${all_cell_type_group[$(( $SLURM_ARRAY_TASK_ID / 1 % 3 ))]}
 
 ## Explicitly pipe script output to a log
-log_path=../../processed-data/10_MAGMA/logs/03_gene_set_analysis_${gwas}_${cell_type_group}_${SLURM_ARRAY_TASK_ID}.txt
+log_path=../../processed-data/10_MAGMA/logs/05_gene_set_analysis_${gwas}_${cell_type_group}_${SLURM_ARRAY_TASK_ID}.txt
 
 {
 set -e

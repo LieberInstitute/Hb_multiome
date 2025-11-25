@@ -9,6 +9,7 @@ gene_set_paths = here(
     'processed-data', '10_MAGMA', 'gene_sets',
     sprintf('%s.tsv', cell_type_groups)
 )
+reference_gtf = '/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-gex-GRCh38-2024-A/genes/genes.gtf.gz'
 names(gene_set_paths) = cell_type_groups
 sig_cutoff = 0.05
 
@@ -28,10 +29,6 @@ gene_stat_paths = c(
 )
 
 #   Why are there NAs in 'p' and 'gwas' (probably after the left join)?
-
-
-
-
 
 gene_df_list = list()
 for (gwas in names(gene_stat_paths)) {

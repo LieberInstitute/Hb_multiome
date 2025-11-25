@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=10G
-#SBATCH --job-name=06_prep_geneloc
+#SBATCH --mem=5G
+#SBATCH --job-name=03_prep_MDD
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../processed-data/10_MAGMA/logs/06_prep_geneloc.txt
-#SBATCH -e ../../processed-data/10_MAGMA/logs/06_prep_geneloc.txt
+#SBATCH -o ../../processed-data/10_MAGMA/logs/03_prep_MDD.txt
+#SBATCH -e ../../processed-data/10_MAGMA/logs/03_prep_MDD.txt
 
 set -e
 
@@ -25,7 +25,7 @@ module load conda_R/4.5
 ## List current modules for reproducibility
 module list
 
-Rscript 06_prep_geneloc.R
+Rscript 03_prep_MDD.R
 
 echo "**** Job ends ****"
 date
