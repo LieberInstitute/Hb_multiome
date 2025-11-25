@@ -29,6 +29,10 @@ gene_sets_path = here(
     'processed-data', '10_MAGMA', 'gene_sets',
     sprintf('%s.tsv', opt$cell_type_group)
 )
+gene_stat_path = here(
+    'processed-data', '10_MAGMA', opt$gwas,
+    sprintf('%s.genes.out', opt$gwas)
+)
 plot_dir = here('plots', '10_MAGMA', opt$gwas)
 sig_cutoff = 0.05
 
@@ -52,7 +56,9 @@ results_df = read_table_auto_skip(results_path) |>
     select(cell_type, peak_category, neg_log_p)
 
 #   Read in the actual gene sets, since we'll later count the size of the union
-#   of genes across cell types and peak categories
+#   of genes across cell types and peak categories. Here we only count genes
+#   with statistics from MAGMA
+gene_stat_df = read_table(gene_stat_path, show_col_types = FALSE)
 gene_sets_df = read_tsv(gene_sets_path, show_col_types = FALSE) |>
     mutate(
         cell_type = str_extract(set_id, '^[^_]+'),
@@ -61,7 +67,8 @@ gene_sets_df = read_tsv(gene_sets_path, show_col_types = FALSE) |>
     select(-set_id) |>
     filter(
         cell_type %in% results_df$cell_type,
-        peak_category %in% results_df$peak_category
+        peak_category %in% results_df$peak_category,
+        gene_id %in% gene_stat_df$GENE
     )
 
 #   Number of genes per cell type (note sorting ensure proper ordering of cell
