@@ -5,30 +5,20 @@ library(RColorBrewer)
 library(sessioninfo)
 
 cell_type_groups = c('broad', 'semi_broad', 'mid')
+gwas_groups = c('MDD', 'MDD2019', 'panic', 'SCZ', 'SUD2020')
 gene_set_paths = here(
     'processed-data', '10_MAGMA', 'gene_sets',
     sprintf('%s.tsv', cell_type_groups)
 )
+gene_stat_paths = here(
+    'processed-data', '10_MAGMA', gwas_groups,
+    sprintf('%s.genes.out', gwas_groups)
+)
+out_path = here('processed-data', '10_MAGMA', 'gene_level_results.csv')
 reference_gtf = '/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-gex-GRCh38-2024-A/genes/genes.gtf.gz'
 names(gene_set_paths) = cell_type_groups
+names(gene_stat_paths) = gwas_groups
 sig_cutoff = 0.05
-
-#   Paths to gene-level statistics
-hb_pilot_dir = '/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/13_MAGMA/GWAS'
-gene_stat_paths = c(
-    MDD = file.path(hb_pilot_dir, 'MDD/MDD.phs001672.pha005122.genes.out'),
-    MDD2019 = file.path(
-        hb_pilot_dir, 'mdd2019edinburgh/PGC_UKB_depression_genome-wide.genes.out'
-    ),
-    panic = file.path(hb_pilot_dir, 'panic2019/pgc-panic2019.genes.out'),
-    SCZ = file.path(
-        hb_pilot_dir,
-        'scz2022/PGC3_SCZ_wave3.european.autosome.public.v3.ensembl.genes.out'
-    ),
-    SUD2020 = file.path(hb_pilot_dir, 'sud2020op/opi.DEPvEXP_EUR.noAF.genes.out')
-)
-
-#   Why are there NAs in 'p' and 'gwas' (probably after the left join)?
 
 gene_df_list = list()
 for (gwas in names(gene_stat_paths)) {
@@ -47,11 +37,7 @@ for (gwas in names(gene_stat_paths)) {
                 peak_category = str_extract(set_id, '(?<=_).+')
             ) |>
             rename(p = P) |>
-            select(gene_id, cell_type, peak_category, p, gwas) |>
-            group_by(cell_type, peak_category) |>
-            arrange(p) |>
-            slice_head(n = 5) |>
-            ungroup()
+            select(gene_id, cell_type, peak_category, gwas, p)
         
         #   Cell-type resolutions only differ in how they treat habenula types,
         #   which means there would be plenty of duplicated information if we
@@ -65,5 +51,25 @@ for (gwas in names(gene_stat_paths)) {
     }
 }
 
-gene_df_list |>
-    bind_rows()
+gene_df = bind_rows(gene_df_list)
+
+#   Warn about percentage of genes missing MAGMA stats
+for (gwas in names(gene_stat_paths)) {
+    message(
+        sprintf(
+            'Dropping %d%% of genes for GWAS %s missing MAGMA stats',
+            round(100 * mean(is.na(gene_df$p[gene_df$gwas == gwas]))),
+            gwas
+        )
+    )
+}
+
+gene_df |>
+    filter(!is.na(p)) |>
+    group_by(gwas, cell_type, peak_category) |>
+    arrange(p) |>
+    slice_head(n = 5) |>
+    ungroup() |>
+    write_csv(out_path)
+
+session_info()
