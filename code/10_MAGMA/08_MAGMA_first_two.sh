@@ -1,12 +1,13 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=25G
-#SBATCH --job-name=00_prep_gene_sets
+#SBATCH --job-name=08_MAGMA_first_two
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../processed-data/10_MAGMA/logs/00_prep_gene_sets_%a.txt
-#SBATCH -e ../../processed-data/10_MAGMA/logs/00_prep_gene_sets_%a.txt
+#SBATCH -o ../../processed-data/10_MAGMA/logs/08_MAGMA_first_two_%a.txt
+#SBATCH -e ../../processed-data/10_MAGMA/logs/08_MAGMA_first_two_%a.txt
 #SBATCH --array=1-5%5
+#SBATCH --exclude=compute-175
 
 #   Run the first two steps in the MAGMA pipeline for every GWAS. Critically,
 #   all relevant inputs/ reference files use hg19 and European ancestry. This

@@ -1,0 +1,139 @@
+**** Job starts ****
+Tue Nov 25 10:04:27 AM EST 2025
+**** JHPCE info ****
+User: neagles
+Job id: 24968814
+Job name: 08_MAGMA_first_two
+Node name: compute-168
+Task id: 1
+Loading LIBD SLURM module for magma/1.10
+
+Currently Loaded Modules:
+  1) JHPCE_ROCKY9_DEFAULT_ENV   2) JHPCE_tools/3.0   3) magma/1.10
+
+ 
+
+Processing GWAS MDD
+Using SNP location file: /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/SNPs.tsv
+Using p-value file: /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/p_values.tsv
+Welcome to MAGMA v1.10 (linux/s)
+Using flags:
+	--annotate
+	--snp-loc /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/SNPs.tsv
+	--gene-loc /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/hg19_gene_loc.tsv
+	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/MDD
+
+Start time is 10:04:27, Tuesday 25 Nov 2025
+
+Starting annotation...
+Reading gene locations from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/hg19_gene_loc.tsv... 
+	WARNING: on line 17106, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198695)
+	WARNING: on line 17111, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198712)
+	WARNING: on line 17119, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198727)
+	WARNING: on line 17138, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198763)
+	WARNING: on line 17146, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198786)
+	WARNING: on line 17157, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198804)
+	WARNING: on line 17179, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198840)
+	WARNING: on line 17204, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198886)
+	WARNING: on line 17206, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198888)
+	WARNING: on line 17212, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198899)
+	WARNING: on line 17235, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198938)
+	WARNING: on line 18261, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000212907)
+	WARNING: on line 20337, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000228253)
+	36510 gene locations read from file
+	chromosome  1: 3404 genes
+	chromosome  2: 2542 genes
+	chromosome  3: 1895 genes
+	chromosome  4: 1532 genes
+	chromosome  5: 1813 genes
+	chromosome  6: 1826 genes
+	chromosome  7: 1667 genes
+	chromosome  8: 1495 genes
+	chromosome  9: 1319 genes
+	chromosome 10: 1393 genes
+	chromosome 11: 2067 genes
+	chromosome 12: 1928 genes
+	chromosome 13: 787 genes
+	chromosome 14: 1482 genes
+	chromosome 15: 1267 genes
+	chromosome 16: 1650 genes
+	chromosome 17: 1988 genes
+	chromosome 18: 781 genes
+	chromosome 19: 2027 genes
+	chromosome 20: 963 genes
+	chromosome 21: 534 genes
+	chromosome 22: 890 genes
+	chromosome  X: 1148 genes
+	chromosome  Y: 112 genes
+Reading SNP locations from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/SNPs.tsv... 
+	WARNING: on line 1, chromosome code 'CHR' not recognised; skipping SNP (ID = SNP)
+                                                                                                 	11699 SNP locations read from file
+	of those, 6728 (57.51%) mapped to at least one gene
+Writing annotation to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/MDD.genes.annot
+	for chromosome  1, 3352 genes are empty (out of 3404)
+	for chromosome  2, 2492 genes are empty (out of 2542)
+	for chromosome  3, 1825 genes are empty (out of 1895)
+	for chromosome  4, 1506 genes are empty (out of 1532)
+	for chromosome  5, 1788 genes are empty (out of 1813)
+	for chromosome  6, 1805 genes are empty (out of 1826)
+	for chromosome  7, 1642 genes are empty (out of 1667)
+	for chromosome  8, 1482 genes are empty (out of 1495)
+	for chromosome  9, 1299 genes are empty (out of 1319)
+	for chromosome 10, 1376 genes are empty (out of 1393)
+	for chromosome 11, 2034 genes are empty (out of 2067)
+	for chromosome 12, 1902 genes are empty (out of 1928)
+	for chromosome 13, 776 genes are empty (out of 787)
+	for chromosome 14, 1464 genes are empty (out of 1482)
+	for chromosome 15, 1246 genes are empty (out of 1267)
+	for chromosome 16, 1643 genes are empty (out of 1650)
+	for chromosome 17, 1933 genes are empty (out of 1988)
+	for chromosome 18, 769 genes are empty (out of 781)
+	for chromosome 19, 2015 genes are empty (out of 2027)
+	for chromosome 20, 957 genes are empty (out of 963)
+	for chromosome 21, 532 genes are empty (out of 534)
+	for chromosome 22, 875 genes are empty (out of 890)
+	for chromosome  X, 1148 genes are empty (out of 1148)
+	for chromosome  Y, 112 genes are empty (out of 112)
+	at least one SNP mapped to each of a total of 537 genes (out of 36510)
+
+
+End time is 10:04:27, Tuesday 25 Nov 2025 (elapsed: 00:00:00)
+Welcome to MAGMA v1.10 (linux/s)
+Using flags:
+	--bfile /dcs04/lieber/lcolladotor/with10x_LIBD001/HumanPilot/Analysis/Layer_Guesses/MAGMA/g1000_eur
+	--pval /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/p_values.tsv ncol=N
+	--gene-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/MDD.genes.annot
+	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/MDD
+
+Start time is 10:04:27, Tuesday 25 Nov 2025
+
+Loading PLINK-format data...
+Reading file /dcs04/lieber/lcolladotor/with10x_LIBD001/HumanPilot/Analysis/Layer_Guesses/MAGMA/g1000_eur.fam... 503 individuals read
+Reading file /dcs04/lieber/lcolladotor/with10x_LIBD001/HumanPilot/Analysis/Layer_Guesses/MAGMA/g1000_eur.bim... 22665064 SNPs read
+Preparing file /dcs04/lieber/lcolladotor/with10x_LIBD001/HumanPilot/Analysis/Layer_Guesses/MAGMA/g1000_eur.bed... 
+
+Reading SNP synonyms from file /dcs04/lieber/lcolladotor/with10x_LIBD001/HumanPilot/Analysis/Layer_Guesses/MAGMA/g1000_eur.synonyms (auto-detected)
+	read 6016767 mapped synonyms from file, mapping to 3921040 SNPs in the data
+	WARNING: detected 133 synonymous SNP pairs in the data
+	         skipped all synonym entries involved, synonymous SNPs are kept in analysis
+	         writing list of detected synonyms in data to supplementary log file
+Reading SNP p-values from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/p_values.tsv... 
+	detected 3 variables in file
+	using variable: SNP (SNP id)
+	using variable: P (p-value)
+	using variable: N (sample size; discarding SNPs with N < 50)
+	read 11700 lines from file, containing valid SNP p-values for 10479 SNPs in data (89.56% of lines, 0.04623% of SNPs in data)
+Loading gene annotation from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/MDD.genes.annot... 
+	537 gene definitions read from file
+	found 493 genes containing valid SNPs in genotype data
+
+
+Starting gene analysis... 
+	using model: SNPwise-mean
+	processed genes: 6 (1.2%)     	processed genes: 31 (6.3%)     	processed genes: 48 (9.7%)     	processed genes: 62 (12.6%)     	processed genes: 63 (12.8%)     	processed genes: 110 (22.3%)     	processed genes: 111 (22.5%)     	processed genes: 117 (23.7%)     	processed genes: 119 (24.1%)     	processed genes: 131 (26.6%)     	processed genes: 275 (55.8%)     	processed genes: 318 (64.5%)     	processed genes: 356 (72.2%)     	processed genes: 426 (86.4%)     	processed genes: 427 (86.6%)     	processed genes: 444 (90.1%)     	processed genes: 445 (90.3%)     	processed genes: 456 (92.5%)     	processed genes: 469 (95.1%)                                                                                                                        	writing gene analysis results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/MDD.genes.out
+	writing intermediate output to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/MDD.genes.raw
+
+
+End time is 10:06:32, Tuesday 25 Nov 2025 (elapsed: 00:02:05)
+**** Job ends ****
+Tue Nov 25 10:06:32 AM EST 2025
