@@ -6,10 +6,13 @@
 **/recycler/
 **/*.log
 **/*.rds
-## Remove 04_wnn_gene_expression and 04_wnn_gene_expression_v2 (old VPlots for louvain, SLM, etc) directories from GitHub tracking but keep locally
-## you can remove if safely if convenient - csc
+
+## Remove dirs/files listed below from GitHub tracking but keep locally - you can remove if safely if convenient - csc
+# old VPlots for louvain, SLM, etc) directories 
 old_wnn_Vplots_louvain_slm
 old_wnn_Vplots_louvain_slm_v2
+# olds trainning datasets
+plots/02_merge_seurats/trainning_samples_S4S5S6/
 
 
 # cellranger arc files 
