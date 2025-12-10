@@ -21,6 +21,12 @@ reference_gtf = '/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-g
 names(gene_set_paths) = cell_type_groups
 names(gene_stat_paths) = gwas_groups
 sig_cutoff = 0.05
+gwas_renaming = c(
+    'MDD2019' = 'MDD',
+    'panic' = 'Panic Disorder',
+    'SCZ' = 'SCZ',
+    'SUD2020' = 'OUD'
+)
 
 #   MAGMA set-level outputs have a variable amount of header lines. Auto-detect
 #   the header length and read in dynamically
@@ -94,15 +100,12 @@ gtf = gtf[gtf$type == 'gene'] |>
     as_tibble() |>
     select(gene_id = gene_id, gene_name = gene_name)
 
-#   Export final gene sets with top 5 significant genes per
-#   (gwas, cell type, peak category) combination. Only include genes if the set
+#   Export final gene sets, only including genes where the set
 #   as a whole was significant
 gene_df |>
-    filter(!is.na(p), p < sig_cutoff, set_is_sig) |>
-    group_by(gwas, cell_type, peak_category) |>
-    arrange(p) |>
-    slice_head(n = 5) |>
-    ungroup() |>
+    filter(!is.na(p), p < sig_cutoff, set_is_sig, gwas != 'MDD') |>
+    mutate(gwas = gwas_renaming[gwas]) |>
+    arrange(gwas, cell_type, peak_category, p) |>
     left_join(gtf, by = 'gene_id') |>
     select(gwas, cell_type, peak_category, gene_id, gene_name, p) |>
     write_csv(out_path)
