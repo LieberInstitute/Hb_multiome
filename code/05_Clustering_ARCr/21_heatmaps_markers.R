@@ -517,30 +517,48 @@ hm_LHb_MHb <- make_heatmap_column_group(mat_LHb_MHb, row_split_sub, merged_Hb_cl
 lhb_genes <- names(row_cluster_group[row_cluster_group == "LHb"])
 mhb_genes <- names(row_cluster_group[row_cluster_group == "MHb"])
 valid_lhb <- lhb_genes[lhb_genes %in% rownames(SeuratOBJ)]
-invalid_lhb <- lhb_genes[!lhb_genes %in% rownames(SeuratOBJ)]
+valid_mhb <- mhb_genes[mhb_genes %in% rownames(SeuratOBJ)]
 # valid_lhb
 # invalid_lhb
+identical(valid_mhb, valid_lhb)
+
 # Extract their expression matrix
-mat <- GetAssayData(SeuratOBJ, layer = "data")[valid_lhb, , drop = FALSE]
+mat_lhb <- GetAssayData(SeuratOBJ, slot = "data")[valid_lhb, , drop = FALSE]
+mat_mhb <- GetAssayData(SeuratOBJ, slot = "data")[valid_mhb, , drop = FALSE]
+
 # Compute average expression across all LHb genes
-SeuratOBJ[["LHb_combined_score"]] <- Matrix::colMeans(mat)
+SeuratOBJ[["LHb_combined_score"]] <- Matrix::colMeans(mat_lhb)
+SeuratOBJ[["MHb_combined_score"]] <- Matrix::colMeans(mat_mhb)
 
 plt_LHb <- FeaturePlot(
     SeuratOBJ,
     features = "LHb_combined_score",
     reduction = "wnn.umap"
 ) +
-    labs(title = paste0("LHb Marker Gene Expression – ", seurat_name)) &
+    labs(title = "LHb Marker Gene Expression") &
     theme(
         text = element_text(size = 8),
         axis.text.x = element_text(size = 7),
         axis.text.y = element_text(size = 7),
         plot.title = element_text(hjust = 0.5)
     )
+plt_MHb <- FeaturePlot(
+    SeuratOBJ,
+    features = "MHb_combined_score",
+    reduction = "wnn.umap"
+) +
+    labs(title = "MHb Marker Gene Expression") &
+    theme(
+        text = element_text(size = 8),
+        axis.text.x = element_text(size = 7),
+        axis.text.y = element_text(size = 7),
+        plot.title = element_text(hjust = 0.5)
+    )
+plt_Hb <- plt_MHb + plt_LHb
 
 ggsave(
-    filename = here(plotDir, paste0(seurat_name, "_LHb_FeaturePlot.pdf")),
-    plot = plt_LHb, width = 12, height = 6
+    filename = here(plotDir, "MHb_LHb_FeaturePlot.pdf"),
+    plot = plt_Hb, width = 6, height = 12
 )
 
 
