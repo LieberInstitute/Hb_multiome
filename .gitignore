@@ -11,8 +11,17 @@
 # old VPlots for louvain, SLM, etc) directories 
 old_wnn_Vplots_louvain_slm
 old_wnn_Vplots_louvain_slm_v2
-# olds trainning datasets
+# old trainning datasets
 plots/02_merge_seurats/trainning_samples_S4S5S6/
+processed-data/05_Clustering_ARCr/02_Hb_celltypes_from_seurat_reanalyze_v3/old_leiden_r1_Feb11/
+processed-data/05_Clustering_ARCr/02_Hb_celltypes_from_seurat_reanalyze_v3/old_leiden_r2_Feb28/
+
+# scattterd plots using links filtered by CC and logFC - we decided to continue the analysis with all links found (not filtered)
+plots/06_peak_calling/14_exploratory_pb_peak_scores_MACS2/old_links_ct_filted_CC02_FDR02/
+# Exploratory Heatmaps & Peak Score Folders Stored Locally Only - Before Pseudobulk Assasys
+plots/06_peak_calling/07_exploratory_heatmaps/
+plots/06_peak_calling/08_exploratory_peak_scores_MACS2/
+plots/06_peak_calling/10_compare_link_peak_gene_distributions_MACS2/
 
 
 # cellranger arc files 
@@ -41,6 +50,7 @@ processed-data/cellrangerATAC/
 processed-data/05_Clustering_ARCr/01_clustering_std_method/
 processed-data/**/*.rds
 processed-data/**/*.RDS
+processed-data/08_spatial_registration_vs_multiome_snRNA-seq/
 
 # better to check file size before adding the sub-dir living here:
 processed-data/06_peak_calling/
