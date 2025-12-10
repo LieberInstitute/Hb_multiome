@@ -1,14 +1,16 @@
 # Hb_multiome
 
-------------------------------------------------------------------------
+<br>
 
 ## Project Description
+
+<br> 
 
 ------------------------------------------------------------------------
 
 ## Local Data in JHPCE
 
-#### Project name: Hb_multiome
+#### Github Project Name: Hb_multiome
 
 Allocated in: `/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome`
 
