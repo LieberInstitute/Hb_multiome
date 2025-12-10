@@ -64,10 +64,22 @@ id4=$(sbatch --parsable --dependency=afterok:$id3 13_pseudobulk_LinkPeaks_MACS2_
 ## Make distribution plots to evaluate Peak scores
 sbatch --dependency=afterok:$id4 14_exploratory_pb_peak_scores_MACS2.sh
 
+echo "===== MACS2 peaks widths at different clustering resolutions  ................."
+
+sbatch --parsable --dependency=afterok:$id3 15_pseudobulk_compare_link_peak_gene_distributions_MACS2.R
+
 
 echo "===== DARs (search markers) in pb assays with merge macs2 peaks / by cell-type  ................."
 
 id5=$(sbatch --parsable --dependency=afterok:$id3 16_pseudobulk_DARs_MACS2_reduced.sh)
+
+
+
+
+
+
+
+
 
 
 echo "===== DARs (voomLmFit) in pb assays with merge macs2 peaks / by cell-type  ................."
