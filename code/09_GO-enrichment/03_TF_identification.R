@@ -1,6 +1,7 @@
 
 ## Scan DAR sequences for TF motifs, test enrichment vs background, and optionally footprint
 
+library(tidyverse)
 library(JASPAR2024)     # or latest available JASPAR set
 library(TFBSTools)
 library(motifmatchr)
@@ -15,16 +16,16 @@ library(BSgenome.Hsapiens.UCSC.hg38)
 library(clusterProfiler)
 
 
-
 ## Inputs & goal
-## Check pre-processing steps are completed:
-# Filter cells (both assays): min fragments in peaks, TSS enrichment, blacklist removal, nucleosome signal; RNA nFeature/nCount/mito%.
-# Normalization: RNA (SCTransform/LogNormalize); ATAC (TF-IDF + SVD/LSI).
-# WNN integration & clustering: derive final clusters/cell-types to compare.
-# Peak set: use merged MACS2 peaks (across samples) or Signac “peaks” assay.
+
+## Pre-processing steps completed:
+# Filter cells (both assays): min fragments in peaks, TSS enrichment, blacklist removal, nucleosome signal; RNA nFeature/nCount/mito%. (all done)
+# Normalization: RNA (SCTransform/LogNormalize); ATAC (TF-IDF + SVD/LSI). (all done)
+# WNN integration & clustering: derive final clusters/cell-types to compare. (all done)
+# Peak set: use merged MACS2 peaks (across samples) or Signac “peaks” assay. (all done)
 
 
-## Confirm DARs are pseudobulk data
+## Confirm DARs are pseudobulk data (confirm) 
 
 ## Keep significant DARs (tune thresholds)
 # DARs <- dar %>% filter(FDR <= 0.05, abs(logFC) >= 0.25)
@@ -42,6 +43,7 @@ ann <- annotatePeak(
     tssRegion=c(-2000, 2000),  # promoter window (adjust as needed)
     annoDb="org.Hs.eg.db"
 ) %>% as.data.frame()
+
 
 DARs_annot <- DARs %>%
     tibble::rownames_to_column("peak_id") %>%
@@ -90,8 +92,7 @@ ego <- enrichGO(gene         = genes_for_go,
                 qvalueCutoff = 0.2)
 # Optional: rrvgo to reduce terms
 
-## some notes for guihub issues
-# QA checks:
+##########  QA checks:
 # Replicate structure (≥2 per group) for DAR calling
 # GC/length matching for motif background
 # Blacklist and low-mappability filters
