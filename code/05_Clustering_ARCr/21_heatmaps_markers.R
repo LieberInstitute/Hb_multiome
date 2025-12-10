@@ -511,6 +511,41 @@ grid_ann <- paste0("Top ", top_subset," DEG (FDR < 5%)\nWilcoxon test (Seurat)")
 hm_LHb_MHb <- make_heatmap_column_group(mat_LHb_MHb, row_split_sub, merged_Hb_clusters, top_anno_sub, row_anno_sub, 
                                         row_names_font_size, f_name, grid_ann, 18) # file name and bottom ann
 
+
+## Make fast Feature Plot for presentation 
+
+lhb_genes <- names(row_cluster_group[row_cluster_group == "LHb"])
+mhb_genes <- names(row_cluster_group[row_cluster_group == "MHb"])
+valid_lhb <- lhb_genes[lhb_genes %in% rownames(SeuratOBJ)]
+invalid_lhb <- lhb_genes[!lhb_genes %in% rownames(SeuratOBJ)]
+# valid_lhb
+# invalid_lhb
+# Extract their expression matrix
+mat <- GetAssayData(SeuratOBJ, layer = "data")[valid_lhb, , drop = FALSE]
+# Compute average expression across all LHb genes
+SeuratOBJ[["LHb_combined_score"]] <- Matrix::colMeans(mat)
+
+plt_LHb <- FeaturePlot(
+    SeuratOBJ,
+    features = "LHb_combined_score",
+    reduction = "wnn.umap"
+) +
+    labs(title = paste0("LHb Marker Gene Expression – ", seurat_name)) &
+    theme(
+        text = element_text(size = 8),
+        axis.text.x = element_text(size = 7),
+        axis.text.y = element_text(size = 7),
+        plot.title = element_text(hjust = 0.5)
+    )
+
+ggsave(
+    filename = here(plotDir, paste0(seurat_name, "_LHb_FeaturePlot.pdf")),
+    plot = plt_LHb, width = 12, height = 6
+)
+
+
+
+
 message("All done!!!")
 
 
