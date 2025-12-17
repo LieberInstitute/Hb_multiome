@@ -6,7 +6,6 @@
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
-#SBATCH --mail-type=ALL
 
 set -eo pipefail
 
@@ -26,7 +25,7 @@ echo "Node name: ${HOSTNAME}"
 echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 
 ## Load the R module
-module load conda_R/4.4.x
+module load conda_R/4.5
 
 ## List current modules for reproducibility
 module list

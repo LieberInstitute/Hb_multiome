@@ -22,7 +22,7 @@ library("here")
 ## setup variable names
 
 # resolution_level = "Mid" 
-FDR = 0.2 # actual value to run the DAR-Links
+FDR = 0.1 # actual value to run the DAR-Links
 # we do not use log FC for this exploratory analysis
 
 ## Set directory names
@@ -50,8 +50,10 @@ if (!dir.exists(plotDir)) { dir.create(plotDir) }
 message("Loading Unique-Overlap Hits ...")
 
 ## load full overlaps df
-overlaps_df <- read.csv(here(inputCSV_Overlaps_Dir, 
-                             paste0("Overlaps_LinkPeak_DARs_FDR", FDR, ".csv")))
+overlaps_df <- read_csv(
+        here(inputCSV_Overlaps_Dir, "Overlaps_LinkPeak_DARs_FDR0.2.csv")
+    ) |>
+    filter(fdr_dars < FDR, FDR_CC < FDR)
 # head(overlaps_df)
 
 
