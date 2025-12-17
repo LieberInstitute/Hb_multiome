@@ -28,7 +28,7 @@ library("here")
 resolution_level = "Mid" 
 
 # test 1 thresholds on Links
-FDR_links = 0.2 
+FDR_links = 0.1
 
 # test 2 thresholds on DARs
 FDR = 0.2 # actual value to run the DAR-Links
@@ -75,7 +75,9 @@ message(length(lst_peak_files), " Link peak-genes files found ... ")
 
 # bind all files 
 list_of_df <- lapply(here(inputCSV_Links_Dir, lst_peak_files), read.csv)
-linkPeaks_results_all <- bind_rows(list_of_df)
+linkPeaks_results_all <- bind_rows(list_of_df) |>
+    as_tibble() |>
+    filter(FDR < FDR_links)
 
 message("Processing ", length(list_of_df), " LinkPeaks files for merged-peaks dataset")
 message(nrow(linkPeaks_results_all), " total links") 
@@ -103,7 +105,7 @@ g1 <- ggplot(cluster_counts, aes(x = reorder(cluster, n), y = n)) +
     geom_text(aes(label = n), hjust = -0.2, size = 3) +
     labs(
         title = "LinkPeaks by Cell Type",
-        subtitle = paste0(sum(cluster_counts$n), " unique | FDR = ", FDR),
+        subtitle = paste0(sum(cluster_counts$n), " total | FDR = ", FDR_links),
         x = NULL, # "Cell Type",
         y = "Number of Links"
     ) +
@@ -111,7 +113,7 @@ g1 <- ggplot(cluster_counts, aes(x = reorder(cluster, n), y = n)) +
     coord_flip() +
     scale_y_continuous(expand = expansion(mult = c(0, 0.15)))  # add 10% space on right
 
-f_name <- paste0("links_barplot_ct_FDR", FDR, ".pdf")
+f_name <- paste0("links_barplot_ct_FDR", FDR_links, ".pdf")
 ggsave(here(plotDir, f_name),
        g1, width = 7, height = 7)
 
@@ -270,7 +272,7 @@ g2 <- lapply(thresholds, function(th) {
             geom_text(aes(label = n), hjust = -0.2, size = 3) +
             labs(
                 title = paste("DARs by Cell Type"),
-                subtitle = paste0(sum(DARs_counts$n), " unique | FDR = ", gsub("FDR","", th)),
+                subtitle = paste0(sum(DARs_counts$n), " total | FDR = ", gsub("FDR","", th)),
                 x = NULL,
                 y = "Number of DARs"
             ) +
@@ -293,11 +295,11 @@ walk2(
 
 ## only for linkpeaks with FDR=0.2 and dars with FDR=0.1 (first filter for both)
 combined_LinkPeaks_DARs <- g1 + g2[[1]]
-f_name <- paste0("LinkPeaks_DARs_combined_barplot_FDR0.2.pdf")
+f_name <- sprintf("LinkPeaks_DARs_combined_barplot_FDR%s_FDR%s.pdf", FDR_links, FDR_thresh[1])
 ggsave(here(plotDir, f_name),
        combined_LinkPeaks_DARs, width = 7, height = 7)
 combined_LinkPeaks_DARs <- g1 + g2[[2]]
-f_name <- paste0("LinkPeaks_DARs_combined_barplot_FDR02_FDR01.pdf")
+f_name <- sprintf("LinkPeaks_DARs_combined_barplot_FDR%s_FDR%s.pdf", FDR_links, FDR_thresh[2])
 ggsave(here(plotDir, f_name),
        combined_LinkPeaks_DARs, width = 7, height = 7)
 
