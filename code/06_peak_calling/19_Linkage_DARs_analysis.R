@@ -27,13 +27,8 @@ library("here")
 ## setup variable names
 resolution_level = "Mid" 
 
-# test 1 thresholds on Links
 FDR_links = 0.1
-
-# test 2 thresholds on DARs
-FDR = 0.2 # actual value to run the DAR-Links
-FDR_thresh = c(0.1, 0.2)
-# lfc_thresh = 0.2 # we do not use log FC for this exploratory analysis
+FDR_dars = 0.1
 
 ## Set directory names
 inputCSV_Links_Dir <- here(
@@ -91,7 +86,6 @@ write.csv(linkPeaks_results_all, f_name, row.names = FALSE)
 
 message("LinkPeaks saved for FDR", gsub("\\.", "", as.character(FDR_links)), ".csv")
 
-
 #===========================================================================
 
 message("Ploting barplot of number of links by cellType .. ")
@@ -105,7 +99,10 @@ g1 <- ggplot(cluster_counts, aes(x = reorder(cluster, n), y = n)) +
     geom_text(aes(label = n), hjust = -0.2, size = 3) +
     labs(
         title = "LinkPeaks by Cell Type",
-        subtitle = paste0(sum(cluster_counts$n), " total | FDR = ", FDR_links),
+        subtitle = sprintf(
+            "%d unique | FDR = %s", length(unique(linkPeaks_results_all$peak_id)),
+            FDR_links
+        ),
         x = NULL, # "Cell Type",
         y = "Number of Links"
     ) +
@@ -116,8 +113,6 @@ g1 <- ggplot(cluster_counts, aes(x = reorder(cluster, n), y = n)) +
 f_name <- paste0("links_barplot_ct_FDR", FDR_links, ".pdf")
 ggsave(here(plotDir, f_name),
        g1, width = 7, height = 7)
-
-
 
 ##==============================================================================
 
@@ -132,10 +127,9 @@ lst_DARs_files_cellType <- list.files(
 message(length(lst_DARs_files_cellType), " DAR files found ... ")
 lst_DARs_files_cellType
 
-
 #===========================================================================
 
-message("Parsing DARs for each cellType at ", paste("FDR=", FDR_thresh, " "))
+message("Parsing DARs for each cellType at ", paste("FDR=", FDR_dars, " "))
 
 #DARS_signif_df_lst = list()
 # FDR_thresh = c(0.1, 0.2)
@@ -146,7 +140,6 @@ filter_signific_DARs <- function(
         fdr_thresh,
         output_Dir
 ) {
-    
     # testing
     # ct =  lst_DARs_files_cellType[2]
     # fdr_thresh = 0.2
@@ -169,10 +162,7 @@ filter_signific_DARs <- function(
                 logFC = paste0("logFC_", ct_name),
                 fdr   = paste0("fdr_", ct_name)
             ) |>
-            mutate(
-                fdr = as.numeric(fdr),  # keep actual fdr values
-                is_significant = if_else(fdr < fdr_thresh, "Significant", "Not Significant")
-            ) |> 
+            mutate(fdr = as.numeric(fdr)) |> 
             filter(fdr < fdr_thresh)
         
         DARS_signif_df_lst[[ct_name]] <- DARs_significant
@@ -195,54 +185,26 @@ filter_signific_DARs <- function(
 }
 
 ## for each FDR_thresh to test
-DARs_results_all <- purrr::map_dfr(
-    FDR_thresh, 
-    ~ filter_signific_DARs(lst_DARs_files_cellType, .x, processedDir),
-    .id = "FDR_threshold"
-)
-
-## Convert the .id column (1, 2) into meaningful labels
-DARs_results_all <- DARs_results_all |>
-    mutate(FDR_threshold = factor(FDR_threshold, 
-                                  labels = paste0("FDR", FDR_thresh)))
-
-table(DARs_results_all$FDR_threshold)
-# FDR0.1 FDR0.2 
-# 257010 325580 
-# 266011 349352
-DARs_results_all |> head()
-
+DARs_results_all <- filter_signific_DARs(
+    lst_DARs_files_cellType, FDR_dars, processedDir
+) |>
+    as_tibble()
 
 #===========================================================================
 
 message("Plotting barplot of DARs by cellType ...")
 
-# Make FDR_threshold a factor for facet labels
-DARs_results_all <- DARs_results_all |>
-    mutate(FDR_threshold = as.factor(FDR_threshold))
-
 # count DARs
 DARs_counts <- DARs_results_all |>
-    count(cell_type, FDR_threshold, sort = TRUE)
-
-# Get unique thresholds
-thresholds <- unique(DARs_counts$FDR_threshold)
-
-# Loop through thresholds and plot one at a time
+    count(cell_type, sort = TRUE)
 
 # Extract cluster-order used in the LinkPeaks plot to set plots side to side in the same order
 cluster_order <- cluster_counts |>
     pull(cluster)
-DARs_counts |> filter(FDR_threshold=="FDR0.2") |> pull(cell_type)
-
-# Validate cluster vectors: check for missing clusters between LinkPeaks and DARs
-cluster_order_DARs <- DARs_counts |>
-    filter(FDR_threshold == "FDR0.2") |>
-    pull(cell_type)
 
 # Clusters unique to each dataset
-DAR_clust     <- setdiff(cluster_order_DARs, cluster_order)
-Linked_clust  <- setdiff(cluster_order, cluster_order_DARs)
+DAR_clust     <- setdiff(DARs_results_all$cell_type, cluster_order)
+Linked_clust  <- setdiff(cluster_order, DARs_results_all$cell_type)
 
 if (length(DAR_clust) > 0) {
     message("Clusters found in DARs but missing in LinkPeaks: ",
@@ -253,85 +215,44 @@ if (length(DAR_clust) > 0) {
             paste(Linked_clust, collapse = ", "))
     cluster_order <- unique(c(cluster_order, Linked_clust))
 } else {
-    message("oth LinkPeaks and DARs contain the same clusters.")
+    message("Both LinkPeaks and DARs contain the same clusters.")
 }
-# preserve original order but keep unique entries
-cluster_order <- unique(cluster_order)
 
-g2 <- lapply(thresholds, function(th) {
-    
-        df_sub <- filter(DARs_counts, FDR_threshold == th)
-        # This prevents issues with missing levels and ensures we only order the visible data.
-        current_cluster_order <- cluster_order[cluster_order %in% unique(df_sub$cell_type)]
-        reversed_order <- rev(current_cluster_order)
-        
-        ggplot(df_sub,
-               aes(x = factor(cell_type, levels = reversed_order), y = n)) +
-            
-            geom_col(fill = "grey") +
-            geom_text(aes(label = n), hjust = -0.2, size = 3) +
-            labs(
-                title = paste("DARs by Cell Type"),
-                subtitle = paste0(sum(DARs_counts$n), " total | FDR = ", gsub("FDR","", th)),
-                x = NULL,
-                y = "Number of DARs"
-            ) +
-            theme_minimal() +
-            coord_flip() +
-            scale_y_continuous(expand = expansion(mult = c(0, 0.2)))  # add 10% space on right
-    })
+df_sub <- DARs_counts
 
-walk2(
-    .x = g2,           
-    .y = thresholds,   # thresholds for filenames
-    ~ ggsave(
-        filename = file.path(plotDir, paste0("DARs_barplot_ct_", .y, ".pdf")),
-        plot = .x,
-        width = 7,
-        height = 7
-    )
-)
+# This prevents issues with missing levels and ensures we only order the visible data.
+current_cluster_order <- cluster_order[cluster_order %in% unique(df_sub$cell_type)]
+reversed_order <- rev(current_cluster_order)
 
-
-## only for linkpeaks with FDR=0.2 and dars with FDR=0.1 (first filter for both)
-combined_LinkPeaks_DARs <- g1 + g2[[1]]
-f_name <- sprintf("LinkPeaks_DARs_combined_barplot_FDR%s_FDR%s.pdf", FDR_links, FDR_thresh[1])
-ggsave(here(plotDir, f_name),
-       combined_LinkPeaks_DARs, width = 7, height = 7)
-combined_LinkPeaks_DARs <- g1 + g2[[2]]
-f_name <- sprintf("LinkPeaks_DARs_combined_barplot_FDR%s_FDR%s.pdf", FDR_links, FDR_thresh[2])
-ggsave(here(plotDir, f_name),
-       combined_LinkPeaks_DARs, width = 7, height = 7)
-
-
-## overlay both FDR thr for comparison purposes 
-
-# Turn into a nicely formatted label
-subtitle_label <- paste(
-    names(table(DARs_results_all$FDR_threshold)),
-    table(DARs_results_all$FDR_threshold),
-    sep = ": ",
-    collapse = " | "
-)
-
-g3 <- ggplot(DARs_counts, aes(x = reorder(cell_type, n), y = n, fill = FDR_threshold)) +
-    geom_col(alpha = 0.5, position = "identity") +  # <- overlay instead of dodge
+g2 = ggplot(
+        df_sub, aes(x = factor(cell_type, levels = reversed_order), y = n)
+    ) +
+    geom_col(fill = "grey") +
+    geom_text(aes(label = n), hjust = -0.2, size = 3) +
     labs(
         title = paste("DARs by Cell Type"),
-        subtitle = subtitle_label,
+        subtitle = sprintf(
+            "%d unique | FDR = %s", length(unique(DARs_results_all$peak_id)),
+            FDR_dars
+        ),
         x = NULL,
-        y = "Number of DARs",
-        fill = "FDR Threshold"
+        y = "Number of DARs"
     ) +
     theme_minimal() +
-    coord_flip()  +
+    coord_flip() +
     scale_y_continuous(expand = expansion(mult = c(0, 0.2)))  # add 10% space on right
 
-f_name <- paste0("DARs_barplot_overlay_FDRs.pdf")
+ggsave(
+    filename = file.path(plotDir, paste0("DARs_barplot_ct_", FDR_dars, ".pdf")),
+    plot = g2,
+    width = 7,
+    height = 7
+)
+
+combined_LinkPeaks_DARs <- g1 + g2
+f_name <- sprintf("LinkPeaks_DARs_combined_barplot_FDR%s_FDR%s.pdf", FDR_links, FDR_dars)
 ggsave(here(plotDir, f_name),
-       g3, width = 7, height = 7)
-
-
+       combined_LinkPeaks_DARs, width = 7, height = 7)
 
 #===========================================================================
 
@@ -366,7 +287,7 @@ gr_links <-
              CCscore  = score, # spearman CC
              gene_name  = gene,
              gene_id  = gene_id, 
-             FDR_CC = FDR,
+             FDR_CC = FDR_links,
              cluster  = cluster,
              tss = tss,
              # the strand of the linked gene (+ or -)
@@ -385,19 +306,14 @@ gr_links <-
 length(gr_links) # [1] 10948
 head(gr_links)
 
-
 ##==============================================================================
-## Filter DARs with FDR=0.2
 
-DARs_FDRX <- DARs_results_all |>
-    filter(FDR_threshold == paste0("FDR", FDR)) 
-nrow(DARs_FDRX) < nrow(DARs_results_all) # [1] 325580
+DARs_FDRX <- DARs_results_all
 nrow(DARs_FDRX) # [1] 325580
 head(DARs_FDRX)
 # FDR_threshold cell_type            peak_id      logFC          fdr
 # 1        FDR0.2 Astrocyte chr1-629811-630032  1.1115262 1.970054e-07
 # 2        FDR0.2 Astrocyte chr1-633694-634122  1.1348873 8.347289e-09
-
 
 # split the peak_id "chr-start-end" into seqnames, start, end
 
@@ -406,7 +322,6 @@ DARs_split <- tidyr::separate(DARs_FDRX, peak_id, into = c("seqnames", "start", 
            end   = as.integer(end))
 
 nrow(DARs_split) # [1] 325580
-
 
 # In GRanges(), anything other than seqnames, ranges, and strand is read as metadata
 # Differential Accessibility Regions (DARs) are treated as unstranded 
@@ -419,21 +334,17 @@ gr_dars <-
             # Metadata columns passed directly:
             peak_id        = paste(seqnames, start, end, sep = "-"),
             cell_type      = cell_type,
-            FDR_threshold  = FDR_threshold, # 0.1 / 0.2 
+            FDR_dars  = FDR_dars,
             # Add FC of chromatin accessibility:
             # - logFC > 0 → peak is more accessible (open) in the target cell type
             # - logFC < 0 → peak is less accessible (closed) in the target cell type
-            logFC          = logFC,
-            fdr_dars = fdr
-            #is_significant = is_significant
+            logFC          = logFC
     )
 )
 
 ## inspect
 length(gr_dars) # [1] 325580
 head(gr_dars)
-
-
 
 #===========================================================================
 
@@ -451,10 +362,9 @@ g_venn_overlaps <- ggvenn(venn_list,
        stroke_size = 0.5,
        set_name_size = 4)
 
-f_name <- paste0("Overlaps_venn_diagram_FDR", FDR, ".pdf")
+f_name <- sprintf("Overlaps_venn_diagram_FDR%s_%s.pdf", FDR_links, FDR_dars)
 ggsave(here(plotDir, f_name),
        g_venn_overlaps, width = 5, height = 5)
-
 
 # findOverlaps() reports all pairs of ranges that overlap # “≥1 bp overlap”
 # If one LinkPeaks region overlaps many DARs regions, you’ll get multiple rows for the same LinkPeak
@@ -490,12 +400,12 @@ overlaps_df <- data.frame(
 nrow(overlaps_df) # [1] 20650
 head(overlaps_df)
 
-f_name <- here(processedDir, paste0("Overlaps_LinkPeak_DARs_FDR", FDR, ".csv"))
+f_name <- here(
+    processedDir, sprintf("Overlaps_LinkPeak_DARs_FDR%s_%s.csv", FDR_links, FDR_dars)
+)
 write.csv(overlaps_df, f_name, row.names = FALSE)
 
-
 message("All done!!!")
-
 
 # library("slurmjobs")
 # job_single(
@@ -516,4 +426,3 @@ Sys.time()
 proc.time()
 options(width = 120)
 session_info()
-

@@ -6,6 +6,7 @@
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
+#SBATCH --exclude=compute-093
 
 set -eo pipefail
 
