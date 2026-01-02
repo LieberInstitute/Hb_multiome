@@ -49,11 +49,10 @@ if (!dir.exists(plotDir)) { dir.create(plotDir) }
 
 message("Loading Unique-Overlap Hits ...")
 
-## load full overlaps df
+## load full overlaps df, which is already FDR filtered
 overlaps_df <- read_csv(
-        here(inputCSV_Overlaps_Dir, "Overlaps_LinkPeak_DARs_FDR0.2.csv")
-    ) |>
-    filter(fdr_dars < FDR, FDR_CC < FDR)
+    here(inputCSV_Overlaps_Dir, "Overlaps_LinkPeak_DARs_FDR0.1_0.1.csv")
+)
 # head(overlaps_df)
 
 
@@ -689,7 +688,7 @@ all_overlaps_raw <- overlaps_df |>
         )
     )
 
-## get total counts / all shared overlaps
+## get total counts / 2-shared overlaps
 
 n_unique_links <- all_overlaps_raw |> filter(overlap_type == "Unique") |> pull(peak_id_links) |> unique() |> length()
 # 1967
@@ -714,44 +713,11 @@ plt_divergence_stacked(
     n_unique_links,
     n_shared_links,
     FDR,
-    "All",
+    "2",
     plotDir
 )
-
-
-## ======= filter only 2-shared cell-Types / (skip this block if you want all shared peaks)
-
-## Define the list of peaks shared by exactly 2 cell types
-shared2_links <- overlaps_df |>
-    distinct(peak_id_links, cell_type) |>
-    count(peak_id_links, name = "n_cell_types") |>
-    filter(n_cell_types == 2) |>
-    pull(peak_id_links)
-
-all_overlaps_raw <- all_overlaps_raw |>
-    filter(overlap_type == "Unique" | peak_id_links %in% shared2_links)
-
-## recompute shared count after filtering
-n_shared_links <- all_overlaps_raw |> filter(overlap_type == "Shared") |> pull(peak_id_links) |>  unique() |> length() 
-# 1238
-
-## make summary table to divergence plot for 2-ct level 
-combined_summary <- make_combined_summary_divergence_plots(
-    all_overlaps_raw)
-
-## make divergence plot
-plt_divergence_stacked(
-    combined_summary,
-    n_unique_links,
-    n_shared_links,
-    FDR,
-    "2", # means 2 shared ct-levels
-    plotDir
-)
-
 
 message("All plots done!!!")
-
 
 # library("slurmjobs")
 # job_single(
