@@ -100,7 +100,7 @@ g1 <- ggplot(cluster_counts, aes(x = reorder(cluster, n), y = n)) +
     labs(
         title = "LinkPeaks by Cell Type",
         subtitle = sprintf(
-            "%d unique | FDR = %s", length(unique(linkPeaks_results_all$peak_id)),
+            "%d unique | FDR = %s", length(unique(linkPeaks_results_all$peak)),
             FDR_links
         ),
         x = NULL, # "Cell Type",
