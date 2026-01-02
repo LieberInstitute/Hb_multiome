@@ -188,7 +188,11 @@ filter_signific_DARs <- function(
 DARs_results_all <- filter_signific_DARs(
     lst_DARs_files_cellType, FDR_dars, processedDir
 ) |>
-    as_tibble()
+    as_tibble() |>
+    #   keep peaks that are differentially accessible in at most 2 cell types
+    group_by(peak_id) |>
+    filter(n_distinct(cell_type) <= 2) |>
+    ungroup()
 
 #===========================================================================
 
