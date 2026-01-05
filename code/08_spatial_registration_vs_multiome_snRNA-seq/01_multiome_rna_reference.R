@@ -17,28 +17,30 @@ library("rtracklayer")
 library("spatialLIBD")
 library("sessioninfo")
 
-## set directories
-inputRDS <- here("processed-data", "05_Clustering_ARCr", "17_wnn_clustering_final_ct") # has final WNN annotations
-outputRDS <- here("processed-data", "08_spatial_registration_vs_multiome_snRNA-seq") 
+task_id = as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID"))
+cluster_column = c("cluster_ann", "mid_cluster")[task_id]
+cluster_res = c("fine", "mid")[task_id]
+
+inputRDS <- here(
+    "processed-data", "05_Clustering_ARCr", "22_add_mid_level_clustering",
+    "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
+)
+outputRDS <- here(
+    "processed-data", "08_spatial_registration_vs_multiome_snRNA-seq",
+    cluster_res
+)
 
 # Before move scripts from Hb_Visium project
 # inputRDS <- "/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/05_Clustering_ARCr/05_rename_idents"
 # outputRDS <- "/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/05_Clustering_ARCr/08_wnn_gene_expression_plts_renamed_idents/"
 
-if (!dir.exists(outputRDS)) {
-  dir.create(outputRDS, showWarnings = FALSE, recursive = TRUE)
-}
-
+dir.create(outputRDS, showWarnings = FALSE, recursive = TRUE)
 
 ## ==============================================================================
 message("Converting Seurat into SCE object ...")
 
 ## Read seurat object
-rds_name <- here(
-  inputRDS,
-  "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
-)
-SeuratOBJ <- readRDS(rds_name)
+SeuratOBJ <- readRDS(inputRDS)
 SeuratOBJ
 # An object of class Seurat
 # 299552 features across 55702 samples within 2 assays
@@ -46,16 +48,7 @@ SeuratOBJ
 # 3 layers present: data, counts, scale.data
 # 1 other assay present: ATAC
 # 13 dimensional reductions calculated: pca, umap.unintegrated, integrated.cca, umap, integrated.harmony, lsi, umap.lsi.unintegrated, umap.integrated, tsne.integrated, integrated.lsi.harmony, umap.lsi.integrated, tsne.lsi.integrated, wnn.umap
-levels(SeuratOBJ)
-#colnames(SeuratOBJ@meta.data)
-table(SeuratOBJ@meta.data$cluster_ann)
-
-# C.04.Excit.Thal
-# C.06.ExcitT.LHb.4
-# C.09.ExcitT.LHb.4
-# C.16.MHb.1.2
-# C.30.MHb.LHb
-
+table(SeuratOBJ@meta.data[[cluster_column]])
 
 ## Import RNA assay into sce object
 
@@ -214,7 +207,7 @@ message("computing enrichment statistics ...")
 sce_modeling_results <- registration_wrapper(
   sce = sce,
   #var_registration = "seurat_clusters",
-  var_registration = "cluster_ann",
+  var_registration = cluster_column,
   var_sample_id = "orig.ident",
   gene_ensembl = "gene_id", # gene ensembl ids
   gene_name = "gene_symbol" # gene_names
