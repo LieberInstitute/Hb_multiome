@@ -3,7 +3,6 @@
 library(here)
 library(Seurat)
 library(Signac)
-library(DeconvoBuddies)
 library(tidyverse)
 
 seur_path = here(
