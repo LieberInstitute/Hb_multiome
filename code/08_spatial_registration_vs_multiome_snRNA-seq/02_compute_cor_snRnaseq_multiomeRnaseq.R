@@ -20,13 +20,13 @@ library("tidyverse")
 ## Input / Output dirs
 rds_input <- here(
   "processed-data",
-  "08_spatial_registration_vs_multiome_snRNA-seq",
+  "08_spatial_registration_vs_multiome_snRNA-seq", "fine",
   "enrichment_snRNA-multiome_v5.rds"
   )
 ## Create output directories
 dir_rdata <- here(
   "processed-data",
-  "08_spatial_registration_vs_multiome_snRNA-seq"
+  "08_spatial_registration_vs_multiome_snRNA-seq", "fine"
   )
 dir_plot <- here(
     "plots", 
