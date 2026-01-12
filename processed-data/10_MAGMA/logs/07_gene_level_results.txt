@@ -1,8 +1,8 @@
 **** Job starts ****
-Wed Dec 10 03:16:57 PM EST 2025
+Mon Jan 12 01:12:23 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 25627811
+Job id: 26393705
 Job name: 07_gene_level_results
 Node name: compute-169
 Task id: 
@@ -126,11 +126,22 @@ This message can be suppressed by:
   suppressPackageStartupMessages(library(ComplexHeatmap))
 ========================================
 
+Warning: 2 parsing failures.
+  row col expected actual                                                                                                                                file
+33748 CHR a double      X '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/lifetime_cannabis/lifetime_cannabis.genes.out'
+33749 CHR a double      X '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/lifetime_cannabis/lifetime_cannabis.genes.out'
+
 Dropping 98% of genes for MDD GWAS missing MAGMA stats
-Dropping 55% of genes for MDD2019 GWAS missing MAGMA stats
-Dropping 55% of genes for panic GWAS missing MAGMA stats
-Dropping 55% of genes for SCZ GWAS missing MAGMA stats
-Dropping 56% of genes for SUD2020 GWAS missing MAGMA stats
+Dropping 60% of genes for MDD2019 GWAS missing MAGMA stats
+Dropping 60% of genes for panic GWAS missing MAGMA stats
+Dropping 60% of genes for SCZ GWAS missing MAGMA stats
+Dropping 62% of genes for SUD2020 GWAS missing MAGMA stats
+Dropping 60% of genes for AUD GWAS missing MAGMA stats
+Dropping 60% of genes for CUD GWAS missing MAGMA stats
+Dropping 61% of genes for ext_cannabis GWAS missing MAGMA stats
+Dropping 60% of genes for lifetime_cannabis GWAS missing MAGMA stats
+Dropping 61% of genes for OUD GWAS missing MAGMA stats
+Dropping 61% of genes for SUD2 GWAS missing MAGMA stats
 Warning messages:
 1: In S4Vectors:::anyMissing(runValue(x_seqnames)) :
   'S4Vectors:::anyMissing()' is deprecated.
@@ -150,7 +161,7 @@ See help("Deprecated")
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2025-12-10
+ date     2026-01-12
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   NA
 
@@ -249,4 +260,4 @@ See help("Deprecated")
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Dec 10 03:17:42 PM EST 2025
+Mon Jan 12 01:13:47 PM EST 2026
