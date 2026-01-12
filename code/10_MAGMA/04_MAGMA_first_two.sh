@@ -6,14 +6,14 @@
 #SBATCH -t 1-0:00:00
 #SBATCH -o ../../processed-data/10_MAGMA/logs/04_MAGMA_first_two_%a.txt
 #SBATCH -e ../../processed-data/10_MAGMA/logs/04_MAGMA_first_two_%a.txt
-#SBATCH --array=1-5%5
-#SBATCH --exclude=compute-175
+#SBATCH --array=6-11%6
 
 #   Run the first two steps in the MAGMA pipeline for every GWAS. Critically,
 #   all relevant inputs/ reference files use hg19 and European ancestry. This
 #   needs to be rerun (instead of grabbing what was done for habenula pilot)
 #   because of two issues: a lack of chr22 in the geneloc input and use of an
-#   hg38 input file for the MDD GWAS
+#   hg38 input file for the MDD GWAS. There are also new GWASes not originally
+#   included in the habenula pilot analysis.
 
 set -e
 
@@ -30,7 +30,7 @@ echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 module load magma/1.10
 module list
 
-all_gwas=(MDD MDD2019 panic SCZ SUD2020)
+all_gwas=(MDD MDD2019 panic SCZ SUD2020 AUD CUD ext_cannabis lifetime_cannabis OUD SUD2)
 gwas=${all_gwas[$(($SLURM_ARRAY_TASK_ID - 1))]}
 
 repo_dir=$(git rev-parse --show-toplevel)
@@ -40,10 +40,6 @@ gene_loc=${repo_dir}/processed-data/10_MAGMA/hg19_gene_loc.tsv
 bfile=/dcs04/lieber/lcolladotor/with10x_LIBD001/HumanPilot/Analysis/Layer_Guesses/MAGMA/g1000_eur
 
 case ${gwas} in
-    MDD)
-        snp_loc=${repo_dir}/processed-data/10_MAGMA/MDD/SNPs.tsv
-        pval_file=${repo_dir}/processed-data/10_MAGMA/MDD/p_values.tsv
-        ;;
     MDD2019)
         snp_loc=${hb_gwas_dir}/mdd2019edinburgh/PGC_UKB_depression_genome-wide.snploc
         pval_file=${repo_dir}/processed-data/10_MAGMA/MDD2019/p_values.tsv
@@ -61,9 +57,9 @@ case ${gwas} in
         pval_file=${hb_gwas_dir}/sud2020op/opi.DEPvEXP_EUR.noAF.pval
         ;;
     *)
-        #   Unexpected values
-        echo "Unknown GWAS: ${gwas}"
-        exit 1
+        #   Other GWASes follow a simpler pattern
+        snp_loc=${repo_dir}/processed-data/10_MAGMA/${gwas}/SNPs.tsv
+        pval_file=${repo_dir}/processed-data/10_MAGMA/${gwas}/p_values.tsv
         ;;
 esac
 

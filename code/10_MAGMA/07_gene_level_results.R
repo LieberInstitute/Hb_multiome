@@ -6,7 +6,10 @@ library(RColorBrewer)
 library(sessioninfo)
 
 cell_type_groups = c('broad', 'semi_broad', 'mid')
-gwas_groups = c('MDD', 'MDD2019', 'panic', 'SCZ', 'SUD2020')
+gwas_groups = c(
+    'MDD', 'MDD2019', 'panic', 'SCZ', 'SUD2020', 'AUD', 'CUD', 'ext_cannabis',
+    'lifetime_cannabis', 'OUD', 'SUD2'
+)
 gene_set_paths = here(
     'processed-data', '10_MAGMA', 'gene_sets',
     sprintf('%s.tsv', cell_type_groups)
@@ -25,7 +28,13 @@ gwas_renaming = c(
     'MDD2019' = 'MDD',
     'panic' = 'Panic Disorder',
     'SCZ' = 'SCZ',
-    'SUD2020' = 'OUD'
+    'SUD2020' = 'OUD 1',
+    'AUD' = 'AUD',
+    'CUD' = 'CUD',
+    'ext_cannabis' = 'Ext. Cannabis',
+    'lifetime_cannabis' = 'Lifetime Cannabis',
+    'OUD' = 'OUD 2',
+    'SUD2' = 'SUD'
 )
 
 #   MAGMA set-level outputs have a variable amount of header lines. Auto-detect
