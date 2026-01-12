@@ -5,11 +5,11 @@ ext_cannabis
 lifetime_cannabis
 MDD
 MDD2019
-OUD2
+OUD
 panic
 SCZ
 SUD2
 SUD2020
-OUD/OUD*
+OUD_unused
 hg38ToHg19.over.chain
 hg19_gene_loc.tsv
