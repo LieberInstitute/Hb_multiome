@@ -1,11 +1,11 @@
 **** Job starts ****
-Tue Nov 25 11:16:42 AM EST 2025
+Mon Jan 12 01:04:31 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 24974199
+Job id: 26393677
 Job name: 06_pval_heatmap
-Node name: compute-168
-Task id: 15
+Node name: compute-176
+Task id: 22
 Loading conda_R/4.5
 
 Currently Loaded Modules:
@@ -50,10 +50,10 @@ $ARGS
 character(0)
 
 $gwas
-[1] "MDD"
+[1] "ext_cannabis"
 
 $cell_type_group
-[1] "broad"
+[1] "semi_broad"
 
 null device 
           1 
@@ -67,7 +67,7 @@ null device
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2025-11-25
+ date     2026-01-12
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   NA
 
@@ -142,4 +142,4 @@ null device
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Tue Nov 25 11:16:48 AM EST 2025
+Mon Jan 12 01:04:54 PM EST 2026

@@ -1,10 +1,10 @@
 **** Job starts ****
-Tue Nov 25 11:16:12 AM EST 2025
+Mon Jan 12 01:03:50 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 24974200
+Job id: 26393656
 Job name: 06_pval_heatmap
-Node name: compute-168
+Node name: compute-175
 Task id: 1
 Loading conda_R/4.5
 
@@ -67,7 +67,7 @@ null device
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2025-11-25
+ date     2026-01-12
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   NA
 
@@ -142,4 +142,4 @@ null device
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Tue Nov 25 11:16:18 AM EST 2025
+Mon Jan 12 01:04:04 PM EST 2026
