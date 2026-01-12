@@ -106,11 +106,13 @@ fread(mdd_path, skip = 21) |>
 #   MDD2019
 #-------------------------------------------------------------------------------
 
+#   P-value file only
 fread(mdd2019_path) |>
     as_tibble() |>
     dplyr::rename(SNP = MarkerName) |>
     mutate(N = mdd2019_N) |>
-    to_input_files(mdd2019_out_dir)
+    select(SNP, P, N) |>
+    write_tsv(file.path(mdd2019_out_dir, 'p_values.tsv'))
 
 #-------------------------------------------------------------------------------
 #   AUD
