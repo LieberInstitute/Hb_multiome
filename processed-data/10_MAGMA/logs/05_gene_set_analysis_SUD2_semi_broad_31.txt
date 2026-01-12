@@ -1,11 +1,11 @@
 **** Job starts ****
-Mon Jan 12 12:53:48 PM EST 2026
+Mon Jan 12 12:57:16 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 26393588
+Job id: 26393644
 Job name: 05_gene_set_analysis
-Node name: compute-176
-Task id: 4
+Node name: compute-169
+Task id: 31
 Loading LIBD SLURM module for magma/1.10
 
 Currently Loaded Modules:
@@ -15,28 +15,29 @@ Currently Loaded Modules:
 
 Welcome to MAGMA v1.10 (linux/s)
 Using flags:
-	--gene-results /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD2019/MDD2019.genes.raw
+	--gene-results /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SUD2/SUD2.genes.raw
 	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv gene-col=gene_id set-col=set_id
-	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD2019/semi_broad
+	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SUD2/semi_broad
 
-Start time is 12:53:53, Monday 12 Jan 2026
+Start time is 12:57:19, Monday 12 Jan 2026
 
-Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD2019/MDD2019.genes.raw... 
-	33087 genes read from file
+Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SUD2/SUD2.genes.raw... 
+	30382 genes read from file
 Loading gene-set annotation...
 Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv... 
 	detected 2 variables in file
 	using variable: gene_id (gene ID)
 	using variable: set_id (set ID)
-	WARNING: gene set Endo_Linked_DAR_enriched contains no genes defined in genotype data
 	45 gene-set definitions read from file
-	found 44 gene sets containing genes defined in genotype data (containing a total of 2342 unique genes)
+	found 45 gene sets containing genes defined in genotype data (containing a total of 2292 unique genes)
 Preparing variables for analysis...
 	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
+	WARNING: discarding gene set 'Endo_Linked_DAR_enriched' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
+	WARNING: discarding gene set 'OPC_Discordant_Linked_DAR' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
 	WARNING: discarding gene set 'OPC_Linked_OCR_enriched' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
 	WARNING: discarding gene set 'Thal_Linked_OCR_depleted' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
 	truncating covariate values more than 5 standard deviations from the mean
-	total variables available for analysis: 42 gene sets
+	total variables available for analysis: 41 gene sets
 
 Parsing model specifications...
 Inverting gene-gene correlation matrix...
@@ -48,11 +49,11 @@ Inverting gene-gene correlation matrix...
 		inverse mac, log(inverse mac)
 	analysing individual variables
 
-	analysing single-variable models (number of models: 42)
-                                                                                                                   	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD2019/semi_broad.gsa.out
-	writing gene information to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD2019/semi_broad.gsa.genes.out
-	writing gene analysis results per significant result (after multiple testing correction, at alpha = 0.05) to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD2019/semi_broad.gsa.sets.genes.out
+	analysing single-variable models (number of models: 41)
+                                                                                                                   	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SUD2/semi_broad.gsa.out
+	writing gene information to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SUD2/semi_broad.gsa.genes.out
+	writing gene analysis results per significant result (after multiple testing correction, at alpha = 0.05) to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SUD2/semi_broad.gsa.sets.genes.out
 
-End time is 12:55:17, Monday 12 Jan 2026 (elapsed: 00:01:24)
+End time is 12:58:23, Monday 12 Jan 2026 (elapsed: 00:01:04)
 **** Job ends ****
-Mon Jan 12 12:55:17 PM EST 2026
+Mon Jan 12 12:58:23 PM EST 2026

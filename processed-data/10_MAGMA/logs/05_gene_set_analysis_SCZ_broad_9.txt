@@ -1,10 +1,10 @@
 **** Job starts ****
-Tue Nov 25 10:58:38 AM EST 2025
+Mon Jan 12 12:53:44 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 24973550
+Job id: 26393593
 Job name: 05_gene_set_analysis
-Node name: compute-178
+Node name: compute-168
 Task id: 9
 Loading LIBD SLURM module for magma/1.10
 
@@ -19,7 +19,7 @@ Using flags:
 	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv gene-col=gene_id set-col=set_id
 	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SCZ/broad
 
-Start time is 10:58:38, Tuesday 25 Nov 2025
+Start time is 12:53:46, Monday 12 Jan 2026
 
 Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SCZ/SCZ.genes.raw... 
 	33312 genes read from file
@@ -52,6 +52,6 @@ Inverting gene-gene correlation matrix...
 	analysing single-variable models (number of models: 36)
                                                                                                                    	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SCZ/broad.gsa.out
 
-End time is 11:00:28, Tuesday 25 Nov 2025 (elapsed: 00:01:50)
+End time is 12:55:20, Monday 12 Jan 2026 (elapsed: 00:01:34)
 **** Job ends ****
-Tue Nov 25 11:00:28 AM EST 2025
+Mon Jan 12 12:55:21 PM EST 2026

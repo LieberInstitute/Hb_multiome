@@ -1,11 +1,11 @@
 **** Job starts ****
-Mon Jan 12 12:53:44 PM EST 2026
+Mon Jan 12 12:55:26 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 26393594
+Job id: 26393627
 Job name: 05_gene_set_analysis
-Node name: compute-168
-Task id: 10
+Node name: compute-178
+Task id: 19
 Loading LIBD SLURM module for magma/1.10
 
 Currently Loaded Modules:
@@ -15,14 +15,14 @@ Currently Loaded Modules:
 
 Welcome to MAGMA v1.10 (linux/s)
 Using flags:
-	--gene-results /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SCZ/SCZ.genes.raw
+	--gene-results /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/CUD/CUD.genes.raw
 	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv gene-col=gene_id set-col=set_id
-	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SCZ/semi_broad
+	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/CUD/semi_broad
 
-Start time is 12:53:45, Monday 12 Jan 2026
+Start time is 12:55:32, Monday 12 Jan 2026
 
-Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SCZ/SCZ.genes.raw... 
-	33312 genes read from file
+Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/CUD/CUD.genes.raw... 
+	33222 genes read from file
 Loading gene-set annotation...
 Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv... 
 	detected 2 variables in file
@@ -50,8 +50,8 @@ Inverting gene-gene correlation matrix...
 	analysing individual variables
 
 	analysing single-variable models (number of models: 42)
-                                                                                                                   	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SCZ/semi_broad.gsa.out
+                                                                                                                   	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/CUD/semi_broad.gsa.out
 
-End time is 12:55:21, Monday 12 Jan 2026 (elapsed: 00:01:36)
+End time is 12:57:10, Monday 12 Jan 2026 (elapsed: 00:01:38)
 **** Job ends ****
-Mon Jan 12 12:55:22 PM EST 2026
+Mon Jan 12 12:57:11 PM EST 2026

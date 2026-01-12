@@ -1,11 +1,11 @@
 **** Job starts ****
-Mon Jan 12 12:53:44 PM EST 2026
+Mon Jan 12 12:55:39 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 26393594
+Job id: 26393630
 Job name: 05_gene_set_analysis
-Node name: compute-168
-Task id: 10
+Node name: compute-176
+Task id: 22
 Loading LIBD SLURM module for magma/1.10
 
 Currently Loaded Modules:
@@ -15,28 +15,29 @@ Currently Loaded Modules:
 
 Welcome to MAGMA v1.10 (linux/s)
 Using flags:
-	--gene-results /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SCZ/SCZ.genes.raw
+	--gene-results /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/ext_cannabis/ext_cannabis.genes.raw
 	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv gene-col=gene_id set-col=set_id
-	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SCZ/semi_broad
+	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/ext_cannabis/semi_broad
 
-Start time is 12:53:45, Monday 12 Jan 2026
+Start time is 12:55:40, Monday 12 Jan 2026
 
-Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SCZ/SCZ.genes.raw... 
-	33312 genes read from file
+Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/ext_cannabis/ext_cannabis.genes.raw... 
+	31692 genes read from file
 Loading gene-set annotation...
 Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv... 
 	detected 2 variables in file
 	using variable: gene_id (gene ID)
 	using variable: set_id (set ID)
 	45 gene-set definitions read from file
-	found 45 gene sets containing genes defined in genotype data (containing a total of 2358 unique genes)
+	found 45 gene sets containing genes defined in genotype data (containing a total of 2310 unique genes)
 Preparing variables for analysis...
 	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
 	WARNING: discarding gene set 'Endo_Linked_DAR_enriched' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
+	WARNING: discarding gene set 'OPC_Discordant_Linked_DAR' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
 	WARNING: discarding gene set 'OPC_Linked_OCR_enriched' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
 	WARNING: discarding gene set 'Thal_Linked_OCR_depleted' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
 	truncating covariate values more than 5 standard deviations from the mean
-	total variables available for analysis: 42 gene sets
+	total variables available for analysis: 41 gene sets
 
 Parsing model specifications...
 Inverting gene-gene correlation matrix...
@@ -45,13 +46,12 @@ Inverting gene-gene correlation matrix...
 	conditioning on internal variables:
 		gene size, log(gene size)
 		gene density, log(gene density)
-		sample size, log(sample size)
 		inverse mac, log(inverse mac)
 	analysing individual variables
 
-	analysing single-variable models (number of models: 42)
-                                                                                                                   	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SCZ/semi_broad.gsa.out
+	analysing single-variable models (number of models: 41)
+                                                                                                                   	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/ext_cannabis/semi_broad.gsa.out
 
-End time is 12:55:21, Monday 12 Jan 2026 (elapsed: 00:01:36)
+End time is 12:57:09, Monday 12 Jan 2026 (elapsed: 00:01:29)
 **** Job ends ****
-Mon Jan 12 12:55:22 PM EST 2026
+Mon Jan 12 12:57:10 PM EST 2026
