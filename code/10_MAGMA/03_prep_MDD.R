@@ -83,57 +83,26 @@ to_input_files = function(input_df, out_dir) {
 #   MDD
 ################################################################################
 
-#-------------------------------------------------------------------------------
-#   SNP input
-#-------------------------------------------------------------------------------
+chain = import.chain(chain_path)
 
 mdd_df = fread(mdd_path, skip = 21) |>
-    as_tibble()
-
-mdd_gr = GRanges(
-    seqnames = paste0('chr', mdd_df$`Chr ID`),
-    ranges = IRanges(start = mdd_df$`Chr Position`, width = 1),
-    SNP = mdd_df$`SNP ID`
-)
-
-chain = import.chain(chain_path)
-lifted = unlist(liftOver(mdd_gr, chain))
-message(
-    sprintf(
-        'Lifted over %d of %d SNPs to hg19',
-        length(lifted), length(mdd_gr)
-    )
-)
-
-tibble(
-        SNP = lifted$SNP,
-        CHR = gsub('chr', '', as.character(seqnames(lifted))),
-        BP = start(lifted)
+    as_tibble() |>
+    dplyr::rename(
+        SNP = `SNP ID`, P = `P-value`, CHR = `Chr ID`, BP = `Chr Position`
     ) |>
-    write_tsv(file.path(mdd_out_dir, 'SNPs.tsv'))
-
-#-------------------------------------------------------------------------------
-#   P-value input
-#-------------------------------------------------------------------------------
-
-mdd_df |>
-    dplyr::rename(SNP = `SNP ID`, P = `P-value`) |>
     mutate(N = mdd_N) |>
-    select(SNP, P, N) |>
-    filter(SNP %in% lifted$SNP) |>
-    write_tsv(file.path(mdd_out_dir, 'p_values.tsv'))
+    lift_df(chain) |>
+    to_input_files(mdd_out_dir)
 
 ################################################################################
 #   MDD2019
 ################################################################################
 
-#   P-value input only
 mdd_df = fread(mdd2019_path) |>
     as_tibble() |>
     dplyr::rename(SNP = MarkerName) |>
     mutate(N = mdd2019_N) |>
-    select(SNP, P, N) |>
-    write_tsv(file.path(mdd2019_out_dir, 'p_values.tsv'))
+    to_input_files(mdd2019_out_dir)
 
 ################################################################################
 #   AUD
@@ -142,79 +111,24 @@ mdd_df = fread(mdd2019_path) |>
 aud_df = read_tsv(aud_path, show_col_types = FALSE) |>
     dplyr::rename(
         SNP = SNP_ID, CHR = Chromsome, BP = Position, P = PValue, N = SampleSize
-    )
-
-#   SNP input
-aud_df |>
-    select(SNP, CHR, BP) |>
-    write_tsv(file.path(aud_out_dir, 'SNPs.tsv'))
-
-#   P-value input
-aud_df |>
-    select(SNP, P, N) |>
-    write_tsv(file.path(aud_out_dir, 'p_values.tsv'))
+    ) |>
+    to_input_files(aud_out_dir)
 
 ################################################################################
 #   CUD
 ################################################################################
 
-cud_df = read_tsv(cud_path, show_col_types = FALSE)
-
-#   SNP input
-cud_df |>
-    select(SNP, CHR, BP) |>
-    write_tsv(file.path(cud_out_dir, 'SNPs.tsv'))
-
-#   P-value input
-cud_df |>
-    select(SNP, P, N) |>
-    write_tsv(file.path(cud_out_dir, 'p_values.tsv'))
+cud_df = read_tsv(cud_path, show_col_types = FALSE) |>
+    to_input_files(cud_out_dir)
 
 ################################################################################
 #   ext_cannabis
 ################################################################################
 
 ext_cannabis_df = read_tsv(ext_cannabis_path, show_col_types = FALSE) |>
-    dplyr::rename(BP = POS, P = PVAL)
-
-#   It's hg38, so we lift to hg19
-ext_cannabis_gr = GRanges(
-    seqnames = paste0('chr', ext_cannabis_df$CHR),
-    ranges = IRanges(start = ext_cannabis_df$BP, width = 1),
-    SNP = ext_cannabis_df$SNP
-)
-
-#   Lift over
-lifted = unlist(liftOver(ext_cannabis_gr, chain))
-message(
-    sprintf(
-        'Lifted over %d of %d SNPs to hg19',
-        length(lifted), length(ext_cannabis_gr)
-    )
-)
-
-#   Convert back into a tibble with all columns
-ext_cannabis_df = tibble(
-        SNP = lifted$SNP,
-        CHR = gsub('chr', '', as.character(seqnames(lifted))),
-        BP = start(lifted)
-    ) |>
-    left_join(
-        ext_cannabis_df |>
-            select(SNP, P, N),
-        by = 'SNP'
-    )
-stopifnot(!any(is.na(ext_cannabis_df)))
-
-#   SNP input
-ext_cannabis_df |>
-    select(SNP, CHR, BP) |>
-    write_tsv(file.path(ext_cannabis_out_dir, 'SNPs.tsv'))
-
-#   P-value input
-ext_cannabis_df |>
-    select(SNP, P, N) |>
-    write_tsv(file.path(ext_cannabis_out_dir, 'p_values.tsv'))
+    dplyr::rename(BP = POS, P = PVAL) |>
+    lift_df(chain) |>
+    to_input_files(ext_cannabis_out_dir)
 
 ################################################################################
 #   Lifetime Cannabis
@@ -226,16 +140,7 @@ lifetime_cannabis_df = read_tsv(
     #   There are some missing chromosomes and X should be a number
     filter(!is.na(Chr)) |>
     mutate(Chr = as.integer(ifelse(Chr == 'X', 23, Chr))) |>
-    dplyr::rename(CHR = Chr, BP = Bp)
-
-#   SNP input
-lifetime_cannabis_df |>
-    select(SNP, CHR, BP) |>
-    write_tsv(file.path(lifetime_cannabis_out_dir, 'SNPs.tsv'))
-
-#   P-value input
-lifetime_cannabis_df |>
-    select(SNP, P, N) |>
-    write_tsv(file.path(lifetime_cannabis_out_dir, 'p_values.tsv'))
+    dplyr::rename(CHR = Chr, BP = Bp) |>
+    to_input_files(lifetime_cannabis_out_dir)
 
 session_info()
