@@ -141,10 +141,17 @@ read_tsv(input_paths['AUD'], show_col_types = FALSE) |>
     to_input_files(out_dirs['AUD'])
 
 #-------------------------------------------------------------------------------
+#   compulsive
+#-------------------------------------------------------------------------------
+
+read_tsv(input_paths['compulsive'], show_col_types = FALSE) |>
+    to_input_files(out_dirs['compulsive'])
+
+#-------------------------------------------------------------------------------
 #   CUD
 #-------------------------------------------------------------------------------
 
-cud_df = read_tsv(input_paths['CUD'], show_col_types = FALSE) |>
+read_tsv(input_paths['CUD'], show_col_types = FALSE) |>
     to_input_files(out_dirs['CUD'])
 
 #-------------------------------------------------------------------------------
@@ -155,6 +162,13 @@ read_tsv(input_paths['ext_cannabis'], show_col_types = FALSE) |>
     dplyr::rename(BP = POS, P = PVAL) |>
     lift_df(chain) |>
     to_input_files(out_dirs['ext_cannabis'])
+
+#-------------------------------------------------------------------------------
+#   internalizing
+#-------------------------------------------------------------------------------
+
+read_tsv(input_paths['internalizing'], show_col_types = FALSE) |>
+    to_input_files(out_dirs['internalizing'])
 
 #-------------------------------------------------------------------------------
 #   Lifetime Cannabis
@@ -170,6 +184,13 @@ read_tsv(
     to_input_files(out_dirs['lifetime_cannabis'])
 
 #-------------------------------------------------------------------------------
+#   neurodev
+#-------------------------------------------------------------------------------
+
+read_tsv(input_paths['neurodev'], show_col_types = FALSE) |>
+    to_input_files(out_dirs['neurodev'])
+
+#-------------------------------------------------------------------------------
 #   OUD
 #-------------------------------------------------------------------------------
 
@@ -180,7 +201,21 @@ read_tsv(input_paths['OUD'], show_col_types = FALSE) |>
     to_input_files(out_dirs['OUD'])
 
 #-------------------------------------------------------------------------------
-#   SUD
+#   p_factor
+#-------------------------------------------------------------------------------
+
+read_tsv(input_paths['p_factor'], show_col_types = FALSE) |>
+    to_input_files(out_dirs['p_factor'])
+
+#-------------------------------------------------------------------------------
+#   SCZ_BPD
+#-------------------------------------------------------------------------------
+
+read_tsv(input_paths['SCZ_BPD'], show_col_types = FALSE) |>
+    to_input_files(out_dirs['SCZ_BPD'])
+
+#-------------------------------------------------------------------------------
+#   SUD2
 #-------------------------------------------------------------------------------
 
 read_tsv(input_paths['SUD2'], show_col_types = FALSE) |>
@@ -188,5 +223,12 @@ read_tsv(input_paths['SUD2'], show_col_types = FALSE) |>
     #   A small number of rows had parsing issues; just drop them
     filter(!is.na(CHR)) |>
     to_input_files(out_dirs['SUD2'])
+
+#-------------------------------------------------------------------------------
+#   SUD3
+#-------------------------------------------------------------------------------
+
+read_tsv(input_paths['SUD3'], show_col_types = FALSE) |>
+    to_input_files(out_dirs['SUD3'])
 
 session_info()
