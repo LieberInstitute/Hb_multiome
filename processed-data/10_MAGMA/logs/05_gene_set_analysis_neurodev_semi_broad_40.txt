@@ -1,11 +1,11 @@
 **** Job starts ****
-Tue Jan 20 12:27:01 PM EST 2026
+Tue Jan 20 12:29:40 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 26996598
+Job id: 26996633
 Job name: 05_gene_set_analysis
-Node name: compute-177
-Task id: 13
+Node name: compute-178
+Task id: 40
 Loading LIBD SLURM module for magma/1.10
 
 Currently Loaded Modules:
@@ -16,14 +16,14 @@ Currently Loaded Modules:
 
 Welcome to MAGMA v1.10 (linux/s)
 Using flags:
-	--gene-results /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SUD2020/SUD2020.genes.raw
+	--gene-results /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/neurodev/neurodev.genes.raw
 	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv gene-col=gene_id set-col=set_id
-	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SUD2020/semi_broad
+	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/neurodev/semi_broad
 
-Start time is 12:27:02, Tuesday 20 Jan 2026
+Start time is 12:29:40, Tuesday 20 Jan 2026
 
-Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SUD2020/SUD2020.genes.raw... 
-	28963 genes read from file
+Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/neurodev/neurodev.genes.raw... 
+	27931 genes read from file
 Loading gene-set annotation...
 Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv... 
 	detected 2 variables in file
@@ -31,7 +31,7 @@ Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/process
 	using variable: set_id (set ID)
 	WARNING: gene set Endo_Linked_DAR_enriched contains no genes defined in genotype data
 	45 gene-set definitions read from file
-	found 44 gene sets containing genes defined in genotype data (containing a total of 2235 unique genes)
+	found 44 gene sets containing genes defined in genotype data (containing a total of 2161 unique genes)
 Preparing variables for analysis...
 	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
 	WARNING: discarding gene set 'LHb_Linked_DAR_depleted' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
@@ -43,18 +43,17 @@ Preparing variables for analysis...
 
 Parsing model specifications...
 Inverting gene-gene correlation matrix...
-	processing block 1 of 27	processing block 2 of 27	processing block 3 of 27	processing block 4 of 27	processing block 5 of 27	processing block 6 of 27	processing block 7 of 27	processing block 8 of 27	processing block 9 of 27	processing block 10 of 27	processing block 11 of 27	processing block 12 of 27	processing block 13 of 27	processing block 14 of 27	processing block 15 of 27	processing block 16 of 27	processing block 17 of 27	processing block 18 of 27	processing block 19 of 27	processing block 20 of 27	processing block 21 of 27	processing block 22 of 27	processing block 23 of 27	processing block 24 of 27	processing block 25 of 27	processing block 26 of 27	processing block 27 of 27                                                                                                                   Performing regression analysis...
+	processing block 1 of 29	processing block 2 of 29	processing block 3 of 29	processing block 4 of 29	processing block 5 of 29	processing block 6 of 29	processing block 7 of 29	processing block 8 of 29	processing block 9 of 29	processing block 10 of 29	processing block 11 of 29	processing block 12 of 29	processing block 13 of 29	processing block 14 of 29	processing block 15 of 29	processing block 16 of 29	processing block 17 of 29	processing block 18 of 29	processing block 19 of 29	processing block 20 of 29	processing block 21 of 29	processing block 22 of 29	processing block 23 of 29	processing block 24 of 29	processing block 25 of 29	processing block 26 of 29	processing block 27 of 29	processing block 28 of 29	processing block 29 of 29                                                                                                                   Performing regression analysis...
 	testing direction: one-sided, positive (sets), two-sided (covar)
 	conditioning on internal variables:
 		gene size, log(gene size)
 		gene density, log(gene density)
-		sample size, log(sample size)
 		inverse mac, log(inverse mac)
 	analysing individual variables
 
 	analysing single-variable models (number of models: 40)
-                                                                                                                   	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/SUD2020/semi_broad.gsa.out
+                                                                                                                   	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/neurodev/semi_broad.gsa.out
 
-End time is 12:27:38, Tuesday 20 Jan 2026 (elapsed: 00:00:36)
+End time is 12:30:14, Tuesday 20 Jan 2026 (elapsed: 00:00:34)
 **** Job ends ****
-Tue Jan 20 12:27:38 PM EST 2026
+Tue Jan 20 12:30:14 PM EST 2026

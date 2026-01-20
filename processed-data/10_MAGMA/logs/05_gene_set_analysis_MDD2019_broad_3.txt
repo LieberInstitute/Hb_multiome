@@ -1,15 +1,16 @@
 **** Job starts ****
-Mon Jan 12 12:53:49 PM EST 2026
+Tue Jan 20 12:26:22 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 26393587
+Job id: 26996585
 Job name: 05_gene_set_analysis
-Node name: compute-176
+Node name: compute-177
 Task id: 3
 Loading LIBD SLURM module for magma/1.10
 
 Currently Loaded Modules:
-  1) JHPCE_ROCKY9_DEFAULT_ENV   2) JHPCE_tools/3.0   3) magma/1.10
+  1) JHPCE_ROCKY9_DEFAULT_ENV   3) conda/3-24.3.0   5) magma/1.10
+  2) JHPCE_tools/3.0            4) conda_R/4.5
 
  
 
@@ -19,7 +20,7 @@ Using flags:
 	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv gene-col=gene_id set-col=set_id
 	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD2019/broad
 
-Start time is 12:53:53, Monday 12 Jan 2026
+Start time is 12:26:23, Tuesday 20 Jan 2026
 
 Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD2019/MDD2019.genes.raw... 
 	33087 genes read from file
@@ -53,6 +54,6 @@ Inverting gene-gene correlation matrix...
 	writing gene information to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD2019/broad.gsa.genes.out
 	writing gene analysis results per significant result (after multiple testing correction, at alpha = 0.05) to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD2019/broad.gsa.sets.genes.out
 
-End time is 12:55:17, Monday 12 Jan 2026 (elapsed: 00:01:24)
+End time is 12:27:23, Tuesday 20 Jan 2026 (elapsed: 00:01:00)
 **** Job ends ****
-Mon Jan 12 12:55:18 PM EST 2026
+Tue Jan 20 12:27:23 PM EST 2026
