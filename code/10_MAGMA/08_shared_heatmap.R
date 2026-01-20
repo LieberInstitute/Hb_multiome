@@ -13,7 +13,7 @@ gene_stat_path = here('processed-data', '10_MAGMA', '%s', '%s.genes.out')
 plot_dir = here('plots', '10_MAGMA')
 cell_type_groups = c('broad', 'semi_broad', 'mid')
 gwas_groups = c(
-    'MDD', 'MDD2019', 'panic', 'SCZ', 'SUD2020', 'AUD', 'CUD', 'ext_cannabis',
+    'MDD2019', 'panic', 'SCZ', 'SUD2020', 'AUD', 'CUD', 'ext_cannabis',
     'lifetime_cannabis', 'OUD', 'SUD2', 'compulsive', 'internalizing',
     'neurodev', 'p_factor', 'SCZ_BPD', 'SUD3'
 )
@@ -29,7 +29,7 @@ gwas_renaming = c(
     'OUD' = 'OUD 2',
     'SUD2' = 'SUD 1',
     'compulsive' = 'Compulsive Disorders',
-    'internalizing' = 'Internalizing Disorders',
+    'internalizing' = 'Intern. Disorders',
     'neurodev' = 'Neurodev. Disorders',
     'p_factor' = 'P Factor',
     'SCZ_BPD' = 'SCZ/BPD',

@@ -1,11 +1,12 @@
 **** Job starts ****
-Mon Jan 12 03:12:00 PM EST 2026
+Tue Jan 20 01:24:02 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 26398530
+Job id: 27054456
 Job name: 08_shared_heatmap
-Node name: compute-168
+Node name: compute-178
 Task id: 
+Unloading conda_R/4.5
 Loading conda_R/4.5
 
 Currently Loaded Modules:
@@ -45,9 +46,9 @@ Correlation of -log(p-value) between OUD 1 and OUD 2 for each cell-type resoluti
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-01-12
+ date     2026-01-20
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   NA
+ quarto   1.7.32 @ /users/neagles/.positron-server/bin/3290136f699527bf01b703b390457b05ef2b858a/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package      * version date (UTC) lib source
@@ -98,4 +99,4 @@ Correlation of -log(p-value) between OUD 1 and OUD 2 for each cell-type resoluti
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Mon Jan 12 03:12:06 PM EST 2026
+Tue Jan 20 01:25:03 PM EST 2026
