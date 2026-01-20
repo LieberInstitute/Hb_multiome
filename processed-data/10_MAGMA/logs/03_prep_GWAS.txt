@@ -1,11 +1,12 @@
 **** Job starts ****
-Mon Jan 12 11:08:25 AM EST 2026
+Tue Jan 20 11:59:17 AM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 26389140
+Job id: 26995133
 Job name: 03_prep_GWAS
-Node name: compute-169
+Node name: compute-178
 Task id: 
+Unloading conda_R/4.5
 Loading conda_R/4.5
 
 Currently Loaded Modules:
@@ -126,9 +127,9 @@ e.g.:
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-01-12
+ date     2026-01-20
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   NA
+ quarto   1.7.32 @ /users/neagles/.positron-server/bin/3290136f699527bf01b703b390457b05ef2b858a/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package              * version   date (UTC) lib source
@@ -213,4 +214,4 @@ e.g.:
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Mon Jan 12 11:11:23 AM EST 2026
+Tue Jan 20 12:02:29 PM EST 2026
