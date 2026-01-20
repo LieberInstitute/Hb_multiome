@@ -10,29 +10,45 @@ library(GenomicRanges)
 library(sessioninfo)
 
 chain_path = here('processed-data', '10_MAGMA', 'hg38ToHg19.over.chain')
-mdd_path = '/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/13_MAGMA/GWAS/MDD/MDD.phs001672.pha005122.txt'
-mdd2019_path = '/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/13_MAGMA/GWAS/mdd2019edinburgh/PGC_UKB_depression_genome-wide.txt'
-aud_path = here('processed-data', '10_MAGMA', 'AUD', 'AUDSumstats.txt.gz')
-cud_path = here('processed-data', '10_MAGMA', 'CUD', 'CUDEASumstats.txt.gz')
-ext_cannabis_path = here(
-    'processed-data', '10_MAGMA', 'ext_cannabis', 'ExtSumstats.txt.gz'
+input_paths = c(
+    MDD = '/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/13_MAGMA/GWAS/MDD/MDD.phs001672.pha005122.txt',
+    MDD2019 = '/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/13_MAGMA/GWAS/mdd2019edinburgh/PGC_UKB_depression_genome-wide.txt',
+    AUD = here('processed-data', '10_MAGMA', 'AUD', 'AUDSumstats.txt.gz'),
+    compulsive = here(
+        'processed-data', '10_MAGMA', 'compulsive',
+        'F1_CompulsiveDisorders_2025.txt.gz'
+    ),
+    CUD = here('processed-data', '10_MAGMA', 'CUD', 'CUDEASumstats.txt.gz'),
+    ext_cannabis = here(
+        'processed-data', '10_MAGMA', 'ext_cannabis', 'ExtSumstats.txt.gz'
+    ),
+    internalizing = here(
+        'processed-data', '10_MAGMA', 'internalizing',
+        'F4_Internalizing_2025.txt.gz'
+    ),
+    lifetime_cannabis = here(
+        'processed-data', '10_MAGMA', 'lifetime_cannabis',
+        'LifetimeCannabisICC.txt.gz'
+    ),
+    neurodev = here(
+        'processed-data', '10_MAGMA', 'neurodev',
+        'F3_Neurodevelopmental_2025.txt.gz'
+    ),
+    OUD = here('processed-data', '10_MAGMA', 'OUD', 'OUDEASumstats.txt.gz'),
+    p_factor = here(
+        'processed-data', '10_MAGMA', 'p_factor', 'PFactor_2025.txt.gz'
+    ),
+    SCZ_BPD = here(
+        'processed-data', '10_MAGMA', 'SCZ_BPD',
+        'F2_SchizophreniaBipolar_2025.txt.gz'
+    ),
+    SUD2 = here('processed-data', '10_MAGMA', 'SUD2', 'SUDEA.txt.gz'),
+    SUD3 = here(
+        'processed-data', '10_MAGMA', 'SUD3', 'F5_SubstanceUse_2025.txt.gz'
+    )
 )
-lifetime_cannabis_path = here(
-    'processed-data', '10_MAGMA', 'lifetime_cannabis',
-    'LifetimeCannabisICC.txt.gz'
-)
-oud_path = here('processed-data', '10_MAGMA', 'OUD', 'OUDEASumstats.txt.gz')
-sud_path = here('processed-data', '10_MAGMA', 'SUD2', 'SUDEA.txt.gz')
-mdd_out_dir = here('processed-data', '10_MAGMA', 'MDD')
-mdd2019_out_dir = here('processed-data', '10_MAGMA', 'MDD2019')
-aud_out_dir = here('processed-data', '10_MAGMA', 'AUD')
-cud_out_dir = here('processed-data', '10_MAGMA', 'CUD')
-ext_cannabis_out_dir = here('processed-data', '10_MAGMA', 'ext_cannabis')
-lifetime_cannabis_out_dir = here(
-    'processed-data', '10_MAGMA', 'lifetime_cannabis'
-)
-oud_out_dir = here('processed-data', '10_MAGMA', 'OUD')
-sud_out_dir = here('processed-data', '10_MAGMA', 'SUD2')
+out_dirs = here('processed-data', '10_MAGMA', names(input_paths))
+names(out_dirs) = names(input_paths)
 mdd_N = 1154267
 mdd2019_N = 807553
 
@@ -87,90 +103,90 @@ to_input_files = function(input_df, out_dir) {
 #   Main
 ################################################################################
 
+chain = import.chain(chain_path)
+
 #-------------------------------------------------------------------------------
 #   MDD
 #-------------------------------------------------------------------------------
 
-chain = import.chain(chain_path)
-
-fread(mdd_path, skip = 21) |>
+fread(input_paths['MDD'], skip = 21) |>
     as_tibble() |>
     dplyr::rename(
         SNP = `SNP ID`, P = `P-value`, CHR = `Chr ID`, BP = `Chr Position`
     ) |>
     mutate(N = mdd_N) |>
     lift_df(chain) |>
-    to_input_files(mdd_out_dir)
+    to_input_files(out_dirs['MDD'])
 
 #-------------------------------------------------------------------------------
 #   MDD2019
 #-------------------------------------------------------------------------------
 
 #   P-value file only
-fread(mdd2019_path) |>
+fread(input_paths['MDD2019']) |>
     as_tibble() |>
     dplyr::rename(SNP = MarkerName) |>
     mutate(N = mdd2019_N) |>
     select(SNP, P, N) |>
-    write_tsv(file.path(mdd2019_out_dir, 'p_values.tsv'))
+    write_tsv(file.path(out_dirs['MDD2019'], 'p_values.tsv'))
 
 #-------------------------------------------------------------------------------
 #   AUD
 #-------------------------------------------------------------------------------
 
-read_tsv(aud_path, show_col_types = FALSE) |>
+read_tsv(input_paths['AUD'], show_col_types = FALSE) |>
     dplyr::rename(
         SNP = SNP_ID, CHR = Chromsome, BP = Position, P = PValue, N = SampleSize
     ) |>
-    to_input_files(aud_out_dir)
+    to_input_files(out_dirs['AUD'])
 
 #-------------------------------------------------------------------------------
 #   CUD
 #-------------------------------------------------------------------------------
 
-cud_df = read_tsv(cud_path, show_col_types = FALSE) |>
-    to_input_files(cud_out_dir)
+cud_df = read_tsv(input_paths['CUD'], show_col_types = FALSE) |>
+    to_input_files(out_dirs['CUD'])
 
 #-------------------------------------------------------------------------------
 #   ext_cannabis
 #-------------------------------------------------------------------------------
 
-read_tsv(ext_cannabis_path, show_col_types = FALSE) |>
+read_tsv(input_paths['ext_cannabis'], show_col_types = FALSE) |>
     dplyr::rename(BP = POS, P = PVAL) |>
     lift_df(chain) |>
-    to_input_files(ext_cannabis_out_dir)
+    to_input_files(out_dirs['ext_cannabis'])
 
 #-------------------------------------------------------------------------------
 #   Lifetime Cannabis
 #-------------------------------------------------------------------------------
 
 read_tsv(
-        lifetime_cannabis_path, col_types = c('ccidi')
+        input_paths['lifetime_cannabis'], col_types = c('ccidi')
     ) |>
     #   There are some missing chromosomes and X should be a number
     filter(!is.na(Chr)) |>
     mutate(Chr = as.integer(ifelse(Chr == 'X', 23, Chr))) |>
     dplyr::rename(CHR = Chr, BP = Bp) |>
-    to_input_files(lifetime_cannabis_out_dir)
+    to_input_files(out_dirs['lifetime_cannabis'])
 
 #-------------------------------------------------------------------------------
 #   OUD
 #-------------------------------------------------------------------------------
 
-read_tsv(oud_path, show_col_types = FALSE) |>
+read_tsv(input_paths['OUD'], show_col_types = FALSE) |>
     dplyr::rename(
         SNP = SNP_ID, CHR = Chrosome, BP = Position, P = PValue, N = Effective_N
     ) |>
-    to_input_files(oud_out_dir)
+    to_input_files(out_dirs['OUD'])
 
 #-------------------------------------------------------------------------------
 #   SUD
 #-------------------------------------------------------------------------------
 
-read_tsv(sud_path, show_col_types = FALSE) |>
+read_tsv(input_paths['SUD2'], show_col_types = FALSE) |>
     dplyr::rename(CHR = Chr) |>
     #   A small number of rows had parsing issues; just drop them
     filter(!is.na(CHR)) |>
-    to_input_files(sud_out_dir)
+    to_input_files(out_dirs['SUD2'])
 
 session_info()
