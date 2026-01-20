@@ -8,7 +8,8 @@ library(sessioninfo)
 cell_type_groups = c('broad', 'semi_broad', 'mid')
 gwas_groups = c(
     'MDD', 'MDD2019', 'panic', 'SCZ', 'SUD2020', 'AUD', 'CUD', 'ext_cannabis',
-    'lifetime_cannabis', 'OUD', 'SUD2'
+    'lifetime_cannabis', 'OUD', 'SUD2', 'compulsive', 'internalizing',
+    'neurodev', 'p_factor', 'SCZ_BPD', 'SUD3'
 )
 gene_set_paths = here(
     'processed-data', '10_MAGMA', 'gene_sets',
@@ -34,7 +35,13 @@ gwas_renaming = c(
     'ext_cannabis' = 'Ext. Cannabis',
     'lifetime_cannabis' = 'Lifetime Cannabis',
     'OUD' = 'OUD 2',
-    'SUD2' = 'SUD'
+    'SUD2' = 'SUD 1',
+    'compulsive' = 'Compulsive Disorders',
+    'internalizing' = 'Internalizing Disorders',
+    'neurodev' = 'Neurodev. Disorders',
+    'p_factor' = 'P Factor',
+    'SCZ_BPD' = 'SCZ/BPD',
+    'SUD3' = 'SUD 2'
 )
 
 #   MAGMA set-level outputs have a variable amount of header lines. Auto-detect

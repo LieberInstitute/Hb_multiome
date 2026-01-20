@@ -6,7 +6,7 @@
 #SBATCH -t 1-0:00:00
 #SBATCH -o ../../processed-data/10_MAGMA/logs/04_MAGMA_first_two_%a.txt
 #SBATCH -e ../../processed-data/10_MAGMA/logs/04_MAGMA_first_two_%a.txt
-#SBATCH --array=6-11%6
+#SBATCH --array=12-17%6
 
 #   Run the first two steps in the MAGMA pipeline for every GWAS. Critically,
 #   all relevant inputs/ reference files use hg19 and European ancestry. This
@@ -30,7 +30,7 @@ echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 module load magma/1.10
 module list
 
-all_gwas=(MDD MDD2019 panic SCZ SUD2020 AUD CUD ext_cannabis lifetime_cannabis OUD SUD2)
+all_gwas=(MDD MDD2019 panic SCZ SUD2020 AUD CUD ext_cannabis lifetime_cannabis OUD SUD2 compulsive internalizing neurodev p_factor SCZ_BPD SUD3)
 gwas=${all_gwas[$(($SLURM_ARRAY_TASK_ID - 1))]}
 
 repo_dir=$(git rev-parse --show-toplevel)
