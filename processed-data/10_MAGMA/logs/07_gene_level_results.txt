@@ -1,11 +1,12 @@
 **** Job starts ****
-Mon Jan 12 01:12:23 PM EST 2026
+Tue Jan 20 01:13:24 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 26393705
+Job id: 27054405
 Job name: 07_gene_level_results
-Node name: compute-169
+Node name: compute-178
 Task id: 
+Unloading conda_R/4.5
 Loading conda_R/4.5
 
 Currently Loaded Modules:
@@ -131,17 +132,23 @@ Warning: 2 parsing failures.
 33748 CHR a double      X '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/lifetime_cannabis/lifetime_cannabis.genes.out'
 33749 CHR a double      X '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/lifetime_cannabis/lifetime_cannabis.genes.out'
 
-Dropping 98% of genes for MDD GWAS missing MAGMA stats
-Dropping 60% of genes for MDD2019 GWAS missing MAGMA stats
-Dropping 60% of genes for panic GWAS missing MAGMA stats
-Dropping 60% of genes for SCZ GWAS missing MAGMA stats
-Dropping 62% of genes for SUD2020 GWAS missing MAGMA stats
-Dropping 60% of genes for AUD GWAS missing MAGMA stats
-Dropping 60% of genes for CUD GWAS missing MAGMA stats
-Dropping 61% of genes for ext_cannabis GWAS missing MAGMA stats
-Dropping 60% of genes for lifetime_cannabis GWAS missing MAGMA stats
-Dropping 61% of genes for OUD GWAS missing MAGMA stats
-Dropping 61% of genes for SUD2 GWAS missing MAGMA stats
+Dropping 99% of genes for MDD GWAS missing MAGMA stats
+Dropping 69% of genes for MDD2019 GWAS missing MAGMA stats
+Dropping 69% of genes for panic GWAS missing MAGMA stats
+Dropping 69% of genes for SCZ GWAS missing MAGMA stats
+Dropping 70% of genes for SUD2020 GWAS missing MAGMA stats
+Dropping 69% of genes for AUD GWAS missing MAGMA stats
+Dropping 69% of genes for CUD GWAS missing MAGMA stats
+Dropping 70% of genes for ext_cannabis GWAS missing MAGMA stats
+Dropping 69% of genes for lifetime_cannabis GWAS missing MAGMA stats
+Dropping 70% of genes for OUD GWAS missing MAGMA stats
+Dropping 70% of genes for SUD2 GWAS missing MAGMA stats
+Dropping 71% of genes for compulsive GWAS missing MAGMA stats
+Dropping 71% of genes for internalizing GWAS missing MAGMA stats
+Dropping 71% of genes for neurodev GWAS missing MAGMA stats
+Dropping 71% of genes for p_factor GWAS missing MAGMA stats
+Dropping 71% of genes for SCZ_BPD GWAS missing MAGMA stats
+Dropping 71% of genes for SUD3 GWAS missing MAGMA stats
 Warning messages:
 1: In S4Vectors:::anyMissing(runValue(x_seqnames)) :
   'S4Vectors:::anyMissing()' is deprecated.
@@ -161,9 +168,9 @@ See help("Deprecated")
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-01-12
+ date     2026-01-20
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   NA
+ quarto   1.7.32 @ /users/neagles/.positron-server/bin/3290136f699527bf01b703b390457b05ef2b858a/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package              * version   date (UTC) lib source
@@ -260,4 +267,4 @@ See help("Deprecated")
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Mon Jan 12 01:13:47 PM EST 2026
+Tue Jan 20 01:14:08 PM EST 2026
