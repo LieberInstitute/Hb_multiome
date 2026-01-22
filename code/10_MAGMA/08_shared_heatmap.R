@@ -144,5 +144,31 @@ results_df |>
     summarise(OUD_cor = cor(`OUD 1`, `OUD 2`)) |>
     print()
 
+#   Fraction of significant peak categories per cell type and GWAS
+p = results_df |>
+    group_by(cell_type, cell_type_group, gwas_group) |>
+    summarize(
+        frac_signif = sum(neg_log_p > -log10(sig_cutoff)) /
+            length(unique(results_df$peak_category))
+    ) |>
+    ggplot(aes(x = gwas_group, y = cell_type, fill = frac_signif)) +
+        geom_tile() +
+        scale_fill_viridis_c() +
+        facet_grid(
+            rows = vars(cell_type_group), scales = "free_y", space  = "free_y"
+        ) +
+        theme_bw(base_size = 20) +
+        theme(
+            axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+            strip.text.y.right = element_text(angle = 0)
+        ) +
+        labs(x = "GWAS", y = "Cell Type", fill = "Fraction\nSignificant")
+pdf(
+    file = file.path(plot_dir, "shared_heatmap_substance_frac_signif.pdf"),
+    width = 9, height = 6
+)
+print(p)
+dev.off()
+
 session_info()
   
