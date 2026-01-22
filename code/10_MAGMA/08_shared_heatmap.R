@@ -20,20 +20,20 @@ gwas_groups = c(
 gwas_renaming = c(
     'MDD2019' = 'MDD',
     'panic' = 'Panic Disorder',
+    'compulsive' = 'Compulsive Disorders',
     'SCZ' = 'SCZ',
-    'SUD2020' = 'OUD 1',
+    'SCZ_BPD' = 'SCZ/BPD',
     'AUD' = 'AUD',
     'CUD' = 'CUD',
     'ext_cannabis' = 'Ext. Cannabis',
     'lifetime_cannabis' = 'Lifetime Cannabis',
+    'SUD2020' = 'OUD 1',
     'OUD' = 'OUD 2',
     'SUD2' = 'SUD 1',
-    'compulsive' = 'Compulsive Disorders',
+    'SUD3' = 'SUD 2',
     'internalizing' = 'Intern. Disorders',
     'neurodev' = 'Neurodev. Disorders',
-    'p_factor' = 'P Factor',
-    'SCZ_BPD' = 'SCZ/BPD',
-    'SUD3' = 'SUD 2'
+    'p_factor' = 'P Factor'
 )
 sig_cutoff = 0.05
 
@@ -72,7 +72,7 @@ for (cell_type_group in cell_type_groups) {
 results_df = bind_rows(results_df_list) |>
     mutate(
         p_label = ifelse(neg_log_p > -log10(sig_cutoff), "*", ""),
-        gwas_group = gwas_renaming[gwas_group],
+        gwas_group = factor(gwas_renaming[gwas_group], levels = gwas_renaming),
         cell_type_group = factor(cell_type_group, levels = cell_type_groups)
     )
 
