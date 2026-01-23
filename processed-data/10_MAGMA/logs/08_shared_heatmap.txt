@@ -1,8 +1,8 @@
 **** Job starts ****
-Thu Jan 22 01:21:03 PM EST 2026
+Thu Jan 22 04:01:30 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 27082487
+Job id: 27085440
 Job name: 08_shared_heatmap
 Node name: compute-168
 Task id: 
@@ -27,15 +27,17 @@ Currently Loaded Modules:
 ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
 here() starts at /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome
 Loading required package: viridisLite
-null device 
-          1 
 Correlation of -log(p-value) between OUD 1 and OUD 2 for each cell-type resolution:
 # A tibble: 3 × 2
-  cell_type_group  OUD_cor
-  <fct>              <dbl>
-1 broad           -0.0278 
-2 semi_broad       0.337  
-3 mid              0.00692
+  cell_type_group OUD_cor
+  <fct>             <dbl>
+1 broad           0.444  
+2 semi_broad      0.905  
+3 mid             0.00692
+`summarise()` has grouped output by 'cell_type', 'cell_type_group'. You can
+override using the `.groups` argument.
+null device 
+          1 
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -99,4 +101,4 @@ Correlation of -log(p-value) between OUD 1 and OUD 2 for each cell-type resoluti
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Thu Jan 22 01:21:12 PM EST 2026
+Thu Jan 22 04:03:10 PM EST 2026
