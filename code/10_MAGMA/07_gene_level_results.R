@@ -199,4 +199,46 @@ pdf(
 print(p)
 dev.off()
 
+#   Get the original size of the union across peak categories per cell type
+#   which we'll use to scale the number of unique genes from above (for
+#   easier interpretation)
+gene_set_df_list = list()
+for (cell_type_group in cell_type_groups) {
+    gene_set_df_list[[cell_type_group]] = read_table(
+            gene_set_paths[[cell_type_group]], show_col_types = FALSE
+        ) |>
+        mutate(
+            cell_type = str_extract(set_id, '^[^_]+'),
+            cell_type_res = cell_type_group
+        )
+}
+gene_set_df = bind_rows(gene_set_df_list) |>
+    group_by(cell_type, cell_type_res) |>
+    summarize(num_genes = length(unique(gene_id))) |>
+    ungroup()
+
+p = unique_df |>
+    left_join(gene_set_df, by = c('cell_type', 'cell_type_res')) |>
+    mutate(
+        perc_unique = 100 * num_unique / num_genes
+    ) |>
+    ggplot(aes(x = gwas, y = cell_type, fill = perc_unique)) +
+        geom_tile() +
+        scale_fill_viridis_c() +
+        facet_grid(
+            rows = vars(cell_type_res), scales = "free_y", space  = "free_y"
+        ) +
+        theme_bw(base_size = 20) +
+        theme(
+            axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+            strip.text.y.right = element_text(angle = 0)
+        ) +
+        labs(x = "GWAS", y = "Cell Type", fill = "% Unique\nGenes")
+pdf(
+    file = file.path(plot_dir, "shared_heatmap_substance_perc_unique.pdf"),
+    width = 9, height = 6
+)
+print(p)
+dev.off()
+
 session_info()
