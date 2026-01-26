@@ -1,10 +1,10 @@
 **** Job starts ****
-Tue Jan 20 01:13:24 PM EST 2026
+Mon Jan 26 02:28:16 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 27054405
+Job id: 27115110
 Job name: 07_gene_level_results
-Node name: compute-178
+Node name: compute-169
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -132,23 +132,22 @@ Warning: 2 parsing failures.
 33748 CHR a double      X '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/lifetime_cannabis/lifetime_cannabis.genes.out'
 33749 CHR a double      X '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/lifetime_cannabis/lifetime_cannabis.genes.out'
 
-Dropping 99% of genes for MDD GWAS missing MAGMA stats
-Dropping 69% of genes for MDD2019 GWAS missing MAGMA stats
-Dropping 69% of genes for panic GWAS missing MAGMA stats
-Dropping 69% of genes for SCZ GWAS missing MAGMA stats
-Dropping 70% of genes for SUD2020 GWAS missing MAGMA stats
-Dropping 69% of genes for AUD GWAS missing MAGMA stats
-Dropping 69% of genes for CUD GWAS missing MAGMA stats
-Dropping 70% of genes for ext_cannabis GWAS missing MAGMA stats
-Dropping 69% of genes for lifetime_cannabis GWAS missing MAGMA stats
-Dropping 70% of genes for OUD GWAS missing MAGMA stats
-Dropping 70% of genes for SUD2 GWAS missing MAGMA stats
-Dropping 71% of genes for compulsive GWAS missing MAGMA stats
-Dropping 71% of genes for internalizing GWAS missing MAGMA stats
-Dropping 71% of genes for neurodev GWAS missing MAGMA stats
-Dropping 71% of genes for p_factor GWAS missing MAGMA stats
-Dropping 71% of genes for SCZ_BPD GWAS missing MAGMA stats
-Dropping 71% of genes for SUD3 GWAS missing MAGMA stats
+Dropping 57% of genes for SUD2020 GWAS missing MAGMA stats
+Dropping 56% of genes for AUD GWAS missing MAGMA stats
+Dropping 56% of genes for CUD GWAS missing MAGMA stats
+Dropping 57% of genes for ext_cannabis GWAS missing MAGMA stats
+Dropping 56% of genes for lifetime_cannabis GWAS missing MAGMA stats
+Dropping 56% of genes for OUD GWAS missing MAGMA stats
+Dropping 57% of genes for SUD2 GWAS missing MAGMA stats
+Dropping 58% of genes for SUD3 GWAS missing MAGMA stats
+Dropping 56% of genes for MDD2019 GWAS missing MAGMA stats
+Dropping 56% of genes for panic GWAS missing MAGMA stats
+Dropping 56% of genes for SCZ GWAS missing MAGMA stats
+Dropping 58% of genes for compulsive GWAS missing MAGMA stats
+Dropping 58% of genes for internalizing GWAS missing MAGMA stats
+Dropping 58% of genes for neurodev GWAS missing MAGMA stats
+Dropping 58% of genes for p_factor GWAS missing MAGMA stats
+Dropping 58% of genes for SCZ_BPD GWAS missing MAGMA stats
 Warning messages:
 1: In S4Vectors:::anyMissing(runValue(x_seqnames)) :
   'S4Vectors:::anyMissing()' is deprecated.
@@ -158,6 +157,14 @@ See help("Deprecated")
   'S4Vectors:::anyMissing()' is deprecated.
 Use 'anyNA()' instead.
 See help("Deprecated")
+null device 
+          1 
+`summarise()` has grouped output by 'cell_type'. You can override using the
+`.groups` argument.
+null device 
+          1 
+pdf 
+  2 
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -168,7 +175,7 @@ See help("Deprecated")
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-01-20
+ date     2026-01-26
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.7.32 @ /users/neagles/.positron-server/bin/3290136f699527bf01b703b390457b05ef2b858a/quarto/bin/quarto
 
@@ -209,6 +216,7 @@ See help("Deprecated")
  ggplot2              * 3.5.2     2025-04-09 [1] CRAN (R 4.5.0)
  GlobalOptions          0.1.2     2020-06-10 [2] CRAN (R 4.5.0)
  glue                   1.8.0     2024-09-30 [1] CRAN (R 4.5.0)
+ gridExtra              2.3       2017-09-09 [1] CRAN (R 4.5.0)
  gtable                 0.3.6     2024-10-25 [1] CRAN (R 4.5.0)
  here                 * 1.0.1     2020-12-13 [1] CRAN (R 4.5.0)
  hms                    1.1.3     2023-03-21 [2] CRAN (R 4.5.0)
@@ -216,6 +224,7 @@ See help("Deprecated")
  IRanges              * 2.42.0    2025-04-15 [1] Bioconduc~
  iterators              1.0.14    2022-02-05 [2] CRAN (R 4.5.0)
  jsonlite               2.0.0     2025-03-27 [1] CRAN (R 4.5.0)
+ labeling               0.4.3     2023-08-29 [1] CRAN (R 4.5.0)
  lattice                0.22-7    2025-04-02 [3] CRAN (R 4.5.0)
  lifecycle              1.0.4     2023-11-07 [1] CRAN (R 4.5.0)
  lubridate            * 1.9.4     2024-12-08 [2] CRAN (R 4.5.0)
@@ -225,10 +234,12 @@ See help("Deprecated")
  matrixStats            1.5.0     2025-01-07 [1] CRAN (R 4.5.0)
  pillar                 1.11.0    2025-07-04 [1] CRAN (R 4.5.0)
  pkgconfig              2.0.3     2019-09-22 [1] CRAN (R 4.5.0)
+ plyr                   1.8.9     2023-10-02 [2] CRAN (R 4.5.0)
  png                    0.1-8     2022-11-29 [1] CRAN (R 4.5.0)
  purrr                * 1.1.0     2025-07-10 [1] CRAN (R 4.5.0)
  R6                     2.6.1     2025-02-15 [1] CRAN (R 4.5.0)
  RColorBrewer         * 1.1-3     2022-04-03 [1] CRAN (R 4.5.0)
+ Rcpp                   1.1.0     2025-07-02 [1] CRAN (R 4.5.0)
  RCurl                  1.98-1.17 2025-03-22 [2] CRAN (R 4.5.0)
  readr                * 2.1.5     2024-01-10 [2] CRAN (R 4.5.0)
  restfulr               0.0.15    2022-06-16 [2] CRAN (R 4.5.0)
@@ -253,7 +264,9 @@ See help("Deprecated")
  timechange             0.3.0     2024-01-18 [2] CRAN (R 4.5.0)
  tzdb                   0.5.0     2025-03-15 [2] CRAN (R 4.5.0)
  UCSC.utils             1.4.0     2025-04-15 [2] Bioconductor 3.21 (R 4.5.0)
+ UpSetR               * 1.4.0     2019-05-22 [2] CRAN (R 4.5.0)
  vctrs                  0.6.5     2023-12-01 [1] CRAN (R 4.5.0)
+ viridisLite            0.4.2     2023-05-02 [1] CRAN (R 4.5.0)
  vroom                  1.6.5     2023-12-05 [2] CRAN (R 4.5.0)
  withr                  3.0.2     2024-10-28 [1] CRAN (R 4.5.0)
  XML                    3.99-0.18 2025-01-01 [2] CRAN (R 4.5.0)
@@ -267,4 +280,4 @@ See help("Deprecated")
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Tue Jan 20 01:14:08 PM EST 2026
+Mon Jan 26 02:29:11 PM EST 2026
