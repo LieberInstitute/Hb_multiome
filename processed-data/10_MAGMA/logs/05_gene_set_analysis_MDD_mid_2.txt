@@ -1,10 +1,10 @@
 **** Job starts ****
-Tue Jan 20 12:26:22 PM EST 2026
+Fri Jan 30 01:17:09 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 26996584
+Job id: 27176654
 Job name: 05_gene_set_analysis
-Node name: compute-177
+Node name: compute-167
 Task id: 2
 Loading LIBD SLURM module for magma/1.10
 
@@ -20,7 +20,7 @@ Using flags:
 	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv gene-col=gene_id set-col=set_id
 	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/mid
 
-Start time is 12:26:23, Tuesday 20 Jan 2026
+Start time is 13:17:09, Friday 30 Jan 2026
 
 Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/MDD.genes.raw... 
 	493 genes read from file
@@ -29,32 +29,34 @@ Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/process
 	detected 2 variables in file
 	using variable: gene_id (gene ID)
 	using variable: set_id (set ID)
+	WARNING: gene set Astrocyte_Discordant_Linked_DAR contains no genes defined in genotype data
+	WARNING: gene set Astrocyte_Linked_DAR_depleted contains no genes defined in genotype data
 	WARNING: gene set Astrocyte_Linked_DAR_enriched contains no genes defined in genotype data
 	WARNING: gene set Astrocyte_Linked_OCR_depleted contains no genes defined in genotype data
 	WARNING: gene set Astrocyte_Linked_OCR_enriched contains no genes defined in genotype data
-	WARNING: gene set Endo_Linked_DAR_enriched contains no genes defined in genotype data
+	WARNING: gene set Excit.Thal_Discordant_Linked_DAR contains no genes defined in genotype data
 	WARNING: gene set Excit.Thal_Linked_DAR_depleted contains no genes defined in genotype data
 	WARNING: gene set Excit.Thal_Linked_DAR_enriched contains no genes defined in genotype data
-	WARNING: gene set Excit.Thal_Linked_OCR_depleted contains no genes defined in genotype data
+	WARNING: gene set Excit.Thal_Linked_OCR_enriched contains no genes defined in genotype data
 	WARNING: gene set Inhib.Thal_Linked_OCR_depleted contains no genes defined in genotype data
 	WARNING: gene set LHb.1.3.4_Discordant_Linked_DAR contains no genes defined in genotype data
 	WARNING: gene set LHb.1.3.4_Linked_DAR_enriched contains no genes defined in genotype data
 	WARNING: gene set LHb.1.3.4_Linked_OCR_depleted contains no genes defined in genotype data
+	WARNING: gene set LHb.1.3.4_Linked_OCR_enriched contains no genes defined in genotype data
 	WARNING: gene set LHb.1.3.4_Unlinked_DAR contains no genes defined in genotype data
 	WARNING: gene set LHb.1_Discordant_Linked_DAR contains no genes defined in genotype data
-	WARNING: gene set LHb.1_Linked_DAR_depleted contains no genes defined in genotype data
 	WARNING: gene set LHb.1_Linked_DAR_enriched contains no genes defined in genotype data
 	WARNING: gene set LHb.1_Linked_OCR_depleted contains no genes defined in genotype data
 	WARNING: gene set LHb.1_Linked_OCR_enriched contains no genes defined in genotype data
 	WARNING: gene set LHb.1_Unlinked_DAR contains no genes defined in genotype data
+	WARNING: gene set LHb.2.7_Discordant_Linked_DAR contains no genes defined in genotype data
+	WARNING: gene set LHb.2.7_Linked_DAR_enriched contains no genes defined in genotype data
 	WARNING: gene set LHb.2.7_Linked_OCR_depleted contains no genes defined in genotype data
-	WARNING: gene set LHb.4_Linked_DAR_depleted contains no genes defined in genotype data
+	WARNING: gene set LHb.4_Discordant_Linked_DAR contains no genes defined in genotype data
 	WARNING: gene set LHb.4_Linked_DAR_enriched contains no genes defined in genotype data
+	WARNING: gene set LHb.4_Linked_OCR_depleted contains no genes defined in genotype data
 	WARNING: gene set LHb.4_Linked_OCR_enriched contains no genes defined in genotype data
 	WARNING: gene set LHb.4_Unlinked_DAR contains no genes defined in genotype data
-	WARNING: gene set MHb.1.2_Discordant_Linked_DAR contains no genes defined in genotype data
-	WARNING: gene set MHb.1.2_Linked_DAR_depleted contains no genes defined in genotype data
-	WARNING: gene set MHb.1.2_Linked_DAR_enriched contains no genes defined in genotype data
 	WARNING: gene set MHb.1.2_Linked_OCR_enriched contains no genes defined in genotype data
 	WARNING: gene set MHb.1.2_Unlinked_DAR contains no genes defined in genotype data
 	WARNING: gene set MHb.1_Discordant_Linked_DAR contains no genes defined in genotype data
@@ -64,36 +66,26 @@ Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/process
 	WARNING: gene set MHb.1_Linked_OCR_enriched contains no genes defined in genotype data
 	WARNING: gene set MHb.1_Unlinked_DAR contains no genes defined in genotype data
 	WARNING: gene set MHb.2_Linked_DAR_depleted contains no genes defined in genotype data
-	WARNING: gene set MHb.2_Linked_OCR_enriched contains no genes defined in genotype data
-	WARNING: gene set Microglia_Discordant_Linked_DAR contains no genes defined in genotype data
 	WARNING: gene set Microglia_Linked_DAR_enriched contains no genes defined in genotype data
-	WARNING: gene set OPC_Discordant_Linked_DAR contains no genes defined in genotype data
-	WARNING: gene set OPC_Linked_DAR_enriched contains no genes defined in genotype data
-	WARNING: gene set OPC_Linked_OCR_enriched contains no genes defined in genotype data
 	WARNING: gene set OPC_Unlinked_DAR contains no genes defined in genotype data
+	WARNING: gene set Oligo_Discordant_Linked_DAR contains no genes defined in genotype data
 	WARNING: gene set Oligo_Linked_DAR_depleted contains no genes defined in genotype data
 	WARNING: gene set Oligo_Linked_DAR_enriched contains no genes defined in genotype data
-	WARNING: gene set Oligo_Linked_OCR_depleted contains no genes defined in genotype data
-	WARNING: gene set Oligo_Linked_OCR_enriched contains no genes defined in genotype data
-	WARNING: gene set Thal_Linked_OCR_depleted contains no genes defined in genotype data
-	72 gene-set definitions read from file
-	found 25 gene sets containing genes defined in genotype data (containing a total of 61 unique genes)
+	59 gene-set definitions read from file
+	found 17 gene sets containing genes defined in genotype data (containing a total of 46 unique genes)
 Preparing variables for analysis...
 	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
 	WARNING: discarding gene set 'Astrocyte_Unlinked_DAR' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv, variance is too low (set contains only one gene used in analysis)
-	WARNING: discarding gene set 'Excit.Thal_Discordant_Linked_DAR' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv, variance is too low (set contains only one gene used in analysis)
+	WARNING: discarding gene set 'Excit.Thal_Linked_OCR_depleted' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv, variance is too low (set contains only one gene used in analysis)
+	WARNING: discarding gene set 'Inhib.Thal_Linked_DAR_depleted' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv, variance is too low (set contains only one gene used in analysis)
 	WARNING: discarding gene set 'Inhib.Thal_Linked_OCR_enriched' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv, variance is too low (set contains only one gene used in analysis)
-	WARNING: discarding gene set 'LHb.1.3.4_Linked_OCR_enriched' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv, variance is too low (set contains only one gene used in analysis)
-	WARNING: discarding gene set 'LHb.2.7_Discordant_Linked_DAR' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv, variance is too low (set contains only one gene used in analysis)
-	WARNING: discarding gene set 'LHb.2.7_Linked_OCR_enriched' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv, variance is too low (set contains only one gene used in analysis)
 	WARNING: discarding gene set 'LHb.2.7_Unlinked_DAR' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv, variance is too low (set contains only one gene used in analysis)
-	WARNING: discarding gene set 'LHb.4_Discordant_Linked_DAR' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv, variance is too low (set contains only one gene used in analysis)
-	WARNING: discarding gene set 'LHb.4_Linked_OCR_depleted' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv, variance is too low (set contains only one gene used in analysis)
 	WARNING: discarding gene set 'MHb.2_Linked_DAR_enriched' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv, variance is too low (set contains only one gene used in analysis)
 	WARNING: discarding gene set 'MHb.2_Linked_OCR_depleted' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv, variance is too low (set contains only one gene used in analysis)
+	WARNING: discarding gene set 'MHb.2_Linked_OCR_enriched' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv, variance is too low (set contains only one gene used in analysis)
 	WARNING: discarding gene set 'Microglia_Unlinked_DAR' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/mid.tsv, variance is too low (set contains only one gene used in analysis)
 	truncating covariate values more than 5 standard deviations from the mean
-	total variables available for analysis: 13 gene sets
+	total variables available for analysis: 8 gene sets
 
 Parsing model specifications...
 Inverting gene-gene correlation matrix...
@@ -105,11 +97,9 @@ Inverting gene-gene correlation matrix...
 		inverse mac, log(inverse mac)
 	analysing individual variables
 
-	analysing single-variable models (number of models: 13)
+	analysing single-variable models (number of models: 8)
                                                                                                                    	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/mid.gsa.out
-	writing gene information to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/mid.gsa.genes.out
-	writing gene analysis results per significant result (after multiple testing correction, at alpha = 0.05) to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/mid.gsa.sets.genes.out
 
-End time is 12:26:23, Tuesday 20 Jan 2026 (elapsed: 00:00:00)
+End time is 13:17:09, Friday 30 Jan 2026 (elapsed: 00:00:00)
 **** Job ends ****
-Tue Jan 20 12:26:23 PM EST 2026
+Fri Jan 30 01:17:09 PM EST 2026

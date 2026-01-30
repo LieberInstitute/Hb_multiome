@@ -1,8 +1,8 @@
 **** Job starts ****
-Tue Jan 20 12:27:29 PM EST 2026
+Fri Jan 30 01:21:04 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 26996605
+Job id: 27176685
 Job name: 05_gene_set_analysis
 Node name: compute-178
 Task id: 19
@@ -20,7 +20,7 @@ Using flags:
 	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv gene-col=gene_id set-col=set_id
 	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/CUD/semi_broad
 
-Start time is 12:27:29, Tuesday 20 Jan 2026
+Start time is 13:21:04, Friday 30 Jan 2026
 
 Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/CUD/CUD.genes.raw... 
 	33222 genes read from file
@@ -29,15 +29,16 @@ Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/process
 	detected 2 variables in file
 	using variable: gene_id (gene ID)
 	using variable: set_id (set ID)
-	45 gene-set definitions read from file
-	found 45 gene sets containing genes defined in genotype data (containing a total of 2358 unique genes)
+	WARNING: gene set Oligo_Linked_DAR_enriched contains no genes defined in genotype data
+	36 gene-set definitions read from file
+	found 35 gene sets containing genes defined in genotype data (containing a total of 1685 unique genes)
 Preparing variables for analysis...
 	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
-	WARNING: discarding gene set 'Endo_Linked_DAR_enriched' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
-	WARNING: discarding gene set 'OPC_Linked_OCR_enriched' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
-	WARNING: discarding gene set 'Thal_Linked_OCR_depleted' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
+	WARNING: discarding gene set 'Microglia_Linked_DAR_enriched' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
+	WARNING: discarding gene set 'Oligo_Discordant_Linked_DAR' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
+	WARNING: discarding gene set 'Oligo_Linked_DAR_depleted' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
 	truncating covariate values more than 5 standard deviations from the mean
-	total variables available for analysis: 42 gene sets
+	total variables available for analysis: 32 gene sets
 
 Parsing model specifications...
 Inverting gene-gene correlation matrix...
@@ -50,9 +51,9 @@ Inverting gene-gene correlation matrix...
 		inverse mac, log(inverse mac)
 	analysing individual variables
 
-	analysing single-variable models (number of models: 42)
+	analysing single-variable models (number of models: 32)
                                                                                                                    	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/CUD/semi_broad.gsa.out
 
-End time is 12:28:52, Tuesday 20 Jan 2026 (elapsed: 00:01:23)
+End time is 13:22:35, Friday 30 Jan 2026 (elapsed: 00:01:31)
 **** Job ends ****
-Tue Jan 20 12:28:52 PM EST 2026
+Fri Jan 30 01:22:35 PM EST 2026
