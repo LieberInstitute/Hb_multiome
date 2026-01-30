@@ -18,15 +18,25 @@ pair_df = read_csv(pair_path, show_col_types = FALSE) |>
         type_classification == 'classification-3', category != "Non-significant"
     ) |>
     mutate(
+        #   For DARs, we care about the cell type in which the peak is
+        #   differentially accessible; for linked peaks, we care about the cell
+        #   type where the link occurs
+        actual_cell_type = ifelse(grepl('DAR', category), cell_type, cluster),
         set_id = paste(
-            cell_type,
+            actual_cell_type,
             category |>
                 str_replace_all('[()+-]', '') |>
                 str_replace_all(' +', '_'),
             sep = '_'
         )
     ) |>
-    select(set_id, gene_id)
+    #   Linked DARs are only interpretable if the link and differential
+    #   accessibility occur in the same cell type
+    filter((cluster == cell_type) | !grepl('Linked_DAR', set_id)) |>
+    select(set_id, gene_id) |>
+    #   At this point it's still posible for genes to be duplicated within a set
+    #   (peaks can be different)
+    distinct()
 
 #   Gene sets at mid resolution
 pair_df |>
@@ -36,18 +46,14 @@ pair_df |>
 #   Gene sets at semi-broad resolution
 pair_df |>
     mutate(set_id = str_replace(set_id, '^([ML])Hb\\.[^_]+', '\\1Hb')) |>
-    group_by(set_id, gene_id) |>
-    slice_head(n = 1) |>
-    ungroup() |>
+    distinct() |>
     arrange(set_id) |>
     write_tsv(sprintf(out_path, 'semi_broad'))
 
 #   Gene sets at broad resolution
 pair_df |>
     mutate(set_id = str_replace(set_id, '^[ML]Hb\\.[^_]+', 'Hb')) |>
-    group_by(set_id, gene_id) |>
-    slice_head(n = 1) |>
-    ungroup() |>
+    distinct() |>
     arrange(set_id) |>
     write_tsv(sprintf(out_path, 'broad'))
 
