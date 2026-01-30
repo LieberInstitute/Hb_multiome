@@ -1,11 +1,12 @@
 **** Job starts ****
-Fri Nov 14 11:25:39 AM EST 2025
+Fri Jan 30 01:14:18 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 24142473
-Job name: 00_prep_gene_sets
-Node name: compute-169
+Job id: 27176621
+Job name: 01_prep_gene_sets
+Node name: compute-099
 Task id: 
+Unloading conda_R/4.5
 Loading conda_R/4.5
 
 Currently Loaded Modules:
@@ -35,9 +36,9 @@ here() starts at /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2025-11-14
+ date     2026-01-30
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   NA
+ quarto   1.7.32 @ /users/neagles/.positron-server/bin/3290136f699527bf01b703b390457b05ef2b858a/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package      * version date (UTC) lib source
@@ -87,4 +88,4 @@ here() starts at /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Fri Nov 14 11:25:41 AM EST 2025
+Fri Jan 30 01:14:25 PM EST 2026
