@@ -5,10 +5,10 @@ Results for significant/selected chromatin regions that are both:
 -   **LinkPeaks**: Putative cis-regulatory elements linked to gene expression through correlation\
 -   **DARs**: Differentially Accessible Regions (DARs) based on cell-type-specific chromatin accessibility
 
-Overlaps were computed to pinpoint cis-regulatory elements (CREs) of interesr across cell types.
+Overlaps were computed to pinpoint cis-regulatory elements (CREs) of interest across cell types.
 
 -   Tested in: 18 mid-resolution WNN clusters\
--   FDR threshold: 0.2
+-   FDR threshold: 0.1 (for both LinkPeaks and DARs)
 
 ------------------------------------------------------------------------
 
@@ -57,16 +57,17 @@ Each row represents a shared peak that is both:
 
 <br>
 
+While `peak_id` and `cell_type` apply to both sources, the remaining columns
+come for either the linked-peak side or the DARs side.
+
 ####  From LinkPeaks
 
 | Column | Description |
 |----------------------------|--------------------------------------------|
-| `peak_id_links` | LinkPeaks identifier (`chr-start-end`) |
-| `CCscore` | Spearman correlation between accessibility and gene expression |
-| `gene_name` | Correlated gene symbol |
-| `gene_id` | Ensembl gene ID |
-| `FDR_CC` | FDR from correlation test |
-| `cluster` | Cell type where the link was detected |
+| `link_cc_score` | Spearman correlation between accessibility and gene expression |
+| `link_gene_name` | Correlated gene symbol |
+| `link_gene_id` | Ensembl gene ID |
+| `link_fdr_cc` | FDR from correlation test |
 | `distance`, `tss`, `signed_distance` | Distances from peak to gene TSS |
 | `signed_by_strand` | Signed distance adjusted by gene strand (+/–) |
 
@@ -76,11 +77,8 @@ Each row represents a shared peak that is both:
 
 | Column          | Description                      |
 |-----------------|----------------------------------|
-| `peak_id`       | Genomic coordinate from DAR      |
-| `cell_type`     | Cell type where DAR was detected |
-| `logFC`         | Log₂ fold change from DARs       |
-| `fdr_dars`      | FDR from DARs test               |
-| `FDR_threshold` | FDR threshold used (0.2)         |
+| `dar_logFC`         | Log₂ fold change from DARs       |
+| `dar_fdr`      | FDR from DARs test               |
 
 ------------------------------------------------------------------------
 
