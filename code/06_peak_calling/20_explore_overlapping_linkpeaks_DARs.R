@@ -6,13 +6,9 @@
 ## Recommended resources on interactive mode: srun --pty --mem=15GB --x11 bash
 ########################################################################
 
-library("dplyr")
 library("purrr")
-library("ggplot2")
 library("patchwork")
 library("tidyverse")
-library("tidyr")
-library("stringr")
 library("here")
 
 #===============================================================================
@@ -51,7 +47,8 @@ message("Loading Unique-Overlap Hits ...")
 
 ## load full overlaps df, which is already FDR filtered
 overlaps_df <- read_csv(
-    here(inputCSV_Overlaps_Dir, "Overlaps_LinkPeak_DARs_FDR0.1_0.1.csv")
+    here(inputCSV_Overlaps_Dir, "Overlaps_LinkPeak_DARs_FDR0.1_0.1.csv"),
+    show_col_types = FALSE
 )
 # head(overlaps_df)
 
@@ -111,11 +108,11 @@ make_combined_summary_divergence_plots <- function(
 ){
     
     combined_summary <- all_overlaps_raw |>
-        group_by(cell_type, peak_id_links, overlap_type) |>
+        group_by(cell_type, peak_id, overlap_type) |>
         summarise(
             peak_accessibility = case_when(
-                all(logFC > 0) ~ "More",
-                all(logFC < 0) ~ "Less",
+                all(dar_logFC > 0) ~ "More",
+                all(dar_logFC < 0) ~ "Less",
                 TRUE ~ "Mixed" # Mark as Mixed if LinkPeak has both More and Less DARs
             ),
             .groups = "drop" 
@@ -595,8 +592,8 @@ message("Processing Open/Close LinkPeaks-DARs overlappings per cell type ... ")
 ## Define Accessibility  for all the unique overlaps
 overlaps_df <- overlaps_df |>
     mutate(accessibility = case_when(
-        logFC > 0 ~ "More",
-        logFC < 0 ~ "Less",
+        dar_logFC > 0 ~ "More",
+        dar_logFC < 0 ~ "Less",
         TRUE ~ "Neutral"
     )) |>
     filter(accessibility %in% c("More", "Less"))
@@ -606,12 +603,8 @@ nrow(uniques_df) # 1967
 
 ## verification
 overlaps_df |>
-    count(peak_id_links, sort = TRUE) |>
+    count(peak_id, sort = TRUE) |>
     filter(n > 1) |> head()
-# peak_id_links   n
-# 1 chr1-2683852-2684422 108
-# 2 chr1-161612222-161613071  96
-# 3 chr11-65497297-65497968  91
 
 unique_peak_ids_to_filter <- uniques_df |>
     # We pull the peak_id column, which seems to correspond to the ATAC-seq peak identifier
@@ -621,7 +614,7 @@ n_uniques_peak_ids <- length(unique_peak_ids_to_filter) # 1967
 
 ## Restrict overlaps to Unique LinkPeaks only
 unique_overlaps <- overlaps_df |>
-    filter(peak_id_links %in% unique_peak_ids_to_filter) 
+    filter(peak_id %in% unique_peak_ids_to_filter) 
 
 nrow(unique_overlaps) # [1] 2904
 head(unique_overlaps)
@@ -635,11 +628,11 @@ message("Saved unique overlaps csv!")
 ## ==== Prepare data for divergence plots: Peak-level / Uniques vs shared-level 
 
 unique_summary_collapsed <- unique_overlaps |>
-    group_by(cell_type, peak_id_links) |>
+    group_by(cell_type, peak_id) |>
     summarise(
         accessibility = case_when(
-            all(logFC > 0) ~ "More",
-            all(logFC < 0) ~ "Less",
+            all(dar_logFC > 0) ~ "More",
+            all(dar_logFC < 0) ~ "Less",
             TRUE ~ "Mixed"   # at least one Up and one Down DAR
         ),
         .groups = "drop"
@@ -682,7 +675,7 @@ all_overlaps_raw <- overlaps_df |>
     filter(accessibility %in% c("More", "Less")) |> # Filter out Neutral
     mutate(
         overlap_type = ifelse(
-            peak_id_links %in% unique_peak_ids, 
+            peak_id %in% unique_peak_ids, 
             "Unique", 
             "Shared"
         )
@@ -690,9 +683,9 @@ all_overlaps_raw <- overlaps_df |>
 
 ## get total counts / 2-shared overlaps
 
-n_unique_links <- all_overlaps_raw |> filter(overlap_type == "Unique") |> pull(peak_id_links) |> unique() |> length()
+n_unique_links <- all_overlaps_raw |> filter(overlap_type == "Unique") |> pull(peak_id) |> unique() |> length()
 # 1967
-n_shared_links <- all_overlaps_raw |> filter(overlap_type == "Shared") |> pull(peak_id_links) |> unique() |> length()
+n_shared_links <- all_overlaps_raw |> filter(overlap_type == "Shared") |> pull(peak_id) |> unique() |> length()
 # 3636
 
 ## make summary table to divergence plot

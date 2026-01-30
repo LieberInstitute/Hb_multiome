@@ -2,7 +2,7 @@
 #SBATCH -p katun
 #SBATCH --mem=30G
 #SBATCH --job-name=20_explore_overlapping_linkpeaks_DARs
-#SBATCH -c 2
+#SBATCH -c 1
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
