@@ -2,11 +2,10 @@
 #SBATCH -p katun
 #SBATCH --mem=30G
 #SBATCH --job-name=19_Linkage_DARs_analysis
-#SBATCH -c 2
+#SBATCH -c 1
 #SBATCH -t 1-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
-#SBATCH --exclude=compute-093
 
 set -eo pipefail
 
