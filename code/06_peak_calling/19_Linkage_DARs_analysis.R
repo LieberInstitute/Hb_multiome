@@ -77,9 +77,15 @@ linkPeaks_results_all <- lapply(
         show_col_types = FALSE
     ) |>
     bind_rows() |>
-    filter(FDR < FDR_links, abs(score) >= thr_CC)
+    filter(FDR < FDR_links, abs(score) >= thr_CC) |>
+    #   It appears a given peak ID can be associated with multiple (generally
+    #   overlapping) GRanges sets. The goal was to find the "most linked" gene
+    #   for each peak, so let's do that by FDR
+    group_by(peak, cluster) |>
+    slice_min(order_by = FDR, n = 1, with_ties = FALSE) |>
+    ungroup()
 
-message(nrow(linkPeaks_results_all), " total links") 
+message(nrow(linkPeaks_results_all), " total links")
 
 # save LinkPeaks table 
 f_name <- here(
