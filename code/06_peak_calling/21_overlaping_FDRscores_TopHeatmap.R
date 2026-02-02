@@ -1,6 +1,7 @@
 ########################################################################
 ## Explore FDR-Scores and Top overlapping (Heatmap)
-## - (1) Build a class of overlapping peaks
+## - (1) Form a single CSV of DARs, linked peaks, and their overlaps.
+##       Categorize all peaks
 ## - (2) Heatmap summarize accessibility (logFC, FDR, directionality) 
 ##    → Subset by cell_type, because visual goal centers on cell-type–specific regulatory accessibility
 ##
@@ -11,28 +12,24 @@
 
 library("pheatmap")
 library("reshape2")
-library("dplyr")
-library("purrr")
-library("ggplot2")
 library("patchwork")
 library("ggrepel")
 library("tidyverse")
-library("tidyr")
-library("stringr")
 library("here")
 
 #===============================================================================
 # resolution_level = "Mid"      # 18 cell-types
 #===============================================================================
 
-## setup variable names
+top_genes_scattered_plt = 20
 
-FDR = 0.2 # actual value to run the DAR-Links. We do not use log FC for this exploratory analysis
-
-## Set directory names
-inputCSV_Overlaps_Dir <- here(
-    "processed-data",
-    "06_peak_calling"
+overlap_path = here(
+    "processed-data", "06_peak_calling", "19_Linkage_DARs_analysis",
+    "Overlaps_LinkPeak_DARs_FDR0.1_0.1.csv"
+)
+links_dir = here(
+    "processed-data", "06_peak_calling", "14_exploratory_pb_peak_scores_MACS2",
+    "links_ct_merged"
 )
 processedDir <- here(
     "processed-data",
@@ -45,97 +42,98 @@ plotDir <- here(
     "21_overlaping_FDRscores_TopHeatmap"
 )
 
+color_map <- c(
+    "Linked DAR enriched"   = "#E64B35FF",
+    "Linked DAR depleted"   = "#800080",
+    "Linked OCR enriched"   = "#00A087FF",
+    "Linked OCR depleted"   = "#3B7000FF",
+    "Discordant Linked DAR" = "#0424DB",  
+    "Unlinked DAR"          = "#3C5488FF"
+)
+
 if (!dir.exists(processedDir)) { dir.create(processedDir) }
 if (!dir.exists(plotDir)) { dir.create(plotDir) }
 
-##==============================================================================
+################################################################################
+#   Form a single tibble of DARs, linked peaks, and their overlaps. Categorize
+#   peaks
+################################################################################
 
-message("Loading Unique-Overlap with directionality ...")
+#   At this point we have a CSV of DARs, of linked peaks, and of their overlaps.
+#   Merge into a single tibble and categorize them
 
-## load raw overlaps and 2-shared ct overlaps 
-overlap_df <- read.csv(here(inputCSV_Overlaps_Dir, "19_Linkage_DARs_analysis", 
-                             paste0("Overlaps_LinkPeak_DARs_FDR", FDR, ".csv")))
-shared_2ct_df <- read.csv(here(inputCSV_Overlaps_Dir, "20_explore_overlapping_linkpeaks_DARs", 
-                             paste0("overlaps_summary_linkPeak_DARs_unique_ct_FDR", FDR, ".csv")))
-                            
+#-------------------------------------------------------------------------------
+#   Overlaps
+#-------------------------------------------------------------------------------
 
-## filter uniques and 2-shared ct overlaps
-all_unique_df <- overlap_df |>
-    distinct(peak_id_links, .keep_all = TRUE)
-nrow(all_unique_df) # 5603
-head(all_unique_df)
+overlap_df <- read_csv(overlap_path, show_col_types = FALSE)
 
-## first, filter uniques
-peaks_unique_cell_types <- shared_2ct_df |>
-    filter(n_cell_types == 1) |>
-    pull(peak_id)
-length(peaks_unique_cell_types) # 1967
+#   Start with overlaps where the DAR is unique to one cell type
 
-## Keep only those 1,967 unique LinkPeaks
-unique_df <- all_unique_df |>
-    filter(peak_id_links %in% peaks_unique_cell_types) |>
+#   There are only 2 peaks where differential accessibility was found in 2
+#   cell types. We might as well drop them, which allows us to claim all
+#   DARs are unique to one cell type
+overlap_df |>
+    group_by(peak_id) |>
+    filter(n() > 1) |>
+    ungroup() |>
+    select(peak_id, cell_type, link_gene_name) |>
+    print()
+
+overlap_df = overlap_df |>
+    group_by(peak_id) |>
+    filter(n() == 1) |>
+    ungroup() |>
     mutate(
-        overlap_type = "Unique",
-        n_cell_types = 1,
+        category = case_when(
+            (dar_logFC > 0) & (link_cc_score > 0) ~ "Linked DAR enriched",
+            (dar_logFC < 0) & (link_cc_score < 0) ~ "Linked DAR depleted",
+            TRUE ~ "Linked DAR discordant"
+        )
     )
 
-length(unique_df$peak_id_links) # 1967
-table(unique_df$cell_type)
-head(unique_df)
-summary(unique_df)
+#-------------------------------------------------------------------------------
+#   Linked peaks
+#-------------------------------------------------------------------------------
 
-
-## filter 2ct shared
-peaks_shared_cell_types <- shared_2ct_df |>
-    filter(n_cell_types == 2) |>
-    pull(peak_id)
-length(peaks_shared_cell_types) # 1238
-
-# Keep only unique and 2-shared overlaps
-unique_df2 <- all_unique_df |>
-    filter(peak_id_links %in% peaks_shared_cell_types) |>
+link_files <- list.files(
+    path = links_dir, pattern = ("^Mid.*\\.csv$"), full.names = TRUE
+)
+link_df = lapply(link_files, read_csv, show_col_types = FALSE) |>
+    bind_rows() |>
+    dplyr::rename(
+        peak_id = peak,
+        cell_type = cluster,
+        link_cc_score = score,
+        link_gene_id = gene_id,
+        link_gene_name = gene,
+        link_gene_strand = strand,
+        link_fdr_cc = FDR
+    ) |>
     mutate(
-        overlap_type = "Shared",
-        n_cell_types = 2,
-    )
-
-length(unique_df2$peak_id_links) 
-table(unique_df2$cell_type)
-head(unique_df2)
-summary(unique_df2)
-
-unique_df <- bind_rows(unique_df, unique_df2)
-head(unique_df)
-table(unique_df$overlap_type)
-nrow(unique_df) # 3205
-
-# save detailed unique and 2-shared overlaps with meta-data
-f_name <- here(processedDir, paste0("overlaps_unique_2shared_ct_FDR", FDR, ".csv"))
-write.csv(unique_df, f_name, row.names = FALSE)
-
+        dar_fdr = NA_real_,
+        dar_logFC = NA_real_,
+        category = ifelse(
+            link_cc_score > 0, "Linked OCR enriched", "Linked OCR depleted"
+        )
+    ) |>
+    select(all_of(colnames(overlap_df)))
+    
+stopifnot(setequal(colnames(overlap_df), colnames(link_df)))
 
 ## =============================================================================
-## subset by cell_type and cluster, focus only on cis-links where both accessibility and expression specificity occur in the same cluster
-# Conceptually: 
-# cell_type → From the ATAC side: where the chromatin accessibility change occurs (DARs)
-# cluster → From the RNA side: where the correlated gene was expressed or correlated in the LinkPeaks model
 
-
-all_clusters <- unique(unique_df$cell_type)
+all_clusters <- unique(overlap_df$cell_type)
 # sort by MHh and LHb first 
 clusters_sorted <- c(
     sort(grep("MHb|LHb", all_clusters, value = TRUE)), 
     sort(grep("MHb|LHb", all_clusters, value = TRUE, invert = TRUE))
 )
-clusters_sorted
-
-# ## subset df by cell-Type / check point
-# unique_df |> filter(cell_type=="LHb.2.7") |> nrow() #203
     
 subset_cell_type <- function(unique_df, cluster_specific) {
     subset_uniques <- unique_df |> filter(cell_type == cluster_specific)
     message("Subsetting [", cluster_specific, "] cell_type. Total unique OCR found: ",
-            length(unique(subset_uniques$peak_id_links)))
+            length(unique(subset_uniques$peak_id)))
     return(subset_uniques)
 }
 
@@ -147,12 +145,10 @@ make_scattered_plot_dars_cc_real <- function(
         plot_data,
         categories_to_plot,
         top_genes,
-        thr_CC,    # Thresh for Peak-Gene correlation
-        thr_DAR,   # Thresh for Differential Accessibility Regions (DARs)
-        thr_logFC, # Thresh for DARs Accessibility Direction
-        fdr_cutoff = 0.2 # FDR used in both ds to define significant peaks 
+        thr_CC = 0.3,    # Thresh for Peak-Gene correlation
+        thr_DAR = 0.1,   # Thresh for Differential Accessibility Regions (DARs)
+        fdr_cutoff = 0.1 # FDR used in both ds to define significant peaks 
 ) {
-
     message("cats_to_plot: ", paste(categories_to_plot, collapse = ", "))
     message("present in data: ", paste(unique(plot_data$category), collapse = ", "))
     
@@ -182,33 +178,13 @@ make_scattered_plot_dars_cc_real <- function(
     axis_labels <- sprintf("%.2f", axis_breaks)
     
     subtitle_text <- paste0(
-        "Spearman CC |p| > ", thr_CC,
-        " | FDR-DARs < ", thr_DAR,
-        " & log2FC ± ", thr_logFC
+        "Spearman CC |p| > ", thr_CC, " | FDR-DARs < ", thr_DAR
     )
     
-    # Define the full palette (master color map) - we have 2 categories
-    color_map <- c(
-        "Linked_DAR (+) enriched"  = "#E64B35FF",  # reuse similar red for CSC+Nick version
-        "Linked_DAR (-) depleted"  = "#800080",    # reuse purple for CSC+Nick version
-        "Linked OCR (+) enriched"  = "#00A087FF",
-        "Linked OCR (-) depleted"  = "#3B7000FF",
-        "Discordant Linked DAR"    = "#0424DB",  
-        "Unlinked DAR"             = "#3C5488FF",
-        "Non-significant"          = "lightgrey"
-    )
-    
-    desired_order <- c(
-        "Linked_DAR (+) enriched",
-        "Linked_DAR (-) depleted",
-        "Linked OCR (+) enriched",
-        "Linked OCR (-) depleted",
-        "Discordant Linked DAR",
-        "Unlinked DAR",
-        "Non-significant"
-    )
     # Restrict to categories actually present in our subset
-    present_categories <- intersect(desired_order, unique(plot_data$category))
+    present_categories <- intersect(
+        names(color_map), unique(plot_data$category)
+    )
     
     g1 <- ggplot(plot_data, aes(x = CCscore, y = logFC, color = category)) +
         geom_hline(yintercept = c(-thr_logFC, thr_logFC), linetype = "dashed", color = "darkgrey") +
@@ -242,7 +218,6 @@ make_scattered_plot_dars_cc_real <- function(
         plot_annotation(caption = paste("Uniques & 2-Shared CellTypes\nTop:", top_genes, "genes"))
     
     return(g1)
-    
 }
 
 ## subset the overlaps by cell_type
@@ -262,22 +237,7 @@ names(subsetted_list_df)
 
 ## make scattered plots using real values (non-normalized)
 
-## Set thresholds for LinkPeaks (CC) and DARs
-
-top_genes_scattered_plt = 20
-thr_CC = 0.3  # correlation strength
-thr_DAR = 0.1 # fdr_dars / accessibility significance
-thr_logFC = 0
-thr_fdr = 0.2
-
-
 ## Categorize peaks overlaps ===================================================
-# (3) Cynthia+Nick classification adapted to our current analysis: classification-3
-
-peaks_classification3 = c("Linked_DAR (+) enriched", "Linked_DAR (-) depleted", 
-                          "Discordant Linked DAR",
-                          "Linked OCR (+) enriched", "Linked OCR (-) depleted", 
-                          "Non-significant")
 
 ## (B) Classification-3 logic  =================================================
 plot_data_list_3 <- purrr::map(subsetted_list_df, ~ .x |> 
