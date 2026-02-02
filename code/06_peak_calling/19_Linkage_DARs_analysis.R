@@ -290,7 +290,7 @@ gr_links <-
              CCscore  = score, # spearman CC
              gene_name  = gene,
              gene_id  = gene_id, 
-             FDR_CC = FDR_links,
+             FDR_CC = FDR,
              cluster  = cluster,
              tss = tss,
              # the strand of the linked gene (+ or -)
@@ -330,7 +330,7 @@ gr_dars <-
             # Metadata columns passed directly:
             peak_id        = paste(seqnames, start, end, sep = "-"),
             cell_type      = cell_type,
-            FDR_dars  = FDR_dars,
+            FDR_dars  = fdr,
             # Add FC of chromatin accessibility:
             # - logFC > 0 → peak is more accessible (open) in the target cell type
             # - logFC < 0 → peak is less accessible (closed) in the target cell type
@@ -340,15 +340,15 @@ gr_dars <-
 
 #===========================================================================
 
-message("Finding overlaps ...")
+message("Finding overlaps (of peak + cell-type pairs) ...")
 
 ## Unique overlaps venn diagram
 venn_list <- list(
-    DARs = unique(gr_dars$peak_id),
-    LinkPeaks = unique(gr_links$peak_id_links)
+    DARs = unique(paste(gr_dars$peak_id, gr_dars$cell_type, sep = "_")),
+    LinkPeaks = unique(
+        paste(gr_links$peak_id_links, gr_links$cluster, sep = "_")
+    )
 )
-length(venn_list$LinkPeaks) # [1] 7098
-length(venn_list$DARs) # [1] 211558
 g_venn_overlaps <- ggvenn(venn_list,
        fill_color = c("skyblue", "orange"),
        stroke_size = 0.5,
