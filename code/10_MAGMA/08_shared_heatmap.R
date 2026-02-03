@@ -22,6 +22,16 @@ gwas_groups = list(
         'p_factor', 'SCZ_BPD'
     )
 )
+#   The 5 factors + general P factor from the paper:
+#   https://doi.org/10.1038/s41586-025-09820-3
+gwas_factors = c(
+    'compulsive' = 'F1: compulsive',
+    'SCZ_BPD' = 'F2: SCZ/BPD',
+    'neurodev' = 'F3: neurodev',
+    'internalizing' = 'F4: intern.',
+    'SUD3' = 'F5: SUD',
+    'p_factor' = 'P Factor'
+)
 gwas_renaming = c(
     'MDD2019' = 'MDD',
     'panic' = 'Panic Disorder',
@@ -128,6 +138,13 @@ for (cell_type_group in cell_type_groups) {
 results_df = bind_rows(results_df_list) |>
     mutate(
         p_label = ifelse(neg_log_p > -log10(sig_cutoff), "*", ""),
+        gwas_factor = factor(
+            ifelse(
+                gwas_group %in% names(gwas_factors),
+                gwas_factors[gwas_group], NA
+            ),
+            levels = gwas_factors
+        ),
         gwas_group = factor(gwas_renaming[gwas_group], levels = gwas_renaming),
         cell_type_group = factor(cell_type_group, levels = cell_type_groups)
     ) |>
@@ -145,6 +162,15 @@ for (gwas_set in names(gwas_groups)) {
         f_name = sprintf("shared_heatmap_%s.pdf", gwas_set)
     )
 }
+
+#   P-value heatmap for the 5 factors + P factor
+p_val_heatmap(
+    results_df = results_df |>
+        filter(!is.na(gwas_factor)) |>
+        mutate(gwas_group = gwas_factor),
+    gwas_groups = gwas_factors,
+    f_name = "shared_heatmap_5_factors.pdf"
+)
 
 #   For each cell-type resolution, take the correlation of -log(p-value)
 #   between the 2 OUD GWAS sets, which should be substantial and positive
