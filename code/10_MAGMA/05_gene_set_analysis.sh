@@ -46,7 +46,7 @@ module list
 #   Gene set analysis step
 magma \
     --gene-results $gene_results_path \
-    --set-annot $gene_set_path gene-col=gene_id set-col=set_id \
+    --set-annot $gene_set_path gene-col=link_gene_id set-col=set_id \
     --out $out_prefix
 
 echo "**** Job ends ****"
