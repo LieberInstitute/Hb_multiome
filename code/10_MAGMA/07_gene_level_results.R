@@ -85,13 +85,13 @@ for (gwas in names(gene_stat_paths)) {
         gene_df = read_table(
                 gene_set_paths[[cell_type_group]], show_col_types = FALSE
             ) |>
-            left_join(gene_stat_df, by = c('gene_id' = 'GENE')) |>
+            left_join(gene_stat_df, by = c('link_gene_id' = 'GENE')) |>
             mutate(
                 cell_type = str_extract(set_id, '^[^_]+'),
                 peak_category = str_extract(set_id, '(?<=_).+')
             ) |>
             left_join(set_df, by = c('cell_type', 'peak_category')) |>
-            dplyr::rename(p = P) |>
+            dplyr::rename(p = P, gene_id = link_gene_id) |>
             select(
                 gene_id, cell_type, peak_category, gwas, p, set_is_sig,
                 cell_type_res
