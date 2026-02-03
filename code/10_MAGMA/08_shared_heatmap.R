@@ -40,6 +40,16 @@ gwas_renaming = c(
     'neurodev' = 'Neurodev.',
     'p_factor' = 'P Factor'
 )
+peak_levels = c(
+    'Linked_DAR_enriched', 'Linked_DAR_depleted', 'Linked_DAR_discordant',
+    'Linked_OCR_enriched', 'Linked_OCR_depleted'
+)
+#   This isn't respected in facet_grid(scales = 'free_y')
+# cell_type_levels = c(
+#     'Hb', 'MHb', 'LHb', 'MHb.1', 'MHb.2', 'MHb.1.2', 'MHb.3', 'LHb.1',
+#     'LHb.1.3', 'LHb.1.3.4', 'LHb.4', 'LHb.2.7', 'Astrocyte', 'Endo',
+#     'Excit.Thal', 'Inhib.Thal', 'Thal', 'Microglia', 'Oligo', 'OPC'
+# )
 sig_cutoff = 0.05
 
 ################################################################################
@@ -101,7 +111,9 @@ for (cell_type_group in cell_type_groups) {
             ) |>
             mutate(
                 cell_type = str_extract(FULL_NAME, '^[^_]+'),
-                peak_category = str_extract(FULL_NAME, '(?<=_).+'),
+                peak_category = factor(
+                    str_extract(FULL_NAME, '(?<=_).+'), levels = peak_levels
+                ),
                 neg_log_p = -log10(P),
                 cell_type_group = cell_type_group,
                 gwas_group = gwas_group
@@ -121,6 +133,8 @@ results_df = bind_rows(results_df_list) |>
     ) |>
     #   Remove redundant rows
     filter(grepl('Hb', cell_type) | cell_type_group == 'mid')
+
+stopifnot(!any(is.na(results_df$peak_category)))
 
 #   P-value heatmaps split by substance-use-related traits vs. others
 for (gwas_set in names(gwas_groups)) {
