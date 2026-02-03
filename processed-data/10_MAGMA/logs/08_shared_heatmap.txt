@@ -1,8 +1,8 @@
 **** Job starts ****
-Thu Jan 22 04:01:30 PM EST 2026
+Tue Feb  3 12:53:55 PM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 27085440
+Job id: 27465274
 Job name: 08_shared_heatmap
 Node name: compute-168
 Task id: 
@@ -27,13 +27,15 @@ Currently Loaded Modules:
 ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
 here() starts at /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome
 Loading required package: viridisLite
+null device 
+          1 
 Correlation of -log(p-value) between OUD 1 and OUD 2 for each cell-type resolution:
 # A tibble: 3 × 2
   cell_type_group OUD_cor
   <fct>             <dbl>
-1 broad           0.444  
-2 semi_broad      0.905  
-3 mid             0.00692
+1 broad           -0.205 
+2 semi_broad      -0.0984
+3 mid             -0.0769
 `summarise()` has grouped output by 'cell_type', 'cell_type_group'. You can
 override using the `.groups` argument.
 null device 
@@ -48,9 +50,9 @@ null device
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-01-22
+ date     2026-02-03
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.7.32 @ /users/neagles/.positron-server/bin/3290136f699527bf01b703b390457b05ef2b858a/quarto/bin/quarto
+ quarto   1.8.27 @ /users/neagles/.positron-server/bin/4b472e9bf40ca88f886fe9c7fcfbb9ee702fccd0/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package      * version date (UTC) lib source
@@ -101,4 +103,4 @@ null device
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Thu Jan 22 04:03:10 PM EST 2026
+Tue Feb  3 12:58:28 PM EST 2026
