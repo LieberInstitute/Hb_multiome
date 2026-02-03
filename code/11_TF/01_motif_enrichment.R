@@ -5,59 +5,61 @@ library(tidyverse)
 library(JASPAR2024)     # or latest available JASPAR set
 library(TFBSTools)
 library(motifmatchr)
-
-
 library(ChIPseeker)
 library(TxDb.Hsapiens.UCSC.hg38.knownGene)  # or species-appropriate
 library(org.Hs.eg.db)
-
-
 library(BSgenome.Hsapiens.UCSC.hg38)
 library(clusterProfiler)
+library(here)
+library(sessioninfo)
+library(GenomicRanges)
+library(Signac)
 
+peak_path = here(
+    'processed-data', '06_peak_calling', '21_overlaping_FDRscores_TopHeatmap',
+    'all_peaks_categorized.csv.gz'
+)
+promoter_window = 2000  # +/- around TSS
 
 ## Inputs & goal
 
-## Pre-processing steps completed:
-# Filter cells (both assays): min fragments in peaks, TSS enrichment, blacklist removal, nucleosome signal; RNA nFeature/nCount/mito%. (all done)
-# Normalization: RNA (SCTransform/LogNormalize); ATAC (TF-IDF + SVD/LSI). (all done)
-# WNN integration & clustering: derive final clusters/cell-types to compare. (all done)
 # Peak set: use merged MACS2 peaks (across samples) or Signac “peaks” assay. (all done)
 
 
 ## Confirm DARs are pseudobulk data (confirm) 
 
-## Keep significant DARs (tune thresholds)
-# DARs <- dar %>% filter(FDR <= 0.05, abs(logFC) >= 0.25)
-# (ArchR: getMarkerFeatures with useGroups and bgdGroups, then markerTest.)
+#   Consider filtering DARs by logFC
 
 
 ## Genomic annotation of DARs
 # Add basic region context and nearest/overlapping genes
 
-peak_gr <- StringToGRanges(rownames(DARs), sep=c("-", "-"))  # "chr-start-end" to GRanges
+peak_df = read_csv(peak_path, show_col_types = FALSE)
 
-ann <- annotatePeak(
-    peak_gr,
-    TxDb=TxDb.Hsapiens.UCSC.hg38.knownGene,
-    tssRegion=c(-2000, 2000),  # promoter window (adjust as needed)
-    annoDb="org.Hs.eg.db"
-) %>% as.data.frame()
+peak_gr = peak_df |>
+    pull(peak_id) |>
+    unique() |>
+    StringToGRanges(sep = c("-", "-"))
 
+ann = annotatePeak(
+        peak_gr, TxDb = TxDb.Hsapiens.UCSC.hg38.knownGene,
+        tssRegion = c(-1 * promoter_window, promoter_window),
+        annoDb = "org.Hs.eg.db"
+    ) |>
+    as.data.frame() |>
+    as_tibble() |>
+    dplyr::rename(
+        nearest_gene_id = ENSEMBL, nearest_gene_name = SYMBOL
+    ) |>
+    mutate(peak_id = paste(seqnames, start, end, sep = "-")) |>
+    select(peak_id, annotation, nearest_gene_id, nearest_gene_name)
 
-DARs_annot <- DARs %>%
-    tibble::rownames_to_column("peak_id") %>%
-    left_join(ann %>% 
-                  transmute(peak_id=paste(seqnames, start, end, sep="-"),
-                            annotation, geneId=geneId, SYMBOL=SYMBOL, 
-                            distanceToTSS=distanceToTSS))
+peak_df = peak_df |>
+    left_join(ann, by = "peak_id")
 
 ## Maybe consider external data
 # ENCODE cCREs, FANTOM5 enhancers, Vista, DHS, blacklist → annotate class (promoter/enhancer), confidence tiers.
 # ChromHMM states if you have matched samples/tissues.
-
-## We could merge with Peak-to-gene linkage, but its not considered by now
-
 
 ## get DAR and background (size/GC-matched) peak sets
 
@@ -98,22 +100,6 @@ ego <- enrichGO(gene         = genes_for_go,
 # Blacklist and low-mappability filters
 # Sensitivity analysis on FDR/logFC thresholds
 # Window size for LinkPeaks (±100–500 kb) and per-cluster stability.
-
-## Minimal skeleton
-annotate_DARs_multiome <- function(obj, contrast_celltype, fdr_atac=0.05, lfc_atac=0.25) {
-    # assume we have merged peaks
-    pb_list <- make_pseudobulk(obj, assay="peaks", group=c("sample_id","cell_type"))
-    dar_tbl <- run_edgeR(pb_list, contrast_celltype, fdr=fdr_atac, lfc=lfc_atac)
-    dar_tbl <- add_genomic_annotations(dar_tbl, genome="hg38")
-    links   <- link_peaks_to_genes(obj, distance=5e5)
-    dar_tbl <- dar_tbl |> left_join(links, by="peak_id")
-    degs    <- get_deg_table(obj, contrast_celltype)
-    dar_tbl <- dar_tbl |> left_join(degs, by=c("SYMBOL"="gene"))
-    dar_tbl <- add_concordance(dar_tbl)
-    dar_tbl <- add_motif_enrichment(dar_tbl, genome="hg38", db="JASPAR2024")
-    dar_tbl
-}
-
 
 ## Desired Deliverables: 
 # DARs_<celltype>_vs_rest.csv (full table)
