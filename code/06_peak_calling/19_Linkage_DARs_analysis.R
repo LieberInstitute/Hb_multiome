@@ -77,13 +77,7 @@ linkPeaks_results_all <- lapply(
         show_col_types = FALSE
     ) |>
     bind_rows() |>
-    filter(FDR < FDR_links, abs(score) >= thr_CC) |>
-    #   It appears a given peak ID can be associated with multiple (generally
-    #   overlapping) GRanges sets. The goal was to find the "most linked" gene
-    #   for each peak, so let's do that by FDR
-    group_by(peak, cluster) |>
-    slice_min(order_by = FDR, n = 1, with_ties = FALSE) |>
-    ungroup()
+    filter(FDR < FDR_links, abs(score) >= thr_CC)
 
 message(nrow(linkPeaks_results_all), " total links")
 
@@ -156,7 +150,7 @@ filter_signific_DARs <- function(
         message("Processing DARs for [", ct_name, "] with FDR=", fdr_thresh)
         
         DARs_csv <- here(inputCSV_DARs_Dir, ct)
-        DARs_df <- read_csv(DARs_csv)
+        DARs_df <- read_csv(DARs_csv, show_col_types = FALSE)
         
         message(nrow(DARs_df), " ", ct_name, " total DARs found ... ")
         
