@@ -204,14 +204,14 @@ overlap_df <- read_csv(overlap_path, show_col_types = FALSE)
 #   DARs are unique to one cell type
 overlap_df |>
     group_by(peak_id) |>
-    filter(n() > 1) |>
+    filter(n_distinct(cell_type) > 1) |>
     ungroup() |>
     select(peak_id, cell_type, link_gene_name) |>
     print()
 
 overlap_df = overlap_df |>
     group_by(peak_id) |>
-    filter(n() == 1) |>
+    filter(n_distinct(cell_type) == 1) |>
     ungroup() |>
     mutate(
         category = case_when(
