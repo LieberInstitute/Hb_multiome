@@ -1,10 +1,10 @@
 **** Job starts ****
-Tue Feb  3 09:30:25 AM EST 2026
+Fri Feb  6 11:47:47 AM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 27458348
+Job id: 27659990
 Job name: 05_gene_set_analysis
-Node name: compute-095
+Node name: compute-169
 Task id: 1
 Loading LIBD SLURM module for magma/1.10
 
@@ -20,7 +20,7 @@ Using flags:
 	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv gene-col=link_gene_id set-col=set_id
 	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/semi_broad
 
-Start time is 09:30:25, Tuesday 03 Feb 2026
+Start time is 11:47:47, Friday 06 Feb 2026
 
 Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/MDD.genes.raw... 
 	493 genes read from file
@@ -35,7 +35,6 @@ Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/process
 	WARNING: gene set Astrocyte_Linked_OCR_enriched contains no genes defined in genotype data
 	WARNING: gene set Endo_Linked_OCR_depleted contains no genes defined in genotype data
 	WARNING: gene set Excit.Thal_Linked_DAR_depleted contains no genes defined in genotype data
-	WARNING: gene set Excit.Thal_Linked_DAR_discordant contains no genes defined in genotype data
 	WARNING: gene set Excit.Thal_Linked_DAR_enriched contains no genes defined in genotype data
 	WARNING: gene set Inhib.Thal_Linked_DAR_depleted contains no genes defined in genotype data
 	WARNING: gene set Inhib.Thal_Linked_DAR_discordant contains no genes defined in genotype data
@@ -54,14 +53,13 @@ Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/process
 	WARNING: gene set Thal_Linked_OCR_depleted contains no genes defined in genotype data
 	WARNING: gene set Thal_Linked_OCR_enriched contains no genes defined in genotype data
 	33 gene-set definitions read from file
-	found 9 gene sets containing genes defined in genotype data (containing a total of 34 unique genes)
+	found 10 gene sets containing genes defined in genotype data (containing a total of 41 unique genes)
 Preparing variables for analysis...
 	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
-	WARNING: discarding gene set 'Inhib.Thal_Linked_OCR_depleted' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
-	WARNING: discarding gene set 'LHb_Linked_DAR_discordant' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
+	WARNING: discarding gene set 'Excit.Thal_Linked_DAR_discordant' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
 	WARNING: discarding gene set 'LHb_Linked_DAR_enriched' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
 	truncating covariate values more than 5 standard deviations from the mean
-	total variables available for analysis: 6 gene sets
+	total variables available for analysis: 8 gene sets
 
 Parsing model specifications...
 Inverting gene-gene correlation matrix...
@@ -73,9 +71,9 @@ Inverting gene-gene correlation matrix...
 		inverse mac, log(inverse mac)
 	analysing individual variables
 
-	analysing single-variable models (number of models: 6)
+	analysing single-variable models (number of models: 8)
                                                                                                                    	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/MDD/semi_broad.gsa.out
 
-End time is 09:30:25, Tuesday 03 Feb 2026 (elapsed: 00:00:00)
+End time is 11:47:47, Friday 06 Feb 2026 (elapsed: 00:00:00)
 **** Job ends ****
-Tue Feb  3 09:30:25 AM EST 2026
+Fri Feb  6 11:47:47 AM EST 2026

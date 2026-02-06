@@ -1,10 +1,10 @@
 **** Job starts ****
-Tue Feb  3 09:35:55 AM EST 2026
+Fri Feb  6 11:54:05 AM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 27458438
+Job id: 27660050
 Job name: 05_gene_set_analysis
-Node name: compute-168
+Node name: compute-176
 Task id: 39
 Loading LIBD SLURM module for magma/1.10
 
@@ -20,7 +20,7 @@ Using flags:
 	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv gene-col=link_gene_id set-col=set_id
 	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/neurodev/broad
 
-Start time is 09:35:57, Tuesday 03 Feb 2026
+Start time is 11:54:05, Friday 06 Feb 2026
 
 Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/neurodev/neurodev.genes.raw... 
 	27931 genes read from file
@@ -31,7 +31,7 @@ Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/process
 	using variable: set_id (set ID)
 	WARNING: gene set Endo_Linked_OCR_depleted contains no genes defined in genotype data
 	29 gene-set definitions read from file
-	found 28 gene sets containing genes defined in genotype data (containing a total of 1411 unique genes)
+	found 28 gene sets containing genes defined in genotype data (containing a total of 1697 unique genes)
 Preparing variables for analysis...
 	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
 	WARNING: discarding gene set 'Microglia_Linked_OCR_depleted' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv, variance is too low (set contains only one gene used in analysis)
@@ -55,6 +55,6 @@ Inverting gene-gene correlation matrix...
 	analysing single-variable models (number of models: 23)
                                                                                                                    	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/neurodev/broad.gsa.out
 
-End time is 09:36:33, Tuesday 03 Feb 2026 (elapsed: 00:00:36)
+End time is 11:54:50, Friday 06 Feb 2026 (elapsed: 00:00:45)
 **** Job ends ****
-Tue Feb  3 09:36:34 AM EST 2026
+Fri Feb  6 11:54:50 AM EST 2026

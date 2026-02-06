@@ -3,7 +3,6 @@ library(here)
 library(rtracklayer)
 library(ComplexHeatmap)
 library(RColorBrewer)
-library(UpSetR)
 library(sessioninfo)
 
 cell_type_groups = c('broad', 'semi_broad', 'mid')
@@ -215,7 +214,7 @@ for (cell_type_group in cell_type_groups) {
 }
 gene_set_df = bind_rows(gene_set_df_list) |>
     group_by(cell_type, cell_type_res) |>
-    summarize(num_genes = length(unique(gene_id))) |>
+    summarize(num_genes = length(unique(link_gene_id))) |>
     ungroup()
 
 p = unique_df |>
@@ -239,31 +238,6 @@ pdf(
     file = file.path(plot_dir, "shared_heatmap_substance_perc_unique.pdf"),
     width = 9, height = 6
 )
-print(p)
-dev.off()
-
-#   UpSet plot for LHb.2.7 genes across substance-use-related GWASes
-upset_sets = lapply(
-    gwas_renaming[gwas_groups[['substance']]],
-    function(this_gwas) {
-        this_gene_set = gene_df |>
-            filter(cell_type == 'LHb.2.7', gwas == this_gwas) |>
-            pull(gene_id)
-        return(this_gene_set)
-    }
-)
-names(upset_sets) = gwas_renaming[gwas_groups[['substance']]]
-upset_sets = upset_sets[lengths(upset_sets) > 0]
-
-p = upset(
-    fromList(upset_sets),
-    sets = names(upset_sets),
-    order.by = "freq",
-    sets.bar.color = "steelblue",
-    text.scale = 3,
-    number.angles = 15
-)
-pdf(file.path(plot_dir, 'LH.2.7_upset.pdf'), width = 10)
 print(p)
 dev.off()
 

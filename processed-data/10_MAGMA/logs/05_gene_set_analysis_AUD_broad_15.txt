@@ -1,8 +1,8 @@
 **** Job starts ****
-Tue Feb  3 09:31:31 AM EST 2026
+Fri Feb  6 11:49:13 AM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 27458384
+Job id: 27660010
 Job name: 05_gene_set_analysis
 Node name: compute-168
 Task id: 15
@@ -20,7 +20,7 @@ Using flags:
 	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv gene-col=link_gene_id set-col=set_id
 	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/AUD/broad
 
-Start time is 09:31:34, Tuesday 03 Feb 2026
+Start time is 11:49:14, Friday 06 Feb 2026
 
 Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/AUD/AUD.genes.raw... 
 	32750 genes read from file
@@ -30,7 +30,7 @@ Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/process
 	using variable: link_gene_id (gene ID)
 	using variable: set_id (set ID)
 	29 gene-set definitions read from file
-	found 29 gene sets containing genes defined in genotype data (containing a total of 1546 unique genes)
+	found 29 gene sets containing genes defined in genotype data (containing a total of 1865 unique genes)
 Preparing variables for analysis...
 	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
 	WARNING: discarding gene set 'Endo_Linked_OCR_depleted' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv, variance is too low (set contains only one gene used in analysis)
@@ -55,6 +55,6 @@ Inverting gene-gene correlation matrix...
 	analysing single-variable models (number of models: 24)
                                                                                                                    	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/AUD/broad.gsa.out
 
-End time is 09:33:47, Tuesday 03 Feb 2026 (elapsed: 00:02:13)
+End time is 11:51:16, Friday 06 Feb 2026 (elapsed: 00:02:02)
 **** Job ends ****
-Tue Feb  3 09:33:47 AM EST 2026
+Fri Feb  6 11:51:16 AM EST 2026

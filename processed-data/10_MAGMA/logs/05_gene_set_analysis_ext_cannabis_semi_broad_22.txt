@@ -1,10 +1,10 @@
 **** Job starts ****
-Tue Feb  3 09:32:21 AM EST 2026
+Fri Feb  6 11:50:45 AM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 27458406
+Job id: 27660028
 Job name: 05_gene_set_analysis
-Node name: compute-166
+Node name: compute-095
 Task id: 22
 Loading LIBD SLURM module for magma/1.10
 
@@ -20,7 +20,7 @@ Using flags:
 	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv gene-col=link_gene_id set-col=set_id
 	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/ext_cannabis/semi_broad
 
-Start time is 09:32:26, Tuesday 03 Feb 2026
+Start time is 11:50:46, Friday 06 Feb 2026
 
 Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/ext_cannabis/ext_cannabis.genes.raw... 
 	31692 genes read from file
@@ -31,7 +31,7 @@ Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/process
 	using variable: set_id (set ID)
 	WARNING: gene set Endo_Linked_OCR_depleted contains no genes defined in genotype data
 	33 gene-set definitions read from file
-	found 32 gene sets containing genes defined in genotype data (containing a total of 1507 unique genes)
+	found 32 gene sets containing genes defined in genotype data (containing a total of 1821 unique genes)
 Preparing variables for analysis...
 	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
 	WARNING: discarding gene set 'Microglia_Linked_OCR_depleted' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/semi_broad.tsv, variance is too low (set contains only one gene used in analysis)
@@ -54,6 +54,6 @@ Inverting gene-gene correlation matrix...
 	analysing single-variable models (number of models: 28)
                                                                                                                    	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/ext_cannabis/semi_broad.gsa.out
 
-End time is 09:33:35, Tuesday 03 Feb 2026 (elapsed: 00:01:09)
+End time is 11:54:03, Friday 06 Feb 2026 (elapsed: 00:03:17)
 **** Job ends ****
-Tue Feb  3 09:33:35 AM EST 2026
+Fri Feb  6 11:54:03 AM EST 2026

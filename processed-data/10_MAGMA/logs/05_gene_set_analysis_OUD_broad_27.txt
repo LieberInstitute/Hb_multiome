@@ -1,10 +1,10 @@
 **** Job starts ****
-Tue Feb  3 09:33:53 AM EST 2026
+Fri Feb  6 11:51:22 AM EST 2026
 **** JHPCE info ****
 User: neagles
-Job id: 27458423
+Job id: 27660033
 Job name: 05_gene_set_analysis
-Node name: compute-176
+Node name: compute-096
 Task id: 27
 Loading LIBD SLURM module for magma/1.10
 
@@ -20,7 +20,7 @@ Using flags:
 	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv gene-col=link_gene_id set-col=set_id
 	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/OUD/broad
 
-Start time is 09:33:53, Tuesday 03 Feb 2026
+Start time is 11:51:22, Friday 06 Feb 2026
 
 Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/OUD/OUD.genes.raw... 
 	31295 genes read from file
@@ -31,7 +31,7 @@ Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/process
 	using variable: set_id (set ID)
 	WARNING: gene set Endo_Linked_OCR_depleted contains no genes defined in genotype data
 	29 gene-set definitions read from file
-	found 28 gene sets containing genes defined in genotype data (containing a total of 1521 unique genes)
+	found 28 gene sets containing genes defined in genotype data (containing a total of 1834 unique genes)
 Preparing variables for analysis...
 	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
 	WARNING: discarding gene set 'Microglia_Linked_OCR_depleted' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/gene_sets/broad.tsv, variance is too low (set contains only one gene used in analysis)
@@ -55,6 +55,6 @@ Inverting gene-gene correlation matrix...
 	analysing single-variable models (number of models: 24)
                                                                                                                    	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/OUD/broad.gsa.out
 
-End time is 09:35:03, Tuesday 03 Feb 2026 (elapsed: 00:01:10)
+End time is 11:53:55, Friday 06 Feb 2026 (elapsed: 00:02:33)
 **** Job ends ****
-Tue Feb  3 09:35:03 AM EST 2026
+Fri Feb  6 11:53:55 AM EST 2026
