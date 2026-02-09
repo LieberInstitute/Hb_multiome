@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=40G
-#SBATCH --job-name=03_minimal_object
+#SBATCH --job-name=01_minimal_object
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../processed-data/11_TF/logs/03_minimal_object.txt
-#SBATCH -e ../../processed-data/11_TF/logs/03_minimal_object.txt
+#SBATCH -o ../../processed-data/11_TF/logs/01_minimal_object.txt
+#SBATCH -e ../../processed-data/11_TF/logs/01_minimal_object.txt
 
 set -e
 
@@ -24,7 +24,7 @@ module load conda_R/4.5
 ## List current modules for reproducibility
 module list
 
-Rscript 03_minimal_object.R
+Rscript 01_minimal_object.R
 
 echo "**** Job ends ****"
 date
