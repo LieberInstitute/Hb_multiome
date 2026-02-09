@@ -14,10 +14,15 @@ library(here)
 library(sessioninfo)
 library(GenomicRanges)
 library(Signac)
+library(Seurat)
 
 peak_path = here(
     'processed-data', '06_peak_calling', '21_overlaping_FDRscores_TopHeatmap',
     'all_peaks_categorized.csv.gz'
+)
+seur_path = here(
+    'processed-data', '06_peak_calling', '11_peaks_merge_MACS2',
+    'Seurat_peaks_merged_cell_level_Mid_resolution.rds'
 )
 promoter_window = 2000  # +/- around TSS
 
@@ -34,28 +39,31 @@ promoter_window = 2000  # +/- around TSS
 ## Genomic annotation of DARs
 # Add basic region context and nearest/overlapping genes
 
-peak_df = read_csv(peak_path, show_col_types = FALSE)
+seur = readRDS(seur_path)
 
-peak_gr = peak_df |>
-    pull(peak_id) |>
-    unique() |>
-    StringToGRanges(sep = c("-", "-"))
+#   Grab unique DARs
+peak_df = read_csv(peak_path, show_col_types = FALSE) |>
+    filter(grepl('DAR', category)) |>
+    select(peak_id, cell_type) |>
+    distinct()
+stopifnot(all(peak_df$peak_id %in% rownames(seur)))
 
-ann = annotatePeak(
-        peak_gr, TxDb = TxDb.Hsapiens.UCSC.hg38.knownGene,
-        tssRegion = c(-1 * promoter_window, promoter_window),
-        annoDb = "org.Hs.eg.db"
-    ) |>
-    as.data.frame() |>
-    as_tibble() |>
-    dplyr::rename(
-        nearest_gene_id = ENSEMBL, nearest_gene_name = SYMBOL
-    ) |>
-    mutate(peak_id = paste(seqnames, start, end, sep = "-")) |>
-    select(peak_id, annotation, nearest_gene_id, nearest_gene_name)
+#   RegionStats was already computed. Now attach TF motifs and test for
+#   enrichment by cell type
 
-peak_df = peak_df |>
-    left_join(ann, by = "peak_id")
+jaspar_db = JASPAR2024()
+pfm = getMatrixSet(
+    jaspar_db@db, opts = list(species = 9606, collection = "CORE")
+)
+seur = AddMotifs(
+    object = seur, genome = BSgenome.Hsapiens.UCSC.hg38, pfm = pfm
+)
+
+for (this_cell_type in unique(peak_df$cell_type)) {
+    dar_peaks = peak_df |>
+        filter(cell_type == this_cell_type) |>
+        pull(peak_id)
+}
 
 ## Maybe consider external data
 # ENCODE cCREs, FANTOM5 enhancers, Vista, DHS, blacklist → annotate class (promoter/enhancer), confidence tiers.
