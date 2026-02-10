@@ -20,23 +20,32 @@ peak_path = here(
     'processed-data', '06_peak_calling', '21_overlaping_FDRscores_TopHeatmap',
     'all_peaks_categorized.csv.gz'
 )
-seur_path = here('processed-data', '11_TF', 'minimal_seur.rds')
+seur_path = here(
+    "processed-data", "06_peak_calling", "12_pseudobulk_MACS2",
+    "Mid_pseudobulk.spearman.5e5_merged_peaks.rds"
+)
+out_path = here(
+    'processed-data', '11_TF', '02_motif_enrichment',
+    'motif_enrichment_results.csv.gz'
+)
+atac_assay = "ATAC_macs2_merged_pseudo"
 plot_dir = here('plots', '11_TF', '02_motif_enrichment')
-promoter_window = 2000  # +/- around TSS
 volcano_fold_cutoff = 1.5
 volcano_fdr_cutoff = 0.05
 
 dir.create(plot_dir, showWarnings = FALSE, recursive = TRUE)
-
-## Inputs & goal
-
-## Confirm DARs are pseudobulk data (confirm)
-
-#   Consider filtering DARs by logFC
+dir.create(dirname(out_path), showWarnings = FALSE, recursive = TRUE)
 
 #   Load in and keep standard chromosomes only to match BSgenome
 seur = readRDS(seur_path)
-seur = seur[as.vector(grepl('^chr', seqnames(granges(seur)))), ]
+
+#   There are strange errors with basic subsetting of the full object, which
+#   seems to be fixed by this minimal, ATAC-only object
+seur = DietSeurat(seur, assays = atac_assay, dimreducs = NULL, graphs = NULL)
+DefaultAssay(seur) = atac_assay
+
+#   Keep only peaks on standard chromosomes to match BSgenome
+seur = seur[grepl('^chr', rownames(seur)), ]
 
 #   Grab unique DARs on the standard chromosomes
 peak_df = read_csv(peak_path, show_col_types = FALSE) |>
@@ -106,6 +115,10 @@ p = motif_df |>
 pdf(file.path(plot_dir, "motif_volcano.pdf"), width = 16, height = 16)
 print(p)
 dev.off()
+
+write_csv(motif_df, out_path)
+
+session_info()
 
 ## Maybe consider external data
 # ENCODE cCREs, FANTOM5 enhancers, Vista, DHS, blacklist → annotate class (promoter/enhancer), confidence tiers.
