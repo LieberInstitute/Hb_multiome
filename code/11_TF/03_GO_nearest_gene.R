@@ -2,7 +2,6 @@
 #   Not technically TF-related
 
 library(tidyverse)
-library(TFBSTools)
 library(ChIPseeker)
 library(TxDb.Hsapiens.UCSC.hg38.knownGene)  # or species-appropriate
 library(org.Hs.eg.db)
@@ -18,12 +17,16 @@ peak_path = here(
     'processed-data', '06_peak_calling', '21_overlaping_FDRscores_TopHeatmap',
     'all_peaks_categorized.csv.gz'
 )
+plot_dir = here('plots', '11_TF', '03_GO_nearest_gene')
+go_num_terms = 5
 gtf_path = '/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0/genes/genes.gtf.gz'
 promoter_window = 2000  # +/- around TSS
 
+dir.create(plot_dir, showWarnings = FALSE)
+
 #   Load in DARs
 peak_df = read_csv(peak_path, show_col_types = FALSE) |>
-    dplyr::filter(grepl('DAR', category)) |>
+    filter(grepl('DAR', category)) |>
     distinct(peak_id, cell_type, .keep_all = TRUE)
 
 peak_gr = peak_df |>
@@ -60,10 +63,9 @@ peak_df = peak_df |>
     #   It's still a bit unclear why a considerable fraction of nearest genes
     #   don't have Ensembl IDs or symbols in the GTF. We'll only consider
     #   genes in the GTF for GO
-    filter(!is.na(gene_for_go))
+    filter(!is.na(gene_for_go), gene_for_go %in% gtf$gene_id)
 
-## Functional enrichment (GO/Pathways) for linked genes
-
+ego_df_list = list()
 for (this_cell_type in unique(peak_df$cell_type)) {
     gene_set = peak_df |>
         filter(cell_type == this_cell_type) |>
@@ -71,28 +73,41 @@ for (this_cell_type in unique(peak_df$cell_type)) {
         unique()
 
     #   Note the universe here-- we're constraining nearest genes to those in
-    #   the GTF
+    #   the GTF. This gives us a larger set actually than those genes expressed
+    #   in the RNA assay (from which linked peaks were derived), which seems a
+    #   favorable in this particular case since there are very few linked peaks
+    #   relative to nearest genes
     ego = enrichGO(
-        gene = gene_set, OrgDb = org.Hs.eg.db, keyType = "SYMBOL", ont = "BP",
+        gene = gene_set, OrgDb = org.Hs.eg.db, keyType = "ENSEMBL", ont = "BP",
         universe = gtf$gene_id, pAdjustMethod= "BH", pvalueCutoff = 1,
         qvalueCutoff = 0.05
     )
-
-    dotplot(ego, showCategory = 5) + ggtitle(this_cell_type)
+    ego_df_list[[this_cell_type]] = ego@result |>
+        as_tibble() |>
+        mutate(cell_type = this_cell_type)
 }
 
-# Optional: rrvgo to reduce terms
+#   Custom dot plots by cell type
+p = bind_rows(ego_df_list) |>
+    group_by(cell_type) |>
+    slice_min(p.adjust, n = go_num_terms) |>
+    ungroup() |>
+    mutate(
+        gene_ratio = Count / as.integer(str_extract(GeneRatio, "(?<=/)[0-9]+")),
+        log_fdr = -log10(p.adjust)
+    ) |>
+    ggplot(
+            aes(
+                x = cell_type, y = Description, color = log_fdr,
+                size = gene_ratio
+            )
+        ) +
+        geom_point() +
+        scale_color_gradient(low = "red", high = "blue") +
+        facet_wrap(~cell_type, scales = "free", ncol = 3) +
+        theme_bw(base_size = 5)
+pdf(file.path(plot_dir, 'GO_nearest_gene.pdf'))
+print(p)
+dev.off()
 
-##########  QA checks:
-# Replicate structure (≥2 per group) for DAR calling
-# GC/length matching for motif background
-# Blacklist and low-mappability filters
-# Sensitivity analysis on FDR/logFC thresholds
-# Window size for LinkPeaks (±100–500 kb) and per-cluster stability.
-
-## Desired Deliverables: 
-# DARs_<celltype>_vs_rest.csv (full table)
-# DARs_<celltype>_topN.bed (browser tracks)
-# motif_enrichment_<celltype>.csv
-# GO_<celltype>_linked_genes.csv
-# QC plots: MA/volcano, region annotations pie/bar, distance-to-TSS, motif volcano, GO dotplot, link distance distribution.
+session_info()
