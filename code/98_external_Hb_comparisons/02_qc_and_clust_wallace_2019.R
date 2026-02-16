@@ -187,13 +187,34 @@ plotHeatmap(MN_best_aurocs,
 
 
 
+
+#Get the metaclusters from the best vs next results, add those annotations to the full SCE object
+mclusters = extractMetaClusters(MN_best_aurocs, threshold = .7)
+mclusters
+full_cluster_study_labels = paste(all_donor_sce$study_id, all_donor_sce$seurat_clusters, sep = "|")
+
+# Create a vector of meta_cluster names for each element in mclusters
+meta_cluster_names <- rep(names(mclusters), sapply(mclusters, length))
+# Flatten mclusters to match the order
+flat_mclusters <- unlist(mclusters)
+# Create a lookup vector
+mclusters_lookup <- setNames(meta_cluster_names, flat_mclusters)
+# Map each cell's label to its meta_cluster
+all_donor_sce$meta_cluster <- mclusters_lookup[full_cluster_study_labels]
+# Check the result
+head(all_donor_sce$meta_cluster)
+table(names(all_donor_sce$meta_cluster), all_donor_sce$meta_cluster)
+
+
 #Save the combined SCE object with the donor-specific clusters as metadata for future use
 saveRDS(all_donor_sce, file = 'processed-data/98_external_Hb_comparisons/02_qc_and_clust_wallace_2019/all_donor_sce_with_denovo_clusters.rds')
+#all_donor_sce = readRDS('processed-data/98_external_Hb_comparisons/02_qc_and_clust_wallace_2019/all_donor_sce_with_denovo_clusters.rds')
 
 
 #Save the MetaNeighbor results 
 saveRDS(MN_aurocs, file = 'processed-data/98_external_Hb_comparisons/02_qc_and_clust_wallace_2019/all_by_all_MN_aurocs.rds' )
 saveRDS(MN_best_aurocs, file = 'processed-data/98_external_Hb_comparisons/02_qc_and_clust_wallace_2019/best_vs_next_MN_aurocs.rds' )
+#MN_best_aurocs = readRDS('processed-data/98_external_Hb_comparisons/02_qc_and_clust_wallace_2019/best_vs_next_MN_aurocs.rds' )
 
 
 #Save the MetaNeighbor plots
