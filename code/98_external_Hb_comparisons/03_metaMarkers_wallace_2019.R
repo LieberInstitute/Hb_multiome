@@ -53,7 +53,14 @@ export_meta_markers(wallace_mouse_hab_metaM,
   "processed-data/98_external_Hb_comparisons/03_metaMarkers_wallace_2019/mouse_hab_meta_markers.csv", 
   names(wallace_mouse_hab_metaM))
 
+wallace_mouse_hab_metaM = read_meta_markers("processed-data/98_external_Hb_comparisons/03_metaMarkers_wallace_2019/mouse_hab_meta_markers.csv.gz")
+
 wallace_mouse_hab_metaM %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
+
+wallace_mouse_hab_metaM %>% filter(gene %in% c('Chat','Slc18a3','Slc5a7', 'Tac1', 'Vglut1', 'Vglut2')) %>% View()
+
+
+
 
 
 #Check out some of the top markers used in the Wallace 2019 paper
@@ -186,6 +193,42 @@ p_bubble = get_bubble_plot(hab_161105_seurat, custom_markers, 'Mouse: 161105')
 p_bubble
 
 
+#Human marker panel
+#We use Tac3 in humans, but not present in the mouse annotations
+custom_markers = c('Tac2','Gpr151','Pou4f1','Mbp')
+
+
+p_bubble = get_bubble_plot(hab_160822_seurat, custom_markers, 'Mouse: 160822')
+p_bubble
+
+p_bubble = get_bubble_plot(hab_161102_seurat, custom_markers, 'Mouse: 161102')
+p_bubble
+
+p_bubble = get_bubble_plot(hab_161103_seurat, custom_markers, 'Mouse: 161103')
+p_bubble
+
+p_bubble = get_bubble_plot(hab_161105_seurat, custom_markers, 'Mouse: 161105')
+p_bubble
+
+
+#Neuronal subtype markers
+#Chat, Slc18a3, Slc5a7 are all cholinergic markers
+#Tac1 is a marker for substance P neurons
+#Slc17a7 and a6 are Vglut1 and Vglut2 
+custom_markers = c('Chat', 'Slc18a3', 'Slc5a7','Tac1', 'Slc17a7', 'Slc17a6')
+
+
+p_bubble = get_bubble_plot(hab_160822_seurat, custom_markers, 'Mouse: 160822')
+p_bubble
+
+p_bubble = get_bubble_plot(hab_161102_seurat, custom_markers, 'Mouse: 161102')
+p_bubble
+
+p_bubble = get_bubble_plot(hab_161103_seurat, custom_markers, 'Mouse: 161103')
+p_bubble
+
+p_bubble = get_bubble_plot(hab_161105_seurat, custom_markers, 'Mouse: 161105')
+p_bubble
 
 
 
