@@ -128,6 +128,12 @@ for (i in seq_along(donor_list)) {
 }
 
 
+#Save the donor-specific Seurat objects for future use
+saveRDS(donor_list, file = 'processed-data/98_external_Hb_comparisons/02_qc_and_clust_wallace_2019/individual_donor_seurat_objects_list.rds')
+
+
+
+
 #Convert to SingleCellExperiment objects for MetaNeighbor
 donor_sce_list <- lapply(donor_list, as.SingleCellExperiment)
 #Change the assays names to counts cpm scaledata
