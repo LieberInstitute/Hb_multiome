@@ -9,8 +9,6 @@ library(dplyr)
 library(ggplot2)
 
 
-
-
 #Load up the full SCE object, contains the metacluster annotations
 all_donor_sce = readRDS('processed-data/98_external_Hb_comparisons/02_qc_and_clust_wallace_2019/all_donor_sce_with_denovo_clusters.rds')
 
@@ -55,7 +53,37 @@ export_meta_markers(wallace_mouse_hab_metaM,
   "processed-data/98_external_Hb_comparisons/03_metaMarkers_wallace_2019/mouse_hab_meta_markers.csv", 
   names(wallace_mouse_hab_metaM))
 
-wallace_mouse_hab_metaM %>% group_by(cell_type) %>% slice_min(rank, n = 10) %>% View()
+wallace_mouse_hab_metaM %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
+
+
+#Check out some of the top markers used in the Wallace 2019 paper
+#Tac2, Slc17a7 are MHb markers
+#Slc17a6, Snap25 are MHb and LHb markers
+#Gap43 is an LHb marker
+wallace_mouse_hab_metaM %>% filter(gene %in% c('Tac2', 'Slc17a7', 'Slc17a6', 'Snap25', 'Gap43')) %>%
+  group_by(cell_type) %>% arrange(rank, .by_group = T) %>% View()
+
+
+
+#Astrocyte, endothelial, pericyte, pericyte
+wallace_mouse_hab_metaM %>% filter(gene %in% c('Slc6a11', 'Cldn5', 'Abcc9', 'Pdgfrb')) %>%
+  group_by(cell_type) %>% arrange(rank, .by_group = T) %>% View()
+
+
+
+#Microglia, macrophages, fibroblasts
+wallace_mouse_hab_metaM %>% filter(gene %in% c('Cx3cr1', 'Mrc1', 'Col3a1')) %>%
+  group_by(cell_type) %>% arrange(rank, .by_group = T) %>% View()
+
+
+#Mog is an oligo and Diff. Oligo marker 
+#GPR17 is a Diff. Oligo and Polydendrocyte marker
+#Olig1 is a marker for all three
+#Pdgfra is a marker for polydendrocytes
+wallace_mouse_hab_metaM %>% filter(gene %in% c('Gpr17', 'Mog', 'Olig1', 'Pdgfra')) %>%
+  group_by(cell_type) %>% arrange(rank, .by_group = T) %>% View()
+
+
 
 
 #Load up the individual seurat objects, add the metaCluster annotations, and check out what it looks like in the UMAPs
@@ -88,12 +116,74 @@ DimPlot(hab_161105_seurat, group.by = 'meta_cluster', label = TRUE) + ggtitle('M
 
 
 
+#Check out some bubble plots of the top metaMarkers across the metaclusters
+top_cluster_markers = wallace_mouse_hab_metaM %>% 
+  filter(rank <= 5) %>% pull(gene)
+top_cluster_markers = unique(top_cluster_markers)
+
+DotPlot(hab_160822_seurat, 
+        features = c(top_cluster_markers),
+        group.by = 'meta_cluster')
+
+DotPlot(hab_161105_seurat, 
+        features = c(top_cluster_markers),
+        group.by = 'meta_cluster')
 
 
 
+#Custom bubble plot function
+
+get_bubble_plot = function(seurat_object, top_markers, sample_name){
+  # Extract expression data and metadata
+  expr_data <- FetchData(seurat_object, vars = top_markers, slot = "data")
+  metadata <- seurat_object@meta.data
+
+  # Combine into a data frame
+  plot_data <- cbind(expr_data, meta_cluster = metadata$meta_cluster) %>%
+    as.data.frame() %>%
+    tidyr::pivot_longer(cols = -meta_cluster, names_to = "gene", values_to = "expression")
+
+  # Calculate mean expression and percent expressing per cluster
+  summary_data <- plot_data %>%
+    group_by(gene, meta_cluster) %>%
+    summarise(
+      mean_expression = mean(expression),
+      pct_expressing = sum(expression > 0) / n() * 100,
+      .groups = "drop"
+    )
+
+  # Set factor levels to control axis order
+  summary_data$gene <- factor(summary_data$gene, levels = top_markers)
+  summary_data$meta_cluster <- factor(summary_data$meta_cluster, 
+                                      levels = sort(unique(summary_data$meta_cluster)))
+
+  # Create bubble plot
+  p1 = ggplot(summary_data, aes(x = gene, y = meta_cluster, size = mean_expression, color = pct_expressing)) +
+    geom_point() +
+    scale_color_gradient(low = "lightgrey", high = "red") +
+    scale_size_continuous(range = c(2, 8)) +
+    theme_minimal() + ggtitle(sample_name) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(x = "Gene", y = "Meta Cluster", size = "Mean Expression", color = "% Expressing")
+  return(p1)
+}
 
 
 
+custom_markers = c('Tac2', 'Slc17a7', 'Slc17a6', 'Snap25', 'Gap43', 'Slc6a11', 'Cldn5', 'Abcc9', 'Pdgfrb', 'Cx3cr1', 'Mrc1', 'Col3a1', 'Gpr17', 'Mog', 'Olig1', 'Pdgfra')
+
+
+p_bubble = get_bubble_plot(hab_160822_seurat, custom_markers, 'Mouse: 160822')
+p_bubble
+
+p_bubble = get_bubble_plot(hab_161102_seurat, custom_markers, 'Mouse: 161102')
+p_bubble
+
+p_bubble = get_bubble_plot(hab_161103_seurat, custom_markers, 'Mouse: 161103')
+p_bubble
+
+p_bubble = get_bubble_plot(hab_161105_seurat, custom_markers, 'Mouse: 161105')
+p_bubble
 
 
 
