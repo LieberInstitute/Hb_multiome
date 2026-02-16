@@ -1,10 +1,24 @@
 #Script for initial basic QC and attempting default Seurat clustering of the Wallace 2019 mouse data.
+#Also add in the author provided cluster annotations
 
 library(Seurat)
 library(SingleCellExperiment)
 library(dplyr)
 library(ggplot2)
 library(MetaNeighbor)
+
+
+
+#Rdata objects containing seurat objects with cluster annotations from the original paper.
+#As in Figure 1B
+load('processed-data/98_external_Hb_comparisons/Wallace_etal_2019_habenula_scseq/Habenula_Seurat_meta.RData')
+View(meta)
+table(meta$CellClassNames_filtered)
+dim(meta)
+
+
+
+
 
 #Load the data
 #Cell count matches the reported 7506 final cells used in the paper
@@ -16,6 +30,14 @@ hab_batch1_data@version
 
 #Update the object to v3
 hab_batch1_data <- UpdateSeuratObject(hab_batch1_data)
+
+
+#Check that the cluster metadata and the cell barcodes in the seurat object match up
+#They do and they're in the correct order already, neat
+table(rownames(hab_batch1_data@meta.data) == rownames(meta))
+
+#Add the author cluster annotations
+hab_batch1_data$author_celltype = meta$CellClassNames_filtered
 
 
 #Sample metadata is likely hidden in the cell barcodes, though never explained by the authors
@@ -31,10 +53,6 @@ barcode_df %>% group_by(V1, V2, V4) %>%
 
 hab_batch1_data$putative_donor = barcode_df$V2
 hab_batch1_data$putative_LR = barcode_df$V4
-
-
-
-
 
 #Follow along basic Seurat cluster workflow, as per https://satijalab.org/seurat/articles/pbmc3k_tutorial.html
 VlnPlot(hab_batch1_data, features = c("nFeature_RNA", "nCount_RNA", "percent.mito"), ncol = 3)
@@ -79,6 +97,7 @@ hab_batch1_data  <- RunUMAP(hab_batch1_data , dims = 1:20)
 DimPlot(hab_batch1_data , reduction = "umap")
 
 #Check out the sample metadata to see if it matches to clear batch effects
+DimPlot(hab_batch1_data, group.by = "author_celltype", label= TRUE)
 DimPlot(hab_batch1_data, group.by = "putative_donor")
 DimPlot(hab_batch1_data, group.by = "putative_LR")
 
@@ -113,7 +132,7 @@ for (i in seq_along(donor_list)) {
   
   # Find neighbors and clusters
   donor_list[[i]] <- FindNeighbors(donor_list[[i]], dims = 1:20)
-  donor_list[[i]] <- FindClusters(donor_list[[i]])
+  donor_list[[i]] <- FindClusters(donor_list[[i]], resolution = .5)
   
   # UMAP
   donor_list[[i]] <- RunUMAP(donor_list[[i]], dims = 1:20)
@@ -124,6 +143,8 @@ for (i in seq_along(donor_list)) {
 #Check out the UMAPs for each donor
 for (i in seq_along(donor_list)) {
   p <- DimPlot(donor_list[[i]], reduction = "umap", label = TRUE) + ggtitle(names(donor_list)[i])
+  print(p)
+  p <- DimPlot(donor_list[[i]], reduction = "umap",group.by = 'author_celltype' , label = TRUE) + ggtitle(names(donor_list)[i])
   print(p)
 }
 
