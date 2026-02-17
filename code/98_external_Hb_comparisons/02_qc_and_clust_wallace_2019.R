@@ -6,6 +6,7 @@ library(SingleCellExperiment)
 library(dplyr)
 library(ggplot2)
 library(MetaNeighbor)
+library(ComplexHeatmap)
 
 
 
@@ -17,6 +18,55 @@ table(meta$CellClassNames_filtered)
 dim(meta)
 
 
+#Rdata objects with the Lateral and Medial habenula subclustering
+#From https://github.com/mwall2017/habenula_indrops
+#Cell type annotations are in the tree.ident column
+#Medial Hab: 1= Ventral 2/3, 2= Ventrolateral, 3= Lateral, 4= Dorsal, 5= Superior
+load('processed-data/98_external_Hb_comparisons/Wallace_etal_2019_habenula_scseq/mhb_Seurat_meta.RData')
+View(meta_mhb)
+
+dim(meta_mhb)
+table(rownames(meta_mhb) %in% rownames(meta))
+
+mhb_labels = c('Mhb_Ventral 2/3' = '1', 'Mhb_Ventrolateral' = '2', 'Mhb_Lateral' = '3', 'Mhb_Dorsal' = '4', 'Mhb_Superior' = '5')
+meta_mhb$celltype_annot = names(mhb_labels[meta_mhb$tree.ident])
+table(meta_mhb$celltype_annot)
+
+#Lateral Hab: 1= Oval/Medial, 2= Marginal, 3= Lateral, 4= Hbx 
+load('processed-data/98_external_Hb_comparisons/Wallace_etal_2019_habenula_scseq/lhb_Seurat_meta.RData')
+View(meta_lhb)
+
+dim(meta_lhb)
+table(rownames(meta_lhb) %in% rownames(meta))
+
+lhb_labels = c('Lhb_Oval/Medial' = '1', 'Lhb_Marginal' = '2', 'Lhb_Lateral' = '3', 'Lhb_Hox' = '4')
+meta_lhb$celltype_annot = names(lhb_labels[meta_lhb$tree.ident])
+table(meta_lhb$celltype_annot)
+
+#Add to the full metadata dataframe
+#Initial check separately to see what the habenula subclusters map to the original annoations
+test_index = match(rownames(meta_lhb), rownames(meta))
+table(meta$CellClassNames_filtered[test_index])
+test_index = match(rownames(meta_mhb), rownames(meta))
+table(meta$CellClassNames_filtered[test_index])
+#they're not a perfect match between medial habenula in the original and then medial habenula in the subclusters
+#but pretty close
+
+mhb_index = match(rownames(meta_mhb), rownames(meta))
+lhb_index = match(rownames(meta_lhb), rownames(meta))
+
+meta$hab_subcluster = 'Not habenula'
+meta$hab_subcluster[mhb_index] = meta_mhb$celltype_annot
+meta$hab_subcluster[lhb_index] = meta_lhb$celltype_annot
+
+#Confusion matrix to visualize annotation mappings
+cell_num_confs_mat = as.matrix(table(meta$CellClassNames_filtered, meta$hab_subcluster))
+subclust_cell_nums = colSums(cell_num_confs_mat)
+cell_num_confs_mat = sweep(cell_num_confs_mat, 2, subclust_cell_nums, "/")
+
+col_fun = circlize::colorRamp2(c(0, 1), c("white", "red"))
+Heatmap(cell_num_confs_mat, name = 'Proportion of cells', col = col_fun, column_title = 'Habenula subcluster mapping' ,
+cluster_rows = FALSE, cluster_columns = FALSE, show_row_names = TRUE, show_column_names = TRUE )
 
 
 
@@ -38,7 +88,7 @@ table(rownames(hab_batch1_data@meta.data) == rownames(meta))
 
 #Add the author cluster annotations
 hab_batch1_data$author_celltype = meta$CellClassNames_filtered
-
+hab_batch1_data$author_subHab_celltype = meta$hab_subcluster
 
 #Sample metadata is likely hidden in the cell barcodes, though never explained by the authors
 barcodes = rownames(hab_batch1_data@meta.data)
@@ -98,6 +148,7 @@ DimPlot(hab_batch1_data , reduction = "umap")
 
 #Check out the sample metadata to see if it matches to clear batch effects
 DimPlot(hab_batch1_data, group.by = "author_celltype", label= TRUE)
+DimPlot(hab_batch1_data, group.by = "author_subHab_celltype", label= TRUE)
 DimPlot(hab_batch1_data, group.by = "putative_donor")
 DimPlot(hab_batch1_data, group.by = "putative_LR")
 
@@ -105,8 +156,6 @@ DimPlot(hab_batch1_data, group.by = "putative_LR")
 #The L and R habenula are well mixed.
 
 #One simple analysis to try, just as practice to get things up and running, is a per-donor cluster plus MetaNeighbor assessment
-
-
 
 #Break up by donor and then cluster each separately
 donors <- unique(hab_batch1_data$putative_donor)
@@ -145,6 +194,8 @@ for (i in seq_along(donor_list)) {
   p <- DimPlot(donor_list[[i]], reduction = "umap", label = TRUE) + ggtitle(names(donor_list)[i])
   print(p)
   p <- DimPlot(donor_list[[i]], reduction = "umap",group.by = 'author_celltype' , label = TRUE) + ggtitle(names(donor_list)[i])
+  print(p)
+  p <- DimPlot(donor_list[[i]], reduction = "umap",group.by = 'author_subHab_celltype' , label = TRUE) + ggtitle(names(donor_list)[i])
   print(p)
 }
 
@@ -231,6 +282,26 @@ all_donor_sce$meta_cluster <- mclusters_lookup[full_cluster_study_labels]
 # Check the result
 head(all_donor_sce$meta_cluster)
 table(names(all_donor_sce$meta_cluster), all_donor_sce$meta_cluster)
+
+
+#Confusion matrix between metaclusters and the author annotations
+all_celltype_conf_mat = as.matrix(table(all_donor_sce$meta_cluster, all_donor_sce$author_celltype))
+all_celltype_sum_vec = colSums(all_celltype_conf_mat)
+all_celltype_conf_mat  = sweep(all_celltype_conf_mat , 2, all_celltype_sum_vec, "/")
+
+col_fun = circlize::colorRamp2(c(0, 1), c("white", "red"))
+Heatmap(all_celltype_conf_mat, name = 'Proportion of cells', col = col_fun, column_title = 'Metacluster vs author annotation' ,
+cluster_rows = TRUE, cluster_columns = TRUE, show_row_names = TRUE, show_column_names = TRUE )
+
+#Subclust habenula annotations
+all_celltype_conf_mat = as.matrix(table(all_donor_sce$meta_cluster, all_donor_sce$author_subHab_celltype))
+all_celltype_sum_vec = colSums(all_celltype_conf_mat)
+all_celltype_conf_mat  = sweep(all_celltype_conf_mat , 2, all_celltype_sum_vec, "/")
+
+col_fun = circlize::colorRamp2(c(0, 1), c("white", "red"))
+Heatmap(all_celltype_conf_mat, name = 'Proportion of cells', col = col_fun, column_title = 'Metacluster vs author Hab-subclust annots' ,
+cluster_rows = TRUE, cluster_columns = TRUE, show_row_names = TRUE, show_column_names = TRUE )
+
 
 
 #Save the combined SCE object with the donor-specific clusters as metadata for future use
