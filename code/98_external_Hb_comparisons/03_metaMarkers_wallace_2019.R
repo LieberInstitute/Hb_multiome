@@ -140,13 +140,13 @@ DotPlot(hab_161105_seurat,
 
 #Custom bubble plot function
 
-get_bubble_plot = function(seurat_object, top_markers, sample_name){
+get_bubble_plot = function(seurat_object, top_markers, sample_name, group_col = 'meta_cluster'){
   # Extract expression data and metadata
   expr_data <- FetchData(seurat_object, vars = top_markers, slot = "data")
   metadata <- seurat_object@meta.data
 
   # Combine into a data frame
-  plot_data <- cbind(expr_data, meta_cluster = metadata$meta_cluster) %>%
+  plot_data <- cbind(expr_data, meta_cluster = metadata[[group_col]]) %>%
     as.data.frame() %>%
     tidyr::pivot_longer(cols = -meta_cluster, names_to = "gene", values_to = "expression")
 
@@ -176,7 +176,7 @@ get_bubble_plot = function(seurat_object, top_markers, sample_name){
 }
 
 
-
+#Markers used in the original Wallace 2019 paper in Figure 1
 custom_markers = c('Tac2', 'Slc17a7', 'Slc17a6', 'Snap25', 'Gap43', 'Slc6a11', 'Cldn5', 'Abcc9', 'Pdgfrb', 'Cx3cr1', 'Mrc1', 'Col3a1', 'Gpr17', 'Mog', 'Olig1', 'Pdgfra')
 
 
@@ -231,6 +231,18 @@ p_bubble = get_bubble_plot(hab_161105_seurat, custom_markers, 'Mouse: 161105')
 p_bubble
 
 
+#And repeat the above but looking at the author habenula subclusters
+p_bubble = get_bubble_plot(hab_160822_seurat, custom_markers, 'Mouse: 160822', group_col = 'author_subHab_celltype')
+p_bubble
+
+p_bubble = get_bubble_plot(hab_161102_seurat, custom_markers, 'Mouse: 161102', group_col = 'author_subHab_celltype')
+p_bubble
+
+p_bubble = get_bubble_plot(hab_161103_seurat, custom_markers, 'Mouse: 161103', group_col = 'author_subHab_celltype')
+p_bubble
+
+p_bubble = get_bubble_plot(hab_161105_seurat, custom_markers, 'Mouse: 161105', group_col = 'author_subHab_celltype')
+p_bubble
 
 
 
