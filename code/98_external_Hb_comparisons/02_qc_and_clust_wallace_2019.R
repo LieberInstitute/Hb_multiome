@@ -7,12 +7,25 @@ library(dplyr)
 library(ggplot2)
 library(MetaNeighbor)
 library(ComplexHeatmap)
+library(here)
 
+here::here()
+
+#Path to the Wallace 2019 data
+wallace_path = here('processed-data', '98_external_Hb_comparisons', 'Wallace_etal_2019_habenula_scseq')
+list.files(wallace_path)
+#Path to save any generated data
+new_data_path = here('processed-data', '98_external_Hb_comparisons', '02_qc_and_clust_wallace_2019')
+#Path to plot directory
+plot_path = here('plots', '98_external_Hb_comparisons', '02_qc_and_clust_wallace_2019')
+
+if (!dir.exists(new_data_path)) dir.create(new_data_path)
+if (!dir.exists(plot_path)) dir.create(plot_path)
 
 
 #Rdata objects containing seurat objects with cluster annotations from the original paper.
 #As in Figure 1B
-load('processed-data/98_external_Hb_comparisons/Wallace_etal_2019_habenula_scseq/Habenula_Seurat_meta.RData')
+load(paste0(wallace_path, '/Habenula_Seurat_meta.RData'))
 View(meta)
 table(meta$CellClassNames_filtered)
 dim(meta)
@@ -22,7 +35,8 @@ dim(meta)
 #From https://github.com/mwall2017/habenula_indrops
 #Cell type annotations are in the tree.ident column
 #Medial Hab: 1= Ventral 2/3, 2= Ventrolateral, 3= Lateral, 4= Dorsal, 5= Superior
-load('processed-data/98_external_Hb_comparisons/Wallace_etal_2019_habenula_scseq/mhb_Seurat_meta.RData')
+
+load(paste0(wallace_path, '/mhb_Seurat_meta.RData'))
 View(meta_mhb)
 
 dim(meta_mhb)
@@ -33,7 +47,7 @@ meta_mhb$celltype_annot = names(mhb_labels[meta_mhb$tree.ident])
 table(meta_mhb$celltype_annot)
 
 #Lateral Hab: 1= Oval/Medial, 2= Marginal, 3= Lateral, 4= Hbx 
-load('processed-data/98_external_Hb_comparisons/Wallace_etal_2019_habenula_scseq/lhb_Seurat_meta.RData')
+load(paste0(wallace_path, '/lhb_Seurat_meta.RData'))
 View(meta_lhb)
 
 dim(meta_lhb)
@@ -72,7 +86,7 @@ cluster_rows = FALSE, cluster_columns = FALSE, show_row_names = TRUE, show_colum
 
 #Load the data
 #Cell count matches the reported 7506 final cells used in the paper
-hab_batch1_data = readRDS('processed-data/98_external_Hb_comparisons/Wallace_etal_2019_habenula_scseq/hab_batch1.rds')
+hab_batch1_data = readRDS(paste0(wallace_path, '/hab_batch1.rds'))
 hab_batch1_data
 
 #Made with Seurat v2.3.4
@@ -201,8 +215,7 @@ for (i in seq_along(donor_list)) {
 
 
 #Save the donor-specific Seurat objects for future use
-saveRDS(donor_list, file = 'processed-data/98_external_Hb_comparisons/02_qc_and_clust_wallace_2019/individual_donor_seurat_objects_list.rds')
-
+saveRDS(donor_list, file = paste0(new_data_path, '/individual_donor_seurat_objects_list.rds'))
 
 
 
@@ -305,18 +318,18 @@ cluster_rows = TRUE, cluster_columns = TRUE, show_row_names = TRUE, show_column_
 
 
 #Save the combined SCE object with the donor-specific clusters as metadata for future use
-saveRDS(all_donor_sce, file = 'processed-data/98_external_Hb_comparisons/02_qc_and_clust_wallace_2019/all_donor_sce_with_denovo_clusters.rds')
-#all_donor_sce = readRDS('processed-data/98_external_Hb_comparisons/02_qc_and_clust_wallace_2019/all_donor_sce_with_denovo_clusters.rds')
+saveRDS(all_donor_sce, file = paste0(new_data_path, '/all_donor_sce_with_denovo_clusters.rds'))
+#all_donor_sce = readRDS(paste0(new_data_path, '/all_donor_sce_with_denovo_clusters.rds'))
 
 
 #Save the MetaNeighbor results 
-saveRDS(MN_aurocs, file = 'processed-data/98_external_Hb_comparisons/02_qc_and_clust_wallace_2019/all_by_all_MN_aurocs.rds' )
-saveRDS(MN_best_aurocs, file = 'processed-data/98_external_Hb_comparisons/02_qc_and_clust_wallace_2019/best_vs_next_MN_aurocs.rds' )
-#MN_best_aurocs = readRDS('processed-data/98_external_Hb_comparisons/02_qc_and_clust_wallace_2019/best_vs_next_MN_aurocs.rds' )
+saveRDS(MN_aurocs, file = paste0(new_data_path, '/all_by_all_MN_aurocs.rds') )
+saveRDS(MN_best_aurocs, file = paste0(new_data_path, '/best_vs_next_MN_aurocs.rds') )
+#MN_best_aurocs = readRDS(paste0(new_data_path, '/best_vs_next_MN_aurocs.rds'))
 
-
+paste0(plot_path, '/all_by_all_MN_aurocs_heatmap.pdf')
 #Save the MetaNeighbor plots
-pdf('plots/98_external_Hb_comparisons/02_qc_and_clust_wallace_2019/all_by_all_MN_aurocs_heatmap.pdf', width = 10, height = 8)
+pdf(paste0(plot_path, '/all_by_all_MN_aurocs_heatmap.pdf'), width = 10, height = 8)
 #Plot allby-all AUROC heatmap
 plotHeatmap(MN_aurocs, 
   show_dendro = TRUE, 
@@ -326,7 +339,8 @@ plotHeatmap(MN_aurocs,
 
 dev.off()
 
-pdf('plots/98_external_Hb_comparisons/02_qc_and_clust_wallace_2019/best_vs_next_MN_aurocs_heatmap.pdf', width = 10, height = 8)
+
+pdf(paste0(plot_path, '/best_vs_next_MN_aurocs_heatmap.pdf'), width = 10, height = 8)
 #Plot best_vs_next AUROC heatmap
 plotHeatmap(MN_best_aurocs, 
   show_dendro = TRUE, 
