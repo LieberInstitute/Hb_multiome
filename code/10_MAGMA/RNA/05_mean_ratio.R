@@ -11,9 +11,9 @@ max_num_genes = 200
 
 dir.create(out_dir, showWarnings = FALSE)
 
-export_set = function(spe, cell_type_col, file_tag) {    
+export_set = function(sce, cell_type_col, file_tag) {    
     marker_stats = get_mean_ratio(
-            sce = spe_pb, assay_name = "logcounts",
+            sce = sce, assay_name = "logcounts",
             cellType_col = cell_type_col, gene_ensembl = "gene_id",
             gene_name = "gene_name"
         ) |>
