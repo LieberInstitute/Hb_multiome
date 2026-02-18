@@ -262,6 +262,126 @@ p_bubble
 
 
 
+#I think we can confidently label the non-neuronal metaclusters, the cholinergic - supstance P medial Hab clusters, and at least the Lateral hab clusters
+#Save bubble plots using the full data across all donors
+#And save the metadata with the annotated MetaClusters, use this moving forward
+
+#Switch the full dataset to Seurat for the bubble plots
+all_donor_seurat = as.Seurat(all_donor_sce, counts = "counts", data = "cpm")
+all_donor_seurat
+
+#Curious to see the meta-cluster annotations in the full dataset
+#repeat the standard dim reduction from seurat
+
+#HVGs
+all_donor_seurat <- FindVariableFeatures(all_donor_seurat, selection.method = "vst", nfeatures = 2000)
+
+#Scale data
+all.genes <- rownames(all_donor_seurat)
+all_donor_seurat <- ScaleData(all_donor_seurat, features = all.genes)
+
+#PCA
+all_donor_seurat  <- RunPCA(all_donor_seurat , features = VariableFeatures(object = all_donor_seurat ))
+DimPlot(all_donor_seurat, reduction = "pca") + NoLegend()
+
+#UMAP
+all_donor_seurat  <- RunUMAP(all_donor_seurat , dims = 1:20)
+p1 = DimPlot(all_donor_seurat , reduction = "umap", group.by = 'meta_cluster', label = TRUE) + 
+  ggtitle('Wallace 2019: MetaCluster annotations')
+p1
+ggsave(p1, filename = 'wallace_mouse_hab_meta_cluster_umap.pdf', path = plot_path,
+device = 'pdf', width = 8, height = 7)
+
+#While we're here, save donor umap, author annotation umap
+p2 = DimPlot(all_donor_seurat , reduction = "umap", group.by = 'putative_donor') + 
+  ggtitle('Wallace 2019: mouse sample annotations')
+p2
+ggsave(p2, filename = 'wallace_mouse_hab_donor_umap.pdf', path = plot_path,
+device = 'pdf', width = 8, height = 7)
+
+
+p3 = DimPlot(all_donor_seurat , reduction = "umap", group.by = 'author_celltype', label = TRUE) + 
+  ggtitle('Wallace 2019: author annotations')
+p3
+ggsave(p3, filename = 'wallace_mouse_hab_author_annot_umap.pdf', path = plot_path,
+device = 'pdf', width = 8, height = 7)
+
+p4 = DimPlot(all_donor_seurat , reduction = "umap", group.by = 'author_subHab_celltype', label = TRUE) + 
+  ggtitle('Wallace 2019: author annotations')
+p4
+ggsave(p4, filename = 'wallace_mouse_hab_author_subHab_annot_umap.pdf', path = plot_path,
+device = 'pdf', width = 8, height = 7)
+
+
+#And now the bubble plot with the Wallace marker panel
+custom_markers = c('Tac2', 'Slc17a7', 'Slc17a6', 'Snap25', 'Gap43', 'Slc6a11', 'Cldn5', 'Abcc9', 'Pdgfrb', 'Cx3cr1', 'Mrc1', 'Col3a1', 'Gpr17', 'Mog', 'Olig1', 'Pdgfra')
+
+p_bubble_paper_markers = get_bubble_plot(all_donor_seurat , custom_markers, 'Wallace 2019: all mouse samples')
+p_bubble_paper_markers
+ggsave(p_bubble_paper_markers, filename = 'wallace_mouse_hab_paper_markers_meta_cluster_bubble.pdf', path = plot_path,
+device = 'pdf', width = 10, height = 8)
+
+
+#And the bubble plot with the human marker panel
+custom_markers = c('Tac2','Gpr151','Pou4f1','Mbp')
+
+p_bubble_human_markers = get_bubble_plot(all_donor_seurat , custom_markers, 'Wallace 2019: all mouse samples')
+p_bubble_human_markers
+ggsave(p_bubble_human_markers, filename = 'wallace_mouse_human_hab_markers_meta_cluster_bubble.pdf', path = plot_path,
+device = 'pdf', width = 10, height = 8)
+
+
+#And the cholinergic and substance P markers
+custom_markers = c('Chat', 'Slc18a3', 'Slc5a7','Tac1', 'Slc17a7', 'Slc17a6')
+
+p_bubble_excit_markers = get_bubble_plot(all_donor_seurat , custom_markers, 'Wallace 2019: all mouse samples')
+p_bubble_excit_markers
+ggsave(p_bubble_excit_markers, filename = 'wallace_mouse_excite_subtype_markers_meta_cluster_bubble.pdf', path = plot_path,
+device = 'pdf', width = 10, height = 8)
+
+
+#metacluster annotations from all the above
+meta_annot_vec = c('chol_subP_MHb_1' = 'meta_cluster1',
+                    'Endothelial' = 'meta_cluster2',
+                    'Macrophages' = 'meta_cluster3',
+                    'Astrocytes' = 'meta_cluster4',
+                    'Cholinergic MHb' = 'meta_cluster5',
+                    'Polydendrocytes' = 'meta_cluster6',
+                    'Substance P MHb' = 'meta_cluster7',
+                    'Oligodendrocytes' = 'meta_cluster8',
+                    'Pericytes' = 'meta_cluster9',
+                    'Differentiating Oligodendrocytes' = 'meta_cluster10',
+                    'Microglia' = 'meta_cluster11',
+                    'LHb_1' = 'meta_cluster12',
+                    'chol_subP_MHb_2' = 'meta_cluster13',
+                    'LHb_2' = 'meta_cluster14',
+                    'LHb_3' = 'meta_cluster15',
+                    'outliers' = 'outliers'  
+)
+
+meta_annot_vec  = setNames(names(meta_annot_vec), meta_annot_vec)
+
+
+all_donor_seurat$meta_clust_celltype_annot = unname(meta_annot_vec[all_donor_seurat$meta_cluster])
+table(all_donor_seurat$meta_clust_celltype_annot, all_donor_seurat$meta_cluster)
+
+#Save the metadata as a data.frame to add to the seurat data object later
+full_seurat_metadata = all_donor_seurat@meta.data
+saveRDS(full_seurat_metadata, paste0(new_data_path, '/wallace_mouse_metaclust_celltype_annot_metadata.rds'))
+
+
+
+#and a final umap with the annotated metaclusters
+p5 = DimPlot(all_donor_seurat , reduction = "umap", group.by = 'meta_clust_celltype_annot', label = TRUE) + 
+  ggtitle('Wallace 2019: metacluster celltype annotations')
+p5
+ggsave(p5, filename = 'wallace_mouse_hab_metaCluster_celltype_annot_umap.pdf', path = plot_path,
+device = 'pdf', width = 8, height = 7)
+
+
+
+
+
 
 
 
