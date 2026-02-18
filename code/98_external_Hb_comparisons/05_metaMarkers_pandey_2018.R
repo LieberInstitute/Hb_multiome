@@ -18,6 +18,8 @@ list.files(pandey_10x_path)
 pandey_ss_path = here('processed-data', '98_external_Hb_comparisons', 'Pandey_etal_2018_habenula_scseq', 'smartSeq')
 list.files(pandey_ss_path)
 
+path_to_orthologs = here('processed-data', '98_external_Hb_comparisons', 'human_mouse_zebrafish_orthologs.txt.gz')
+
 #Path to save any generated data
 new_data_path = here('processed-data', '98_external_Hb_comparisons', '05_metaMarkers_pandey_2018')
 #Path to already generated data
@@ -74,6 +76,113 @@ export_meta_markers(pandey_zebrafish_hab_metaM,
 pandey_zebrafish_hab_metaM = read_meta_markers(paste0(new_data_path, '/zebrafish_hab_meta_markers.csv.gz'))
 
 pandey_zebrafish_hab_metaM %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
+
+
+#Add the human orthologs to the zebrafish metamarkers
+#`Gene name` column is the human gene name
+hu_mu_zf_ortholog_df = data.table::fread(path_to_orthologs)
+table(hu_mu_zf_ortholog_df$`Mouse homology type`)
+#Get the 1to1 orthologs across the three species
+hu_mu_zf_ortholog_df <- hu_mu_zf_ortholog_df %>% filter(`Mouse homology type` == 'ortholog_one2one' )
+hu_mu_zf_ortholog_df  = hu_mu_zf_ortholog_df %>% filter(!duplicated(`Gene name`))
+
+dim(hu_mu_zf_ortholog_df )
+View(hu_mu_zf_ortholog_df)
+#The zebrafish gene names are all uppercase in the data, need to match the lowercase for the orthologtable
+head(pandey_zebrafish_hab_metaM )
+pandey_zebrafish_hab_metaM$lowercase_zeb_gene = tolower(pandey_zebrafish_hab_metaM$gene)
+
+#Add the human ortholog
+index = match(pandey_zebrafish_hab_metaM$lowercase_zeb_gene, hu_mu_zf_ortholog_df$`Zebrafish gene name` )
+pandey_zebrafish_hab_metaM$human_gene_ortholog = hu_mu_zf_ortholog_df$`Gene name`[index]
+
+
+pandey_zebrafish_hab_metaM %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% 
+  select(cell_type, rank, gene, human_gene_ortholog, recurrence, auroc) %>% 
+  View()
+
+
+
+#Custom bubble plot function
+
+get_bubble_plot = function(seurat_object, top_markers, sample_name, group_col = 'meta_cluster'){
+  # Extract expression data and metadata
+  expr_data <- FetchData(seurat_object, vars = top_markers, slot = "data")
+  metadata <- seurat_object@meta.data
+
+  # Combine into a data frame
+  plot_data <- cbind(expr_data, meta_cluster = metadata[[group_col]]) %>%
+    as.data.frame() %>%
+    tidyr::pivot_longer(cols = -meta_cluster, names_to = "gene", values_to = "expression")
+
+  # Calculate mean expression and percent expressing per cluster
+  summary_data <- plot_data %>%
+    group_by(gene, meta_cluster) %>%
+    summarise(
+      mean_expression = mean(expression),
+      pct_expressing = sum(expression > 0) / n() * 100,
+      .groups = "drop"
+    )
+
+  # Set factor levels to control axis order
+  summary_data$gene <- factor(summary_data$gene, levels = top_markers)
+  summary_data$meta_cluster <- factor(summary_data$meta_cluster, 
+                                      levels = sort(unique(summary_data$meta_cluster)))
+
+  # Create bubble plot
+  p1 = ggplot(summary_data, aes(x = gene, y = meta_cluster, size = mean_expression, color = pct_expressing)) +
+    geom_point() +
+    scale_color_gradient(low = "lightgrey", high = "red") +
+    scale_size_continuous(range = c(2, 8)) +
+    theme_minimal() + ggtitle(sample_name) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(x = "Gene", y = "Meta Cluster", size = "Mean Expression", color = "% Expressing")
+  return(p1)
+}
+
+
+#Switch the full dataset to Seurat for the bubble plots
+all_donor_seurat = as.Seurat(all_donor_sce, counts = "counts", data = "cpm")
+
+
+#Markers used in the original Wallace 2019 paper in Figure 1
+custom_markers = c('Tac2', 'Slc17a7', 'Slc17a6', 'Snap25', 'Gap43', 'Slc6a11', 'Cldn5', 'Abcc9', 'Pdgfrb', 'Cx3cr1', 'Mrc1', 'Col3a1', 'Gpr17', 'Mog', 'Olig1', 'Pdgfra')
+custom_markers = toupper(custom_markers)
+custom_markers = hu_mu_zf_ortholog_df %>% filter(`Gene name` %in% custom_markers) %>% pull(`Zebrafish gene name`) %>% toupper()
+custom_markers = custom_markers[custom_markers != '']
+p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish all 3 samples')
+p_bubble
+
+
+
+custom_markers = c('Tac3', 'Tac2','Gpr151','Pou4f1','Mbp')
+custom_markers = toupper(custom_markers)
+custom_markers = hu_mu_zf_ortholog_df %>% filter(`Gene name` %in% custom_markers) %>% pull(`Zebrafish gene name`) %>% toupper()
+custom_markers = custom_markers[custom_markers != '']
+
+p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish all 3 samples')
+p_bubble
+
+
+custom_markers = c('Chat', 'Slc18a3', 'Slc5a7','Tac1', 'Slc17a7', 'Slc17a6')
+custom_markers = toupper(custom_markers)
+custom_markers = hu_mu_zf_ortholog_df %>% filter(`Gene name` %in% custom_markers) %>% pull(`Zebrafish gene name`) %>% toupper()
+custom_markers = custom_markers[custom_markers != '']
+p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish all 3 samples')
+p_bubble
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
