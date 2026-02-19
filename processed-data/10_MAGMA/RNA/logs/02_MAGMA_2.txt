@@ -1,0 +1,581 @@
+**** Job starts ****
+Wed Feb 18 03:23:38 PM EST 2026
+**** JHPCE info ****
+User: neagles
+Job id: 29007572
+Job name: 02_MAGMA
+Node name: compute-169
+Task id: 2
+Loading LIBD SLURM module for magma/1.10
+
+Currently Loaded Modules:
+  1) JHPCE_ROCKY9_DEFAULT_ENV   3) conda/3-24.3.0   5) magma/1.10
+  2) JHPCE_tools/3.0            4) conda_R/4.5
+
+ 
+
+Processing GWAS panic
+Using SNP location file: /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/panic2019/pgc-panic2019.snploc
+Using p-value file: /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/panic2019/pgc-panic2019.pval
+Welcome to MAGMA v1.10 (linux/s)
+Using flags:
+	--annotate
+	--snp-loc /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/panic2019/pgc-panic2019.snploc
+	--gene-loc /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Habenula_Visium/processed-data/09_HD_cell_level/no_secondary/MAGMA/hg19_gene_loc.tsv
+	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/panic
+
+Start time is 15:23:38, Wednesday 18 Feb 2026
+
+Starting annotation...
+Reading gene locations from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Habenula_Visium/processed-data/09_HD_cell_level/no_secondary/MAGMA/hg19_gene_loc.tsv... 
+	WARNING: on line 17088, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198695)
+	WARNING: on line 17093, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198712)
+	WARNING: on line 17101, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198727)
+	WARNING: on line 17120, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198763)
+	WARNING: on line 17128, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198786)
+	WARNING: on line 17139, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198804)
+	WARNING: on line 17161, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198840)
+	WARNING: on line 17186, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198886)
+	WARNING: on line 17188, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198888)
+	WARNING: on line 17194, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198899)
+	WARNING: on line 17217, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198938)
+	WARNING: on line 18241, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000212907)
+	WARNING: on line 20308, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000228253)
+	38511 gene locations read from file
+	chromosome  1: 3581 genes
+	chromosome  2: 2691 genes
+	chromosome  3: 2009 genes
+	chromosome  4: 1606 genes
+	chromosome  5: 1898 genes
+	chromosome  6: 1943 genes
+	chromosome  7: 1797 genes
+	chromosome  8: 1563 genes
+	chromosome  9: 1407 genes
+	chromosome 10: 1486 genes
+	chromosome 11: 2176 genes
+	chromosome 12: 2012 genes
+	chromosome 13: 844 genes
+	chromosome 14: 1541 genes
+	chromosome 15: 1363 genes
+	chromosome 16: 1754 genes
+	chromosome 17: 2085 genes
+	chromosome 18: 800 genes
+	chromosome 19: 2114 genes
+	chromosome 20: 1000 genes
+	chromosome 21: 548 genes
+	chromosome 22: 947 genes
+	chromosome  X: 1208 genes
+	chromosome  Y: 138 genes
+Reading SNP locations from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/panic2019/pgc-panic2019.snploc... 
+	WARNING: on line 1, chromosome code 'CHR' not recognised; skipping SNP (ID = SNP)
+	SNPs mapped so far: 503662	SNPs mapped so far: 852600	SNPs mapped so far: 1238813	SNPs mapped so far: 1671821	SNPs mapped so far: 2211130	SNPs mapped so far: 2721845	SNPs mapped so far: 3167762	SNPs mapped so far: 3663465	SNPs mapped so far: 4113684	SNPs mapped so far: 4592446	SNPs mapped so far: 5032819	SNPs mapped so far: 5516780	WARNING: on line 9889446, chromosome code 'rs142727994' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889447, chromosome code 'rs116297416' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889448, chromosome code 'rs62564128' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889449, chromosome code 'rs2475885' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889450, chromosome code 'rs73445902' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889451, chromosome code 'rs187387785' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889452, chromosome code 'rs62564155' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889453, chromosome code 'rs62564861' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889454, chromosome code 'rs151018378' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889455, chromosome code 'rs62564862' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889456, chromosome code 'rs77130479' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889457, chromosome code 'rs62564864' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889458, chromosome code 'rs143289401' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889459, chromosome code 'rs71484825' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889460, chromosome code 'rs62564871' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889461, chromosome code 'rs147061921' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889462, chromosome code 'rs62564877' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889463, chromosome code 'rs4244784' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889464, chromosome code 'rs80043869' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889465, chromosome code 'rs78930826' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889466, chromosome code 'rs62564891' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889467, chromosome code 'chr9_66276670_D' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889468, chromosome code 'rs113205332' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889469, chromosome code 'rs71484828' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889470, chromosome code 'rs2507431' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889471, chromosome code 'rs74963657' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889472, chromosome code 'rs75263857' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889473, chromosome code 'rs62564898' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889474, chromosome code 'rs66841999' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889475, chromosome code 'rs71484889' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889476, chromosome code 'rs139605532' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889477, chromosome code 'rs4260995' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889478, chromosome code 'rs62564904' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889479, chromosome code 'rs62564905' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889480, chromosome code 'rs62564906' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889481, chromosome code 'rs62564907' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889482, chromosome code 'rs62564908' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889483, chromosome code 'rs114343977' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889484, chromosome code 'rs74307894' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889485, chromosome code 'rs4929624' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889486, chromosome code 'rs80324333' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889487, chromosome code 'rs141902515' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889488, chromosome code 'rs78230788' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889489, chromosome code 'rs62564919' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889490, chromosome code 'rs71484891' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889491, chromosome code 'rs62564920' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889492, chromosome code 'rs146967181' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889493, chromosome code 'rs72709857' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889494, chromosome code 'rs115510119' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889495, chromosome code 'rs116892221' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889496, chromosome code 'rs62564927' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889497, chromosome code 'rs71484893' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889498, chromosome code 'rs4498668' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889499, chromosome code 'chr9_66308579_D' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889500, chromosome code 'rs77020320' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889501, chromosome code 'rs62564932' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889502, chromosome code 'rs185676972' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889503, chromosome code 'rs77033456' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889504, chromosome code 'rs62562174' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889505, chromosome code 'rs62562175' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889506, chromosome code 'rs71484897' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889507, chromosome code 'rs4347087' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889508, chromosome code 'rs4620404' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889509, chromosome code 'rs4262412' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889510, chromosome code 'chr9_66332537_D' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889511, chromosome code 'rs62562183' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889512, chromosome code 'rs62562184' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889513, chromosome code 'rs2507617' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889514, chromosome code 'rs4285581' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889515, chromosome code 'rs113677007' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889516, chromosome code 'rs79042900' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889517, chromosome code 'rs62562191' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889518, chromosome code 'rs4442266' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889519, chromosome code 'rs71484900' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889520, chromosome code 'rs4929763' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889521, chromosome code 'rs142232056' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889522, chromosome code 'rs147309667' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889523, chromosome code 'chr9_66361220_I' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889524, chromosome code 'rs151137755' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889525, chromosome code 'rs142352429' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889526, chromosome code 'rs11262977' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889527, chromosome code 'rs9696827' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889528, chromosome code 'rs142929746' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889529, chromosome code 'rs62542528' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889530, chromosome code 'rs62542534' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889531, chromosome code 'rs9330061' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889532, chromosome code 'rs9286266' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889533, chromosome code 'rs9330062' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889534, chromosome code 'rs4582671' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889535, chromosome code 'rs4263885' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889536, chromosome code 'rs9777479' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889537, chromosome code 'rs9775520' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889538, chromosome code 'chr9_68154237_D' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889539, chromosome code 'rs12156440' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889540, chromosome code 'rs62542554' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889541, chromosome code 'rs79195860' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889542, chromosome code 'rs4275331' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889543, chromosome code 'rs10908022' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889544, chromosome code 'rs143671602' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889545, chromosome code 'rs55948488' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889546, chromosome code 'rs144911019' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889547, chromosome code 'rs4268231' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889548, chromosome code 'rs10120296' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889549, chromosome code 'rs79993271' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889550, chromosome code 'chr9_68171390_D' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889551, chromosome code 'rs10908024' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889552, chromosome code 'rs10908025' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889553, chromosome code 'rs4483284' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889554, chromosome code 'rs11262932' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889555, chromosome code 'rs4308847' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889556, chromosome code 'rs4455988' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889557, chromosome code 'rs4379558' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889558, chromosome code 'rs9286286' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889559, chromosome code 'rs111956074' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889560, chromosome code 'rs9919058' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889561, chromosome code 'rs9330089' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889562, chromosome code 'rs9697061' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889563, chromosome code 'rs9283282' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889564, chromosome code 'rs4381074' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889565, chromosome code 'rs4291383' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889566, chromosome code 'rs4298610' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889567, chromosome code 'rs10124309' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889568, chromosome code 'rs10114659' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889569, chromosome code 'rs10453281' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889570, chromosome code 'chr9_68185053_I' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889571, chromosome code 'rs4559349' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889572, chromosome code 'rs11262944' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889573, chromosome code 'rs4928883' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889574, chromosome code 'rs4928884' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889575, chromosome code 'rs10752539' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889576, chromosome code 'rs4584280' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889577, chromosome code 'rs4366187' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889578, chromosome code 'rs4366186' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889579, chromosome code 'rs62544098' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889580, chromosome code 'rs10737148' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889581, chromosome code 'rs10752540' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889582, chromosome code 'rs9776687' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889583, chromosome code 'rs78548597' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889584, chromosome code 'rs3004706' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889585, chromosome code 'rs9695523' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889586, chromosome code 'rs4928885' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889587, chromosome code 'rs4928886' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889588, chromosome code 'rs145199185' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889589, chromosome code 'rs4462011' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889590, chromosome code 'rs4480235' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889591, chromosome code 'rs4554602' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889592, chromosome code 'chr9_68201293_D' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889593, chromosome code 'rs9776522' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889594, chromosome code 'rs10908035' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889595, chromosome code 'rs10121925' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889596, chromosome code 'rs75915735' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889597, chromosome code 'rs9695392' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889598, chromosome code 'rs11262973' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889599, chromosome code 'rs9330099' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889600, chromosome code 'rs11262974' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889601, chromosome code 'rs9330100' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889602, chromosome code 'rs10124901' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889603, chromosome code 'rs4560899' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889604, chromosome code 'rs10123335' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889605, chromosome code 'rs3009635' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889606, chromosome code 'rs4445353' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889607, chromosome code 'rs9695143' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889608, chromosome code 'rs9330106' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889609, chromosome code 'chr9_68213650_D' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889610, chromosome code 'rs71493447' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889611, chromosome code 'rs11262980' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889612, chromosome code 'rs9774856' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889613, chromosome code 'rs10796754' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889614, chromosome code 'rs80059267' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889615, chromosome code 'rs2919587' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889616, chromosome code 'rs4329372' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889617, chromosome code 'rs4601456' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889618, chromosome code 'rs60554899' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889619, chromosome code 'rs10796756' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889620, chromosome code 'rs4535858' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889621, chromosome code 'rs4928890' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889622, chromosome code 'rs4928891' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889623, chromosome code 'rs71493448' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889624, chromosome code 'rs4928893' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889625, chromosome code 'rs4928807' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889626, chromosome code 'rs143215212' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889627, chromosome code 'rs10796745' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889628, chromosome code 'rs2772852' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889629, chromosome code 'rs4091679' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889630, chromosome code 'rs116031714' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889631, chromosome code 'rs79635716' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889632, chromosome code 'rs76561159' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889633, chromosome code 'rs10908010' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889634, chromosome code 'rs7043631' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889635, chromosome code 'rs148963840' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889636, chromosome code 'rs150306706' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889637, chromosome code 'rs2582188' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889638, chromosome code 'rs79953555' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889639, chromosome code 'chr9_68256228_I' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889640, chromosome code 'rs142403218' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889641, chromosome code 'rs2456402' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889642, chromosome code 'rs141610251' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889643, chromosome code 'rs140486860' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889644, chromosome code 'rs144146718' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889645, chromosome code 'rs142655160' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889646, chromosome code 'chr9_68275446_D' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889647, chromosome code 'chr9_68276338_D' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889648, chromosome code 'rs4603018' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889649, chromosome code 'rs4562453' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889650, chromosome code 'rs4559350' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889651, chromosome code 'rs4928812' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889652, chromosome code 'chr9_68280362_D' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889653, chromosome code 'rs4553030' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889654, chromosome code 'rs11509982' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889655, chromosome code 'rs4553029' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889656, chromosome code 'rs7875210' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889657, chromosome code 'rs4928802' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889658, chromosome code 'rs1966740' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889659, chromosome code 'rs12236097' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889660, chromosome code 'rs12552260' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889661, chromosome code 'rs3124549' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889662, chromosome code 'rs146523376' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889663, chromosome code 'rs1899184' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889664, chromosome code 'rs4484809' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889665, chromosome code 'rs2119363' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889666, chromosome code 'rs10122506' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889667, chromosome code 'rs7041252' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889668, chromosome code 'rs6606251' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889669, chromosome code 'rs6606252' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889670, chromosome code 'rs1971142' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889671, chromosome code 'rs1971143' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889672, chromosome code 'rs11262890' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889673, chromosome code 'rs10117793' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889674, chromosome code 'rs7037222' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889675, chromosome code 'rs7868458' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889676, chromosome code 'rs10122856' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889677, chromosome code 'rs3009682' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889678, chromosome code 'rs3004790' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889679, chromosome code 'rs7470316' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889680, chromosome code 'rs7863412' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889681, chromosome code 'rs4615704' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889682, chromosome code 'rs4614107' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889683, chromosome code 'rs10796751' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889684, chromosome code 'chr9_68314858_D' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889685, chromosome code 'rs142547237' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889686, chromosome code 'rs7864961' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889687, chromosome code 'rs6422842' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889688, chromosome code 'rs10908016' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889689, chromosome code 'rs11262895' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889690, chromosome code 'rs115981566' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889691, chromosome code 'rs12338654' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889692, chromosome code 'rs144925619' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889693, chromosome code 'rs3124538' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889694, chromosome code 'rs4928816' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889695, chromosome code 'rs7019884' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889696, chromosome code 'rs356390' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889697, chromosome code 'rs6606261' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889698, chromosome code 'rs10908018' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889699, chromosome code 'rs1844021' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889700, chromosome code 'rs10121505' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889701, chromosome code 'rs356386' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889702, chromosome code 'rs356383' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889703, chromosome code 'rs11262906' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889704, chromosome code 'rs10908019' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889705, chromosome code 'rs1817667' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889706, chromosome code 'rs7866239' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889707, chromosome code 'rs1020176' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889708, chromosome code 'rs1844005' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889709, chromosome code 'rs1844003' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889710, chromosome code 'rs55763061' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889711, chromosome code 'chr9_68344996_D' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889712, chromosome code 'rs356359' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889713, chromosome code 'rs356361' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889714, chromosome code 'rs356362' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889715, chromosome code 'rs356363' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889716, chromosome code 'chr9_68348833_I' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889717, chromosome code 'rs356365' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889718, chromosome code 'rs356354' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889719, chromosome code 'chr9_68365876_D' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889720, chromosome code 'rs9413927' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889721, chromosome code 'rs77020773' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889722, chromosome code 'rs62545027' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889723, chromosome code 'rs75583618' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889724, chromosome code 'rs35470759' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889725, chromosome code 'rs138910807' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889726, chromosome code 'rs62543283' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889727, chromosome code 'rs35978760' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889728, chromosome code 'rs35394975' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889729, chromosome code 'rs35284732' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889730, chromosome code 'rs142898774' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889731, chromosome code 'rs145836324' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889732, chromosome code 'rs147193571' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889733, chromosome code 'rs139947605' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889734, chromosome code 'rs145464769' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889735, chromosome code 'rs147702269' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889736, chromosome code 'rs62544714' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889737, chromosome code 'rs62544715' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889738, chromosome code 'rs71493468' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889739, chromosome code 'rs78080244' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889740, chromosome code 'rs72612193' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889741, chromosome code 'rs62544735' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889742, chromosome code 'rs62544744' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889743, chromosome code 'rs62544752' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889744, chromosome code 'rs62545421' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889745, chromosome code 'chr9_68461031_I' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889746, chromosome code 'rs144702733' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889747, chromosome code 'rs62543445' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889748, chromosome code 'rs146242044' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889749, chromosome code 'rs62546106' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889750, chromosome code 'rs62546109' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889751, chromosome code 'rs73649059' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889752, chromosome code 'rs73458604' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889753, chromosome code 'rs62546883' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889754, chromosome code 'rs62546903' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889755, chromosome code 'chr9_68503220_D' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889756, chromosome code 'rs35676375' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889757, chromosome code 'rs62546928' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889758, chromosome code 'rs62546929' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889759, chromosome code 'rs1984605' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889760, chromosome code 'rs62543976' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889761, chromosome code 'rs35841106' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889762, chromosome code 'rs62543980' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889763, chromosome code 'rs147165961' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889764, chromosome code 'rs148221454' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889765, chromosome code 'rs183596911' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889766, chromosome code 'rs144139769' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889767, chromosome code 'rs144004923' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889768, chromosome code 'rs146418947' not recognised; skipping SNP (ID = 9)
+	WARNING: on line 9889769, chromosome code 'rs4275319' not recognised; skipping SNP (ID = 9)
+                                                                                                 	10151300 SNP locations read from file
+	of those, 5783017 (56.97%) mapped to at least one gene
+Writing annotation to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/panic.genes.annot
+	for chromosome  1, 156 genes are empty (out of 3581)
+	for chromosome  2, 106 genes are empty (out of 2691)
+	for chromosome  3, 29 genes are empty (out of 2009)
+	for chromosome  4, 40 genes are empty (out of 1606)
+	for chromosome  5, 45 genes are empty (out of 1898)
+	for chromosome  6, 47 genes are empty (out of 1943)
+	for chromosome  7, 77 genes are empty (out of 1797)
+	for chromosome  8, 48 genes are empty (out of 1563)
+	for chromosome  9, 107 genes are empty (out of 1407)
+	for chromosome 10, 40 genes are empty (out of 1486)
+	for chromosome 11, 51 genes are empty (out of 2176)
+	for chromosome 12, 47 genes are empty (out of 2012)
+	for chromosome 13, 24 genes are empty (out of 844)
+	for chromosome 14, 146 genes are empty (out of 1541)
+	for chromosome 15, 74 genes are empty (out of 1363)
+	for chromosome 16, 85 genes are empty (out of 1754)
+	for chromosome 17, 85 genes are empty (out of 2085)
+	for chromosome 18, 23 genes are empty (out of 800)
+	for chromosome 19, 45 genes are empty (out of 2114)
+	for chromosome 20, 22 genes are empty (out of 1000)
+	for chromosome 21, 36 genes are empty (out of 548)
+	for chromosome 22, 39 genes are empty (out of 947)
+	for chromosome  X, 1208 genes are empty (out of 1208)
+	for chromosome  Y, 138 genes are empty (out of 138)
+	at least one SNP mapped to each of a total of 35793 genes (out of 38511)
+
+
+End time is 15:23:53, Wednesday 18 Feb 2026 (elapsed: 00:00:15)
+Welcome to MAGMA v1.10 (linux/s)
+Using flags:
+	--bfile /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/g1000_eur/g1000_eur
+	--pval /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/panic2019/pgc-panic2019.pval ncol=N
+	--gene-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/panic.genes.annot
+	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/panic
+
+Start time is 15:23:53, Wednesday 18 Feb 2026
+
+Loading PLINK-format data...
+Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/g1000_eur/g1000_eur.fam... 503 individuals read
+Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/g1000_eur/g1000_eur.bim... 22665064 SNPs read
+Preparing file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/g1000_eur/g1000_eur.bed... 
+
+Reading SNP synonyms from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/g1000_eur/g1000_eur.synonyms (auto-detected)
+	read 6016767 mapped synonyms from file, mapping to 3921040 SNPs in the data
+	WARNING: detected 133 synonymous SNP pairs in the data
+	         skipped all synonym entries involved, synonymous SNPs are kept in analysis
+	         writing list of detected synonyms in data to supplementary log file
+Reading SNP p-values from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/panic2019/pgc-panic2019.pval... 
+	detected 3 variables in file
+	using variable: SNP (SNP id)
+	using variable: P (p-value)
+	using variable: N (sample size; discarding SNPs with N < 50)
+	read 10151301 lines from file, containing valid SNP p-values for 8802991 SNPs in data (86.72% of lines, 38.84% of SNPs in data)
+	WARNING: file contained 75 SNPs (same IDs or synonyms) with duplications
+	         dropped all occurrences of each from analysis
+	         writing list of duplicated IDs to supplementary log file
+Loading gene annotation from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/panic.genes.annot... 
+	35793 gene definitions read from file
+	found 35426 genes containing valid SNPs in genotype data
+
+
+Starting gene analysis... 
+	using model: SNPwise-mean
+	processed genes: 150 (0.4%)     	processed genes: 223 (0.6%)     	processed genes: 320 (0.9%)     	processed genes: 405 (1.1%)     	processed genes: 466 (1.3%)     	processed genes: 535 (1.5%)     	processed genes: 625 (1.8%)     	processed genes: 707 (2%)     	processed genes: 783 (2.2%)     	processed genes: 859 (2.4%)     	processed genes: 922 (2.6%)     	processed genes: 994 (2.8%)     	processed genes: 1043 (2.9%)     	processed genes: 1123 (3.2%)     	processed genes: 1157 (3.3%)     	processed genes: 1183 (3.3%)     	processed genes: 1223 (3.5%)     	processed genes: 1266 (3.6%)     	processed genes: 1313 (3.7%)     	processed genes: 1359 (3.8%)     	processed genes: 1410 (4%)     	processed genes: 1456 (4.1%)     	processed genes: 1514 (4.3%)     	processed genes: 1565 (4.4%)     	processed genes: 1683 (4.8%)     	processed genes: 1737 (4.9%)     	processed genes: 1903 (5.4%)     	processed genes: 2064 (5.8%)     	processed genes: 2159 (6.1%)     	processed genes: 2229 (6.3%)     	processed genes: 2307 (6.5%)     	processed genes: 2349 (6.6%)     	processed genes: 2401 (6.8%)     	processed genes: 2431 (6.9%)     	processed genes: 2480 (7%)     	processed genes: 2531 (7.1%)     	processed genes: 2589 (7.3%)     	processed genes: 2637 (7.4%)     	processed genes: 2703 (7.6%)     	processed genes: 2780 (7.8%)     	processed genes: 2845 (8%)     	processed genes: 2908 (8.2%)     	processed genes: 2942 (8.3%)     	processed genes: 3020 (8.5%)     	processed genes: 3089 (8.7%)     	processed genes: 3149 (8.9%)     	processed genes: 3204 (9%)     	processed genes: 3232 (9.1%)     	processed genes: 3282 (9.3%)     	processed genes: 3322 (9.4%)     	processed genes: 3423 (9.7%)     	processed genes: 3487 (9.8%)     	processed genes: 3555 (10%)     	processed genes: 3595 (10.1%)     	processed genes: 3652 (10.3%)     	processed genes: 3728 (10.5%)     	processed genes: 3761 (10.6%)     	processed genes: 3790 (10.7%)     	processed genes: 3805 (10.7%)     	processed genes: 3838 (10.8%)     	processed genes: 3870 (10.9%)     	processed genes: 3922 (11.1%)     	processed genes: 3957 (11.2%)     	processed genes: 3969 (11.2%)     	processed genes: 3980 (11.2%)     	processed genes: 4017 (11.3%)     	processed genes: 4057 (11.5%)     	processed genes: 4101 (11.6%)     	processed genes: 4144 (11.7%)     	processed genes: 4195 (11.8%)     	processed genes: 4275 (12.1%)     	processed genes: 4293 (12.1%)     	processed genes: 4363 (12.3%)     	processed genes: 4528 (12.8%)     	processed genes: 4596 (13%)     	processed genes: 4652 (13.1%)     	processed genes: 4717 (13.3%)     	processed genes: 4777 (13.5%)     	processed genes: 4877 (13.8%)     	processed genes: 4918 (13.9%)     	processed genes: 4967 (14%)     	processed genes: 5023 (14.2%)     	processed genes: 5065 (14.3%)     	processed genes: 5090 (14.4%)     	processed genes: 5121 (14.5%)     	processed genes: 5174 (14.6%)     	processed genes: 5219 (14.7%)     	processed genes: 5258 (14.8%)     	processed genes: 5300 (15%)     	processed genes: 5370 (15.2%)     	processed genes: 5431 (15.3%)     	processed genes: 5495 (15.5%)     	processed genes: 5533 (15.6%)     	processed genes: 5582 (15.8%)     	processed genes: 5649 (15.9%)     	processed genes: 5706 (16.1%)     	processed genes: 5778 (16.3%)     	processed genes: 5811 (16.4%)     	processed genes: 5868 (16.6%)     	processed genes: 5928 (16.7%)     	processed genes: 5966 (16.8%)     	processed genes: 5988 (16.9%)     	processed genes: 6048 (17.1%)     	processed genes: 6088 (17.2%)     	processed genes: 6132 (17.3%)     	processed genes: 6150 (17.4%)     	processed genes: 6173 (17.4%)     	processed genes: 6199 (17.5%)     	processed genes: 6250 (17.6%)     	processed genes: 6313 (17.8%)     	processed genes: 6401 (18.1%)     	processed genes: 6521 (18.4%)     	processed genes: 6596 (18.6%)     	processed genes: 6635 (18.7%)     	processed genes: 6658 (18.8%)     	processed genes: 6695 (18.9%)     	processed genes: 6730 (19%)     	processed genes: 6757 (19.1%)     	processed genes: 6820 (19.3%)     	processed genes: 6886 (19.4%)     	processed genes: 6942 (19.6%)     	processed genes: 6979 (19.7%)     	processed genes: 7023 (19.8%)     	processed genes: 7060 (19.9%)     	processed genes: 7096 (20%)     	processed genes: 7154 (20.2%)     	processed genes: 7194 (20.3%)     	processed genes: 7228 (20.4%)     	processed genes: 7286 (20.6%)     	processed genes: 7348 (20.7%)     	processed genes: 7409 (20.9%)     	processed genes: 7445 (21%)     	processed genes: 7492 (21.1%)     	processed genes: 7553 (21.3%)     	processed genes: 7582 (21.4%)     	processed genes: 7632 (21.5%)     	processed genes: 7711 (21.8%)     	processed genes: 7763 (21.9%)     	processed genes: 7801 (22%)     	processed genes: 7867 (22.2%)     	processed genes: 7951 (22.4%)     	processed genes: 8012 (22.6%)     	processed genes: 8033 (22.7%)     	processed genes: 8058 (22.7%)     	processed genes: 8089 (22.8%)     	processed genes: 8133 (23%)     	processed genes: 8157 (23%)     	processed genes: 8200 (23.1%)     	processed genes: 8251 (23.3%)     	processed genes: 8304 (23.4%)     	processed genes: 8344 (23.6%)     	processed genes: 8429 (23.8%)     	processed genes: 8484 (23.9%)     	processed genes: 8560 (24.2%)     	processed genes: 8602 (24.3%)     	processed genes: 8639 (24.4%)     	processed genes: 8677 (24.5%)     	processed genes: 8708 (24.6%)     	processed genes: 8730 (24.6%)     	processed genes: 8767 (24.7%)     	processed genes: 8799 (24.8%)     	processed genes: 8835 (24.9%)     	processed genes: 8873 (25%)     	processed genes: 8918 (25.2%)     	processed genes: 8960 (25.3%)     	processed genes: 9017 (25.5%)     	processed genes: 9066 (25.6%)     	processed genes: 9102 (25.7%)     	processed genes: 9133 (25.8%)     	processed genes: 9188 (25.9%)     	processed genes: 9234 (26.1%)     	processed genes: 9268 (26.2%)     	processed genes: 9301 (26.3%)     	processed genes: 9348 (26.4%)     	processed genes: 9404 (26.5%)     	processed genes: 9454 (26.7%)     	processed genes: 9539 (26.9%)     	processed genes: 9593 (27.1%)     	processed genes: 9636 (27.2%)     	processed genes: 9686 (27.3%)     	processed genes: 9726 (27.5%)     	processed genes: 9787 (27.6%)     	processed genes: 9832 (27.8%)     	processed genes: 9915 (28%)     	processed genes: 9983 (28.2%)     	processed genes: 10043 (28.3%)     	processed genes: 10126 (28.6%)     	processed genes: 10166 (28.7%)     	processed genes: 10230 (28.9%)     	processed genes: 10291 (29%)     	processed genes: 10330 (29.2%)     	processed genes: 10369 (29.3%)     	processed genes: 10408 (29.4%)     	processed genes: 10444 (29.5%)     	processed genes: 10493 (29.6%)     	processed genes: 10523 (29.7%)     	processed genes: 10578 (29.9%)     	processed genes: 10639 (30%)     	processed genes: 10724 (30.3%)     	processed genes: 10778 (30.4%)     	processed genes: 10815 (30.5%)     	processed genes: 10835 (30.6%)     	processed genes: 10878 (30.7%)     	processed genes: 10934 (30.9%)     	processed genes: 10957 (30.9%)     	processed genes: 11008 (31.1%)     	processed genes: 11043 (31.2%)     	processed genes: 11072 (31.3%)     	processed genes: 11122 (31.4%)     	processed genes: 11195 (31.6%)     	processed genes: 11257 (31.8%)     	processed genes: 11319 (32%)     	processed genes: 11390 (32.2%)     	processed genes: 11420 (32.2%)     	processed genes: 11460 (32.3%)     	processed genes: 11507 (32.5%)     	processed genes: 11547 (32.6%)     	processed genes: 11588 (32.7%)     	processed genes: 11706 (33%)     	processed genes: 11765 (33.2%)     	processed genes: 11812 (33.3%)     	processed genes: 11863 (33.5%)     	processed genes: 11905 (33.6%)     	processed genes: 11927 (33.7%)     	processed genes: 11967 (33.8%)     	processed genes: 11995 (33.9%)     	processed genes: 12037 (34%)     	processed genes: 12075 (34.1%)     	processed genes: 12160 (34.3%)     	processed genes: 12197 (34.4%)     	processed genes: 12232 (34.5%)     	processed genes: 12277 (34.7%)     	processed genes: 12317 (34.8%)     	processed genes: 12364 (34.9%)     	processed genes: 12441 (35.1%)     	processed genes: 12502 (35.3%)     	processed genes: 12565 (35.5%)     	processed genes: 12627 (35.6%)     	processed genes: 12683 (35.8%)     	processed genes: 12723 (35.9%)     	processed genes: 12773 (36.1%)     	processed genes: 12835 (36.2%)     	processed genes: 12883 (36.4%)     	processed genes: 12950 (36.6%)     	processed genes: 12984 (36.7%)     	processed genes: 13035 (36.8%)     	processed genes: 13068 (36.9%)     	processed genes: 13127 (37.1%)     	processed genes: 13223 (37.3%)     	processed genes: 13282 (37.5%)     	processed genes: 13333 (37.6%)     	processed genes: 13359 (37.7%)     	processed genes: 13375 (37.8%)     	processed genes: 13403 (37.8%)     	processed genes: 13440 (37.9%)     	processed genes: 13515 (38.1%)     	processed genes: 13567 (38.3%)     	processed genes: 13607 (38.4%)     	processed genes: 13669 (38.6%)     	processed genes: 13748 (38.8%)     	processed genes: 13798 (38.9%)     	processed genes: 13912 (39.3%)     	processed genes: 13987 (39.5%)     	processed genes: 14025 (39.6%)     	processed genes: 14077 (39.7%)     	processed genes: 14149 (39.9%)     	processed genes: 14269 (40.3%)     	processed genes: 14297 (40.4%)     	processed genes: 14337 (40.5%)     	processed genes: 14398 (40.6%)     	processed genes: 14463 (40.8%)     	processed genes: 14528 (41%)     	processed genes: 14574 (41.1%)     	processed genes: 14695 (41.5%)     	processed genes: 14724 (41.6%)     	processed genes: 14817 (41.8%)     	processed genes: 14871 (42%)     	processed genes: 14930 (42.1%)     	processed genes: 14940 (42.2%)     	processed genes: 15002 (42.3%)     	processed genes: 15029 (42.4%)     	processed genes: 15077 (42.6%)     	processed genes: 15083 (42.6%)     	processed genes: 15100 (42.6%)     	processed genes: 15122 (42.7%)     	processed genes: 15153 (42.8%)     	processed genes: 15210 (42.9%)     	processed genes: 15253 (43.1%)     	processed genes: 15318 (43.2%)     	processed genes: 15407 (43.5%)     	processed genes: 15496 (43.7%)     	processed genes: 15571 (44%)     	processed genes: 15631 (44.1%)     	processed genes: 15674 (44.2%)     	processed genes: 15728 (44.4%)     	processed genes: 15788 (44.6%)     	processed genes: 15822 (44.7%)     	processed genes: 15884 (44.8%)     	processed genes: 15956 (45%)     	processed genes: 15996 (45.2%)     	processed genes: 16035 (45.3%)     	processed genes: 16096 (45.4%)     	processed genes: 16149 (45.6%)     	processed genes: 16180 (45.7%)     	processed genes: 16220 (45.8%)     	processed genes: 16285 (46%)     	processed genes: 16404 (46.3%)     	processed genes: 16460 (46.5%)     	processed genes: 16480 (46.5%)     	processed genes: 16515 (46.6%)     	processed genes: 16528 (46.7%)     	processed genes: 16601 (46.9%)     	processed genes: 16723 (47.2%)     	processed genes: 16815 (47.5%)     	processed genes: 16860 (47.6%)     	processed genes: 16927 (47.8%)     	processed genes: 16990 (48%)     	processed genes: 17041 (48.1%)     	processed genes: 17098 (48.3%)     	processed genes: 17151 (48.4%)     	processed genes: 17201 (48.6%)     	processed genes: 17251 (48.7%)     	processed genes: 17318 (48.9%)     	processed genes: 17392 (49.1%)     	processed genes: 17474 (49.3%)     	processed genes: 17523 (49.5%)     	processed genes: 17585 (49.6%)     	processed genes: 17679 (49.9%)     	processed genes: 17772 (50.2%)     	processed genes: 17815 (50.3%)     	processed genes: 17866 (50.4%)     	processed genes: 17904 (50.5%)     	processed genes: 17923 (50.6%)     	processed genes: 17962 (50.7%)     	processed genes: 18002 (50.8%)     	processed genes: 18048 (50.9%)     	processed genes: 18172 (51.3%)     	processed genes: 18222 (51.4%)     	processed genes: 18243 (51.5%)     	processed genes: 18283 (51.6%)     	processed genes: 18290 (51.6%)     	processed genes: 18337 (51.8%)     	processed genes: 18378 (51.9%)     	processed genes: 18430 (52%)     	processed genes: 18467 (52.1%)     	processed genes: 18514 (52.3%)     	processed genes: 18582 (52.5%)     	processed genes: 18628 (52.6%)     	processed genes: 18674 (52.7%)     	processed genes: 18720 (52.8%)     	processed genes: 18796 (53.1%)     	processed genes: 18832 (53.2%)     	processed genes: 18902 (53.4%)     	processed genes: 18953 (53.5%)     	processed genes: 19004 (53.6%)     	processed genes: 19031 (53.7%)     	processed genes: 19078 (53.9%)     	processed genes: 19225 (54.3%)     	processed genes: 19274 (54.4%)     	processed genes: 19319 (54.5%)     	processed genes: 19338 (54.6%)     	processed genes: 19389 (54.7%)     	processed genes: 19411 (54.8%)     	processed genes: 19443 (54.9%)     	processed genes: 19463 (54.9%)     	processed genes: 19494 (55%)     	processed genes: 19538 (55.2%)     	processed genes: 19592 (55.3%)     	processed genes: 19617 (55.4%)     	processed genes: 19655 (55.5%)     	processed genes: 19707 (55.6%)     	processed genes: 19739 (55.7%)     	processed genes: 19814 (55.9%)     	processed genes: 19972 (56.4%)     	processed genes: 20047 (56.6%)     	processed genes: 20128 (56.8%)     	processed genes: 20207 (57%)     	processed genes: 20308 (57.3%)     	processed genes: 20381 (57.5%)     	processed genes: 20424 (57.7%)     	processed genes: 20483 (57.8%)     	processed genes: 20526 (57.9%)     	processed genes: 20583 (58.1%)     	processed genes: 20608 (58.2%)     	processed genes: 20643 (58.3%)     	processed genes: 20673 (58.4%)     	processed genes: 20725 (58.5%)     	processed genes: 20760 (58.6%)     	processed genes: 20803 (58.7%)     	processed genes: 20870 (58.9%)     	processed genes: 20932 (59.1%)     	processed genes: 21012 (59.3%)     	processed genes: 21039 (59.4%)     	processed genes: 21122 (59.6%)     	processed genes: 21163 (59.7%)     	processed genes: 21192 (59.8%)     	processed genes: 21262 (60%)     	processed genes: 21318 (60.2%)     	processed genes: 21367 (60.3%)     	processed genes: 21426 (60.5%)     	processed genes: 21466 (60.6%)     	processed genes: 21507 (60.7%)     	processed genes: 21534 (60.8%)     	processed genes: 21561 (60.9%)     	processed genes: 21598 (61%)     	processed genes: 21624 (61%)     	processed genes: 21650 (61.1%)     	processed genes: 21688 (61.2%)     	processed genes: 21728 (61.3%)     	processed genes: 21771 (61.5%)     	processed genes: 21824 (61.6%)     	processed genes: 21882 (61.8%)     	processed genes: 21961 (62%)     	processed genes: 22013 (62.1%)     	processed genes: 22075 (62.3%)     	processed genes: 22141 (62.5%)     	processed genes: 22219 (62.7%)     	processed genes: 22270 (62.9%)     	processed genes: 22328 (63%)     	processed genes: 22371 (63.1%)     	processed genes: 22400 (63.2%)     	processed genes: 22441 (63.3%)     	processed genes: 22477 (63.4%)     	processed genes: 22535 (63.6%)     	processed genes: 22590 (63.8%)     	processed genes: 22619 (63.8%)     	processed genes: 22664 (64%)     	processed genes: 22709 (64.1%)     	processed genes: 22759 (64.2%)     	processed genes: 22812 (64.4%)     	processed genes: 22878 (64.6%)     	processed genes: 22920 (64.7%)     	processed genes: 22983 (64.9%)     	processed genes: 23032 (65%)     	processed genes: 23058 (65.1%)     	processed genes: 23091 (65.2%)     	processed genes: 23141 (65.3%)     	processed genes: 23231 (65.6%)     	processed genes: 23268 (65.7%)     	processed genes: 23307 (65.8%)     	processed genes: 23359 (65.9%)     	processed genes: 23395 (66%)     	processed genes: 23429 (66.1%)     	processed genes: 23482 (66.3%)     	processed genes: 23534 (66.4%)     	processed genes: 23580 (66.6%)     	processed genes: 23624 (66.7%)     	processed genes: 23674 (66.8%)     	processed genes: 23720 (67%)     	processed genes: 23770 (67.1%)     	processed genes: 23812 (67.2%)     	processed genes: 23855 (67.3%)     	processed genes: 23902 (67.5%)     	processed genes: 23969 (67.7%)     	processed genes: 24161 (68.2%)     	processed genes: 24244 (68.4%)     	processed genes: 24266 (68.5%)     	processed genes: 24304 (68.6%)     	processed genes: 24330 (68.7%)     	processed genes: 24371 (68.8%)     	processed genes: 24391 (68.9%)     	processed genes: 24439 (69%)     	processed genes: 24495 (69.1%)     	processed genes: 24533 (69.3%)     	processed genes: 24566 (69.3%)     	processed genes: 24600 (69.4%)     	processed genes: 24646 (69.6%)     	processed genes: 24692 (69.7%)     	processed genes: 24727 (69.8%)     	processed genes: 24785 (70%)     	processed genes: 24833 (70.1%)     	processed genes: 24856 (70.2%)     	processed genes: 24883 (70.2%)     	processed genes: 24943 (70.4%)     	processed genes: 24986 (70.5%)     	processed genes: 25039 (70.7%)     	processed genes: 25089 (70.8%)     	processed genes: 25160 (71%)     	processed genes: 25242 (71.3%)     	processed genes: 25407 (71.7%)     	processed genes: 25445 (71.8%)     	processed genes: 25496 (72%)     	processed genes: 25534 (72.1%)     	processed genes: 25575 (72.2%)     	processed genes: 25637 (72.4%)     	processed genes: 25684 (72.5%)     	processed genes: 25736 (72.6%)     	processed genes: 25775 (72.8%)     	processed genes: 25828 (72.9%)     	processed genes: 25858 (73%)     	processed genes: 25897 (73.1%)     	processed genes: 25933 (73.2%)     	processed genes: 25978 (73.3%)     	processed genes: 26027 (73.5%)     	processed genes: 26064 (73.6%)     	processed genes: 26108 (73.7%)     	processed genes: 26202 (74%)     	processed genes: 26231 (74%)     	processed genes: 26280 (74.2%)     	processed genes: 26319 (74.3%)     	processed genes: 26367 (74.4%)     	processed genes: 26393 (74.5%)     	processed genes: 26458 (74.7%)     	processed genes: 26491 (74.8%)     	processed genes: 26515 (74.8%)     	processed genes: 26550 (74.9%)     	processed genes: 26584 (75%)     	processed genes: 26706 (75.4%)     	processed genes: 26802 (75.7%)     	processed genes: 26868 (75.8%)     	processed genes: 26902 (75.9%)     	processed genes: 26915 (76%)     	processed genes: 26945 (76.1%)     	processed genes: 26975 (76.1%)     	processed genes: 27008 (76.2%)     	processed genes: 27052 (76.4%)     	processed genes: 27115 (76.5%)     	processed genes: 27195 (76.8%)     	processed genes: 27242 (76.9%)     	processed genes: 27398 (77.3%)     	processed genes: 27535 (77.7%)     	processed genes: 27598 (77.9%)     	processed genes: 27674 (78.1%)     	processed genes: 27801 (78.5%)     	processed genes: 27864 (78.7%)     	processed genes: 27901 (78.8%)     	processed genes: 27952 (78.9%)     	processed genes: 27977 (79%)     	processed genes: 28008 (79.1%)     	processed genes: 28035 (79.1%)     	processed genes: 28038 (79.1%)     	processed genes: 28068 (79.2%)     	processed genes: 28088 (79.3%)     	processed genes: 28137 (79.4%)     	processed genes: 28173 (79.5%)     	processed genes: 28210 (79.6%)     	processed genes: 28248 (79.7%)     	processed genes: 28348 (80%)     	processed genes: 28415 (80.2%)     	processed genes: 28450 (80.3%)     	processed genes: 28539 (80.6%)     	processed genes: 28581 (80.7%)     	processed genes: 28612 (80.8%)     	processed genes: 28665 (80.9%)     	processed genes: 28751 (81.2%)     	processed genes: 28866 (81.5%)     	processed genes: 28994 (81.8%)     	processed genes: 29062 (82%)     	processed genes: 29182 (82.4%)     	processed genes: 29300 (82.7%)     	processed genes: 29387 (83%)     	processed genes: 29443 (83.1%)     	processed genes: 29505 (83.3%)     	processed genes: 29580 (83.5%)     	processed genes: 29627 (83.6%)     	processed genes: 29697 (83.8%)     	processed genes: 29773 (84%)     	processed genes: 29838 (84.2%)     	processed genes: 29882 (84.4%)     	processed genes: 29963 (84.6%)     	processed genes: 30022 (84.7%)     	processed genes: 30057 (84.8%)     	processed genes: 30091 (84.9%)     	processed genes: 30137 (85.1%)     	processed genes: 30207 (85.3%)     	processed genes: 30274 (85.5%)     	processed genes: 30306 (85.5%)     	processed genes: 30349 (85.7%)     	processed genes: 30411 (85.8%)     	processed genes: 30490 (86.1%)     	processed genes: 30536 (86.2%)     	processed genes: 30603 (86.4%)     	processed genes: 30651 (86.5%)     	processed genes: 30693 (86.6%)     	processed genes: 30732 (86.7%)     	processed genes: 30799 (86.9%)     	processed genes: 30851 (87.1%)     	processed genes: 30889 (87.2%)     	processed genes: 30957 (87.4%)     	processed genes: 31097 (87.8%)     	processed genes: 31162 (88%)     	processed genes: 31210 (88.1%)     	processed genes: 31248 (88.2%)     	processed genes: 31289 (88.3%)     	processed genes: 31336 (88.5%)     	processed genes: 31391 (88.6%)     	processed genes: 31440 (88.7%)     	processed genes: 31487 (88.9%)     	processed genes: 31546 (89%)     	processed genes: 31584 (89.2%)     	processed genes: 31627 (89.3%)     	processed genes: 31678 (89.4%)     	processed genes: 31730 (89.6%)     	processed genes: 31779 (89.7%)     	processed genes: 31811 (89.8%)     	processed genes: 31852 (89.9%)     	processed genes: 31932 (90.1%)     	processed genes: 32022 (90.4%)     	processed genes: 32102 (90.6%)     	processed genes: 32156 (90.8%)     	processed genes: 32234 (91%)     	processed genes: 32303 (91.2%)     	processed genes: 32351 (91.3%)     	processed genes: 32410 (91.5%)     	processed genes: 32470 (91.7%)     	processed genes: 32523 (91.8%)     	processed genes: 32570 (91.9%)     	processed genes: 32637 (92.1%)     	processed genes: 32688 (92.3%)     	processed genes: 32734 (92.4%)     	processed genes: 32767 (92.5%)     	processed genes: 32798 (92.6%)     	processed genes: 32832 (92.7%)     	processed genes: 32877 (92.8%)     	processed genes: 32924 (92.9%)     	processed genes: 32955 (93%)     	processed genes: 33000 (93.2%)     	processed genes: 33047 (93.3%)     	processed genes: 33168 (93.6%)     	processed genes: 33214 (93.8%)     	processed genes: 33254 (93.9%)     	processed genes: 33326 (94.1%)     	processed genes: 33458 (94.4%)     	processed genes: 33558 (94.7%)     	processed genes: 33627 (94.9%)     	processed genes: 33725 (95.2%)     	processed genes: 33788 (95.4%)     	processed genes: 33847 (95.5%)     	processed genes: 33917 (95.7%)     	processed genes: 34003 (96%)     	processed genes: 34086 (96.2%)     	processed genes: 34195 (96.5%)     	processed genes: 34283 (96.8%)     	processed genes: 34340 (96.9%)     	processed genes: 34406 (97.1%)     	processed genes: 34495 (97.4%)     	processed genes: 34578 (97.6%)     	processed genes: 34688 (97.9%)     	processed genes: 34825 (98.3%)     	processed genes: 34873 (98.4%)     	processed genes: 34924 (98.6%)     	processed genes: 34984 (98.8%)     	processed genes: 35021 (98.9%)     	processed genes: 35089 (99%)     	processed genes: 35172 (99.3%)     	processed genes: 35237 (99.5%)     	processed genes: 35285 (99.6%)     	processed genes: 35334 (99.7%)     	processed genes: 35371 (99.8%)                                                                                                                        	writing gene analysis results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/panic.genes.out
+	writing intermediate output to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/panic.genes.raw
+
+
+End time is 15:37:18, Wednesday 18 Feb 2026 (elapsed: 00:13:25)
+Running gene set step at broad resolution
+Welcome to MAGMA v1.10 (linux/s)
+Using flags:
+	--gene-results /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/panic.genes.raw
+	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/gene_sets/broad.tsv gene-col=gene_id set-col=set_id
+	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/broad
+
+Start time is 15:37:18, Wednesday 18 Feb 2026
+
+Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/panic.genes.raw... 
+	35426 genes read from file
+Loading gene-set annotation...
+Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/gene_sets/broad.tsv... 
+	detected 2 variables in file
+	using variable: gene_id (gene ID)
+	using variable: set_id (set ID)
+	9 gene-set definitions read from file
+	found 9 gene sets containing genes defined in genotype data (containing a total of 1344 unique genes)
+Preparing variables for analysis...
+	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
+	truncating covariate values more than 5 standard deviations from the mean
+	total variables available for analysis: 9 gene sets
+
+Parsing model specifications...
+Inverting gene-gene correlation matrix...
+	processing block 1 of 25	processing block 2 of 25	processing block 3 of 25	processing block 4 of 25	processing block 5 of 25	processing block 6 of 25	processing block 7 of 25	processing block 8 of 25	processing block 9 of 25	processing block 10 of 25	processing block 11 of 25	processing block 12 of 25	processing block 13 of 25	processing block 14 of 25	processing block 15 of 25	processing block 16 of 25	processing block 17 of 25	processing block 18 of 25	processing block 19 of 25	processing block 20 of 25	processing block 21 of 25	processing block 22 of 25	processing block 23 of 25	processing block 24 of 25	processing block 25 of 25                                                                                                                   Performing regression analysis...
+	testing direction: one-sided, positive (sets), two-sided (covar)
+	conditioning on internal variables:
+		gene size, log(gene size)
+		gene density, log(gene density)
+		sample size, log(sample size)
+		inverse mac, log(inverse mac)
+	analysing individual variables
+
+	analysing single-variable models (number of models: 9)
+                                                                                                                   	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/broad.gsa.out
+
+End time is 15:39:08, Wednesday 18 Feb 2026 (elapsed: 00:01:50)
+Running gene set step at mid resolution
+Welcome to MAGMA v1.10 (linux/s)
+Using flags:
+	--gene-results /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/panic.genes.raw
+	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/gene_sets/mid.tsv gene-col=gene_id set-col=set_id
+	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/mid
+
+Start time is 15:39:08, Wednesday 18 Feb 2026
+
+Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/panic.genes.raw... 
+	35426 genes read from file
+Loading gene-set annotation...
+Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/gene_sets/mid.tsv... 
+	detected 2 variables in file
+	using variable: gene_id (gene ID)
+	using variable: set_id (set ID)
+	10 gene-set definitions read from file
+	found 10 gene sets containing genes defined in genotype data (containing a total of 1491 unique genes)
+Preparing variables for analysis...
+	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
+	truncating covariate values more than 5 standard deviations from the mean
+	total variables available for analysis: 10 gene sets
+
+Parsing model specifications...
+Inverting gene-gene correlation matrix...
+	processing block 1 of 25	processing block 2 of 25	processing block 3 of 25	processing block 4 of 25	processing block 5 of 25	processing block 6 of 25	processing block 7 of 25	processing block 8 of 25	processing block 9 of 25	processing block 10 of 25	processing block 11 of 25	processing block 12 of 25	processing block 13 of 25	processing block 14 of 25	processing block 15 of 25	processing block 16 of 25	processing block 17 of 25	processing block 18 of 25	processing block 19 of 25	processing block 20 of 25	processing block 21 of 25	processing block 22 of 25	processing block 23 of 25	processing block 24 of 25	processing block 25 of 25                                                                                                                   Performing regression analysis...
+	testing direction: one-sided, positive (sets), two-sided (covar)
+	conditioning on internal variables:
+		gene size, log(gene size)
+		gene density, log(gene density)
+		sample size, log(sample size)
+		inverse mac, log(inverse mac)
+	analysing individual variables
+
+	analysing single-variable models (number of models: 10)
+                                                                                                                   	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/mid.gsa.out
+
+End time is 15:40:57, Wednesday 18 Feb 2026 (elapsed: 00:01:49)
+Running gene set step at fine resolution
+Welcome to MAGMA v1.10 (linux/s)
+Using flags:
+	--gene-results /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/panic.genes.raw
+	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/gene_sets/fine.tsv gene-col=gene_id set-col=set_id
+	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/fine
+
+Start time is 15:40:57, Wednesday 18 Feb 2026
+
+Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/panic.genes.raw... 
+	35426 genes read from file
+Loading gene-set annotation...
+Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/gene_sets/fine.tsv... 
+	detected 2 variables in file
+	using variable: gene_id (gene ID)
+	using variable: set_id (set ID)
+	18 gene-set definitions read from file
+	found 18 gene sets containing genes defined in genotype data (containing a total of 1865 unique genes)
+Preparing variables for analysis...
+	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
+	truncating covariate values more than 5 standard deviations from the mean
+	total variables available for analysis: 18 gene sets
+
+Parsing model specifications...
+Inverting gene-gene correlation matrix...
+	processing block 1 of 25	processing block 2 of 25	processing block 3 of 25	processing block 4 of 25	processing block 5 of 25	processing block 6 of 25	processing block 7 of 25	processing block 8 of 25	processing block 9 of 25	processing block 10 of 25	processing block 11 of 25	processing block 12 of 25	processing block 13 of 25	processing block 14 of 25	processing block 15 of 25	processing block 16 of 25	processing block 17 of 25	processing block 18 of 25	processing block 19 of 25	processing block 20 of 25	processing block 21 of 25	processing block 22 of 25	processing block 23 of 25	processing block 24 of 25	processing block 25 of 25                                                                                                                   Performing regression analysis...
+	testing direction: one-sided, positive (sets), two-sided (covar)
+	conditioning on internal variables:
+		gene size, log(gene size)
+		gene density, log(gene density)
+		sample size, log(sample size)
+		inverse mac, log(inverse mac)
+	analysing individual variables
+
+	analysing single-variable models (number of models: 18)
+                                                                                                                   	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/panic/fine.gsa.out
+
+End time is 15:43:16, Wednesday 18 Feb 2026 (elapsed: 00:02:19)
+**** Job ends ****
+Wed Feb 18 03:43:16 PM EST 2026

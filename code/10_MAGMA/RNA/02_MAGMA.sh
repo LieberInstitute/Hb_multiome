@@ -82,16 +82,15 @@ magma \
 
 #   Gene set analysis step
 
-for i in broad fine; do
-  echo "$i"
+for i in broad mid fine; do
+    echo "Running gene set step at $i resolution"
 
-gene_set_path=${repo_dir}/processed-data/10_MAGMA/RNA/gene_sets/enrichment_markers_$i.tsv
+    gene_set_path=${repo_dir}/processed-data/10_MAGMA/RNA/gene_sets/$i.tsv
 
-magma \
-    --gene-results $out_dir/${gwas}.genes.raw \
-    --set-annot $gene_set_path gene-col=gene_id set-col=set_id \
-    --out $out_dir/$i
-
+    magma \
+        --gene-results $out_dir/${gwas}.genes.raw \
+        --set-annot $gene_set_path gene-col=gene_id set-col=set_id \
+        --out $out_dir/$i
 done
 
 echo "**** Job ends ****"
