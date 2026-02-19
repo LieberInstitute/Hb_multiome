@@ -82,12 +82,19 @@ pandey_zebrafish_hab_metaM %>% group_by(cell_type) %>% slice_min(rank, n = 20) %
 #`Gene name` column is the human gene name
 hu_mu_zf_ortholog_df = data.table::fread(path_to_orthologs)
 table(hu_mu_zf_ortholog_df$`Mouse homology type`)
-#Get the 1to1 orthologs across the three species
+
+#Get the 1to1 orthologs across human and mouse, will likely need to relax for zebrafish, I think it's still reasonable to work with the many-to-many orthologs there
 hu_mu_zf_ortholog_df <- hu_mu_zf_ortholog_df %>% filter(`Mouse homology type` == 'ortholog_one2one' )
-hu_mu_zf_ortholog_df  = hu_mu_zf_ortholog_df %>% filter(!duplicated(`Gene name`))
+
+#To keep a record of the many-to-many zebrafish orthologs, filter on the unique combo of all three gene name columns
+hu_mu_zf_ortholog_df$comb_species_gene = paste(paste(hu_mu_zf_ortholog_df$`Gene name`, hu_mu_zf_ortholog_df$`Mouse gene name`, sep = '_'), hu_mu_zf_ortholog_df$`Zebrafish gene name`, sep = '_' )
+hu_mu_zf_ortholog_df  = hu_mu_zf_ortholog_df %>% filter(!duplicated(comb_species_gene))
 
 dim(hu_mu_zf_ortholog_df )
-View(hu_mu_zf_ortholog_df)
+hu_mu_zf_ortholog_df %>% 
+  select(`Gene name`, `Mouse gene name`, `Mouse homology type`, `Zebrafish gene name`, `Zebrafish homology type`) %>%
+  View()
+
 #The zebrafish gene names are all uppercase in the data, need to match the lowercase for the orthologtable
 head(pandey_zebrafish_hab_metaM )
 pandey_zebrafish_hab_metaM$lowercase_zeb_gene = tolower(pandey_zebrafish_hab_metaM$gene)
@@ -145,6 +152,16 @@ get_bubble_plot = function(seurat_object, top_markers, sample_name, group_col = 
 all_donor_seurat = as.Seurat(all_donor_sce, counts = "counts", data = "cpm")
 
 
+#In the introduction to the paper, it lists markers for the 3 defined domains
+#nptx2a - dorsolateral domain
+#gpr151 and pou4f1 dorsomedial domain
+#aoc1 ventral domain
+zeb_region_markers = c('nptx2a','gpr151','pou4f1','aoc1')
+zeb_region_markers = toupper(zeb_region_markers)
+p_bubble = get_bubble_plot(all_donor_seurat, zeb_region_markers, 'Zebrafish all 3 samples')
+p_bubble
+
+
 #Markers used in the original Wallace 2019 paper in Figure 1
 custom_markers = c('Tac2', 'Slc17a7', 'Slc17a6', 'Snap25', 'Gap43', 'Slc6a11', 'Cldn5', 'Abcc9', 'Pdgfrb', 'Cx3cr1', 'Mrc1', 'Col3a1', 'Gpr17', 'Mog', 'Olig1', 'Pdgfra')
 custom_markers = toupper(custom_markers)
@@ -154,7 +171,7 @@ p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish all 3 sa
 p_bubble
 
 
-
+#Our human Hab panel
 custom_markers = c('Tac3', 'Tac2','Gpr151','Pou4f1','Mbp')
 custom_markers = toupper(custom_markers)
 custom_markers = hu_mu_zf_ortholog_df %>% filter(`Gene name` %in% custom_markers) %>% pull(`Zebrafish gene name`) %>% toupper()
@@ -163,13 +180,40 @@ custom_markers = custom_markers[custom_markers != '']
 p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish all 3 samples')
 p_bubble
 
-
+#Cholinergic and substance P markers
 custom_markers = c('Chat', 'Slc18a3', 'Slc5a7','Tac1', 'Slc17a7', 'Slc17a6')
 custom_markers = toupper(custom_markers)
 custom_markers = hu_mu_zf_ortholog_df %>% filter(`Gene name` %in% custom_markers) %>% pull(`Zebrafish gene name`) %>% toupper()
 custom_markers = custom_markers[custom_markers != '']
 p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish all 3 samples')
 p_bubble
+
+
+#Adult Zebrafish markers used in Pandey Figures
+zeb_custom_adult_markers = c('tac3a','adrb2a','gng2','cbln2b','trh','lrrtm1','wnt7aa','adcyap1a',
+'pvalb7','sox1b','tubb5','gad2','cntnap2a', 'rgs5b','cd82a','zgc:173443','her4.3')
+zeb_custom_adult_markers = toupper(zeb_custom_adult_markers)
+p_bubble = get_bubble_plot(all_donor_seurat, zeb_custom_adult_markers, 'Zebrafish all 3 samples')
+p_bubble
+
+#Larval zebrafish markers used in Pandey figures
+zeb_custom_larva_markers = c('murcb','adrb2a','spx','cbln2b','c1ql4b','lrrtm1','pcdh7b','wnt7aa','adcyap1a',
+'ppp1r1c','sox1a','htr1aa','tubb5','gad2','kiss1', 'epcam')
+zeb_custom_larva_markers = toupper(zeb_custom_larva_markers)
+p_bubble = get_bubble_plot(all_donor_seurat, zeb_custom_larva_markers, 'Zebrafish all 3 samples')
+p_bubble
+
+
+
+#Top 10 metamarkers per metacluster
+custom_meta_markers = pandey_zebrafish_hab_metaM %>% group_by(cell_type) %>% slice_min(rank, n = 10) %>% pull(gene)
+custom_meta_markers = unique(custom_meta_markers)
+p_bubble = get_bubble_plot(all_donor_seurat, custom_meta_markers, 'Zebrafish all 3 samples')
+p_bubble
+
+
+
+
 
 
 
