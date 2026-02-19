@@ -2,8 +2,6 @@
 #Paper: https://www.sciencedirect.com/science/article/pii/S0960982218302252#abs0020
 
 
-
-
 library(SingleCellExperiment)
 library(Seurat)
 library(MetaNeighbor)
@@ -92,7 +90,7 @@ for (i in seq_along(donor_list)) {
   
   # Find neighbors and clusters
   donor_list[[i]] <- FindNeighbors(donor_list[[i]], dims = 1:20)
-  donor_list[[i]] <- FindClusters(donor_list[[i]], resolution = .5)
+  donor_list[[i]] <- FindClusters(donor_list[[i]], resolution = .8)
   
   # UMAP
   donor_list[[i]] <- RunUMAP(donor_list[[i]], dims = 1:20)
@@ -100,12 +98,12 @@ for (i in seq_along(donor_list)) {
   cat("Finished processing", names(donor_list)[i], "\n")
 }
 
+
+#For trying different cluster resolutions
 for (i in seq_along(donor_list)) {
-  #For trying different cluster resolutions
-  donor_list[[i]] <- FindClusters(donor_list[[i]], resolution = .5)
+  donor_list[[i]] <- FindClusters(donor_list[[i]], resolution = .8)
  
 }
-
 
 
 #Check out the UMAPs for each donor
@@ -172,7 +170,7 @@ plotHeatmap(MN_best_aurocs,
 
 
 #Get the metaclusters from the best vs next results, add those annotations to the full SCE object
-mclusters = extractMetaClusters(MN_best_aurocs, threshold = .5)
+mclusters = extractMetaClusters(MN_best_aurocs, threshold = .3)
 mclusters
 full_cluster_study_labels = paste(all_donor_sce$study_id, all_donor_sce$seurat_clusters, sep = "|")
 
