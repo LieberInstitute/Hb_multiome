@@ -108,7 +108,7 @@ wallace_mouse_hab_metaM %>% filter(gene %in% c('Gpr17', 'Mog', 'Olig1', 'Pdgfra'
 
 
 
-paste0(prev_data_path, '/individual_donor_seurat_objects_list.rds')
+
 #Load up the individual seurat objects, add the metaCluster annotations, and check out what it looks like in the UMAPs
 indv_mouse_seurats = readRDS(file = paste0(prev_data_path, '/individual_donor_seurat_objects_list.rds'))
 
@@ -144,51 +144,52 @@ top_cluster_markers = wallace_mouse_hab_metaM %>%
   filter(rank <= 5) %>% pull(gene)
 top_cluster_markers = unique(top_cluster_markers)
 
-DotPlot(hab_160822_seurat, 
-        features = c(top_cluster_markers),
-        group.by = 'meta_cluster')
-
-DotPlot(hab_161105_seurat, 
-        features = c(top_cluster_markers),
-        group.by = 'meta_cluster')
-
-
-
-#Custom bubble plot function
-
-get_bubble_plot = function(seurat_object, top_markers, sample_name, group_col = 'meta_cluster'){
+#Custom bubble plot, gets mean expression per cluster for a gene, plots the z-score of that across the clusters
+get_bubble_plot = function(seurat_object, top_markers, sample_name, group_col = "meta_cluster"){
   # Extract expression data and metadata
-  expr_data <- FetchData(seurat_object, vars = top_markers, slot = "data")
+  expr_data <- FetchData(seurat_object, vars = top_markers, layer = "data")
   metadata <- seurat_object@meta.data
 
   # Combine into a data frame
-  plot_data <- cbind(expr_data, meta_cluster = metadata[[group_col]]) %>%
+  plot_data <- cbind(expr_data, group_var = metadata[[group_col]]) %>%
     as.data.frame() %>%
-    tidyr::pivot_longer(cols = -meta_cluster, names_to = "gene", values_to = "expression")
+    tidyr::pivot_longer(cols = -group_var, names_to = "gene", values_to = "expression")
 
   # Calculate mean expression and percent expressing per cluster
-  summary_data <- plot_data %>%
-    group_by(gene, meta_cluster) %>%
+  summary_data <- plot_data %>% filter(group_var != 'outliers') %>%
+    group_by(gene, group_var) %>%
     summarise(
       mean_expression = mean(expression),
       pct_expressing = sum(expression > 0) / n() * 100,
       .groups = "drop"
-    )
+    ) %>%
+    # Calculate z-score of mean_expression per gene across clusters
+    group_by(gene) %>%
+    mutate(mean_expression_zscore = scale(mean_expression)[,1]) %>%
+    ungroup()
 
   # Set factor levels to control axis order
   summary_data$gene <- factor(summary_data$gene, levels = top_markers)
-  summary_data$meta_cluster <- factor(summary_data$meta_cluster, 
-                                      levels = sort(unique(summary_data$meta_cluster)))
+  summary_data$group_var <- factor(summary_data$group_var, 
+                                      levels = sort(unique(summary_data$group_var)))
 
   # Create bubble plot
-  p1 = ggplot(summary_data, aes(x = gene, y = meta_cluster, size = mean_expression, color = pct_expressing)) +
+  p1 = ggplot(summary_data, aes(x = gene, y = group_var, size = pct_expressing, color = mean_expression)) +
     geom_point() +
-    scale_color_gradient(low = "lightgrey", high = "red") +
+    scale_color_gradient2(low = "white", high = "red", name = "Mean Expression") +
     scale_size_continuous(range = c(2, 8)) +
     theme_minimal() + ggtitle(sample_name) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    labs(x = "Gene", y = "Meta Cluster", size = "Mean Expression", color = "% Expressing")
-  return(p1)
+    labs(x = "Gene", y = group_col, size = "% Expressing", color = "Mean Expression")
+    
+  p2 = ggplot(summary_data, aes(x = gene, y = group_var, size = pct_expressing, color = mean_expression_zscore)) +
+    geom_point() +
+    scale_color_gradient2(low = "blue", mid = 'white', high = "red", name = "Mean Exp. z-score") +
+    scale_size_continuous(range = c(2, 8)) +
+    theme_minimal() + ggtitle(sample_name) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(x = "Gene", y = group_col, size = "% Expressing", color = "Mean Exp. z-score")
+  return(list(p1, p2))
 }
 
 
