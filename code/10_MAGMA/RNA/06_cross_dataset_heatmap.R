@@ -108,12 +108,14 @@ for (gwas_set in names(gwas_groups)) {
 }
 
 #   P-value heatmap for the 5 factors + P factor
-p_val_heatmap(
-    results_df = results_df |>
-        filter(!is.na(gwas_factor)) |>
-        mutate(gwas_group = gwas_factor),
-    gwas_groups = gwas_factors,
-    f_name = "cross_dataset_5_factors.pdf"
-)
+for (cell_type_group in cell_type_groups) {
+    p_val_heatmap(
+        results_df = results_df |>
+            filter(!is.na(gwas_factor), cell_type_group == !!cell_type_group) |>
+            mutate(gwas_group = gwas_factor),
+        gwas_groups = gwas_factors,
+        f_name = sprintf("cross_dataset_5_factors_%s.pdf", cell_type_group)
+    )
+}
 
 session_info()
