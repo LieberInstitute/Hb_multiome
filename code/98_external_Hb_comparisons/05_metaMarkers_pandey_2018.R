@@ -109,47 +109,70 @@ pandey_zebrafish_hab_metaM %>% group_by(cell_type) %>% slice_min(rank, n = 20) %
   View()
 
 
-
-#Custom bubble plot function
-
-get_bubble_plot = function(seurat_object, top_markers, sample_name, group_col = 'meta_cluster'){
+#Custom bubble plot, gets mean expression per cluster for a gene, plots the z-score of that across the clusters
+get_bubble_plot = function(seurat_object, top_markers, sample_name, group_col = "meta_cluster"){
   # Extract expression data and metadata
-  expr_data <- FetchData(seurat_object, vars = top_markers, slot = "data")
+  expr_data <- FetchData(seurat_object, vars = top_markers, layer = "data")
   metadata <- seurat_object@meta.data
 
   # Combine into a data frame
-  plot_data <- cbind(expr_data, meta_cluster = metadata[[group_col]]) %>%
+  plot_data <- cbind(expr_data, group_var = metadata[[group_col]]) %>%
     as.data.frame() %>%
-    tidyr::pivot_longer(cols = -meta_cluster, names_to = "gene", values_to = "expression")
+    tidyr::pivot_longer(cols = -group_var, names_to = "gene", values_to = "expression")
 
   # Calculate mean expression and percent expressing per cluster
-  summary_data <- plot_data %>%
-    group_by(gene, meta_cluster) %>%
+  summary_data <- plot_data %>% filter(group_var != 'outliers') %>%
+    group_by(gene, group_var) %>%
     summarise(
       mean_expression = mean(expression),
       pct_expressing = sum(expression > 0) / n() * 100,
       .groups = "drop"
-    )
+    ) %>%
+    # Calculate z-score of mean_expression per gene across clusters
+    group_by(gene) %>%
+    mutate(mean_expression_zscore = scale(mean_expression)[,1]) %>%
+    ungroup()
 
   # Set factor levels to control axis order
   summary_data$gene <- factor(summary_data$gene, levels = top_markers)
-  summary_data$meta_cluster <- factor(summary_data$meta_cluster, 
-                                      levels = sort(unique(summary_data$meta_cluster)))
+  summary_data$group_var <- factor(summary_data$group_var, 
+                                      levels = sort(unique(summary_data$group_var)))
 
   # Create bubble plot
-  p1 = ggplot(summary_data, aes(x = gene, y = meta_cluster, size = mean_expression, color = pct_expressing)) +
+  p1 = ggplot(summary_data, aes(x = gene, y = group_var, size = pct_expressing, color = mean_expression)) +
     geom_point() +
-    scale_color_gradient(low = "lightgrey", high = "red") +
+    scale_color_gradient2(low = "white", high = "red", name = "Mean Expression") +
     scale_size_continuous(range = c(2, 8)) +
     theme_minimal() + ggtitle(sample_name) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    labs(x = "Gene", y = "Meta Cluster", size = "Mean Expression", color = "% Expressing")
-  return(p1)
+    labs(x = "Gene", y = group_col, size = "% Expressing", color = "Mean Expression")
+    
+  p2 = ggplot(summary_data, aes(x = gene, y = group_var, size = pct_expressing, color = mean_expression_zscore)) +
+    geom_point() +
+    scale_color_gradient2(low = "blue", mid = 'white', high = "red", name = "Mean Exp. z-score") +
+    scale_size_continuous(range = c(2, 8)) +
+    theme_minimal() + ggtitle(sample_name) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(x = "Gene", y = group_col, size = "% Expressing", color = "Mean Exp. z-score")
+  return(list(p1, p2))
 }
 
 
 #Switch the full dataset to Seurat for the bubble plots
 all_donor_seurat = as.Seurat(all_donor_sce, counts = "counts", data = "cpm")
+#HVGs
+all_donor_seurat <- FindVariableFeatures(all_donor_seurat, selection.method = "vst", nfeatures = 2000)
+
+#Scale data
+all.genes <- rownames(all_donor_seurat)
+all_donor_seurat <- ScaleData(all_donor_seurat, features = all.genes)
+
+#PCA
+all_donor_seurat  <- RunPCA(all_donor_seurat , features = VariableFeatures(object = all_donor_seurat ))
+DimPlot(all_donor_seurat, reduction = "pca") + NoLegend()
+
+#UMAP
+all_donor_seurat  <- RunUMAP(all_donor_seurat , dims = 1:20)
 
 
 #In the introduction to the paper, it lists markers for the 3 defined domains
@@ -159,7 +182,13 @@ all_donor_seurat = as.Seurat(all_donor_sce, counts = "counts", data = "cpm")
 zeb_region_markers = c('nptx2a','gpr151','pou4f1','aoc1')
 zeb_region_markers = toupper(zeb_region_markers)
 p_bubble = get_bubble_plot(all_donor_seurat, zeb_region_markers, 'Zebrafish all 3 samples')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
+#From these markers
+#dorsolateral: 8
+#dorsomedial: 1, 2, 3, 4, 7, 9
+#ventral: 5, 6
+# unknown: 10 
 
 
 #Markers used in the original Wallace 2019 paper in Figure 1
@@ -168,8 +197,13 @@ custom_markers = toupper(custom_markers)
 custom_markers = hu_mu_zf_ortholog_df %>% filter(`Gene name` %in% custom_markers) %>% pull(`Zebrafish gene name`) %>% toupper()
 custom_markers = custom_markers[custom_markers != '']
 p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish all 3 samples')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
+#From these markers, high counts of snap25a mask the color scale
+#non-neuronal: 10, no snap25 and expresses cldn5a, mrc1a, abss9, all at low levels
+#VGLUT1: 7, 8
+#VGLUT2: 1, 2, 3, 7, 8
 
 #Our human Hab panel
 custom_markers = c('Tac3', 'Tac2','Gpr151','Pou4f1','Mbp')
@@ -178,7 +212,13 @@ custom_markers = hu_mu_zf_ortholog_df %>% filter(`Gene name` %in% custom_markers
 custom_markers = custom_markers[custom_markers != '']
 
 p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish all 3 samples')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
+
+#Non-neuronal: 10, again with MBPa
+#Tac3a: 1, 2, might be the most aligned with mouse and human medial
+
+
 
 #Cholinergic and substance P markers
 custom_markers = c('Chat', 'Slc18a3', 'Slc5a7','Tac1', 'Slc17a7', 'Slc17a6')
@@ -186,7 +226,13 @@ custom_markers = toupper(custom_markers)
 custom_markers = hu_mu_zf_ortholog_df %>% filter(`Gene name` %in% custom_markers) %>% pull(`Zebrafish gene name`) %>% toupper()
 custom_markers = custom_markers[custom_markers != '']
 p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish all 3 samples')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
+
+#Cholinergic, so there's no expression of chata and chatb is not in the gene annotations
+#slc5a7a: 1, 2, only cholinergic marker that seems to have expression
+#supstanc P: 4, 8
+
 
 
 #Adult Zebrafish markers used in Pandey Figures
@@ -194,14 +240,16 @@ zeb_custom_adult_markers = c('tac3a','adrb2a','gng2','cbln2b','trh','lrrtm1','wn
 'pvalb7','sox1b','tubb5','gad2','cntnap2a', 'rgs5b','cd82a','zgc:173443','her4.3')
 zeb_custom_adult_markers = toupper(zeb_custom_adult_markers)
 p_bubble = get_bubble_plot(all_donor_seurat, zeb_custom_adult_markers, 'Zebrafish all 3 samples')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 #Larval zebrafish markers used in Pandey figures
 zeb_custom_larva_markers = c('murcb','adrb2a','spx','cbln2b','c1ql4b','lrrtm1','pcdh7b','wnt7aa','adcyap1a',
 'ppp1r1c','sox1a','htr1aa','tubb5','gad2','kiss1', 'epcam')
 zeb_custom_larva_markers = toupper(zeb_custom_larva_markers)
 p_bubble = get_bubble_plot(all_donor_seurat, zeb_custom_larva_markers, 'Zebrafish all 3 samples')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 
 
@@ -209,7 +257,85 @@ p_bubble
 custom_meta_markers = pandey_zebrafish_hab_metaM %>% group_by(cell_type) %>% slice_min(rank, n = 10) %>% pull(gene)
 custom_meta_markers = unique(custom_meta_markers)
 p_bubble = get_bubble_plot(all_donor_seurat, custom_meta_markers, 'Zebrafish all 3 samples')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
+#Only real thing that stands out is inhibitory markers in cluster 3
+#This population expresses gad1, gad2, vglut1, vglut2 
+
+
+custom_markers = c('gad1','gad2','slc32a1','slc17a6','slc17a7', 'OPRM1', 'OPRD1','OPRK1')
+custom_markers = toupper(custom_markers)
+custom_markers = hu_mu_zf_ortholog_df %>% filter(`Gene name` %in% custom_markers) %>% pull(`Zebrafish gene name`) %>% toupper()
+custom_markers = custom_markers[custom_markers != '']
+p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish all 3 samples')
+p_bubble[[1]]
+p_bubble[[2]]
+
+#Inhibitory: 3, expresses GAD1, GAD2, and VGAT, low levels of VGLUT2
+
+
+
+#Zebrafish specific cholinergic markers, found from https://www-nature-com.proxy1.library.jhu.edu/articles/s41598-020-72524-3
+#Presynaptic markers: chata, chatb, hacta, hactb, vachta, vachtb, ache
+#nicotinic ach reseptors: chrna3, chrna7, chrna2a
+#cholinergic channels?: slc5a7
+#supstance p markers: tac1, tacr1a, tacr1b
+
+custom_chol_markers = c('chata', 'chatb', 'hacta', 'hactb', 'vachta', 'vachtb', 'ache', 'chrna3', 'chrna7', 'chrna2a',
+'slc5a7a', 'slc5a7','tac1', 'tacr1a', 'tacr1b')
+custom_chol_markers = toupper(custom_chol_markers)
+p_bubble = get_bubble_plot(all_donor_seurat, custom_chol_markers, 'Zebrafish all 3 samples')
+p_bubble[[1]]
+p_bubble[[2]]
+
+
+#Taking all of the above together, here are initial annotations
+#1: dorsomedial_cholinergic_tac3a_1
+#2: dorsomedial_cholinergic_tac3a_2
+#3: dorsomedial_inhibitory_gap43_vglut2
+#4: dorsomedial_subP
+#5: ventral_1
+#6: ventral_2
+#7: dorsomedial_vglut1_vglut2
+#8: dorsolateral_subP_vglut1_vglut2
+#9: dorsomedial_vglut2
+#10: non_neuronal
+
+
+#metacluster annotations from all the above
+meta_annot_vec = c('dorsomedial_cholinergic_tac3a_1' = 'meta_cluster1',
+                    'dorsomedial_cholinergic_tac3a_2' = 'meta_cluster2',
+                    'dorsomedial_inhibitory_gap43_vglut2' = 'meta_cluster3',
+                    'dorsomedial_subP' = 'meta_cluster4',
+                    'ventral_1' = 'meta_cluster5',
+                    'ventral_2' = 'meta_cluster6',
+                    'dorsomedial_vglut1_vglut2' = 'meta_cluster7',
+                    'dorsolateral_subP_vglut1_vglut2' = 'meta_cluster8',
+                    'dorsomedial_vglut2' = 'meta_cluster9',
+                    'non_neuronal' = 'meta_cluster10',
+                    'outliers' = 'outliers'  
+)
+
+meta_annot_vec  = setNames(names(meta_annot_vec), meta_annot_vec)
+
+
+all_donor_seurat$meta_clust_celltype_annot = unname(meta_annot_vec[all_donor_seurat$meta_cluster])
+table(all_donor_seurat$meta_clust_celltype_annot, all_donor_seurat$meta_cluster)
+
+#Save the metadata as a data.frame to add to the seurat data object later
+full_seurat_metadata = all_donor_seurat@meta.data
+saveRDS(full_seurat_metadata, paste0(new_data_path, '/pandey_zebrafish_metaclust_celltype_annot_metadata.rds'))
+
+
+
+#and a final umap with the annotated metaclusters
+p5 = DimPlot(all_donor_seurat , reduction = "umap", group.by = 'meta_clust_celltype_annot', label = TRUE) + 
+  ggtitle('Pandey 2018: metacluster celltype annotations')
+p5
+ggsave(p5, filename = 'pandey_zebrafish_hab_metaCluster_celltype_annot_umap.pdf', path = plot_path,
+device = 'pdf', width = 8, height = 7)
+
+
 
 
 
