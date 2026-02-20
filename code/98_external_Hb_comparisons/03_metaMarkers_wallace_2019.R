@@ -198,17 +198,20 @@ custom_markers = c('Tac2', 'Slc17a7', 'Slc17a6', 'Snap25', 'Gap43', 'Slc6a11', '
 
 
 p_bubble = get_bubble_plot(hab_160822_seurat, custom_markers, 'Mouse: 160822')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 p_bubble = get_bubble_plot(hab_161102_seurat, custom_markers, 'Mouse: 161102')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 p_bubble = get_bubble_plot(hab_161103_seurat, custom_markers, 'Mouse: 161103')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 p_bubble = get_bubble_plot(hab_161105_seurat, custom_markers, 'Mouse: 161105')
-p_bubble
-
+p_bubble[[1]]
+p_bubble[[2]]
 
 #Human marker panel
 #We use Tac3 in humans, but not present in the mouse annotations
@@ -216,16 +219,20 @@ custom_markers = c('Tac2','Gpr151','Pou4f1','Mbp')
 
 
 p_bubble = get_bubble_plot(hab_160822_seurat, custom_markers, 'Mouse: 160822')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 p_bubble = get_bubble_plot(hab_161102_seurat, custom_markers, 'Mouse: 161102')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 p_bubble = get_bubble_plot(hab_161103_seurat, custom_markers, 'Mouse: 161103')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 p_bubble = get_bubble_plot(hab_161105_seurat, custom_markers, 'Mouse: 161105')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 
 #Neuronal subtype markers
@@ -236,30 +243,38 @@ custom_markers = c('Chat', 'Slc18a3', 'Slc5a7','Tac1', 'Slc17a7', 'Slc17a6')
 
 
 p_bubble = get_bubble_plot(hab_160822_seurat, custom_markers, 'Mouse: 160822')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 p_bubble = get_bubble_plot(hab_161102_seurat, custom_markers, 'Mouse: 161102')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 p_bubble = get_bubble_plot(hab_161103_seurat, custom_markers, 'Mouse: 161103')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 p_bubble = get_bubble_plot(hab_161105_seurat, custom_markers, 'Mouse: 161105')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 
 #And repeat the above but looking at the author habenula subclusters
 p_bubble = get_bubble_plot(hab_160822_seurat, custom_markers, 'Mouse: 160822', group_col = 'author_subHab_celltype')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 p_bubble = get_bubble_plot(hab_161102_seurat, custom_markers, 'Mouse: 161102', group_col = 'author_subHab_celltype')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 p_bubble = get_bubble_plot(hab_161103_seurat, custom_markers, 'Mouse: 161103', group_col = 'author_subHab_celltype')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 p_bubble = get_bubble_plot(hab_161105_seurat, custom_markers, 'Mouse: 161105', group_col = 'author_subHab_celltype')
-p_bubble
+p_bubble[[1]]
+p_bubble[[2]]
 
 
 
@@ -319,7 +334,7 @@ custom_markers = c('Tac2', 'Slc17a7', 'Slc17a6', 'Snap25', 'Gap43', 'Slc6a11', '
 
 p_bubble_paper_markers = get_bubble_plot(all_donor_seurat , custom_markers, 'Wallace 2019: all mouse samples')
 p_bubble_paper_markers
-ggsave(p_bubble_paper_markers, filename = 'wallace_mouse_hab_paper_markers_meta_cluster_bubble.pdf', path = plot_path,
+ggsave(p_bubble_paper_markers[[2]], filename = 'wallace_mouse_hab_paper_markers_meta_cluster_bubble.pdf', path = plot_path,
 device = 'pdf', width = 10, height = 8)
 
 
@@ -328,7 +343,7 @@ custom_markers = c('Tac2','Gpr151','Pou4f1','Mbp')
 
 p_bubble_human_markers = get_bubble_plot(all_donor_seurat , custom_markers, 'Wallace 2019: all mouse samples')
 p_bubble_human_markers
-ggsave(p_bubble_human_markers, filename = 'wallace_mouse_human_hab_markers_meta_cluster_bubble.pdf', path = plot_path,
+ggsave(p_bubble_human_markers[[2]], filename = 'wallace_mouse_human_hab_markers_meta_cluster_bubble.pdf', path = plot_path,
 device = 'pdf', width = 10, height = 8)
 
 
@@ -337,26 +352,25 @@ custom_markers = c('Chat', 'Slc18a3', 'Slc5a7','Tac1', 'Slc17a7', 'Slc17a6')
 
 p_bubble_excit_markers = get_bubble_plot(all_donor_seurat , custom_markers, 'Wallace 2019: all mouse samples')
 p_bubble_excit_markers
-ggsave(p_bubble_excit_markers, filename = 'wallace_mouse_excite_subtype_markers_meta_cluster_bubble.pdf', path = plot_path,
+ggsave(p_bubble_excit_markers[[2]], filename = 'wallace_mouse_excite_subtype_markers_meta_cluster_bubble.pdf', path = plot_path,
 device = 'pdf', width = 10, height = 8)
 
 
 #metacluster annotations from all the above
-meta_annot_vec = c('chol_subP_MHb_1' = 'meta_cluster1',
-                    'Endothelial' = 'meta_cluster2',
-                    'Macrophages' = 'meta_cluster3',
-                    'Astrocytes' = 'meta_cluster4',
-                    'Cholinergic MHb' = 'meta_cluster5',
-                    'Polydendrocytes' = 'meta_cluster6',
-                    'Substance P MHb' = 'meta_cluster7',
-                    'Oligodendrocytes' = 'meta_cluster8',
-                    'Pericytes' = 'meta_cluster9',
-                    'Differentiating Oligodendrocytes' = 'meta_cluster10',
-                    'Microglia' = 'meta_cluster11',
-                    'LHb_1' = 'meta_cluster12',
-                    'chol_subP_MHb_2' = 'meta_cluster13',
+meta_annot_vec = c('MHb_subP' = 'meta_cluster1',
+                    'Polydendrocytes' = 'meta_cluster2',
+                    'Endothelial' = 'meta_cluster3',
+                    'LHb_1' = 'meta_cluster4',
+                    'Macrophages' = 'meta_cluster5',
+                    'Astrocytes' = 'meta_cluster6',
+                    'Fibroblasts' = 'meta_cluster7',
+                    'MHb_cholinergic' = 'meta_cluster8',
+                    'Oligodendrocytes' = 'meta_cluster9',
+                    'MHb_subP_cholinergic' = 'meta_cluster10',
+                    'Differentiating Oligodendrocytes' = 'meta_cluster11',
+                    'Pericytes' = 'meta_cluster12',
+                    'Microglia' = 'meta_cluster13',
                     'LHb_2' = 'meta_cluster14',
-                    'LHb_3' = 'meta_cluster15',
                     'outliers' = 'outliers'  
 )
 
