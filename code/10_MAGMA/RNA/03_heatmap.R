@@ -4,6 +4,7 @@ library(viridis)
 library(sessioninfo)
 
 results_path = here('processed-data','10_MAGMA', 'RNA', '%s', '%s.gsa.out')
+out_path = here('processed-data', '10_MAGMA', 'RNA', 'heatmap_results.csv')
 plot_dir = here('plots', '10_MAGMA', 'RNA')
 
 cell_type_groups = c('broad', 'mid', 'fine')
@@ -120,6 +121,8 @@ results_df = bind_rows(results_df_list) |>
         gwas_group = factor(gwas_renaming[gwas_group], levels = gwas_renaming),
         cell_type_group = factor(cell_type_group, levels = cell_type_groups)
     )
+
+write_csv(results_df, out_path)
 
 #   P-value heatmaps split by substance-use-related traits vs. others
 for (gwas_set in names(gwas_groups)) {
