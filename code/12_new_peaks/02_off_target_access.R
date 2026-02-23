@@ -1,5 +1,6 @@
 #   To what degree is accessibility noticeable in cell types where peaks were
-#   not called by MACS2?
+#   not called by MACS2? Since there are a huge number of peaks, we'll use a
+#   matrix product approach that's fairly complex in code, but fast
 
 library(sessioninfo)
 library(Seurat)
@@ -13,7 +14,10 @@ seur_path = here(
     "processed-data", "06_peak_calling", "12_pseudobulk_MACS2",
     "Mid_pseudobulk.spearman.5e5.rds"
 )
+plot_path = here("plots", "12_new_peaks", "off_target_accessibility.pdf")
 atac_assay = "ATAC_macs2_pseudo"
+
+dir.create(dirname(plot_path), showWarnings = FALSE)
 
 seur = readRDS(seur_path)
 
@@ -100,3 +104,46 @@ message(
         mean(count_df$target_mean > count_df$nontarget_mean) * 100
     )
 )
+
+#   Density plot comparing target vs. non-target accessibility distributions
+p = count_df |>
+    pivot_longer(
+        cols = c(target_mean, nontarget_mean),
+        names_to = "peak_type",
+        values_to = "mean_counts"
+    ) |>
+    mutate(
+        peak_type = factor(
+            peak_type,
+            levels = c("target_mean", "nontarget_mean"),
+            labels = c("Target Cell Type(s)", "Non-target Cell Type(s)")
+        )
+    ) |>
+    #   Remove extreme outliers to make the x-axis have more dynamic range
+    group_by(peak_type) |>
+    filter(mean_counts <= quantile(mean_counts, 0.999)) |>
+    ungroup() |>
+    ggplot(aes(x = mean_counts, fill = peak_type, color = peak_type)) +
+    geom_density(alpha = 0.5, linewidth = 1) +
+    scale_x_log10() +
+    scale_fill_manual(
+        values = c(
+            "Target Cell Type(s)" = "blue", "Non-target Cell Type(s)" = "red"
+        )
+    ) +
+    scale_color_manual(
+        values = c(
+            "Target Cell Type(s)" = "blue", "Non-target Cell Type(s)" = "red"
+        )
+    ) +
+    theme_bw(base_size = 20) +
+    labs(
+        x = "Mean Raw Accessibility Per Donor",
+        y = "Density",
+        fill = "Peak Type",
+        color = "Peak Type",
+        title = "Distribution of Peak Accessibility"
+    )
+pdf(plot_path, width = 10, height = 5)
+print(p)
+dev.off()
