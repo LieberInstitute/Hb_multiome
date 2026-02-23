@@ -181,7 +181,7 @@ all_donor_seurat  <- RunUMAP(all_donor_seurat , dims = 1:20)
 #aoc1 ventral domain
 zeb_region_markers = c('nptx2a','gpr151','pou4f1','aoc1')
 zeb_region_markers = toupper(zeb_region_markers)
-p_bubble = get_bubble_plot(all_donor_seurat, zeb_region_markers, 'Zebrafish all 3 samples')
+p_bubble = get_bubble_plot(all_donor_seurat, zeb_region_markers, 'Zebrafish: Hab region markers')
 p_bubble[[1]]
 p_bubble[[2]]
 #From these markers
@@ -196,7 +196,7 @@ custom_markers = c('Tac2', 'Slc17a7', 'Slc17a6', 'Snap25', 'Gap43', 'Slc6a11', '
 custom_markers = toupper(custom_markers)
 custom_markers = hu_mu_zf_ortholog_df %>% filter(`Gene name` %in% custom_markers) %>% pull(`Zebrafish gene name`) %>% toupper()
 custom_markers = custom_markers[custom_markers != '']
-p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish all 3 samples')
+p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish: Wallace mouse markers')
 p_bubble[[1]]
 p_bubble[[2]]
 
@@ -211,7 +211,7 @@ custom_markers = toupper(custom_markers)
 custom_markers = hu_mu_zf_ortholog_df %>% filter(`Gene name` %in% custom_markers) %>% pull(`Zebrafish gene name`) %>% toupper()
 custom_markers = custom_markers[custom_markers != '']
 
-p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish all 3 samples')
+p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish: Human Hab panel markers')
 p_bubble[[1]]
 p_bubble[[2]]
 
@@ -225,7 +225,7 @@ custom_markers = c('Chat', 'Slc18a3', 'Slc5a7','Tac1', 'Slc17a7', 'Slc17a6')
 custom_markers = toupper(custom_markers)
 custom_markers = hu_mu_zf_ortholog_df %>% filter(`Gene name` %in% custom_markers) %>% pull(`Zebrafish gene name`) %>% toupper()
 custom_markers = custom_markers[custom_markers != '']
-p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish all 3 samples')
+p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish: Cholinergic and substance P markers')
 p_bubble[[1]]
 p_bubble[[2]]
 
@@ -256,7 +256,7 @@ p_bubble[[2]]
 #Top 10 metamarkers per metacluster
 custom_meta_markers = pandey_zebrafish_hab_metaM %>% group_by(cell_type) %>% slice_min(rank, n = 10) %>% pull(gene)
 custom_meta_markers = unique(custom_meta_markers)
-p_bubble = get_bubble_plot(all_donor_seurat, custom_meta_markers, 'Zebrafish all 3 samples')
+p_bubble = get_bubble_plot(all_donor_seurat, custom_meta_markers, 'Zebrafish: Top 10 markers')
 p_bubble[[1]]
 p_bubble[[2]]
 #Only real thing that stands out is inhibitory markers in cluster 3
@@ -267,7 +267,7 @@ custom_markers = c('gad1','gad2','slc32a1','slc17a6','slc17a7', 'OPRM1', 'OPRD1'
 custom_markers = toupper(custom_markers)
 custom_markers = hu_mu_zf_ortholog_df %>% filter(`Gene name` %in% custom_markers) %>% pull(`Zebrafish gene name`) %>% toupper()
 custom_markers = custom_markers[custom_markers != '']
-p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish all 3 samples')
+p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish: Inhibitory/Excitatory and opioid markers')
 p_bubble[[1]]
 p_bubble[[2]]
 
@@ -284,7 +284,7 @@ p_bubble[[2]]
 custom_chol_markers = c('chata', 'chatb', 'hacta', 'hactb', 'vachta', 'vachtb', 'ache', 'chrna3', 'chrna7', 'chrna2a',
 'slc5a7a', 'slc5a7','tac1', 'tacr1a', 'tacr1b')
 custom_chol_markers = toupper(custom_chol_markers)
-p_bubble = get_bubble_plot(all_donor_seurat, custom_chol_markers, 'Zebrafish all 3 samples')
+p_bubble = get_bubble_plot(all_donor_seurat, custom_chol_markers, 'Zebrafish: Cholinergic and substance P markers')
 p_bubble[[1]]
 p_bubble[[2]]
 
@@ -335,7 +335,9 @@ p5
 ggsave(p5, filename = 'pandey_zebrafish_hab_metaCluster_celltype_annot_umap.pdf', path = plot_path,
 device = 'pdf', width = 8, height = 7)
 
-
+p6 = DimPlot(all_donor_seurat , reduction = "umap", group.by = 'study_id', label = TRUE) + 
+  ggtitle('Pandey 2018: sample batch')
+p6
 
 
 
