@@ -139,9 +139,9 @@ View(as.data.frame(colData(all_donor_sce)))
 all_donor_sce = all_donor_sce[,
   all_donor_sce$meta_clust_celltype_annot != 'outliers'
 ]
-#Ignore larva?
-all_donor_sce = all_donor_sce[, all_donor_sce$study_id != 'Larva']
-table(all_donor_sce$study_id)
+#Ignore larva? No, good to keep
+#all_donor_sce = all_donor_sce[, all_donor_sce$study_id != 'Larva']
+#table(all_donor_sce$study_id)
 
 
 #Get highly variable genes, this time highly variable genes across the donor datasets, sticking with 2000
@@ -167,10 +167,9 @@ plotHeatmap(
   MN_aurocs,
   show_dendro = TRUE,
   show_labels = TRUE,
-  cex = .5,
-  title = "MetaNeighbor AUROCs for Mouse and Zebrafish Habenula"
+  cex = .5
 )
-
+title("MetaNeighbor Mouse and Zebrafish Habenula: 3000 HVGs non-summed paralogs")
 
 #And the best versus next approach
 
@@ -189,9 +188,10 @@ plotHeatmap(
   MN_best_aurocs,
   show_dendro = TRUE,
   show_labels = TRUE,
-  cex = .5,
-  title = "MetaNeighbor best_vs_next AUROCs Mouse and Zebrafish Habenula"
+  cex = .5
 )
+title("MetaNeighbor BvsNext Mouse and Zebrafish Habenula: 3000 HVGs non-summed paralogs")
+
 
 #Get the metaclusters from the best vs next results, add those annotations to the full SCE object
 mclusters = extractMetaClusters(MN_best_aurocs, threshold = .9)
@@ -212,15 +212,6 @@ all_zebF_sce = readRDS(paste0(
   '/all_donor_sce_with_denovo_clusters.rds'
 ))
 
-#all_zebF_genes = rownames(all_zebF_sce)
-#all_zebF_genes[1:100]
-
-#last_char <- stringr::str_sub(all_zebF_genes, -1)
-#all_zebF_genes[1:10]
-#last_char[1:10]
-
-#table(last_char == 'A')
-#table(last_char == 'B')
 
 #Get the human gene name, using the one-to-many orthologs in zebrafish
 hu_mu_zf_ortholog_df = data.table::fread(path_to_orthologs)
@@ -317,9 +308,9 @@ zeb_seurat  <- RunUMAP(zeb_seurat  , dims = 1:20)
 
 #Doesnt look insane
 DimPlot(zeb_seurat , reduction = "umap", group.by = 'meta_clust_celltype_annot', label = TRUE) + 
-  ggtitle('Pendey 2018: MetaCluster annotations, summed counts')
+  ggtitle('Pendey 2018: MetaCluster annotations, summed paralogs')
 DimPlot(zeb_seurat , reduction = "umap", group.by = 'study_id', label = TRUE) + 
-  ggtitle('Pendey 2018: MetaCluster annotations, summed counts')
+  ggtitle('Pendey 2018: MetaCluster annotations, summed paralogs')
 
 
 #Convert to SingleCellExperiment for MetaNeighbor
@@ -404,9 +395,9 @@ View(as.data.frame(colData(all_donor_sce)))
 all_donor_sce = all_donor_sce[,
   all_donor_sce$meta_clust_celltype_annot != 'outliers'
 ]
-#Ignore larva?
-all_donor_sce = all_donor_sce[, all_donor_sce$study_id != 'Larva']
-table(all_donor_sce$study_id)
+
+#all_donor_sce = all_donor_sce[, all_donor_sce$study_id != 'Larva']
+#table(all_donor_sce$study_id)
 
 
 #Get highly variable genes, this time highly variable genes across the donor datasets, sticking with 2000
@@ -417,6 +408,9 @@ global_hvgs = variableGenes(
 )
 length(global_hvgs)
 keep_global_hvgs = global_hvgs[1:2000]
+
+keep_global_hvgs[grepl('GAD', keep_global_hvgs)]
+keep_global_hvgs[grepl('SLC17A', keep_global_hvgs)]
 
 
 MN_aurocs = MetaNeighborUS(
@@ -432,10 +426,9 @@ plotHeatmap(
   MN_aurocs,
   show_dendro = TRUE,
   show_labels = TRUE,
-  cex = .5,
-  title = "MetaNeighbor AUROCs for Mouse and Zebrafish Habenula"
+  cex = .5
 )
-
+title("MetaNeighbor Mouse and Zebrafish Habenula: 2000 HVGs summed paralogs")
 
 #And the best versus next approach
 
@@ -454,9 +447,9 @@ plotHeatmap(
   MN_best_aurocs,
   show_dendro = TRUE,
   show_labels = TRUE,
-  cex = .5,
-  title = "MetaNeighbor best_vs_next AUROCs Mouse and Zebrafish Habenula"
+  cex = .5
 )
+title("MetaNeighbor BvsNext Mouse and Zebrafish Habenula: 2000 HVGs summed paralogs")
 
 #Get the metaclusters from the best vs next results, add those annotations to the full SCE object
 mclusters = extractMetaClusters(MN_best_aurocs, threshold = .7)
