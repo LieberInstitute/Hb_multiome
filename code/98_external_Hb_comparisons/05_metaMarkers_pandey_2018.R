@@ -174,6 +174,12 @@ DimPlot(all_donor_seurat, reduction = "pca") + NoLegend()
 #UMAP
 all_donor_seurat  <- RunUMAP(all_donor_seurat , dims = 1:20)
 
+#Seurat object without the larval data, just double checking the developmental data is not driving some of the marker trends
+#specifically the excitatory/inhibitory population
+no_larva_seurat = subset(all_donor_seurat, subset = study_id != 'Larva')
+
+
+
 
 #In the introduction to the paper, it lists markers for the 3 defined domains
 #nptx2a - dorsolateral domain
@@ -268,6 +274,10 @@ custom_markers = toupper(custom_markers)
 custom_markers = hu_mu_zf_ortholog_df %>% filter(`Gene name` %in% custom_markers) %>% pull(`Zebrafish gene name`) %>% toupper()
 custom_markers = custom_markers[custom_markers != '']
 p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish: Inhibitory/Excitatory and opioid markers')
+p_bubble[[1]]
+p_bubble[[2]]
+
+p_bubble = get_bubble_plot(no_larva_seurat, custom_markers, 'only adult Zebrafish: Inhibitory/Excitatory and opioid markers')
 p_bubble[[1]]
 p_bubble[[2]]
 
