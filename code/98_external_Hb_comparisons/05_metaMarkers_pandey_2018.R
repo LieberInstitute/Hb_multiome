@@ -236,7 +236,7 @@ p_bubble[[2]]
 
 
 #Adult Zebrafish markers used in Pandey Figures
-zeb_custom_adult_markers = c('tac3a','adrb2a','gng2','cbln2b','trh','lrrtm1','wnt7aa','adcyap1a',
+zeb_custom_adult_markers = c('tac3a','adrb2a','gng2','cbln2b','trh','lrrtm1','wnt7aa','adcyap1a','igf2a',
 'pvalb7','sox1b','tubb5','gad2','cntnap2a', 'rgs5b','cd82a','zgc:173443','her4.3')
 zeb_custom_adult_markers = toupper(zeb_custom_adult_markers)
 p_bubble = get_bubble_plot(all_donor_seurat, zeb_custom_adult_markers, 'Zebrafish all 3 samples')
@@ -244,7 +244,7 @@ p_bubble[[1]]
 p_bubble[[2]]
 
 #Larval zebrafish markers used in Pandey figures
-zeb_custom_larva_markers = c('murcb','adrb2a','spx','cbln2b','c1ql4b','lrrtm1','pcdh7b','wnt7aa','adcyap1a',
+zeb_custom_larva_markers = c('murcb','adrb2a','spx','cbln2b','c1ql4b','lrrtm1','pcdh7b','wnt7aa','adcyap1a', 'igf2a',
 'ppp1r1c','sox1a','htr1aa','tubb5','gad2','kiss1', 'epcam')
 zeb_custom_larva_markers = toupper(zeb_custom_larva_markers)
 p_bubble = get_bubble_plot(all_donor_seurat, zeb_custom_larva_markers, 'Zebrafish all 3 samples')
