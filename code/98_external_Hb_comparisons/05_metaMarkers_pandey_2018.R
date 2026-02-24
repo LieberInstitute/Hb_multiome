@@ -41,12 +41,12 @@ table(all_donor_sce$study_id)
 
 sce_zebAdult1 <- all_donor_sce[, all_donor_sce$study_id == "Adult1"]
 sce_zebAdult2 <- all_donor_sce[, all_donor_sce$study_id == "Adult2"]
-sce_zebLarva <- all_donor_sce[, all_donor_sce$study_id == "Larva"]
+#sce_zebLarva <- all_donor_sce[, all_donor_sce$study_id == "Larva"]
 
 
 markers_adult1 = compute_markers(assay(sce_zebAdult1, "cpm"), sce_zebAdult1$meta_cluster)
 markers_adult2 = compute_markers(assay(sce_zebAdult2, "cpm"), sce_zebAdult2$meta_cluster)
-markers_larva = compute_markers(assay(sce_zebLarva, "cpm"), sce_zebLarva$meta_cluster)
+#markers_larva = compute_markers(assay(sce_zebLarva, "cpm"), sce_zebLarva$meta_cluster)
 
 head(markers_adult1)
 
@@ -54,14 +54,14 @@ head(markers_adult1)
 #Save markers
 export_markers(markers_adult1, paste0(new_data_path, '/markers_adult1_meta_clusters_markers.csv'))
 export_markers(markers_adult2, paste0(new_data_path, '/markers_adult2_meta_clusters_markers.csv'))
-export_markers(markers_larva, paste0(new_data_path, '/markers_larva_meta_clusters_markers.csv'))
+#export_markers(markers_larva, paste0(new_data_path, '/markers_larva_meta_clusters_markers.csv'))
 
 
 #Load up markers and get the metaMarkers 
 pandey_zebrafish_hab_markers = list(
     markers_adult1 = read_markers(paste0(new_data_path, '/markers_adult1_meta_clusters_markers.csv.gz')),
-    markers_adult2 = read_markers(paste0(new_data_path, '/markers_adult2_meta_clusters_markers.csv.gz')),
-    markers_larva = read_markers(paste0(new_data_path, '/markers_larva_meta_clusters_markers.csv.gz'))
+    markers_adult2 = read_markers(paste0(new_data_path, '/markers_adult2_meta_clusters_markers.csv.gz'))
+    #markers_larva = read_markers(paste0(new_data_path, '/markers_larva_meta_clusters_markers.csv.gz'))
     
 )
 
@@ -104,7 +104,7 @@ index = match(pandey_zebrafish_hab_metaM$lowercase_zeb_gene, hu_mu_zf_ortholog_d
 pandey_zebrafish_hab_metaM$human_gene_ortholog = hu_mu_zf_ortholog_df$`Gene name`[index]
 
 
-pandey_zebrafish_hab_metaM %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% 
+pandey_zebrafish_hab_metaM %>% group_by(cell_type) %>% slice_min(rank, n = 50) %>% 
   select(cell_type, rank, gene, human_gene_ortholog, recurrence, auroc) %>% 
   View()
 
@@ -176,7 +176,7 @@ all_donor_seurat  <- RunUMAP(all_donor_seurat , dims = 1:20)
 
 #Seurat object without the larval data, just double checking the developmental data is not driving some of the marker trends
 #specifically the excitatory/inhibitory population
-no_larva_seurat = subset(all_donor_seurat, subset = study_id != 'Larva')
+#no_larva_seurat = subset(all_donor_seurat, subset = study_id != 'Larva')
 
 
 
@@ -191,10 +191,10 @@ p_bubble = get_bubble_plot(all_donor_seurat, zeb_region_markers, 'Zebrafish: Hab
 p_bubble[[1]]
 p_bubble[[2]]
 #From these markers
-#dorsolateral: 8
-#dorsomedial: 1, 2, 3, 4, 7, 9
-#ventral: 5, 6
-# unknown: 10 
+#dorsolateral: 3
+#dorsomedial: 4, 5, 6
+#ventral: 1, 2
+# unknown: 7, 8
 
 
 #Markers used in the original Wallace 2019 paper in Figure 1
@@ -207,9 +207,14 @@ p_bubble[[1]]
 p_bubble[[2]]
 
 #From these markers, high counts of snap25a mask the color scale
-#non-neuronal: 10, no snap25 and expresses cldn5a, mrc1a, abss9, all at low levels
-#VGLUT1: 7, 8
-#VGLUT2: 1, 2, 3, 7, 8
+#non-neuronal: 8, no snap25 and expresses cldn5a, mrc1a, SLC6A11B, all at low levels
+#VGLUT1: 3, 4, 6, though mostly 3 and 4
+#VGLUT2: pretty much all the neuronal clusters, 1, 2, 3, 4, 5, 6, 7
+
+#Check the DE of the VGLUT genes, so they're not strong markers, would need a strong outgroup if they all express them at low levels
+pandey_zebrafish_hab_metaM %>% filter(gene %in% c('SLC17A6A','SLC17A6B','SLC17A7A','SLC17A7B')) %>% group_by(cell_type) %>% 
+  select(cell_type, rank, gene, human_gene_ortholog, recurrence, auroc) %>% 
+  View()
 
 #Our human Hab panel
 custom_markers = c('Tac3', 'Tac2','Gpr151','Pou4f1','Mbp')
@@ -221,8 +226,8 @@ p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish: Human H
 p_bubble[[1]]
 p_bubble[[2]]
 
-#Non-neuronal: 10, again with MBPa
-#Tac3a: 1, 2, might be the most aligned with mouse and human medial
+#Non-neuronal: 8, again with MBPa
+#Tac3a: 4, 5 , might be the most aligned with mouse and human medial
 
 
 
@@ -236,8 +241,8 @@ p_bubble[[1]]
 p_bubble[[2]]
 
 #Cholinergic, so there's no expression of chata and chatb is not in the gene annotations
-#slc5a7a: 1, 2, only cholinergic marker that seems to have expression
-#supstanc P: 4, 8
+#slc5a7a: 4, 5, only cholinergic marker that seems to have expression
+#supstanc P: 3
 
 
 
@@ -249,13 +254,23 @@ p_bubble = get_bubble_plot(all_donor_seurat, zeb_custom_adult_markers, 'Zebrafis
 p_bubble[[1]]
 p_bubble[[2]]
 
-#Larval zebrafish markers used in Pandey figures
-zeb_custom_larva_markers = c('murcb','adrb2a','spx','cbln2b','c1ql4b','lrrtm1','pcdh7b','wnt7aa','adcyap1a', 'igf2a',
-'ppp1r1c','sox1a','htr1aa','tubb5','gad2','kiss1', 'epcam')
-zeb_custom_larva_markers = toupper(zeb_custom_larva_markers)
-p_bubble = get_bubble_plot(all_donor_seurat, zeb_custom_larva_markers, 'Zebrafish all 3 samples')
+zeb_custom_adult_markers = c('tac3a','tac3b','adrb2a','adrb2b','adcyap1a','adcyap1b',
+'igf2a')
+zeb_custom_adult_markers = toupper(zeb_custom_adult_markers)
+p_bubble = get_bubble_plot(all_donor_seurat, zeb_custom_adult_markers, 'Zebrafish all 3 samples')
 p_bubble[[1]]
 p_bubble[[2]]
+
+#The right hab marker used was Tac3a, corresponds to 4 and 5
+#The left hab markers used were ADYAP1A and IGF2A, correspond to cluster 3
+
+#Larval zebrafish markers used in Pandey figures
+#zeb_custom_larva_markers = c('murcb','adrb2a','spx','cbln2b','c1ql4b','lrrtm1','pcdh7b','wnt7aa','adcyap1a', 'igf2a',
+#'ppp1r1c','sox1a','htr1aa','tubb5','gad2','kiss1', 'epcam')
+#zeb_custom_larva_markers = toupper(zeb_custom_larva_markers)
+#p_bubble = get_bubble_plot(all_donor_seurat, zeb_custom_larva_markers, 'Zebrafish all 3 samples')
+#p_bubble[[1]]
+#p_bubble[[2]]
 
 
 
@@ -265,8 +280,7 @@ custom_meta_markers = unique(custom_meta_markers)
 p_bubble = get_bubble_plot(all_donor_seurat, custom_meta_markers, 'Zebrafish: Top 10 markers')
 p_bubble[[1]]
 p_bubble[[2]]
-#Only real thing that stands out is inhibitory markers in cluster 3
-#This population expresses gad1, gad2, vglut1, vglut2 
+
 
 
 custom_markers = c('gad1','gad2','slc32a1','slc17a6','slc17a7', 'OPRM1', 'OPRD1','OPRK1')
@@ -277,11 +291,9 @@ p_bubble = get_bubble_plot(all_donor_seurat, custom_markers, 'Zebrafish: Inhibit
 p_bubble[[1]]
 p_bubble[[2]]
 
-p_bubble = get_bubble_plot(no_larva_seurat, custom_markers, 'only adult Zebrafish: Inhibitory/Excitatory and opioid markers')
-p_bubble[[1]]
-p_bubble[[2]]
 
-#Inhibitory: 3, expresses GAD1, GAD2, and VGAT, low levels of VGLUT2
+
+#Inhibitory: 7, expresses GAD1, GAD2, and VGAT, low levels of VGLUT2
 
 
 
@@ -299,30 +311,31 @@ p_bubble[[1]]
 p_bubble[[2]]
 
 
+
+pandey_zebrafish_hab_metaM %>% filter(gene == 'SLC6A1B') %>% 
+  View()
+
+
 #Taking all of the above together, here are initial annotations
-#1: dorsomedial_cholinergic_tac3a_1
-#2: dorsomedial_cholinergic_tac3a_2
-#3: dorsomedial_inhibitory_gap43_vglut2
-#4: dorsomedial_subP
-#5: ventral_1
-#6: ventral_2
-#7: dorsomedial_vglut1_vglut2
-#8: dorsolateral_subP_vglut1_vglut2
-#9: dorsomedial_vglut2
-#10: non_neuronal
+#1: ventral
+#2: ventral, top markers seem to include immediate early genes
+#3: dorsolateral_TAC1_left, BDNF is also a marker
+#4: dorsomedial_TAC3A_cholinergic_right
+#5: dorsomedial_TAC3A_cholinergic_right, stronger expression of tac3 and slc5A7 gene, also SLC6A1 (GAT1) is a marker
+#6: dorsomedial_neuron
+#7: inhibitory_gap43, VGAT, GAD1, and GAD2 are all markers
+#8: non-neuronal, alot of ribosomal genes are top markers, might be general mush
 
 
 #metacluster annotations from all the above
-meta_annot_vec = c('dorsomedial_cholinergic_tac3a_1' = 'meta_cluster1',
-                    'dorsomedial_cholinergic_tac3a_2' = 'meta_cluster2',
-                    'dorsomedial_inhibitory_gap43_vglut2' = 'meta_cluster3',
-                    'dorsomedial_subP' = 'meta_cluster4',
-                    'ventral_1' = 'meta_cluster5',
-                    'ventral_2' = 'meta_cluster6',
-                    'dorsomedial_vglut1_vglut2' = 'meta_cluster7',
-                    'dorsolateral_subP_vglut1_vglut2' = 'meta_cluster8',
-                    'dorsomedial_vglut2' = 'meta_cluster9',
-                    'non_neuronal' = 'meta_cluster10',
+meta_annot_vec = c( 'ventral' = 'meta_cluster1',
+                    'ventral_immediate_early' = 'meta_cluster2',
+                    'dorsolateral_left_subP_BDNF' = 'meta_cluster3',
+                    'dorsomedial_right_cholinergic' = 'meta_cluster4',
+                    'dorsomedial_right_cholinergic_GAT1' = 'meta_cluster5',
+                    'dorsomedial_neuron' = 'meta_cluster6',
+                    'inhibitory_gap43' = 'meta_cluster7',
+                    'non_neuronal' = 'meta_cluster8',
                     'outliers' = 'outliers'  
 )
 
