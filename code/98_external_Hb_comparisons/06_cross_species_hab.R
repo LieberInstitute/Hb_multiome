@@ -43,6 +43,15 @@ path_to_orthologs = here(
   'human_mouse_zebrafish_orthologs.txt.gz'
 )
 
+#Path to orthologs
+new_data_path = here(
+  'processed-data',
+  '98_external_Hb_comparisons',
+  '06_cross_species_hab'
+)
+
+if (!dir.exists(new_data_path)) dir.create(new_data_path)
+
 
 #Load up the full SCE objects, contains the metacluster annotations
 all_mouse_sce = readRDS(paste0(
@@ -151,7 +160,7 @@ global_hvgs = variableGenes(
   exp_labels = all_donor_sce$study_id
 )
 length(global_hvgs)
-keep_global_hvgs = global_hvgs[1:3000]
+keep_global_hvgs = global_hvgs[1:500]
 
 
 MN_aurocs = MetaNeighborUS(
@@ -169,7 +178,7 @@ plotHeatmap(
   show_labels = TRUE,
   cex = .5
 )
-title("MetaNeighbor Mouse and Zebrafish Habenula: 3000 HVGs non-summed paralogs")
+title("MetaNeighbor Mouse and Zebrafish Habenula: 500 HVGs non-summed paralogs")
 
 #And the best versus next approach
 
@@ -190,7 +199,7 @@ plotHeatmap(
   show_labels = TRUE,
   cex = .5
 )
-title("MetaNeighbor BvsNext Mouse and Zebrafish Habenula: 3000 HVGs non-summed paralogs")
+title("MetaNeighbor BvsNext Mouse and Zebrafish Habenula: 500 HVGs non-summed paralogs")
 
 
 #Get the metaclusters from the best vs next results, add those annotations to the full SCE object
@@ -321,6 +330,9 @@ zeb_sce = as.SingleCellExperiment(zeb_seurat)
 names(assays(zeb_sce)) = c('counts','cpm','scaledata')
 zeb_sce
 
+#Save the paralog summed version of the zebrafish data
+saveRDS(zeb_sce, file = paste0(new_data_path, '/adult_zebrafish_summed_paralogs.rds'))
+
 #Load up the full SCE objects, contains the metacluster annotations
 all_mouse_sce = readRDS(paste0(
   wallace_02_data_path,
@@ -363,12 +375,6 @@ current_mouse_metadata = readRDS(paste0(
 colData(all_mouse_sce) = S4Vectors::DataFrame(current_mouse_metadata)
 
 
-
-#Seems silly to split than merge for MetaNeighbor, but I want to make sure the cluster labels are in the same column for both datasets
-table(all_mouse_sce$study_id)
-
-table(zeb_sce$study_id)
-
 studies <- unique(all_mouse_sce$study_id)
 mouse_sce_list <- lapply(studies, function(study) {
   all_mouse_sce[, all_mouse_sce$study_id == study]
@@ -395,10 +401,6 @@ View(as.data.frame(colData(all_donor_sce)))
 all_donor_sce = all_donor_sce[,
   all_donor_sce$meta_clust_celltype_annot != 'outliers'
 ]
-
-#all_donor_sce = all_donor_sce[, all_donor_sce$study_id != 'Larva']
-#table(all_donor_sce$study_id)
-
 
 #Get highly variable genes, this time highly variable genes across the donor datasets, sticking with 2000
 global_hvgs = variableGenes(
@@ -452,7 +454,7 @@ plotHeatmap(
 title("MetaNeighbor BvsNext Mouse and Zebrafish Habenula: 2000 HVGs summed paralogs")
 
 #Get the metaclusters from the best vs next results, add those annotations to the full SCE object
-mclusters = extractMetaClusters(MN_best_aurocs, threshold = .7)
+mclusters = extractMetaClusters(MN_best_aurocs, threshold = .5)
 mclusters
 
 
