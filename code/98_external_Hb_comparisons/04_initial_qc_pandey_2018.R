@@ -29,13 +29,15 @@ if (!dir.exists(plot_path)) dir.create(plot_path)
 #The available data is in the from of count matrices
 #Start with the 10X data, load up as seurat objects and do standard processing
 
+#Going to focus on the adult data at the moment
+
 # Read one of the count matrices
-pandey_counts <- as.matrix(read.table(
-  gzfile(paste0(pandey_10x_path, "/GSM2818521_larva_counts_matrix.txt.gz"))
-))
+#pandey_counts <- as.matrix(read.table(
+#  gzfile(paste0(pandey_10x_path, "/GSM2818521_larva_counts_matrix.txt.gz"))
+#))
 # Create Seurat object
-zeb_larva_hab_seu <- CreateSeuratObject(counts = pandey_counts, project = "Zebrafish_Habenula")
-zeb_larva_hab_seu
+#zeb_larva_hab_seu <- CreateSeuratObject(counts = pandey_counts, project = "Zebrafish_Habenula")
+#zeb_larva_hab_seu
 
 #Adult 1 sample
 pandey_counts <- as.matrix(read.table(
@@ -56,23 +58,23 @@ zeb_adult2_hab_seu
 
 
 #Not sure how mitochondrial genes are annotated in zebrafish
-zeb_genes = rownames(zeb_larva_hab_seu)
+zeb_genes = rownames(zeb_adult1_hab_seu)
 mt_genes <- zeb_genes[grepl("^mt-|mt$|-mt-", zeb_genes, ignore.case = TRUE)]
 #Looks like its still just MT-, so seurat default functions should work
 
-zeb_larva_hab_seu[["percent.mt"]] <- PercentageFeatureSet(zeb_larva_hab_seu, pattern = "^MT-")
+#zeb_larva_hab_seu[["percent.mt"]] <- PercentageFeatureSet(zeb_larva_hab_seu, pattern = "^MT-")
 zeb_adult1_hab_seu[["percent.mt"]] <- PercentageFeatureSet(zeb_adult1_hab_seu, pattern = "^MT-")
 zeb_adult2_hab_seu[["percent.mt"]] <- PercentageFeatureSet(zeb_adult2_hab_seu, pattern = "^MT-")
 
 #Looks like these are actually pre-filtered, at least the adult samples match the 6% mt threshold reported in the paper
-VlnPlot(zeb_larva_hab_seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+#VlnPlot(zeb_larva_hab_seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
 VlnPlot(zeb_adult1_hab_seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
 VlnPlot(zeb_adult2_hab_seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
 
 #Clustering steps for each individual donor
 
-donor_list = list(zeb_larva_hab_seu, zeb_adult1_hab_seu, zeb_adult2_hab_seu)
-names(donor_list) = c("Larva", "Adult1", "Adult2")
+donor_list = list(zeb_adult1_hab_seu, zeb_adult2_hab_seu)
+names(donor_list) = c("Adult1", "Adult2")
 for (i in seq_along(donor_list)) {
   
   #CPM normalization
@@ -133,7 +135,7 @@ all_donor_sce = mergeSCE(donor_sce_list)
 View(as.data.frame(colData(all_donor_sce)))
 
 #Get highly variable genes, this time highly variable genes across the donor datasets, sticking with 2000
-global_hvgs = variableGenes(dat = all_donor_sce, min_recurrence = 3, exp_labels = all_donor_sce$study_id)
+global_hvgs = variableGenes(dat = all_donor_sce, min_recurrence = 2, exp_labels = all_donor_sce$study_id)
 length(global_hvgs)
 keep_global_hvgs = global_hvgs[1:2000]
 
@@ -145,11 +147,9 @@ MN_aurocs = MetaNeighborUS(var_genes = keep_global_hvgs,
   fast_version = TRUE)
 
 #Plot allby-all AUROC heatmap
-plotHeatmap(MN_aurocs, 
-  show_dendro = TRUE, 
-  show_labels = TRUE, 
-  cex = .5,
-  title = "MetaNeighbor AUROCs for Pendey 2018 zebrafish")
+plotHeatmap(MN_aurocs,
+  cex = .5)
+title("MetaNeighbor AUROCs for Pendey 2018 zebrafish")
 
 
 #And the best versus next approach
@@ -163,14 +163,12 @@ one_vs_best = TRUE, symmetric_output = FALSE)
 
 #Plot best_vs_next AUROC heatmap
 plotHeatmap(MN_best_aurocs, 
-  show_dendro = TRUE, 
-  show_labels = TRUE, 
-  cex = .5,
-  title = "MetaNeighbor best_vs_next AUROCs for Pendey 2018 zebrafish")
+  cex = .5)
+title("MetaNeighbor best_vs_next AUROCs for Pendey 2018 zebrafish")
 
 
 #Get the metaclusters from the best vs next results, add those annotations to the full SCE object
-mclusters = extractMetaClusters(MN_best_aurocs, threshold = .3)
+mclusters = extractMetaClusters(MN_best_aurocs, threshold = .2)
 mclusters
 full_cluster_study_labels = paste(all_donor_sce$study_id, all_donor_sce$seurat_clusters, sep = "|")
 
@@ -240,22 +238,17 @@ paste0(plot_path, '/all_by_all_MN_aurocs_heatmap.pdf')
 #Save the MetaNeighbor plots
 pdf(paste0(plot_path, '/all_by_all_MN_aurocs_heatmap.pdf'), width = 10, height = 8)
 #Plot allby-all AUROC heatmap
-plotHeatmap(MN_aurocs, 
-  show_dendro = TRUE, 
-  show_labels = TRUE, 
-  cex = .5,
-  title = "MetaNeighbor AUROCs for Pendey 2018 zebrafish")
-
+plotHeatmap(MN_aurocs,
+  cex = .5)
+title("MetaNeighbor AUROCs for Pendey 2018 zebrafish")
 dev.off()
 
 
 pdf(paste0(plot_path, '/best_vs_next_MN_aurocs_heatmap.pdf'), width = 10, height = 8)
 #Plot best_vs_next AUROC heatmap
 plotHeatmap(MN_best_aurocs, 
-  show_dendro = TRUE, 
-  show_labels = TRUE, 
-  cex = .5,
-  title = "MetaNeighbor best_vs_next AUROCs for Pendey 2018 zebrafish") 
+  cex = .5)
+title("MetaNeighbor best_vs_next AUROCs for Pendey 2018 zebrafish")
 dev.off()
 
 
