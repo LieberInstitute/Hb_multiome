@@ -5,6 +5,7 @@
 library(SingleCellExperiment)
 library(Seurat)
 library(MetaMarkers)
+library(MetaNeighbor)
 library(dplyr)
 library(ggplot2)
 library(here)
@@ -395,8 +396,235 @@ device = 'pdf', width = 8, height = 7)
 
 
 
+##################################
+#Compare to the Hashikawa datasets
+#path is /dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/09_cross_species_analysis/Hashikawa_data
+#First check out what is there, probably best to just use what has been processed and annotated already
+###################################
+
+#From the /dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/code/09_cross_species_analysis/03_Hashikawa_data_prep.R
+#What I want is the sce_mouse_habenula.Rdata object
+
+hashikawa_path = '/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/09_cross_species_analysis/Hashikawa_data'
+list.files(hashikawa_path)
+
+#Loads as sce_mouse_sub, list of sce objects
+load(paste0(hashikawa_path, '/sce_mouse_habenula.Rdata'))
+hashikawa_sce = sce_mouse_sub$all
+rm(sce_mouse_sub)
+
+#Swap the rownames to gene symbols
+rowData(hashikawa_sce)
+rownames(hashikawa_sce) = rowData(hashikawa_sce)$Symbol
+
+#What do the annotations look like
+#Only has Neuron1, 2, 3, etc labels
+#Is this only lateral habenula?
+colnames(colData(hashikawa_sce))
+table(hashikawa_sce$celltype)
+#Probably split by control and stimulus
+table(hashikawa_sce$stim)
+
+#Load up the Wallace data
+wallace_sce = readRDS(paste0(
+  prev_data_path,
+  '/all_donor_sce_with_denovo_clusters.rds'
+))
+
+#add in the annotated metdata
+current_mouse_metadata = readRDS(paste0(
+  new_data_path,
+  '/wallace_mouse_metaclust_celltype_annot_metadata.rds'
+))
+colData(wallace_sce) = S4Vectors::DataFrame(current_mouse_metadata)
+
+wallace_sce
+
+
+#Add cpm to the hashikawa data
+assay(hashikawa_sce, "cpm") = MetaMarkers::convert_to_cpm(assay(hashikawa_sce, "counts"))
+
+#Filter for the shared present genes
+present_genes = intersect(rownames(wallace_sce), rownames(hashikawa_sce))
+length(present_genes)
+
+hashikawa_sce = hashikawa_sce[present_genes, ]
+wallace_sce = wallace_sce[present_genes, ]
+
+#Sanity check
+table(rownames(hashikawa_sce) %in% rownames(wallace_sce))
+
+#Rename cell-type metadata to match
+wallace_sce$celltype = wallace_sce$meta_clust_celltype_annot
 
 
 
+#Split wallace by donor and Hashikawa by simulus condition
+studies <- unique(wallace_sce$study_id)
+wallace_sce_list <- lapply(studies, function(study) {
+  wallace_sce[, wallace_sce$study_id == study]
+})
+names(wallace_sce_list) <- studies
 
 
+studies <- unique(hashikawa_sce$stim)
+hashikawa_sce_list <- lapply(studies, function(study) {
+  hashikawa_sce[, hashikawa_sce$stim == study]
+})
+names(hashikawa_sce_list) <- studies
+
+
+
+########################
+#MetaNeighbor
+#########################
+
+#Get single SCE object
+all_donor_sce = mergeSCE(c(wallace_sce_list, hashikawa_sce_list))
+View(as.data.frame(colData(all_donor_sce)))
+
+#Ignore the outlier cells
+all_donor_sce = all_donor_sce[,
+  all_donor_sce$celltype != 'outliers'
+]
+
+
+#Get highly variable genes, this time highly variable genes across the donor datasets, sticking with 2000
+global_hvgs = variableGenes(
+  dat = all_donor_sce,
+  min_recurrence = 2,
+  exp_labels = all_donor_sce$study_id
+)
+length(global_hvgs)
+keep_global_hvgs = global_hvgs[1:2000]
+
+
+MN_aurocs = MetaNeighborUS(
+  var_genes = keep_global_hvgs,
+  dat = all_donor_sce,
+  study_id = all_donor_sce$study_id,
+  cell_type = all_donor_sce$celltype,
+  fast_version = TRUE
+)
+
+#Plot allby-all AUROC heatmap
+plotHeatmap(
+  MN_aurocs,
+  show_dendro = TRUE,
+  show_labels = TRUE,
+  cex = .5
+)
+title("MetaNeighbor Mouse Wallace vs Hashikawa: 2000 HVGs")
+
+#And the best versus next approach
+
+MN_best_aurocs = MetaNeighborUS(
+  var_genes = keep_global_hvgs,
+  dat = all_donor_sce,
+  study_id = all_donor_sce$study_id,
+  cell_type = all_donor_sce$celltype,
+  fast_version = TRUE,
+  one_vs_best = TRUE,
+  symmetric_output = FALSE
+)
+
+#Plot best_vs_next AUROC heatmap
+plotHeatmap(
+  MN_best_aurocs,
+  show_dendro = TRUE,
+  show_labels = TRUE,
+  cex = .5
+)
+title("MetaNeighbor BvsNext Mouse Wallace vs Hashikawa: 2000 HVGs")
+
+
+#From these, Hashikawa 
+#Neuron1 - cholinergic
+#Neuron 6 - weak cholinergic match
+#Neuron 7 - likely cholinergic
+
+#Neuron 3 - likely SubP, better match for the subP-cholinergic population in Wallace
+
+#Neuron 2, 4, and 8 - Wallace LHb_1
+#Neuron 5 - Wallace LHb_2
+
+
+#Check out  the markers in the hashikawa dataset
+
+get_bubble_plot_sce = function(sce_object, top_markers, sample_name, group_col = "meta_cluster"){
+  # Extract expression data and metadata
+  expr_data <- assay(sce_object, "cpm")[top_markers, ]
+  metadata <- colData(sce_object)
+
+  # Convert to data frame for plotting
+  plot_data <- as.data.frame(t(expr_data)) %>%
+    tibble::rownames_to_column("cell_id") %>%
+    cbind(group_var = metadata[[group_col]]) %>%
+    tidyr::pivot_longer(cols = -c(cell_id, group_var), names_to = "gene", values_to = "expression")
+
+  # Calculate mean expression and percent expressing per cluster
+  summary_data <- plot_data %>%
+    group_by(gene, group_var) %>%
+    summarise(
+      mean_expression = mean(expression),
+      pct_expressing = sum(expression > 0) / n() * 100,
+      .groups = "drop"
+    ) %>%
+    # Calculate z-score of mean_expression per gene across clusters
+    group_by(gene) %>%
+    mutate(mean_expression_zscore = scale(mean_expression)[,1]) %>%
+    ungroup()
+
+  # Set factor levels to control axis order
+  summary_data$gene <- factor(summary_data$gene, levels = top_markers)
+  summary_data$group_var <- factor(summary_data$group_var, 
+                                      levels = sort(unique(summary_data$group_var)))
+
+  # Create bubble plot
+  p1 = ggplot(summary_data, aes(x = gene, y = group_var, size = mean_expression, color = pct_expressing)) +
+    geom_point() +
+    scale_color_gradient(low = "lightgrey", high = "red") +
+    scale_size_continuous(range = c(2, 8)) +
+    theme_minimal() + ggtitle(sample_name) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(x = "Gene", y = group_col, size = "Mean Expression", color = "% Expressing")
+
+  p2 = ggplot(summary_data, aes(x = gene, y = group_var, size = pct_expressing, color = mean_expression_zscore)) +
+    geom_point() +
+    scale_color_gradient2(low = "blue", mid = 'white', high = "red", name = "Mean Exp. z-score") +
+    scale_size_continuous(range = c(2, 8)) +
+    theme_minimal() + ggtitle(sample_name) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(x = "Gene", y = group_col, size = "% Expressing", color = "Mean Exp. z-score")
+  return(list(p1, p2))
+}
+
+
+rownames(hashikawa_sce) = toupper(rownames(hashikawa_sce))
+
+p_bubble = get_bubble_plot_sce(hashikawa_sce, 
+  top_markers = c('CHAT', 'SLC5A7','SLC18A3', 'TAC1', 'TACR1', 'TAC2','GPR151', 'GAP43','SNAP25', 'POU4F1', 
+  'SLC17A6', 'SLC17A7', 'GAD1', 'GAD2', 'SLC32A1'), sample_name = "Hashikawa mouse Habenula", group_col = "celltype")
+
+p_bubble[[1]]
+p_bubble[[2]]
+
+
+#Altogether, very clear matches between the mouse datasets.
+#Substance P and cholinergic populations clear
+#And at least in this dataset, putative LHb 2, 4, 8 which all map to Wallace LHb1 have GAD1, GAD2, and VGAT expression
+#LHb5 which maps to wallace LHb2 does not. Double check the same in the Wallace data, is this a Lateral habenula distinction we can make?
+
+rownames(wallace_sce) = toupper(rownames(wallace_sce))
+p_bubble = get_bubble_plot_sce(wallace_sce[ , wallace_sce$celltype != 'outliers'], 
+  top_markers = c('CHAT', 'SLC5A7','SLC18A3', 'TAC1', 'TACR1', 'TAC2','GPR151', 'GAP43','SNAP25', 'POU4F1', 
+  'SLC17A6', 'SLC17A7', 'GAD1', 'GAD2', 'SLC32A1'), sample_name = "Wallace mouse Habenula", group_col = "celltype")
+
+p_bubble[[1]]
+p_bubble[[2]]
+
+#So not as clear here, but Wallace LHb 1 does have higher GAD2 and VGAT expression than LHb2.
+#Another distinction maybe is Wallace LHb1 and Hashikawa 2, 4, 8 are all GPR151 low, while Wallace LHb2 and Hashikawa 5 are GPR151 high
+#Same trend with Pou4f1
+
+#The lack of VGLUT1 expression in all lateral Hab clusters is really clear across both datasets
