@@ -105,6 +105,9 @@ colData(all_mouse_sce) = S4Vectors::DataFrame(current_mouse_metadata)
 zeb_sce$final_Annotations = zeb_sce$meta_clust_celltype_annot
 all_mouse_sce$final_Annotations = all_mouse_sce$meta_clust_celltype_annot
 
+zeb_sce$species = 'Zebrafish'
+all_mouse_sce$species = 'Mouse'
+yalcinbas_sce$species = 'Human'
 
 
 #Split the mouse and zebrafish SCE objects into lists of SCE objects for each donor, for MetaNeighbor
@@ -125,6 +128,7 @@ names(zebF_sce_list) <- studies
 #Get single SCE object
 all_donor_sce = mergeSCE(c(mouse_sce_list, zebF_sce_list, list(Human = yalcinbas_sce)))
 table(all_donor_sce$study_id)
+table(all_donor_sce$species)
 table(all_donor_sce$final_Annotations)
 
 #Ignore the outlier cells
@@ -135,16 +139,16 @@ all_donor_sce = all_donor_sce[, all_donor_sce$final_Annotations!= 'outliers']
 global_hvgs = variableGenes(
   dat = all_donor_sce,
   min_recurrence = 2,
-  exp_labels = all_donor_sce$study_id
+  exp_labels = all_donor_sce$species
 )
 length(global_hvgs)
-keep_global_hvgs = global_hvgs[1:2000]
-
+#keep_global_hvgs = global_hvgs[1:2000]
+keep_global_hvgs = global_hvgs
 
 MN_aurocs = MetaNeighborUS(
   var_genes = keep_global_hvgs,
   dat = all_donor_sce,
-  study_id = all_donor_sce$study_id,
+  study_id = all_donor_sce$species,
   cell_type = all_donor_sce$final_Annotations,
   fast_version = TRUE
 )
@@ -161,7 +165,7 @@ title("MetaNeighbor Human, Mouse, ZebF Habenula: 2000 HVGs")
 MN_best_aurocs = MetaNeighborUS(
   var_genes = keep_global_hvgs,
   dat = all_donor_sce,
-  study_id = all_donor_sce$study_id,
+  study_id = all_donor_sce$species,
   cell_type = all_donor_sce$final_Annotations,
   fast_version = TRUE,
   one_vs_best = TRUE,
@@ -175,6 +179,9 @@ plotHeatmap(
 )
 title("MetaNeighbor BvsNext Human, Mouse, ZebF Habenula: 2000 HVGs")
 
+cluster_graph = makeClusterGraph(MN_best_aurocs, low_threshold = .3)
+plotClusterGraph(cluster_graph, all_donor_sce$species, all_donor_sce$final_Annotations, size_factor = 3)
+
 
 
 
@@ -185,6 +192,7 @@ title("MetaNeighbor BvsNext Human, Mouse, ZebF Habenula: 2000 HVGs")
 #Get single SCE object
 human_mouse_sce = mergeSCE(c(mouse_sce_list, list(Human = yalcinbas_sce)))
 table(human_mouse_sce$study_id)
+table(human_mouse_sce$species)
 table(human_mouse_sce$final_Annotations)
 
 #Ignore the outlier cells
@@ -195,16 +203,16 @@ human_mouse_sce = human_mouse_sce[, human_mouse_sce$final_Annotations!= 'outlier
 global_hvgs = variableGenes(
   dat = human_mouse_sce,
   min_recurrence = 2,
-  exp_labels = human_mouse_sce$study_id
+  exp_labels = human_mouse_sce$species
 )
 length(global_hvgs)
-keep_global_hvgs = global_hvgs[1:3000]
+keep_global_hvgs = global_hvgs[1:800]
 
 
 MN_aurocs = MetaNeighborUS(
   var_genes = keep_global_hvgs,
   dat = human_mouse_sce,
-  study_id = human_mouse_sce$study_id,
+  study_id = human_mouse_sce$species,
   cell_type = human_mouse_sce$final_Annotations,
   fast_version = TRUE
 )
@@ -221,7 +229,7 @@ title("MetaNeighbor Human, Mouse Habenula: 2000 HVGs")
 MN_best_aurocs = MetaNeighborUS(
   var_genes = keep_global_hvgs,
   dat = human_mouse_sce,
-  study_id = human_mouse_sce$study_id,
+  study_id = human_mouse_sce$species,
   cell_type = human_mouse_sce$final_Annotations,
   fast_version = TRUE,
   one_vs_best = TRUE,
@@ -253,7 +261,7 @@ mclusters = extractMetaClusters(MN_best_aurocs, threshold = .5)
 mclusters
 
 cluster_graph = makeClusterGraph(MN_best_aurocs, low_threshold = .3)
-plotClusterGraph(cluster_graph, human_mouse_sce$study_id, human_mouse_sce$final_Annotations, size_factor = 3)
+plotClusterGraph(cluster_graph, human_mouse_sce$species, human_mouse_sce$final_Annotations, size_factor = 3)
 
 
 
