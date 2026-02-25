@@ -18,9 +18,9 @@ pandey_ss_path = here('processed-data', '98_external_Hb_comparisons', 'Pandey_et
 list.files(pandey_ss_path)
 
 #Path to save any generated data
-new_data_path = here('processed-data', '98_external_Hb_comparisons', '04_initial_qc_pandey_2018')
+new_data_path = here('processed-data', '98_external_Hb_comparisons', '05_initial_qc_pandey_2018')
 #Path to plot directory
-plot_path = here('plots', '98_external_Hb_comparisons', '04_initial_qc_pandey_2018')
+plot_path = here('plots', '98_external_Hb_comparisons', '05_initial_qc_pandey_2018')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)

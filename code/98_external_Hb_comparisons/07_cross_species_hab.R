@@ -28,12 +28,12 @@ wallace_03_data_path = here(
 pendey_04_data_path = here(
   'processed-data',
   '98_external_Hb_comparisons',
-  '04_initial_qc_pandey_2018'
+  '05_initial_qc_pandey_2018'
 )
 pendey_05_data_path = here(
   'processed-data',
   '98_external_Hb_comparisons',
-  '05_metaMarkers_pandey_2018'
+  '06_metaMarkers_pandey_2018'
 )
 
 #Path to orthologs
@@ -47,7 +47,7 @@ path_to_orthologs = here(
 new_data_path = here(
   'processed-data',
   '98_external_Hb_comparisons',
-  '06_cross_species_hab'
+  '07_cross_species_hab'
 )
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
