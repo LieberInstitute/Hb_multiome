@@ -3,10 +3,10 @@
 #SBATCH --mem=10G
 #SBATCH --job-name=01_link_peaks
 #SBATCH -c 1
-#SBATCH -t 1-00:00:00
+#SBATCH -t 3-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
-#SBATCH --array=1-324%20
+#SBATCH --array=5,36,38-44,46-48,51,54,56-62,64-66,69,79,80%25
 
 ## Define loops and appropriately subset each variable for the array task ID
 all_target_cell_type=(Astrocyte Endo Excit.Thal Inhib.Thal LHb.1 LHb.1.3 LHb.1.3.4 LHb.2.7 LHb.4 LHb.7 MHb.1 MHb.1.2 MHb.2 MHb.3 Microglia Oligo OPC Thal)

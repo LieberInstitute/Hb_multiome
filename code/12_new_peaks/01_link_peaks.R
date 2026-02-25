@@ -7,6 +7,7 @@ library(GenomicRanges)
 library(tidyverse)
 library(here)
 library(Matrix)
+library(sparseMatrixStats)
 
 # Import command-line parameters
 spec <- matrix(
@@ -70,7 +71,8 @@ counts_mat = GetAssayData(seur, assay = atac_assay, layer = "counts")[
 ]
 min_cells = max(3, floor(0.05 * ncol(seur)))   # ≥5% or at least 3
 keep_peaks = rownames(counts_mat)[
-    Matrix::rowSums(counts_mat > 0) >= min_cells
+    (Matrix::rowSums(counts_mat > 0) >= min_cells) &
+    (sparseMatrixStats::rowSds(counts_mat) > 0)
 ]
 stopifnot(length(keep_peaks) > 0)
 
@@ -101,14 +103,14 @@ seur = RunSVD(seur, assay = atac_assay)
 message(Sys.time(), ' | Running LinkPeaks')
 DefaultAssay(seur) = rna_assay
 seur = LinkPeaks(
-    object = seur, peak.assay = atac_assay_name, expression.assay = rna_assay,
+    object = seur, peak.assay = atac_assay, expression.assay = rna_assay,
     min.cells = min_cells, pvalue_cutoff = 1, score_cutoff = 0,
     method = "spearman"
 )
 
 #   Export linked peaks
 message(Sys.time(), ' | Exporting to CSV')
-Links(seurat_subset[[atac_assay_name]]) |>
+Links(seur[[atac_assay]]) |>
     as.data.frame() |>
     as_tibble() |>
     mutate(
