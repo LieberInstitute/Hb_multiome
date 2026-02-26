@@ -533,6 +533,9 @@ broad_markers_human = MetaMarkers::compute_markers(assay(yalcinbas_sce, "cpm"), 
 broad_markers_human %>% group_by(cell_type) %>% slice_max(order_by = fold_change, n = 25) %>% View()
 
 
+#Save markers
+MetaMarkers::export_markers(markers_human , paste0(new_data_path, '/markers_yalcinbas_human_hab_neurons_markers.csv'))
+MetaMarkers::export_markers(broad_markers_human, paste0(new_data_path, '/markers_yalcinbas_human_broadhab_neurons_markers.csv'))
 
 
 
