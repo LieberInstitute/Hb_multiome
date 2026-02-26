@@ -31,6 +31,9 @@ if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
 
 
+#Source the bubble plot functions
+source(here('code','98_external_Hb_comparisons', 'bubble_plot_functions.R'))
+
 
 #Load up the full SCE object, contains the metacluster annotations
 all_donor_sce = readRDS(paste0(prev_data_path, '/all_donor_sce_with_denovo_clusters.rds'))
@@ -108,54 +111,6 @@ pandey_zebrafish_hab_metaM %>% group_by(cell_type) %>% slice_min(rank, n = 50) %
   select(cell_type, rank, gene, human_gene_ortholog, recurrence, auroc) %>% 
   View()
 
-
-#Custom bubble plot, gets mean expression per cluster for a gene, plots the z-score of that across the clusters
-get_bubble_plot = function(seurat_object, top_markers, sample_name, group_col = "meta_cluster"){
-  # Extract expression data and metadata
-  expr_data <- FetchData(seurat_object, vars = top_markers, layer = "data")
-  metadata <- seurat_object@meta.data
-
-  # Combine into a data frame
-  plot_data <- cbind(expr_data, group_var = metadata[[group_col]]) %>%
-    as.data.frame() %>%
-    tidyr::pivot_longer(cols = -group_var, names_to = "gene", values_to = "expression")
-
-  # Calculate mean expression and percent expressing per cluster
-  summary_data <- plot_data %>% filter(group_var != 'outliers') %>%
-    group_by(gene, group_var) %>%
-    summarise(
-      mean_expression = mean(expression),
-      pct_expressing = sum(expression > 0) / n() * 100,
-      .groups = "drop"
-    ) %>%
-    # Calculate z-score of mean_expression per gene across clusters
-    group_by(gene) %>%
-    mutate(mean_expression_zscore = scale(mean_expression)[,1]) %>%
-    ungroup()
-
-  # Set factor levels to control axis order
-  summary_data$gene <- factor(summary_data$gene, levels = top_markers)
-  summary_data$group_var <- factor(summary_data$group_var, 
-                                      levels = sort(unique(summary_data$group_var)))
-
-  # Create bubble plot
-  p1 = ggplot(summary_data, aes(x = gene, y = group_var, size = pct_expressing, color = mean_expression)) +
-    geom_point() +
-    scale_color_gradient2(low = "white", high = "red", name = "Mean Expression") +
-    scale_size_continuous(range = c(2, 8)) +
-    theme_minimal() + ggtitle(sample_name) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    labs(x = "Gene", y = group_col, size = "% Expressing", color = "Mean Expression")
-    
-  p2 = ggplot(summary_data, aes(x = gene, y = group_var, size = pct_expressing, color = mean_expression_zscore)) +
-    geom_point() +
-    scale_color_gradient2(low = "blue", mid = 'white', high = "red", name = "Mean Exp. z-score") +
-    scale_size_continuous(range = c(2, 8)) +
-    theme_minimal() + ggtitle(sample_name) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    labs(x = "Gene", y = group_col, size = "% Expressing", color = "Mean Exp. z-score")
-  return(list(p1, p2))
-}
 
 
 #Switch the full dataset to Seurat for the bubble plots
@@ -365,9 +320,45 @@ p6
 
 
 
+#With the annotated clusters, show and save the bubble plot with the same genes as the mouse data
+
+
+custom_markers = c('CHAT', 'SLC5A7','SLC18A3', 'TAC1', 'TACR1', 'TAC2','GPR151', 'GAP43','SNAP25', 'POU4F1', 
+  'SLC17A6', 'SLC17A7', 'GAD1', 'GAD2', 'SLC32A1')
+custom_markers = toupper(custom_markers)
+custom_markers = hu_mu_zf_ortholog_df %>% filter(`Gene name` %in% custom_markers) %>% pull(`Zebrafish gene name`) %>% toupper()
+custom_markers = custom_markers[custom_markers != '']
+custom_markers
+
+p_bubble = get_bubble_plot(all_donor_seurat, 
+  top_markers = custom_markers, sample_name = "Zebrafish Habenula", group_col = "meta_clust_celltype_annot")
+p_bubble[[1]]
+p_bubble[[2]]
+
+pdf(paste0(plot_path, '/Zebrafish_Hab_marker_bubbles_meanExp.pdf'), width = 10, height = 8)
+p_bubble[[1]]
+dev.off()
+pdf(paste0(plot_path, '/Zebrafish_Hab_marker_bubbles_Zscore_meanExp.pdf'), width = 10, height = 8)
+p_bubble[[2]]
+dev.off()
 
 
 
+#And the regional zebrafish markers
+zeb_region_markers = c('nptx2a','gpr151','pou4f1','aoc1')
+zeb_region_markers = toupper(zeb_region_markers)
+p_bubble = get_bubble_plot(all_donor_seurat, 
+  top_markers = zeb_region_markers, 
+  sample_name = "Zebrafish Habenula", group_col = "meta_clust_celltype_annot")
+p_bubble[[1]]
+p_bubble[[2]]
+
+pdf(paste0(plot_path, '/Zebrafish_Hab_regional_marker_bubbles_meanExp.pdf'), width = 10, height = 8)
+p_bubble[[1]]
+dev.off()
+pdf(paste0(plot_path, '/Zebrafish_Hab_regional_marker_bubbles_Zscore_meanExp.pdf'), width = 10, height = 8)
+p_bubble[[2]]
+dev.off()
 
 
 
