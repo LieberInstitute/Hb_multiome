@@ -400,4 +400,183 @@ full_hashikawa_metadata = readRDS(paste0(hashikawa_data_path, '/hashikawa_mouse_
 colnames(full_hashikawa_metadata )
 colData(hashikawa_sce_sub) = full_hashikawa_metadata 
 #Gene symbols as the rownames
-rownames(hashikawa_sce_sub) = rowData(hashikawa_sc
+rownames(hashikawa_sce_sub) = rowData(hashikawa_sce_sub)$Symbol
+#Add CPM
+assay(hashikawa_sce_sub, "cpm") = MetaMarkers::convert_to_cpm(assay(hashikawa_sce_sub, "counts"))
+
+
+
+#For the mouse to human genes 
+hu_mu_zf_ortholog_df = data.table::fread(path_to_orthologs)
+table(hu_mu_zf_ortholog_df$`Mouse homology type`)
+
+#Get the 1to1 orthologs
+hu_mu_zf_ortholog_df <- hu_mu_zf_ortholog_df %>%
+  filter(
+    `Mouse homology type` == 'ortholog_one2one'
+  ) %>%
+  filter(!duplicated(`Gene name`))
+dim(hu_mu_zf_ortholog_df)
+
+index = match(rownames(all_mouse_sce), hu_mu_zf_ortholog_df$`Mouse gene name`)
+rownames(all_mouse_sce) = hu_mu_zf_ortholog_df$`Gene name`[index]
+
+index = match(rownames(hashikawa_sce_sub), hu_mu_zf_ortholog_df$`Mouse gene name`)
+rownames(hashikawa_sce_sub) = hu_mu_zf_ortholog_df$`Gene name`[index]
+
+
+
+#Get the set of genes that are present in both datasets, and are 1-to-1 orthologs
+all_present_genes = intersect(intersect(rownames(all_mouse_sce), rownames(zeb_sce)), rownames(hashikawa_sce_sub))
+all_present_genes = all_present_genes[!is.na(all_present_genes)]
+length(all_present_genes)
+#Filter the SCE objects for the present genes
+#9532 genes total
+zeb_sce = zeb_sce[rownames(zeb_sce) %in% all_present_genes, ]
+all_mouse_sce = all_mouse_sce[rownames(all_mouse_sce) %in% all_present_genes, ]
+hashikawa_sce_sub = hashikawa_sce_sub[rownames(hashikawa_sce_sub) %in% all_present_genes, ]
+
+
+dim(zeb_sce)
+dim(all_mouse_sce)
+dim(hashikawa_sce_sub)
+#Sanity check
+table(rownames(zeb_sce) %in% rownames(all_mouse_sce))
+table(rownames(zeb_sce) %in% rownames(hashikawa_sce_sub))
+
+
+#Add the mouse metadata
+current_mouse_metadata = readRDS(paste0(
+  wallace_03_data_path,
+  '/wallace_mouse_metaclust_celltype_annot_metadata.rds'
+))
+colData(all_mouse_sce) = S4Vectors::DataFrame(current_mouse_metadata)
+
+
+#Just focus on the neuronal populations
+all_mouse_sce = all_mouse_sce[, !all_mouse_sce$meta_clust_celltype_annot %in% c('Astrocytes','Polydendrocytes','Differentiating Oligodendrocytes','Oligodendrocytes',
+'Pericytes','Fibroblasts','Endothelial','Macrophages', 'Microglia')]
+table(all_mouse_sce$meta_clust_celltype_annot)
+
+
+zeb_sce = zeb_sce[, !zeb_sce$meta_clust_celltype_annot %in% c('non_neuronal')]
+table(zeb_sce$meta_clust_celltype_annot)
+
+
+
+studies <- unique(all_mouse_sce$study_id)
+mouse_sce_list <- lapply(studies, function(study) {
+  all_mouse_sce[, all_mouse_sce$study_id == study]
+})
+names(mouse_sce_list) <- studies
+
+
+studies <- unique(zeb_sce$study_id)
+zebF_sce_list <- lapply(studies, function(study) {
+  zeb_sce[, zeb_sce$study_id == study]
+})
+names(zebF_sce_list) <- studies
+
+
+#Split Hashikawa by stim or control
+studies <- unique(hashikawa_sce_sub$stim)
+hashikawa_sce_sub_list <- lapply(studies, function(study) {
+  hashikawa_sce_sub[, hashikawa_sce_sub$stim == study]
+})
+names(hashikawa_sce_sub_list) <- studies
+
+########################
+#MetaNeighbor
+#########################
+
+#Get single SCE object
+all_donor_sce = mergeSCE(c(mouse_sce_list, zebF_sce_list, hashikawa_sce_sub_list))
+View(as.data.frame(colData(all_donor_sce)))
+
+#Ignore the outlier cells
+all_donor_sce = all_donor_sce[,
+  all_donor_sce$meta_clust_celltype_annot != 'outliers'
+]
+
+#Get highly variable genes, this time highly variable genes across the donor datasets, sticking with 2000
+global_hvgs = variableGenes(
+  dat = all_donor_sce,
+  min_recurrence = 2,
+  exp_labels = all_donor_sce$study_id
+)
+length(global_hvgs)
+keep_global_hvgs = global_hvgs[1:2000]
+
+keep_global_hvgs[grepl('GAD', keep_global_hvgs)]
+keep_global_hvgs[grepl('SLC17A', keep_global_hvgs)]
+
+
+paralogSummed_MN_aurocs = MetaNeighborUS(
+  var_genes = keep_global_hvgs,
+  dat = all_donor_sce,
+  study_id = all_donor_sce$study_id,
+  cell_type = all_donor_sce$meta_clust_celltype_annot,
+  fast_version = TRUE
+)
+
+#Plot allby-all AUROC heatmap
+plotHeatmap(
+  paralogSummed_MN_aurocs,
+  cex = .5
+)
+title("MetaNeighbor Mouse and Zebrafish Habenula: 2000 HVGs summed paralogs")
+
+pdf(paste0(plot_path, '/paralogSummed_AllvsAll_MN_mouse_zeb_neurons.pdf'), width = 10, height = 8)
+plotHeatmap(
+  paralogSummed_MN_aurocs,
+  cex = .5
+)
+title("MetaNeighbor Mouse and Zebrafish Habenula: 2000 HVGs summed paralogs")
+dev.off()
+
+
+#And the best versus next approach
+paralogSummed_MN_best_aurocs = MetaNeighborUS(
+  var_genes = keep_global_hvgs,
+  dat = all_donor_sce,
+  study_id = all_donor_sce$study_id,
+  cell_type = all_donor_sce$meta_clust_celltype_annot,
+  fast_version = TRUE,
+  one_vs_best = TRUE,
+  symmetric_output = FALSE
+)
+
+#Plot best_vs_next AUROC heatmap
+plotHeatmap(
+  paralogSummed_MN_best_aurocs,
+  cex = .5
+)
+title("MetaNeighbor BvsNext Mouse and Zebrafish Habenula: 2000 HVGs summed paralogs")
+
+
+pdf(paste0(plot_path, '/paralogSummed_BvsNext_MN_mouse_zeb_neurons.pdf'), width = 10, height = 8)
+plotHeatmap(
+  paralogSummed_MN_best_aurocs,
+  cex = .5
+)
+title("MetaNeighbor BvsNext Mouse and Zebrafish Habenula: 2000 HVGs summed paralogs")
+dev.off()
+
+
+
+paralog_cluster_graph = makeClusterGraph(paralogSummed_MN_best_aurocs, low_threshold = .7)
+plotClusterGraph(paralog_cluster_graph, all_donor_sce$study_id, all_donor_sce$meta_clust_celltype_annot, size_factor = 3)
+
+pdf(paste0(plot_path, '/paralogSummed_MN_cluster_graph.pdf'), width = 10, height = 8)
+plotClusterGraph(paralog_cluster_graph, all_donor_sce$study_id, all_donor_sce$meta_clust_celltype_annot, size_factor = 3)
+dev.off()
+
+
+
+
+#Get the metaclusters from the best vs next results, add those annotations to the full SCE object
+mclusters = extractMetaClusters(paralogSummed_MN_best_aurocs, threshold = .5)
+mclusters
+
+
+
