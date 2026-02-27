@@ -90,10 +90,19 @@ table(rownames(hashikawa_sce_sub) %in% rownames(wallace_sce))
 wallace_sce$celltype = wallace_sce$meta_clust_celltype_annot
 
 
-#I think it will be clearer to just focus on the habenula data, so filter the non-neurons in Wallace and use the neuronal subset from Hashikawa
-wallace_sce = wallace_sce[, !wallace_sce$celltype %in% c('Astrocytes','Polydendrocytes','Differentiating Oligodendrocytes','Oligodendrocytes',
+#Do a comparison including the non-neurons, and then just the neurons
+wallace_neuron_sce = wallace_sce[, !wallace_sce$celltype %in% c('Astrocytes','Polydendrocytes','Differentiating Oligodendrocytes','Oligodendrocytes',
 'Pericytes','Fibroblasts','Endothelial','Macrophages', 'Microglia')]
+
+table(wallace_neuron_sce$celltype)
 table(wallace_sce$celltype)
+table(hashikawa_sce$celltype)
+
+
+
+########
+#Do the comparison including the non-neurons first
+########
 
 #Split wallace by donor and Hashikawa by simulus condition
 studies <- unique(wallace_sce$study_id)
@@ -110,19 +119,13 @@ hashikawa_sce_list <- lapply(studies, function(study) {
 names(hashikawa_sce_list) <- studies
 
 
-studies <- unique(hashikawa_sce_sub$stim)
-hashikawa_sce_sub_list <- lapply(studies, function(study) {
-  hashikawa_sce_sub[, hashikawa_sce_sub$stim == study]
-})
-names(hashikawa_sce_sub_list) <- studies
-
 
 ########################
 #MetaNeighbor
 #########################
 
 #Get single SCE object
-all_donor_sce = mergeSCE(c(wallace_sce_list, hashikawa_sce_sub_list))
+all_donor_sce = mergeSCE(c(wallace_sce_list, hashikawa_sce_list))
 View(as.data.frame(colData(all_donor_sce)))
 
 #Ignore the outlier cells
@@ -169,9 +172,6 @@ title("MetaNeighbor Mouse Wallace vs Hashikawa: 2000 HVGs")
 dev.off()
 
 
-
-
-
 #And the best versus next approach
 
 MN_best_aurocs = MetaNeighborUS(
@@ -213,21 +213,22 @@ plotClusterGraph(cluster_graph, all_donor_sce$study_id, all_donor_sce$celltype, 
 dev.off()
 
 
+table(hashikawa_sce$celltype)
+
 #From these matches
-#Hashikawa
-#MHb2, 3, 4, 6 : Cholinergic
-#MHb 5 : Substance P
-#MHb1: subP_cholinergic
+#Hashikawa neurons
+#Neuron1 - Cholinergic
+#Neuron2 - LHb1
+#Neuron3 - SubP-Cholinergic
+#Neuron4 - LHb1
+#Neuron5 - LHb2
+#Neuron6 - Cholinergic
+#Neuron7 - Cholinergic
+#Neuron8 - LHb1
 
-#LHb1, 2, 3, 4, 6: Wallace LHb1
-#LHb5: Wallace LHb2
+rownames(hashikawa_sce) = toupper(rownames(hashikawa_sce))
 
-#Check out the markers in the hashikawa dataset
-
-
-rownames(hashikawa_sce_sub) = toupper(rownames(hashikawa_sce_sub))
-
-p_bubble = get_bubble_plot_sce(hashikawa_sce_sub, 
+p_bubble = get_bubble_plot_sce(hashikawa_sce, 
   top_markers = c('CHAT', 'SLC5A7','SLC18A3', 'TAC1', 'TACR1', 'TAC2','GPR151', 'GAP43','SNAP25', 'POU4F1', 
   'SLC17A6', 'SLC17A7', 'GAD1', 'GAD2', 'SLC32A1'), sample_name = "Hashikawa mouse Habenula", group_col = "celltype")
 
@@ -258,6 +259,213 @@ pdf(paste0(plot_path, '/Wallace_Hab_marker_bubbles_meanExp.pdf'), width = 10, he
 p_bubble[[1]]
 dev.off()
 pdf(paste0(plot_path, '/Wallace_Hab_marker_bubbles_Zscore_meanExp.pdf'), width = 10, height = 8)
+p_bubble[[2]]
+dev.off()
+
+#The inhibitory markers are still expressed in Wallace LHb_1 over LHb_2, seems consistent across the datasets
+#The lack of VGLUT1 expression in all lateral Hab clusters is really clear across both datasets
+
+
+#Save metadata for the Hashikawa dataset with annotations matched to the wallace dataset
+table(hashikawa_sce$celltype)
+#metacluster annotations from all the above
+meta_annot_vec = c('MHb_cholinergic.1' = 'Neuron1',
+                   'LHb_1.1' = 'Neuron2',
+                   'MHb_subP_cholinergic' = 'Neuron3',
+                   'LHb_1.2' = 'Neuron4',
+                   'LHb_2' = 'Neuron5',
+                   'MHb_cholinergic.2' = 'Neuron6',
+                   'MHb_cholinergic.3' = 'Neuron7',
+                   'LHb_1.3' = 'Neuron8',
+                   'Astrocyte1' = 'Astrocyte1',
+                   'Astrocyte2' = 'Astrocyte2',
+                   'Endothelial' = 'Endothelial',
+                   'Epen' = 'Epen',
+                   'Microglia' = 'Microglia',
+                   'Mural' = 'Mural',
+                   'Oligo1' = 'Oligo1',
+                   'Oligo2' = 'Oligo2',
+                   'Oligo3' = 'Oligo3',
+                   'OPC1' = 'OPC1',
+                   'OPC2' = 'OPC2',
+                   'OPC3' = 'OPC3'
+)
+
+
+meta_annot_vec  = setNames(names(meta_annot_vec), meta_annot_vec)
+
+
+hashikawa_sce$meta_clust_celltype_annot = unname(meta_annot_vec[hashikawa_sce$celltype])
+table(hashikawa_sce$meta_clust_celltype_annot)
+
+#Save the metadata as a data.frame to add to the seurat data object later
+full_hashikawa_metadata = colData(hashikawa_sce)
+saveRDS(full_hashikawa_metadata, paste0(new_data_path, '/hashikawa_mouse_metaclust_celltype_annot_metadata.rds'))
+
+
+
+
+
+
+#And now with just the neuronal subset
+
+#Split wallace by donor and Hashikawa by simulus condition
+studies <- unique(wallace_neuron_sce$study_id)
+wallace_neuron_sce_list <- lapply(studies, function(study) {
+  wallace_neuron_sce[, wallace_neuron_sce$study_id == study]
+})
+names(wallace_neuron_sce_list) <- studies
+
+
+studies <- unique(hashikawa_sce_sub$stim)
+hashikawa_sce_sub_list <- lapply(studies, function(study) {
+  hashikawa_sce_sub[, hashikawa_sce_sub$stim == study]
+})
+names(hashikawa_sce_sub_list) <- studies
+
+
+
+########################
+#MetaNeighbor
+#########################
+
+#Get single SCE object
+all_donor_sce = mergeSCE(c(wallace_neuron_sce_list, hashikawa_sce_sub_list))
+View(as.data.frame(colData(all_donor_sce)))
+
+#Ignore the outlier cells
+all_donor_sce = all_donor_sce[,
+  all_donor_sce$celltype != 'outliers'
+]
+
+
+#Get highly variable genes, this time highly variable genes across the donor datasets, sticking with 2000
+global_hvgs = variableGenes(
+  dat = all_donor_sce,
+  min_recurrence = 2,
+  exp_labels = all_donor_sce$study_id
+)
+length(global_hvgs)
+keep_global_hvgs = global_hvgs[1:2000]
+
+
+MN_aurocs = MetaNeighborUS(
+  var_genes = keep_global_hvgs,
+  dat = all_donor_sce,
+  study_id = all_donor_sce$study_id,
+  cell_type = all_donor_sce$celltype,
+  fast_version = TRUE
+)
+
+#Plot allby-all AUROC heatmap
+plotHeatmap(
+  MN_aurocs,
+  show_dendro = TRUE,
+  show_labels = TRUE,
+  cex = .5
+)
+title("MetaNeighbor Mouse Wallace vs Hashikawa: 2000 HVGs")
+
+pdf(paste0(plot_path, '/all_vs_all_MN_just_neurons_aurocs_heatmap.pdf'), width = 10, height = 8)
+plotHeatmap(
+  MN_aurocs,
+  show_dendro = TRUE,
+  show_labels = TRUE,
+  cex = .5
+)
+title("MetaNeighbor Mouse Wallace vs Hashikawa: 2000 HVGs")
+dev.off()
+
+
+#And the best versus next approach
+
+MN_best_aurocs = MetaNeighborUS(
+  var_genes = keep_global_hvgs,
+  dat = all_donor_sce,
+  study_id = all_donor_sce$study_id,
+  cell_type = all_donor_sce$celltype,
+  fast_version = TRUE,
+  one_vs_best = TRUE,
+  symmetric_output = FALSE
+)
+
+#Plot best_vs_next AUROC heatmap
+plotHeatmap(
+  MN_best_aurocs,
+  show_dendro = TRUE,
+  show_labels = TRUE,
+  cex = .5
+)
+title("MetaNeighbor BvsNext Mouse Wallace vs Hashikawa: 2000 HVGs")
+
+pdf(paste0(plot_path, '/best_vs_next_MN_just_neurons_aurocs_heatmap.pdf'), width = 10, height = 8)
+plotHeatmap(
+  MN_best_aurocs,
+  show_dendro = TRUE,
+  show_labels = TRUE,
+  cex = .5
+)
+title("MetaNeighbor BvsNext Mouse Wallace vs Hashikawa: 2000 HVGs")
+dev.off()
+
+
+cluster_graph = makeClusterGraph(MN_best_aurocs, low_threshold = .7)
+plotClusterGraph(cluster_graph, all_donor_sce$study_id, all_donor_sce$celltype, size_factor = 3)
+
+pdf(paste0(plot_path, '/MN_cluster_graph_just_neurons.pdf'), width = 10, height = 8)
+cluster_graph = makeClusterGraph(MN_best_aurocs, low_threshold = .7)
+plotClusterGraph(cluster_graph, all_donor_sce$study_id, all_donor_sce$celltype, size_factor = 3)
+dev.off()
+
+
+table(hashikawa_sce$celltype)
+
+
+
+
+#MHb2, 3, 4, 6 : Cholinergic
+#MHb 5 : Substance P
+#MHb1: subP_cholinergic
+
+#LHb1, 2, 3, 4, 6: Wallace LHb1
+#LHb5: Wallace LHb2
+
+#Check out the markers in the hashikawa dataset
+
+
+rownames(hashikawa_sce_sub) = toupper(rownames(hashikawa_sce_sub))
+
+p_bubble = get_bubble_plot_sce(hashikawa_sce_sub, 
+  top_markers = c('CHAT', 'SLC5A7','SLC18A3', 'TAC1', 'TACR1', 'TAC2','GPR151', 'GAP43','SNAP25', 'POU4F1', 
+  'SLC17A6', 'SLC17A7', 'GAD1', 'GAD2', 'SLC32A1'), sample_name = "Hashikawa mouse Habenula", group_col = "celltype")
+
+p_bubble[[1]]
+p_bubble[[2]]
+
+pdf(paste0(plot_path, '/Hashikawa_Hab_just_neurons_marker_bubbles_meanExp.pdf'), width = 10, height = 8)
+p_bubble[[1]]
+dev.off()
+pdf(paste0(plot_path, '/Hashikawa_Hab_just_neurons_marker_bubbles_Zscore_meanExp.pdf'), width = 10, height = 8)
+p_bubble[[2]]
+dev.off()
+
+
+#Altogether, very clear matches between the mouse datasets.
+#Substance P and cholinergic populations clear
+
+rownames(wallace_neuron_sce) = toupper(rownames(wallace_neuron_sce))
+p_bubble = get_bubble_plot_sce(wallace_neuron_sce[ , wallace_neuron_sce$celltype != 'outliers'], 
+  top_markers = c('CHAT', 'SLC5A7','SLC18A3', 'TAC1', 'TACR1', 'TAC2','GPR151', 'GAP43','SNAP25', 'POU4F1', 
+  'SLC17A6', 'SLC17A7', 'GAD1', 'GAD2', 'SLC32A1'), sample_name = "Wallace mouse Habenula", group_col = "celltype")
+
+p_bubble[[1]]
+p_bubble[[2]]
+
+
+pdf(paste0(plot_path, '/Wallace_Hab_just_neurons_marker_bubbles_meanExp.pdf'), width = 10, height = 8)
+p_bubble[[1]]
+dev.off()
+pdf(paste0(plot_path, '/Wallace_Hab_just_neurons_marker_bubbles_Zscore_meanExp.pdf'), width = 10, height = 8)
 p_bubble[[2]]
 dev.off()
 
