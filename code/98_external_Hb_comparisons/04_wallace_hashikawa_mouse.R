@@ -502,6 +502,147 @@ saveRDS(full_hashikawa_metadata, paste0(new_data_path, '/hashikawa_mouse_neuron_
 
 
 
+#Compute mouse meta-markers at a broad annotation level
+#For this purpose, just group all the non-neurons together
+#Group the hashikawa data to match the wallace annotations
+table(hashikawa_sce$meta_clust_celltype_annot)
+
+broad_annot_vec = c('MHb_cholinergic' = 'MHb_cholinergic.1',
+                   'MHb_cholinergic' = 'MHb_cholinergic.2',
+                   'MHb_cholinergic' = 'MHb_cholinergic.3',
+                   'MHb_subP_cholinergic' = 'MHb_subP_cholinergic',
+                   'LHb_1' = 'LHb_1.1',
+                   'LHb_1' = 'LHb_1.2',
+                   'LHb_1' = 'LHb_1.3',
+                   'LHb_2' = 'LHb_2',
+                   'non_neurons' = 'Astrocyte1',
+                   'non_neurons' = 'Astrocyte2',
+                   'non_neurons' = 'Endothelial',
+                   'non_neurons' = 'Epen',
+                   'non_neurons' = 'Microglia',
+                   'non_neurons' = 'Mural',
+                   'non_neurons' = 'Oligo1',
+                   'non_neurons' = 'Oligo2',
+                   'non_neurons' = 'Oligo3',
+                   'non_neurons' = 'OPC1',
+                   'non_neurons' = 'OPC2',
+                   'non_neurons' = 'OPC3'
+)
+
+broad_annot_vec  = setNames(names(broad_annot_vec), broad_annot_vec)
+hashikawa_sce$broad_celltype_annot = unname(broad_annot_vec[hashikawa_sce$meta_clust_celltype_annot])
+table(hashikawa_sce$broad_celltype_annot, hashikawa_sce$meta_clust_celltype_annot )
+
+
+table(wallace_sce$meta_clust_celltype_annot)
+broad_annot_vec = c('MHb_cholinergic' = 'MHb_cholinergic',
+                   'MHb_subP' = 'MHb_subP',
+                   'MHb_subP_cholinergic' = 'MHb_subP_cholinergic',
+                   'LHb_1' = 'LHb_1',
+                   'LHb_2' = 'LHb_2',
+                   'non_neurons' = 'Astrocytes',
+                   'non_neurons' = 'Differentiating Oligodendrocytes',
+                   'non_neurons' = 'Endothelial',
+                   'non_neurons' = 'Fibroblasts',
+                   'non_neurons' = 'Macrophages',
+                   'non_neurons' = 'Microglia',
+                   'non_neurons' = 'Oligodendrocytes',
+                   'non_neurons' = 'Pericytes',
+                   'non_neurons' = 'Polydendrocytes',
+                   'outliers' = 'outliers'
+)
+
+broad_annot_vec  = setNames(names(broad_annot_vec), broad_annot_vec)
+wallace_sce$broad_celltype_annot = unname(broad_annot_vec[wallace_sce$meta_clust_celltype_annot])
+table(wallace_sce$broad_celltype_annot, wallace_sce$meta_clust_celltype_annot )
+
+
+#And the neuronal subsets
+
+table(hashikawa_sce_sub$meta_clust_celltype_annot)
+
+broad_annot_vec = c('MHb_cholinergic' = 'MHb_cholinergic_1',
+                   'MHb_cholinergic' = 'MHb_cholinergic_2',
+                   'MHb_cholinergic' = 'MHb_cholinergic_3',
+                   'MHb_cholinergic' = 'MHb_cholinergic_4',
+                   'MHb_subP_cholinergic' = 'MHb_subP_cholinergic',
+                   'MHb_subP' = 'MHb_subP',
+                   'LHb_1' = 'LHb_1_1',
+                   'LHb_1' = 'LHb_1_2',
+                   'LHb_1' = 'LHb_1_3',
+                   'LHb_1' = 'LHb_1_4',
+                   'LHb_1' = 'LHb_1_5',
+                   'LHb_2' = 'LHb_2'
+)
+
+broad_annot_vec  = setNames(names(broad_annot_vec), broad_annot_vec)
+hashikawa_sce_sub$broad_celltype_annot = unname(broad_annot_vec[hashikawa_sce_sub$meta_clust_celltype_annot])
+table(hashikawa_sce_sub$broad_celltype_annot, hashikawa_sce_sub$meta_clust_celltype_annot )
+
+#Dont need to group for wallace
+table(wallace_neuron_sce$meta_clust_celltype_annot)
+wallace_neuron_sce$broad_celltype_annot = wallace_neuron_sce$meta_clust_celltype_annot
+
+
+
+
+#Get markers and mouse meta-markers
+hashikawa_cntl_all = hashikawa_sce[ ,hashikawa_sce$stim == 'cntl' ]
+hashikawa_stim_all = hashikawa_sce[ ,hashikawa_sce$stim == 'stim' ]
+
+wallace_d1_all = wallace_sce[ , wallace_sce$study_id == 'hab_160822' ]
+wallace_d2_all = wallace_sce[ , wallace_sce$study_id == 'hab_161102' ]
+wallace_d3_all = wallace_sce[ , wallace_sce$study_id == 'hab_161103' ]
+wallace_d4_all = wallace_sce[ , wallace_sce$study_id == 'hab_161105' ]
+
+all_markers = list(
+  hashikawa_cntl_all = compute_markers(assay(hashikawa_cntl_all, "cpm"), hashikawa_cntl_all$broad_celltype_annot),
+  hashikawa_stim_all = compute_markers(assay(hashikawa_stim_all, "cpm"), hashikawa_stim_all$broad_celltype_annot),
+  wallace_d1_all = compute_markers(assay(wallace_d1_all, "cpm"), wallace_d1_all$broad_celltype_annot),
+  wallace_d2_all = compute_markers(assay(wallace_d2_all, "cpm"), wallace_d2_all$broad_celltype_annot),
+  wallace_d3_all = compute_markers(assay(wallace_d3_all, "cpm"), wallace_d3_all$broad_celltype_annot),
+  wallace_d4_all = compute_markers(assay(wallace_d4_all, "cpm"), wallace_d4_all$broad_celltype_annot)
+)
+
+mouse_all_meta_markers = make_meta_markers(all_markers, detailed_stats = TRUE)
+
+mouse_all_meta_markers %>% filter(rank <= 10) %>% View()
+
+export_meta_markers(mouse_all_meta_markers, paste0(new_data_path, '/mouse_hab_all_celltypes_meta_markers.csv'), names(all_markers))
+
+
+
+#Just the neuron subsets
+hashikawa_cntl_all = hashikawa_sce_sub[ ,hashikawa_sce_sub$stim == 'cntl' ]
+hashikawa_stim_all = hashikawa_sce_sub[ ,hashikawa_sce_sub$stim == 'stim' ]
+
+wallace_d1_all = wallace_neuron_sce[ , wallace_neuron_sce$study_id == 'hab_160822' ]
+wallace_d2_all = wallace_neuron_sce[ , wallace_neuron_sce$study_id == 'hab_161102' ]
+wallace_d3_all = wallace_neuron_sce[ , wallace_neuron_sce$study_id == 'hab_161103' ]
+wallace_d4_all = wallace_neuron_sce[ , wallace_neuron_sce$study_id == 'hab_161105' ]
+
+neuron_markers = list(
+  hashikawa_cntl_all = compute_markers(assay(hashikawa_cntl_all, "cpm"), hashikawa_cntl_all$broad_celltype_annot),
+  hashikawa_stim_all = compute_markers(assay(hashikawa_stim_all, "cpm"), hashikawa_stim_all$broad_celltype_annot),
+  wallace_d1_all = compute_markers(assay(wallace_d1_all, "cpm"), wallace_d1_all$broad_celltype_annot),
+  wallace_d2_all = compute_markers(assay(wallace_d2_all, "cpm"), wallace_d2_all$broad_celltype_annot),
+  wallace_d3_all = compute_markers(assay(wallace_d3_all, "cpm"), wallace_d3_all$broad_celltype_annot),
+  wallace_d4_all = compute_markers(assay(wallace_d4_all, "cpm"), wallace_d4_all$broad_celltype_annot)
+)
+
+mouse_neuron_meta_markers = make_meta_markers(neuron_markers, detailed_stats = TRUE)
+
+mouse_neuron_meta_markers %>% filter(rank <= 25) %>% View()
+
+export_meta_markers(mouse_neuron_meta_markers, paste0(new_data_path, '/mouse_hab_neuron_meta_markers.csv'), names(all_markers))
+
+
+
+
+
+
+
+
 
 
 
