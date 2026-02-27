@@ -637,9 +637,12 @@ mouse_neuron_meta_markers %>% filter(rank <= 25) %>% View()
 export_meta_markers(mouse_neuron_meta_markers, paste0(new_data_path, '/mouse_hab_neuron_meta_markers.csv'), names(all_markers))
 
 
+mouse_neuron_meta_markers = read_meta_markers(paste0(new_data_path, '/mouse_hab_neuron_meta_markers.csv.gz'))
+mouse_neuron_meta_markers %>% filter(rank <= 25) %>% View()
 
 
-
+mouse_all_meta_markers = read_meta_markers(paste0(new_data_path, '/mouse_hab_all_celltypes_meta_markers.csv.gz'))
+mouse_all_meta_markers %>% filter(rank <= 25) %>% View()
 
 
 
