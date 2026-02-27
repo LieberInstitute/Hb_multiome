@@ -510,12 +510,12 @@ p_bubble[[2]]
 
 meta_annot_vec = c( 'SupstanceP_medial' = 'MHb.1',
                     'Cholinergic_medial' = 'MHb.2',
-                    'Lateral_1' = 'LHb.7',
-                    'Lateral_1' = 'LHb.2',
-                    'Lateral_2' = 'LHb.1',
-                    'Lateral_2' = 'LHb.3',
-                    'Lateral_2' = 'LHb.4',
-                    'Lateral_2' = 'LHb.5',
+                    'Lateral_2' = 'LHb.7',
+                    'Lateral_2' = 'LHb.2',
+                    'Lateral_1' = 'LHb.1',
+                    'Lateral_1' = 'LHb.3',
+                    'Lateral_1' = 'LHb.4',
+                    'Lateral_1' = 'LHb.5',
                     'outliers' = 'MHb.3' ,
                     'outliers' = 'LHb.6'   
 )
