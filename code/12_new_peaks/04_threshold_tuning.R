@@ -61,10 +61,10 @@ for (target_cell_type in cell_types) {
     result_df_list = list()
     for (other_cell_type in cell_types) {
         result_df_list[[other_cell_type]] = read_csv(
-                sprintf(result_paths, target_cell_type, other_cell_type),
-                show_col_types = FALSE
-            ) |>
-            select(peak, gene, score, FDR, other_cell_type)
+            sprintf(result_paths, target_cell_type, other_cell_type),
+            show_col_types = FALSE
+        ) |>
+        select(peak, gene, score, FDR, other_cell_type)
     }
     result_df = bind_rows(result_df_list)
 
@@ -85,7 +85,7 @@ for (target_cell_type in cell_types) {
                 filter(set_id == target_cell_type) |>
                 pull(gene_name)
 
-            marker_df_list[[length(marker_df_list) + 1]] = tibble(
+            metric_df_list[[length(metric_df_list) + 1]] = tibble(
                 target_cell_type = target_cell_type,
                 FDR_threshold = !!FDR_threshold,
                 cor_threshold = !!cor_threshold,
@@ -102,6 +102,11 @@ metric_df = bind_rows(metric_df_list)
 ################################################################################
 
 p = metric_df |>
+    mutate(
+        FDR_threshold = factor(
+            FDR_threshold, levels = sort(unique(FDR_threshold))
+        )
+    ) |>
     ggplot(aes(x = FDR_threshold, y = cor_threshold, fill = prop_markers)) +
         geom_tile() +
         scale_fill_viridis_c() +
@@ -112,7 +117,8 @@ p = metric_df |>
             fill = "Proportion\nMarkers",
             title = "Marker Enrichment Across Thresholds"
         ) +
-        theme_bw(base_size = 15)
+        theme_bw(base_size = 15) +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 pdf(plot_path)
 print(p)
 dev.off()
