@@ -18,6 +18,8 @@ out_path = here(
 )
 keep_reductions = c("pca", "umap.integrated", "umap.lsi.integrated", "wnn.umap")
 
+dir.create(dirname(out_path), showWarnings = FALSE)
+
 message(Sys.time(), " | Reading original object")
 seur = readRDS(in_path)
 
