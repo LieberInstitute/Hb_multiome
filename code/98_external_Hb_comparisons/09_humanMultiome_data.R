@@ -3,8 +3,10 @@
 library(SingleCellExperiment)
 library(Seurat)
 library(MetaNeighbor)
+library(MetaMarkers)
 library(dplyr)
 library(ggplot2)
+library(ggrepel)
 library(here)
 
 here::here()
@@ -56,7 +58,6 @@ table(multiome_sce$mid_cluster)
 #Donor ID
 table(multiome_sce$orig.ident)
 #Cluster LHb.7 looks to be a donor cluster, 200 cells from 1 donor, 13 cells from 5 others
-
 
 
 #Yalcinbas data
@@ -652,7 +653,87 @@ dev.off()
 #LHb3 - a potential mammal-specific lateral cluster, Maps to the Wallace LHb2, Yalcinbas 2 and 7, and multiome, 2.7 and 7
 
 
+#Check out some DE and markers
+#Check out the markers when including all the data
+all_multiome_markers = compute_markers(assay(multiome_sce, 'cpm'), multiome_sce$mid_cluster)
+all_multiome_markers %>% group_by(cell_type) %>% slice_max(order_by = auroc, n = 25) %>% View()
+all_multiome_markers %>% filter(gene %in% c('', 'TAC1')) %>% group_by(gene) %>% arrange(average_expression, .by_group = T) %>% View()
 
+
+ggplot(all_multiome_markers %>% filter(cell_type == 'MHb.1'), aes(x = log2(fold_change), y = auroc)) + 
+  geom_point(color = 'grey', alpha = .5) +
+  theme_bw() + ggtitle('Multiome MHb.1 DE') + ylim(0,1) + xlim(-7.5, 5.5) +
+  geom_point(data = all_multiome_markers %>% filter(cell_type == 'MHb.1' & gene %in% c('TAC1', 'TAC3', 'CHAT', 'SLC5A7', 'SLC18A3')),
+             color = "red", size = 3) +
+  geom_label_repel(data = all_multiome_markers %>% filter(cell_type == 'MHb.1' & gene %in% c('TAC1', 'TAC3', 'CHAT', 'SLC5A7', 'SLC18A3')),
+                   aes(label = gene),
+                   box.padding = 0.5,
+                   point.padding = 0.5,
+                   segment.color = "black",
+                   segment.size = 0.5)
+
+
+ggplot(all_multiome_markers %>% filter(cell_type == 'MHb.2'), aes(x = log2(fold_change), y = auroc)) + 
+  geom_point(color = 'grey', alpha = .5) +
+  theme_bw() + ggtitle('Multiome MHb.2 DE') + ylim(0,1) + xlim(-7.5, 5.5) +
+  geom_point(data = all_multiome_markers %>% filter(cell_type == 'MHb.2' & gene %in% c('TAC1', 'TAC3', 'CHAT', 'SLC5A7', 'SLC18A3')),
+             color = "red", size = 3) +
+  geom_label_repel(data = all_multiome_markers %>% filter(cell_type == 'MHb.2' & gene %in% c('TAC1', 'TAC3', 'CHAT', 'SLC5A7', 'SLC18A3')),
+                   aes(label = gene),
+                   box.padding = 0.5,
+                   point.padding = 0.5,
+                   segment.color = "black",
+                   segment.size = 0.5)
+
+ggplot(all_multiome_markers %>% filter(cell_type == 'MHb.3'), aes(x = log2(fold_change), y = auroc)) + 
+  geom_point(color = 'grey', alpha = .5) +
+  theme_bw() + ggtitle('Multiome MHb.3 DE')  + ylim(0,1) + xlim(-7.5, 5.5) +
+  geom_point(data = all_multiome_markers %>% filter(cell_type == 'MHb.3' & gene %in% c('TAC1', 'TAC3', 'CHAT', 'SLC5A7', 'SLC18A3')),
+             color = "red", size = 3) +
+  geom_label_repel(data = all_multiome_markers %>% filter(cell_type == 'MHb.3' & gene %in% c('TAC1', 'TAC3', 'CHAT', 'SLC5A7', 'SLC18A3')),
+                   aes(label = gene),
+                   box.padding = 0.5,
+                   point.padding = 0.5,
+                   segment.color = "black",
+                   segment.size = 0.5)
+
+
+ggplot(all_multiome_markers %>% filter(cell_type == 'LHb.4'), aes(x = log2(fold_change), y = auroc)) + 
+  geom_point(color = 'grey', alpha = .5) +
+  theme_bw() + ggtitle('Multiome LHb.4 DE') +
+  geom_point(data = all_multiome_markers %>% filter(cell_type == 'LHb.4' & gene %in% c('GAD1', 'GAD2', 'SLC32A1', 'GPR151','GAP43', 'SLC17A6', 'SLC17A7')),
+             color = "red", size = 3) +
+  geom_label_repel(data = all_multiome_markers %>% filter(cell_type == 'LHb.4' & gene %in% c('GAD1', 'GAD2', 'SLC32A1', 'GPR151','GAP43', 'SLC17A6', 'SLC17A7')),
+                   aes(label = gene),
+                   box.padding = 0.5,
+                   point.padding = 0.5,
+                   segment.color = "black",
+                   segment.size = 0.5)
+
+
+ggplot(all_multiome_markers %>% filter(cell_type == 'LHb.2.7'), aes(x = log2(fold_change), y = auroc)) + 
+  geom_point(color = 'grey', alpha = .5) +
+  theme_bw() + ggtitle('Multiome LHb.2.7 DE') +
+  geom_point(data = all_multiome_markers %>% filter(cell_type == 'LHb.2.7' & gene %in% c('GAD1', 'GAD2', 'SLC32A1', 'GPR151','GAP43', 'SLC17A6', 'SLC17A7')),
+             color = "red", size = 3) +
+  geom_label_repel(data = all_multiome_markers %>% filter(cell_type == 'LHb.2.7' & gene %in% c('GAD1', 'GAD2', 'SLC32A1', 'GPR151','GAP43', 'SLC17A6', 'SLC17A7')),
+                   aes(label = gene),
+                   box.padding = 0.5,
+                   point.padding = 0.5,
+                   segment.color = "black",
+                   segment.size = 0.5)
+
+ggplot(all_multiome_markers %>% filter(cell_type == 'LHb.1'), aes(x = log2(fold_change), y = auroc)) + 
+  geom_point(color = 'grey', alpha = .5) +
+  theme_bw() + ggtitle('Multiome LHb.1 DE') +
+  geom_point(data = all_multiome_markers %>% filter(cell_type == 'LHb.1' & gene %in% c('GAD1', 'GAD2', 'SLC32A1', 'GPR151','GAP43', 'SLC17A6', 'SLC17A7')),
+             color = "red", size = 3) +
+  geom_label_repel(data = all_multiome_markers %>% filter(cell_type == 'LHb.1' & gene %in% c('GAD1', 'GAD2', 'SLC32A1', 'GPR151','GAP43', 'SLC17A6', 'SLC17A7')),
+                   aes(label = gene),
+                   box.padding = 0.5,
+                   point.padding = 0.5,
+                   segment.color = "black",
+                   segment.size = 0.5)
 
 
 
