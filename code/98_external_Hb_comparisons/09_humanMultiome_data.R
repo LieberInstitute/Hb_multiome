@@ -662,11 +662,69 @@ dev.off()
 #LHb3 - a potential mammal-specific lateral cluster, Maps to the Wallace LHb2, Yalcinbas 2 and 7, and multiome, 2.7 and 7
 
 
+#Get a barplot of cell numbers per cluster, than a stacked barplot of donor contribution to each cluster
+
+cell_num_df = as.data.frame(colData(multiome_sce)) %>% select(orig.ident, final_Annotations) %>% group_by(final_Annotations, orig.ident) %>% 
+  summarise(n = n())
+
+annotation_order <- cell_num_df %>%
+  group_by(final_Annotations) %>%
+  summarise(total = sum(n), .groups = "drop") %>%
+  arrange(desc(total)) %>%
+  pull(final_Annotations)
+
+# Stacked barplot with proportions
+p1 = cell_num_df %>%
+  group_by(final_Annotations) %>%
+  mutate(prop = n / sum(n),
+         final_Annotations = factor(final_Annotations, levels = annotation_order)) %>%
+  ggplot(aes(x = final_Annotations, y = prop, fill = orig.ident)) +
+  geom_col() +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Habenula clusters", y = "Proportion", fill = "Sample") +
+  scale_fill_manual(values = MetBrewer::met.brewer("Redon", n = 10), name = 'Donor')
+
+# Total cell count barplot
+p2 = cell_num_df %>%
+  group_by(final_Annotations) %>%
+  summarise(total = sum(n), .groups = "drop") %>%
+  mutate(final_Annotations = factor(final_Annotations, levels = annotation_order)) %>%
+  ggplot(aes(x = final_Annotations, y = total, fill = final_Annotations)) +
+  geom_col() +
+  ggbreak::scale_y_break(c(5000, 10000)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Habenula Clusters", y = "Total Cell Count") +
+  scale_fill_manual(values = MetBrewer::met.brewer("Navajo", n = 10), name = 'Habenula clusters')
+
+
+ggsave(plot = p1, filename = 'cluster_per_donor_stacked_bar.pdf', path = plot_path, 
+width = 4, height = 4,device = 'pdf', useDingbats = F)
+
+ggsave(plot = p2, filename = 'cluster_total_cell_number_bar.pdf', path = plot_path, 
+width = 4, height = 4,device = 'pdf', useDingbats = F, onefile = FALSE)
+
+
+
+
 #Check out some DE and markers
 #Check out the markers when including all the data
 all_multiome_markers = compute_markers(assay(multiome_sce, 'cpm'), multiome_sce$mid_cluster)
-all_multiome_markers %>% group_by(cell_type) %>% slice_max(order_by = auroc, n = 25) %>% View()
-all_multiome_markers %>% filter(gene %in% c('', 'TAC1')) %>% group_by(gene) %>% arrange(average_expression, .by_group = T) %>% View()
+#all_multiome_markers %>% group_by(cell_type) %>% slice_max(order_by = auroc, n = 25) %>% View()
+all_multiome_markers %>% filter(gene %in% c('ESR1', 'PVALB', 'KIT')) %>% group_by(gene) %>% arrange(average_expression, .by_group = T) %>% View()
+
+table(multiome_sce$mid_cluster, multiome_sce$orig.ident)
+table(multiome_sce$mid_cluster)
+
+
+p_bubble = get_bubble_plot_sce(multiome_sce, 
+  top_markers = c('ESR1', 'PVALB','KIT', 'GAD1', 'GAD2', 'SLC32A1', 'SLC17A7', 'OPRM1'),
+ sample_name = "Multiome Habenula", group_col = "final_Annotations")
+
+p_bubble[[1]]
+p_bubble[[2]]
+
 
 
 ggplot(all_multiome_markers %>% filter(cell_type == 'MHb.1'), aes(x = log2(fold_change), y = auroc)) + 
@@ -707,12 +765,12 @@ ggplot(all_multiome_markers %>% filter(cell_type == 'MHb.3'), aes(x = log2(fold_
                    segment.size = 0.5)
 
 
-ggplot(all_multiome_markers %>% filter(cell_type == 'LHb.4'), aes(x = log2(fold_change), y = auroc)) + 
+ggplot(all_multiome_markers %>% filter(cell_type == 'LHb.4'), aes(x = log10(average_expression), y = auroc)) + 
   geom_point(color = 'grey', alpha = .5) +
   theme_bw() + ggtitle('Multiome LHb.4 DE') +
-  geom_point(data = all_multiome_markers %>% filter(cell_type == 'LHb.4' & gene %in% c('GAD1', 'GAD2', 'SLC32A1', 'GPR151','GAP43', 'SLC17A6', 'SLC17A7')),
+  geom_point(data = all_multiome_markers %>% filter(cell_type == 'LHb.4' & gene %in% c('GAD1', 'GAD2', 'SLC32A1', 'GPR151','ESR1', 'PVALB', 'KIT', 'SLC17A6', 'SLC17A7')),
              color = "red", size = 3) +
-  geom_label_repel(data = all_multiome_markers %>% filter(cell_type == 'LHb.4' & gene %in% c('GAD1', 'GAD2', 'SLC32A1', 'GPR151','GAP43', 'SLC17A6', 'SLC17A7')),
+  geom_label_repel(data = all_multiome_markers %>% filter(cell_type == 'LHb.4' & gene %in% c('GAD1', 'GAD2', 'SLC32A1', 'GPR151','ESR1', 'PVALB', 'KIT', 'SLC17A6', 'SLC17A7')),
                    aes(label = gene),
                    box.padding = 0.5,
                    point.padding = 0.5,
@@ -723,9 +781,9 @@ ggplot(all_multiome_markers %>% filter(cell_type == 'LHb.4'), aes(x = log2(fold_
 ggplot(all_multiome_markers %>% filter(cell_type == 'LHb.2.7'), aes(x = log2(fold_change), y = auroc)) + 
   geom_point(color = 'grey', alpha = .5) +
   theme_bw() + ggtitle('Multiome LHb.2.7 DE') +
-  geom_point(data = all_multiome_markers %>% filter(cell_type == 'LHb.2.7' & gene %in% c('GAD1', 'GAD2', 'SLC32A1', 'GPR151','GAP43', 'SLC17A6', 'SLC17A7')),
+  geom_point(data = all_multiome_markers %>% filter(cell_type == 'LHb.2.7' & gene %in% c('GAD1', 'GAD2', 'SLC32A1', 'GPR151','ESR1', 'PVALB', 'KIT', 'SLC17A6', 'SLC17A7', 'OPRM1')),
              color = "red", size = 3) +
-  geom_label_repel(data = all_multiome_markers %>% filter(cell_type == 'LHb.2.7' & gene %in% c('GAD1', 'GAD2', 'SLC32A1', 'GPR151','GAP43', 'SLC17A6', 'SLC17A7')),
+  geom_label_repel(data = all_multiome_markers %>% filter(cell_type == 'LHb.2.7' & gene %in% c('GAD1', 'GAD2', 'SLC32A1', 'GPR151','ESR1', 'PVALB', 'KIT', 'SLC17A6', 'SLC17A7', 'OPRM1')),
                    aes(label = gene),
                    box.padding = 0.5,
                    point.padding = 0.5,
