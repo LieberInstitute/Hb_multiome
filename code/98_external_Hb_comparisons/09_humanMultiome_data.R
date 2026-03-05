@@ -400,6 +400,14 @@ plotClusterGraph(cluster_graph, all_donor_sce$species, all_donor_sce$final_Annot
 dev.off()
 
 
+#And save the cross-species auroc matrices
+saveRDS(MN_aurocs, file = paste0(new_data_path, '/cross_species_MN_AllVsAll_neurons.rds'))
+
+saveRDS(MN_best_aurocs, file = paste0(new_data_path, '/cross_species_MN_BestVsNext_neurons.rds'))
+
+
+
+
 #Potential annotations of the multiome clusters
 
 #MHb.1 - Substance P
