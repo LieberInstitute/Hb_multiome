@@ -46,9 +46,12 @@ link_df = rbind(
         )
     ) |>
     filter(abs(score) > cor_thres, FDR < FDR_thres) |>
-    select(peak, gene, target_cell_type) |>
+    select(peak, gene, target_cell_type, score) |>
     group_by(peak, gene) |>
-    summarize(target_cell_type = ifelse(n() == 1, target_cell_type, "both")) |>
+    summarize(
+        target_cell_type = ifelse(n() == 1, target_cell_type, "both"),
+        score = first(score) # this is ok since scores will be identical
+    ) |>
     ungroup()
 
 stopifnot(all(link_df$peak %in% rownames(seur[[atac_assay]])))
@@ -79,6 +82,7 @@ for (cell_type in unique(link_df$target_cell_type)) {
             donor = donor,
             peak = ct_links$peak,
             gene = ct_links$gene,
+            score = ct_links$score,
             peak_value = rowMeans(
                 GetAssayData(
                     seur, assay = atac_assay, layer = "data"
@@ -96,7 +100,7 @@ count_df = bind_rows(count_df_list)
 
 # Prepare matrices for peak and gene values
 peak_mat <- count_df |>
-    select(cell_type, peak, gene, donor, peak_value) |>
+    select(cell_type, peak, gene, donor, peak_value, score) |>
     unite("row_id", peak, gene, sep = "|", remove = FALSE) |>
     select(row_id, donor, peak_value) |>
     pivot_wider(names_from = donor, values_from = peak_value) |>
@@ -104,7 +108,7 @@ peak_mat <- count_df |>
     as.matrix()
 
 gene_mat <- count_df |>
-    select(cell_type, peak, gene, donor, gene_value) |>
+    select(cell_type, peak, gene, donor, gene_value, score) |>
     unite("row_id", peak, gene, sep = "|", remove = FALSE) |>
     select(row_id, donor, gene_value) |>
     pivot_wider(names_from = donor, values_from = gene_value) |>
@@ -112,46 +116,89 @@ gene_mat <- count_df |>
     as.matrix()
 stopifnot(identical(rownames(peak_mat), rownames(gene_mat)))
 
-# Create row split factor
-row_split <- count_df |>
-    select(peak, gene, cell_type) |>
+# Create row split factor with cell type grouped together
+row_split_df <- count_df |>
+    select(peak, gene, cell_type, score) |>
     distinct() |>
-    unite("row_id", peak, gene, sep = "|") |>
-    pull(cell_type)
+    mutate(
+        cor_sign = ifelse(score > 0, "positive", "negative"),
+        split_group = paste(cell_type, cor_sign, sep = "_")
+    )
+row_split_levels = row_split_df |>
+    distinct(cell_type, cor_sign) |>
+    arrange(cell_type, cor_sign) |>
+    mutate(split_group = paste(cell_type, cor_sign, sep = "_")) |>
+    pull(split_group)
+row_split = factor(row_split_df$split_group, levels = row_split_levels)
+
+# Create annotation data frame with same ordering
+anno_df <- count_df |>
+    select(peak, gene, cell_type, score) |>
+    distinct() |>
+    mutate(cor_sign = ifelse(score > 0, "positive", "negative"))
 
 # Create color function
-col_fun <- colorRamp2(c(0, quantile(c(peak_mat, gene_mat), 0.95)), c("white", "red"))
+col_fun_gene <- colorRamp2(
+    c(0, quantile(gene_mat, 0.95)), 
+    c("#440154FF", "#FDE725FF")  # viridis colors
+)
 
-# Cluster based on gene matrix
+col_fun_peak <- colorRamp2(
+    c(0, quantile(peak_mat, 0.95)), 
+    c("#000004FF", "#FCFDBFFF")  # magma colors
+)
+
+# Define colors for annotations
+cell_type_colors <- c("LHb.2.7" = "#E69F00", "MHb.2" = "#56B4E9", "both" = "#009E73")
+cor_sign_colors <- c("positive" = "#D55E00", "negative" = "#0072B2")
+
+# Create row annotation
+row_ha <- rowAnnotation(
+    `Cell Type` = anno_df$cell_type,
+    `Correlation` = anno_df$cor_sign,
+    col = list(
+        `Cell Type` = cell_type_colors,
+        `Correlation` = cor_sign_colors
+    ),
+    show_legend = TRUE
+)
+
+# Create gene heatmap with row_split but no labels
 ht_gene <- Heatmap(
     gene_mat,
     name = "Gene",
-    col = col_fun,
+    col = col_fun_gene,
     column_title = "Gene Values",
     show_row_names = FALSE,
     cluster_columns = FALSE,
+    show_row_dend = FALSE,
     row_split = row_split,
+    cluster_row_slices = FALSE,
+    row_title = NULL,  # Remove row split labels
+    left_annotation = row_ha,
     border = TRUE
 )
 
 # Get the row order from the gene heatmap
 gene_row_order <- row_order(ht_gene)
 
-# Create peak heatmap with matching row order
+# Create peak heatmap with matching row order and split
 ht_peak <- Heatmap(
     peak_mat,
     name = "Peak",
-    col = col_fun,
+    col = col_fun_peak,
     column_title = "Peak Values",
     show_row_names = FALSE,
     cluster_columns = FALSE,
     cluster_rows = FALSE,
+    cluster_row_slices = FALSE,
     row_split = row_split,
+    row_title = NULL,  # Remove row split labels
     row_order = unlist(gene_row_order),
     border = TRUE
 )
 
-# Combine heatmaps (gene first so it shows the dendrogram)
+# Combine heatmaps
 ht_list <- ht_gene + ht_peak
 pdf(plot_path)
 draw(ht_list)
