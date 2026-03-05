@@ -78,6 +78,29 @@ p_val_heatmap = function(results_df, gwas_groups, f_name) {
     dev.off()
 }
 
+p_val_heatmap2 = function(results_df, gwas_groups, f_name) {
+    p = ggplot(
+            results_df,
+            aes(
+                x = gwas_group, y = cell_type, fill = neg_log_p, label = p_label
+            )
+        ) +
+        geom_tile() +
+        geom_text(size = 6) +
+        scale_fill_viridis_c() +
+        facet_wrap(~dataset, ncol = 3, scales = "free_y") +
+        theme_bw(base_size = 20) +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+        labs(x = "GWAS Trait", y = "Cell Type", fill = "-log10(p)")
+    pdf(
+        file.path(plot_dir, f_name),
+        width = 3 + 2 * length(gwas_groups),
+        height = 6
+    )
+    print(p)
+    dev.off()
+}
+
 ################################################################################
 #   Main
 ################################################################################
@@ -107,14 +130,29 @@ for (gwas_set in names(gwas_groups)) {
     }
 }
 
-#   P-value heatmap for the 5 factors + P factor
 for (cell_type_group in cell_type_groups) {
+    #   P-value heatmap for the 5 factors + P factor
     p_val_heatmap(
         results_df = results_df |>
             filter(!is.na(gwas_factor), cell_type_group == !!cell_type_group) |>
             mutate(gwas_group = gwas_factor),
         gwas_groups = gwas_factors,
         f_name = sprintf("cross_dataset_5_factors_%s.pdf", cell_type_group)
+    )
+
+    #   Custom plot for an RPPR
+    p_val_heatmap2(
+        results_df = results_df |>
+            filter(
+                gwas_group %in% c('OUD 2', 'SUD 1', 'MDD'),
+                cell_type_group == !!cell_type_group
+            ) |>
+            mutate(
+                gwas_group = as.character(gwas_group) |>
+                    recode('OUD 2' = 'OUD', 'SUD 1' = 'SUD')
+            ),
+        gwas_groups = c('OUD', 'SUD', 'MDD'),
+        f_name = sprintf("heatmap_RPPR_%s.pdf", cell_type_group)
     )
 }
 

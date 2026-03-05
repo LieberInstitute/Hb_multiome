@@ -405,7 +405,8 @@ saveRDS(MN_aurocs, file = paste0(new_data_path, '/cross_species_MN_AllVsAll_neur
 
 saveRDS(MN_best_aurocs, file = paste0(new_data_path, '/cross_species_MN_BestVsNext_neurons.rds'))
 
-
+#And save the merged SCE object
+saveRDS(all_donor_sce, file = paste0(new_data_path, '/cross_species_merged_sce_neurons.rds'))
 
 
 #Potential annotations of the multiome clusters
