@@ -66,7 +66,7 @@ peaks_mat = FeatureMatrix(
 new_assay = CreateChromatinAssay(
     counts = peaks_mat,
     ranges = peaks_gr,
-    annotation = tryCatch(Annotation(seur), error = function(e) NULL)
+    annotation = Annotation(seur)
 )
 seur[['ATAC']] = new_assay
 DefaultAssay(seur) = "ATAC"
