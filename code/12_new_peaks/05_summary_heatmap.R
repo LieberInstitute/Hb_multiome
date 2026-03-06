@@ -25,6 +25,7 @@ cell_type2 = "LHb.2.7"
 cor_thres = 0.3
 FDR_thres = 0.1
 num_expected_donors = 10
+color_quantile = 0.99
 
 dir.create(dirname(plot_path), showWarnings = FALSE)
 
@@ -96,20 +97,23 @@ for (cell_type in unique(link_df$target_cell_type)) {
         )
     }
 }
-count_df = bind_rows(count_df_list)
+count_df = bind_rows(count_df_list) |>
+    mutate(row_id = paste(peak, gene, sep = "|")) |>
+    group_by(row_id) |>
+    mutate(
+        peak_value = (peak_value - mean(peak_value)) / sd(peak_value),
+        gene_value = (gene_value - mean(gene_value)) / sd(gene_value)
+    ) |>
+    ungroup()
 
 # Prepare matrices for peak and gene values
 peak_mat <- count_df |>
-    select(cell_type, peak, gene, donor, peak_value, score) |>
-    unite("row_id", peak, gene, sep = "|", remove = FALSE) |>
     select(row_id, donor, peak_value) |>
     pivot_wider(names_from = donor, values_from = peak_value) |>
     column_to_rownames("row_id") |>
     as.matrix()
 
 gene_mat <- count_df |>
-    select(cell_type, peak, gene, donor, gene_value, score) |>
-    unite("row_id", peak, gene, sep = "|", remove = FALSE) |>
     select(row_id, donor, gene_value) |>
     pivot_wider(names_from = donor, values_from = gene_value) |>
     column_to_rownames("row_id") |>
@@ -139,23 +143,31 @@ anno_df <- count_df |>
 
 # Create color function
 col_fun_gene <- colorRamp2(
-    c(0, quantile(gene_mat, 0.95)), 
+    c(
+        quantile(gene_mat[gene_mat < 0], 1 - color_quantile),
+        quantile(gene_mat[gene_mat > 0], color_quantile)
+    ),
     c("#440154FF", "#FDE725FF")  # viridis colors
 )
 
 col_fun_peak <- colorRamp2(
-    c(0, quantile(peak_mat, 0.95)), 
+    c(
+        quantile(peak_mat[peak_mat < 0], 1 - color_quantile),
+        quantile(peak_mat[peak_mat > 0], color_quantile)
+    ), 
     c("#000004FF", "#FCFDBFFF")  # magma colors
 )
 
 # Define colors for annotations
-cell_type_colors <- c("LHb.2.7" = "#E69F00", "MHb.2" = "#56B4E9", "both" = "#009E73")
-cor_sign_colors <- c("positive" = "#D55E00", "negative" = "#0072B2")
+cell_type_colors <- c(
+    "LHb.2.7" = "#305252", "MHb.2" = "#F9B9B7", "both" = "#F5D491"
+)
+cor_sign_colors <- c("positive" = "#6D9DC5", "negative" = "#E3170A")
 
 # Create row annotation
 row_ha <- rowAnnotation(
-    `Cell Type` = anno_df$cell_type,
-    `Correlation` = anno_df$cor_sign,
+    `Cell Type` = factor(anno_df$cell_type, levels = names(cell_type_colors)),
+    `Correlation` = factor(anno_df$cor_sign, levels = names(cor_sign_colors)),
     col = list(
         `Cell Type` = cell_type_colors,
         `Correlation` = cor_sign_colors
@@ -163,10 +175,10 @@ row_ha <- rowAnnotation(
     show_legend = TRUE
 )
 
-# Create gene heatmap with row_split but no labels
+#   RNA heatmap
 ht_gene <- Heatmap(
     gene_mat,
-    name = "Gene",
+    name = "Gene Z-score",
     col = col_fun_gene,
     column_title = "Gene Values",
     show_row_names = FALSE,
@@ -182,10 +194,10 @@ ht_gene <- Heatmap(
 # Get the row order from the gene heatmap
 gene_row_order <- row_order(ht_gene)
 
-# Create peak heatmap with matching row order and split
+#   ATAC heatmap matching row order
 ht_peak <- Heatmap(
     peak_mat,
-    name = "Peak",
+    name = "Peak Z-score",
     col = col_fun_peak,
     column_title = "Peak Values",
     show_row_names = FALSE,
