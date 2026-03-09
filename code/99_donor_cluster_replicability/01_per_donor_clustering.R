@@ -9,6 +9,7 @@
 library(SingleCellExperiment)
 library(Seurat)
 library(MetaMarkers)
+library(MetaNeighbor)
 library(dplyr)
 library(ggplot2)
 library(scater)
@@ -34,16 +35,10 @@ assay(multiome_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(multiome_sce, 'co
 
 multiome_sce
 
-#Set up color scale
-mid_res_annots = names(table(multiome_sce$mid_cluster))
-#color_palette_1 = MetBrewer::met.brewer("Monet", n = 5)
-#names(color_palette_1) = c('Astrocyte','Endo','Microglia','Oligo','OPC')
 
+#Set up color scale
 color_palette_1 = c('Astrocyte' = 'grey','Endo' = 'firebrick','Microglia' = 'darkred',
 'Oligo' = 'darkgoldenrod','OPC' = 'cornsilk3')
-
-#color_palette_2 = MetBrewer::met.brewer("Ingres", n = 3)
-#names(color_palette_2) = c('Inhib.Thal','Excit.Thal','Thal')
 
 color_palette_2 = c('Inhib.Thal' = 'dodgerblue','Excit.Thal' = 'indianred2','Thal' = 'lightsteelblue')
 
@@ -95,6 +90,9 @@ table(multiome_sce$orig.ident, multiome_sce$mid_cluster)
 
 
 #Exclude a donor, learn markers from the the remaining donors, project those markers onto the excluded donor.
+
+#All the cell names are unique, so I can break apart by donor and then put it back together
+table(duplicated(rownames(colData(multiome_sce))))
 
 # Get unique donor IDs
 donors <- unique(multiome_sce$orig.ident)
@@ -178,26 +176,142 @@ table(test_sce$cross_donor_pred_100)
 
 
 
-#And what does seurat dimreduc look like?
+#Just going to go ahead with the cross-donor replicability clustering, just to compare to the integrated cluster labels
 
-test_seurat = as.Seurat(test_sce, counts = 'counts', data = 'cpm')
-test_seurat  <- FindVariableFeatures(test_seurat , selection.method = "vst", nfeatures = 2000)
-all.genes <- rownames(test_seurat )
-test_seurat  <- ScaleData(test_seurat , features = all.genes)
+#Convert all the donor SCEs to seurats, do default seurat clustering, convert back to SCEs, and then metaneighbor across donors
 
-test_seurat <- RunPCA(test_seurat, features = VariableFeatures(object = test_seurat))
+#Convert first to seurats
+multiome_seurat_list <- lapply(multiome_sce_list, function(sce) {
+  as.Seurat(sce, counts = "counts", data = "cpm")
+})
 
-test_seurat <- FindNeighbors(test_seurat, dims = 1:20)
-test_seurat <- FindClusters(test_seurat, resolution = .5)
+#Clustering for each individual donor
+for (i in seq_along(multiome_seurat_list)) {
+  # Find variable features
+  multiome_seurat_list[[i]] <- FindVariableFeatures(multiome_seurat_list[[i]], selection.method = "vst", nfeatures = 2000)
+  
+  # Scale data
+  all.genes <- rownames(multiome_seurat_list[[i]])
+  multiome_seurat_list[[i]] <- ScaleData(multiome_seurat_list[[i]], features = all.genes)
+  
+  # PCA
+  multiome_seurat_list[[i]] <- RunPCA(multiome_seurat_list[[i]], features = VariableFeatures(object = multiome_seurat_list[[i]]))
+  
+  # Find neighbors and clusters
+  multiome_seurat_list[[i]] <- FindNeighbors(multiome_seurat_list[[i]], dims = 1:20)
+  multiome_seurat_list[[i]] <- FindClusters(multiome_seurat_list[[i]], resolution = .5)
+  
+  # UMAP
+  multiome_seurat_list[[i]] <- RunUMAP(multiome_seurat_list[[i]], dims = 1:20)
+  
+  cat("Finished processing", names(multiome_seurat_list)[i], "\n")
+}
 
-test_seurat <- RunUMAP(test_seurat, dims = 1:20)
+#For trying different clustering resolutions
+for (i in seq_along(multiome_seurat_list)) {
+  multiome_seurat_list[[i]] <- FindClusters(multiome_seurat_list[[i]], resolution = .5)
+}
 
-DimPlot(test_seurat, reduction = "umap", group.by = "mid_cluster", cols = color_palette, pt.size = 2) + 
-  ggtitle('Seurat UMAP: original cluster annots')
-DimPlot(test_seurat, reduction = "umap", group.by = 'seurat_clusters', pt.size = 2) + 
-  ggtitle('Seurat UMAP')
 
-test_seurat@meta.data %>% View()
+
+#Check out the UMAPs for each donor
+for (i in seq_along(multiome_seurat_list)) {
+  p <- DimPlot(multiome_seurat_list[[i]], reduction = "umap", group.by = 'seurat_clusters', label = TRUE) + 
+    ggtitle(names(multiome_seurat_list)[i])
+  print(p)
+  p <- DimPlot(multiome_seurat_list[[i]], reduction = "umap",group.by = 'mid_cluster' , label = TRUE) + 
+    ggtitle(names(multiome_seurat_list)[i]) + scale_color_manual(values = color_palette)
+  print(p)
+
+}
+
+
+
+#Convert to SingleCellExperiment objects for MetaNeighbor
+donor_sce_list <- lapply(multiome_seurat_list, as.SingleCellExperiment)
+#Change the assays names to counts cpm scaledata
+for (i in seq_along(donor_sce_list)) {
+  names(assays(donor_sce_list[[i]])) <- c("counts", "cpm", "scaledata" )
+}
+
+
+#And run MetaNeighbor on the default Seurat clusters
+#Get single SCE object
+all_donor_sce = mergeSCE(donor_sce_list)
+View(as.data.frame(colData(all_donor_sce)))
+
+#Get highly variable genes, this time highly variable genes across the donor datasets, sticking with 2000
+global_hvgs = variableGenes(dat = all_donor_sce, min_recurrence = 2, exp_labels = all_donor_sce$study_id)
+length(global_hvgs)
+keep_global_hvgs = global_hvgs[1:2000]
+
+
+MN_aurocs = MetaNeighborUS(var_genes = keep_global_hvgs,
+  dat = all_donor_sce,
+  study_id = all_donor_sce$study_id,
+  cell_type = all_donor_sce$seurat_clusters,
+  fast_version = TRUE)
+
+#Plot allby-all AUROC heatmap
+MetaNeighbor::plotHeatmap(MN_aurocs, 
+  cex = .5,
+  title = "MetaNeighbor AUROCs for HabMulti-ome donors")
+
+
+#And the best versus next approach
+
+MN_best_aurocs = MetaNeighborUS(var_genes = keep_global_hvgs,
+  dat = all_donor_sce,
+  study_id = all_donor_sce$study_id,
+  cell_type = all_donor_sce$seurat_clusters,
+  fast_version = TRUE,
+one_vs_best = TRUE, symmetric_output = FALSE)
+
+#Plot best_vs_next AUROC heatmap
+MetaNeighbor::plotHeatmap(MN_best_aurocs, 
+  cex = .5,
+  title = "MetaNeighbor best_vs_next AUROCs for HabMulti-ome donors")
+
+
+#Get the metaclusters from the best vs next results, add those annotations to the full SCE object
+mclusters = extractMetaClusters(MN_best_aurocs, threshold = .7)
+mclusters
+
+full_cluster_study_labels = paste(all_donor_sce$study_id, all_donor_sce$seurat_clusters, sep = "|")
+
+# Create a vector of meta_cluster names for each element in mclusters
+meta_cluster_names <- rep(names(mclusters), sapply(mclusters, length))
+# Flatten mclusters to match the order
+flat_mclusters <- unlist(mclusters)
+# Create a lookup vector
+mclusters_lookup <- setNames(meta_cluster_names, flat_mclusters)
+# Map each cell's label to its meta_cluster
+all_donor_sce$meta_cluster <- mclusters_lookup[full_cluster_study_labels]
+
+
+#Confusion matrix between metaclusters and the mid_cluster annotations
+all_celltype_conf_mat = as.matrix(table(all_donor_sce$meta_cluster, all_donor_sce$mid_cluster))
+all_celltype_sum_vec = colSums(all_celltype_conf_mat)
+all_celltype_conf_mat  = sweep(all_celltype_conf_mat , 2, all_celltype_sum_vec, "/")
+
+col_fun = circlize::colorRamp2(c(0, 1), c("white", "red"))
+ComplexHeatmap::Heatmap(all_celltype_conf_mat, name = 'Proportion of cells', col = col_fun, column_title = 'Metacluster vs integrated mid-res' ,
+cluster_rows = TRUE, cluster_columns = TRUE, show_row_names = TRUE, show_column_names = TRUE )
+
+logcounts(all_donor_sce) = log1p(cpm(all_donor_sce))
+dec <- modelGeneVar(all_donor_sce)
+hvg <- getTopHVGs(dec, n = 2000)
+
+all_donor_sce <- runPCA(all_donor_sce, subset_row = hvg)
+all_donor_sce <- runUMAP(all_donor_sce, dimred = "PCA", n_dimred = 20)
+
+plotUMAP(all_donor_sce, colour_by = "mid_cluster") +
+  scale_color_manual(values = color_palette) + ggtitle('Unintegrated mid_res clusters')
+
+plotUMAP(all_donor_sce, colour_by = "meta_cluster") +
+  ggtitle('Unintegrated meta clusters')
+
+
 
 
 
