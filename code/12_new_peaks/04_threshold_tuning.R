@@ -22,24 +22,17 @@ result_paths = here(
     'processed-data', '12_new_peaks', '01_link_peaks', '%s_%s.csv.gz'
 )
 gtf_path = '/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-gex-GRCh38-2024-A/genes/genes.gtf.gz'
-marker_path = here("processed-data", "10_MAGMA", "RNA", "gene_sets", "mid.tsv")
-plot_path = here("plots", "12_new_peaks", "threshold_heatmap.pdf")
+marker_path = here("processed-data", "10_MAGMA", "RNA", "gene_sets", "fine.tsv")
+plot_dir = here("plots", "12_new_peaks")
 min_num_links = 10
 FDR_thresholds = c(0.01, 0.05, 0.1, 0.15, 0.2, 1)
 cor_thresholds = 0.05 * seq(0, 10)
 
 ################################################################################
-#   Import markers and convert to gene symbols
+#   Import markers
 ################################################################################
 
-gtf = import(gtf_path) |>
-    as.data.frame() |>
-    as_tibble() |>
-    filter(type == 'gene') |>
-    select(gene_id, gene_name)
-
-marker_df = read_tsv(marker_path, show_col_types = FALSE) |>
-    left_join(gtf, by = 'gene_id')
+marker_df = read_tsv(marker_path, show_col_types = FALSE)
 
 message(
     sprintf(
@@ -84,6 +77,7 @@ for (target_cell_type in cell_types) {
             these_markers = marker_df |>
                 filter(set_id == target_cell_type) |>
                 pull(gene_name)
+            stopifnot(length(these_markers) > 0)
 
             metric_df_list[[length(metric_df_list) + 1]] = tibble(
                 target_cell_type = target_cell_type,
@@ -98,28 +92,59 @@ for (target_cell_type in cell_types) {
 metric_df = bind_rows(metric_df_list)
 
 ################################################################################
-#   Collect proportion of markers for each cell type
+#   Plot heatmaps
 ################################################################################
 
-p = metric_df |>
+metric_df = metric_df |>
     mutate(
         FDR_threshold = factor(
             FDR_threshold, levels = sort(unique(FDR_threshold))
+        ),
+        prop_markers = ifelse(
+            num_linked_genes >= min_num_links, prop_markers, NaN
+        )
+    )
+
+p = ggplot(
+        metric_df,
+        aes(x = FDR_threshold, y = cor_threshold, fill = prop_markers)
+    ) +
+    geom_tile() +
+    scale_fill_viridis_c() +
+    facet_wrap(~target_cell_type) +
+    labs(
+        x = "FDR Threshold",
+        y = "Correlation Threshold",
+        fill = "Proportion\nMarkers",
+        title = "Marker Enrichment Across Thresholds"
+    ) +
+    theme_bw(base_size = 15) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+pdf(file.path(plot_dir, "threshold_heatmap_faceted.pdf"))
+print(p)
+dev.off()
+
+p = metric_df |>
+    group_by(FDR_threshold, cor_threshold) |>
+    summarize(
+        mean_prop_markers = ifelse(
+            mean(is.na(prop_markers)) > 0.5,
+            NaN,
+            mean(prop_markers, na.rm = TRUE)
         )
     ) |>
-    ggplot(aes(x = FDR_threshold, y = cor_threshold, fill = prop_markers)) +
+    ggplot(aes(x = FDR_threshold, y = cor_threshold, fill = mean_prop_markers)) +
         geom_tile() +
         scale_fill_viridis_c() +
-        facet_wrap(~target_cell_type) +
         labs(
             x = "FDR Threshold",
             y = "Correlation Threshold",
-            fill = "Proportion\nMarkers",
-            title = "Marker Enrichment Across Thresholds"
+            fill = "Mean Proportion\nMarkers",
+            title = "Mean Marker Enrichment Across Thresholds"
         ) +
         theme_bw(base_size = 15) +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
-pdf(plot_path)
+pdf(file.path(plot_dir, "threshold_heatmap_mean.pdf"))
 print(p)
 dev.off()
 
