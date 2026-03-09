@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=20G
-#SBATCH --job-name=08_off_target_cor
+#SBATCH --mem=40G
+#SBATCH --job-name=07_non_pb_seur
 #SBATCH -c 1
-#SBATCH -t 1-0:00:00
-#SBATCH -o ../../processed-data/12_new_peaks/logs/08_off_target_cor.txt
-#SBATCH -e ../../processed-data/12_new_peaks/logs/08_off_target_cor.txt
+#SBATCH -t 5-0:00:00
+#SBATCH -o ../../processed-data/12_new_peaks/logs/07_non_pb_seur.txt
+#SBATCH -e ../../processed-data/12_new_peaks/logs/07_non_pb_seur.txt
 
 set -e
 
@@ -24,7 +24,7 @@ module load conda_R/4.5
 ## List current modules for reproducibility
 module list
 
-Rscript 08_off_target_cor.R
+Rscript 07_non_pb_seur.R
 
 echo "**** Job ends ****"
 date

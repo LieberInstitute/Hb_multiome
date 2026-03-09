@@ -3,7 +3,7 @@
 #SBATCH --mem=20G
 #SBATCH --job-name=03_link_peaks_global
 #SBATCH -c 1
-#SBATCH -t 5-0:00:00
+#SBATCH -t 30-0:00:00
 #SBATCH -o ../../processed-data/12_new_peaks/logs/03_link_peaks_global.txt
 #SBATCH -e ../../processed-data/12_new_peaks/logs/03_link_peaks_global.txt
 
