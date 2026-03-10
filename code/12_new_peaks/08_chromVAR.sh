@@ -2,8 +2,8 @@
 #SBATCH -p katun
 #SBATCH --mem=100G
 #SBATCH --job-name=08_chromVAR
-#SBATCH -c 1
-#SBATCH -t 5-0:00:00
+#SBATCH -c 10
+#SBATCH -t 10-0:00:00
 #SBATCH -o ../../processed-data/12_new_peaks/logs/08_chromVAR.txt
 #SBATCH -e ../../processed-data/12_new_peaks/logs/08_chromVAR.txt
 

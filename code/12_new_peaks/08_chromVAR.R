@@ -17,6 +17,7 @@ library(qs2)
 library(here)
 library(TRIPOD)
 library(sessioninfo)
+library(BiocParallel)
 
 seur_path = here(
     "processed-data", "12_new_peaks", "07_non_pb_seur",
@@ -25,6 +26,18 @@ seur_path = here(
 out_path = here(
     "processed-data", "12_new_peaks", "08_chromVAR", "seur.qs2"
 )
+
+dir.create(dirname(out_path), showWarnings = FALSE)
+
+#   See suggestions in https://github.com/stuart-lab/signac/issues/458. chromVAR
+#   seems to implicitly rely on the BiocParallel backend, which can have
+#   incorrect defaults on computing clusters
+num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
+if (num_cores == 1) {
+    register(SerialParam())
+} else {
+    register(MulticoreParam(num_cores))
+}
 
 ################################################################################
 #   First filter to standard chromosomes (in ATAC)
