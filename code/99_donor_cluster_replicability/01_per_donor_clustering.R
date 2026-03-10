@@ -5,6 +5,10 @@
 #This analysis step will do a bit more digging into the MHb.3 cluster.
 #Central idea, is to see if this cluster arises obviously when clustering at a per-donor level.
 
+#Try subclustering just neurons
+
+#Also, check the co-GABA-Glut co-expression in actual cells in LHb.4, but across donors too. 
+
 
 library(SingleCellExperiment)
 library(Seurat)
@@ -46,6 +50,87 @@ color_palette_3 = MetBrewer::met.brewer("Redon", n = 10)
 names(color_palette_3) = c('LHb.1','LHb.1.3','LHb.1.3.4','LHb.2.7','LHb.4','LHb.7','MHb.1','MHb.1.2','MHb.2','MHb.3')
 
 color_palette = c(color_palette_1, color_palette_2, color_palette_3)
+
+
+#Initial check on the co-expression of GABA and Glut markers across clusters
+#Split by donor too
+
+#Adapted from https://github.com/LieberInstitute/spatial_LS/blob/c68566780bc9a4e1aa3fe3f1c238d424bd4d8447/code/14_annotating_chromium_a-p/02_annotating.R#L150-L197
+
+#Plotting co-expression of excitatory and inhibitory markers
+
+pairwise_coexpression <- function(mat, genes, cluster_name) {
+  # mat: genes x cells matrix for one cluster
+  
+  detected <- mat[genes, , drop = FALSE] > 0
+  
+  res <- expand.grid(gene1 = genes, gene2 = genes, stringsAsFactors = FALSE) %>%
+    rowwise() %>%
+    mutate(percent = mean(detected[gene1, ] & detected[gene2, ]) * 100) %>%
+    ungroup() %>%
+    mutate(cluster = cluster_name)
+  
+  res
+}
+
+donors <- unique(colData(multiome_sce)[['orig.ident']])
+
+for(donor in donors){
+  sce_to_plot = multiome_sce[ , multiome_sce$orig.ident == donor]
+
+  genes <- c('SLC32A1',"GAD1","GAD2","SLC17A6", "SLC17A7")
+  expr_mat <- assay(sce_to_plot, "logcounts")
+
+  cluster_to_annotate = "mid_cluster"
+  clusters <- unique(colData(sce_to_plot)[[cluster_to_annotate]])
+
+  coexp_df <- lapply(clusters, function(cl) {
+    cells <- colData(sce_to_plot)[[cluster_to_annotate]] == cl
+    mat_sub <- expr_mat[, cells, drop = FALSE]
+    pairwise_coexpression(mat_sub, genes, cluster_name = cl)
+  }) %>%
+    bind_rows()
+
+  coexp_df$gene1 <- factor(coexp_df$gene1, levels = genes)
+  coexp_df$gene2 <- factor(coexp_df$gene2, levels = rev(genes))
+
+  p <- ggplot(coexp_df, aes(x = gene1, y = gene2, fill = percent)) +
+    geom_tile(color = "grey70", linewidth = 0.3) +
+    facet_wrap(~ cluster, nrow = 5) +
+    scale_fill_gradientn(
+      colours = c("grey95","#f1e2c6", "#f1e2c6", "#f0c94a", "#df8b27", "#d92523", "#8b0d19"),
+      values = c(0, 0.05, 0.20, 0.40, 0.60, 0.8, 1),
+      limits = c(0, 100),
+      breaks = c(0, 5, 20, 40, 60, 80, 100),
+      name = "Percent of cells expressing\ntwo genes"
+    ) +
+    coord_equal() +
+    theme_bw() +
+    theme(
+      panel.grid = element_blank(),
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+      strip.background = element_blank(),
+      strip.text = element_text(size = 12, face = "bold")
+    ) +
+    xlab(NULL) +
+    ylab(NULL) + ggtitle(paste("Co-expression of GABA and Glut markers in", donor))
+
+  print(p)
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #This doesn't have any saved dimension reductions
 #Going back to when the data was converted from Seurat object to SCE, the reductions were not included
@@ -318,3 +403,4 @@ plotUMAP(all_donor_sce, colour_by = "meta_cluster") +
 
 
 
+  
