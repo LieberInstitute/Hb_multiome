@@ -19,8 +19,7 @@ library(TRIPOD)
 library(sessioninfo)
 
 seur_path = here(
-    "processed-data", "12_new_peaks", "07_non_pb_seur",
-    "non_pb_seur.qs2"
+    "processed-data", "12_new_peaks", "08_chromVAR", "seur.qs2"
 )
 out_path = here(
     "processed-data", "12_new_peaks", "09_tripod_preprocess",
@@ -28,39 +27,11 @@ out_path = here(
 )
 
 set.seed(0)
-
-################################################################################
-#   First filter to standard chromosomes (in ATAC)
-################################################################################
+dir.create(dirname(out_path), showWarnings = FALSE)
 
 seur = qs_read(seur_path)
 
-DefaultAssay(seur) = "ATAC"
-gr_std = keepStandardChromosomes(
-    granges(seur[['ATAC']]), pruning.mode = "coarse"
-)
-peaks_keep = paste(seqnames(gr_std), start(gr_std), end(gr_std), sep = '-')
-seur[['ATAC']] = subset(seur[['ATAC']], features = peaks_keep)
-
-################################################################################
-#   Run ChromVAR
-################################################################################
-
-pwm_set = getMatrixSet(
-    x = JASPAR2020, opts = list(species = 9606, all_versions = FALSE)
-)
-motif_mat = CreateMotifMatrix(
-    features = granges(seur[['ATAC']]), pwm = pwm_set, genome = 'hg38',
-    use.counts = FALSE
-)
-motif_obj = CreateMotifObject(data = motif_mat, pwm = pwm_set)
-seur = SetAssayData(
-    seur, assay = 'ATAC', layer = 'motifs', new.data = motif_obj
-)
-seur = RunChromVAR(object = seur, genome = BSgenome.Hsapiens.UCSC.hg38)
-
 tripod_seur = getObjectsForModelFit(object = seur, chr = paste0("chr", 1:22))
-
 seur = filterSeuratObject(object = seur, tripod.object = tripod_seur)
 seur = processSeuratObject(
     object = seur, dim.rna = 1:50, dim.atac = 2:50, verbose = FALSE
