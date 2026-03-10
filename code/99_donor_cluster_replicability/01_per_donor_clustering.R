@@ -120,10 +120,100 @@ for(donor in donors){
 }
 
 
+############################
+#While the LHb.4 cluster does have some co-expression of GABA and Glut markers, they are super small percentages.
+#I'm curious if these are just small subsets of thalamus cells that are present within the LHb.4 cluster
+#Two pieces of evidence, the LHb.4 cluster is spatially the one closest to the thalamus
+#And the GABA glut co-expression is the strongest in the thalamus clusters.
+
+#So even a small amount of thalamus in the LHb.4 could account for the low levels of co GABA glut
+
+##############################
+
+#For the subset of GABA-Glut cells in a cluster, compare the expression of thalamus markers for those cells
+
+#All the cell names are unique, so I can break apart by donor and then put it back together
+table(duplicated(rownames(colData(multiome_sce))))
+
+# Get unique donor IDs
+donors <- unique(multiome_sce$orig.ident)
+
+# Create a named list of SCE objects, one per donor
+multiome_sce_list <- lapply(donors, function(donor) {
+  multiome_sce[, multiome_sce$orig.ident == donor]
+})
+names(multiome_sce_list) <- donors
+
+#Get the markers per donor
+donor_markers_list = lapply(donors, function(donor) {
+  MetaMarkers::compute_markers(assay(multiome_sce_list[[donor]], 'cpm'), multiome_sce_list[[donor]]$mid_cluster)
+})
+names(donor_markers_list) = donors
+
+#Make metamarkers, really just interested in the thalamus markers
+cross_donor_hab_markers = make_meta_markers(donor_markers_list, detailed_stats = TRUE)
 
 
 
+clust_filt = multiome_sce[ , multiome_sce$mid_cluster == 'LHb.4']
+thal_filt = multiome_sce[ , multiome_sce$mid_cluster == 'Excit.Thal']
+in_thal_filt = multiome_sce[ , multiome_sce$mid_cluster == 'Inhib.Thal']
 
+#This gets the cells that co-express GAD2 and SLC17A6
+gad1_expression = assay(clust_filt, 'cpm')['GAD1', ]
+gad2_expression = assay(clust_filt, 'cpm')['GAD2', ]
+vglut2_expression = assay(clust_filt, 'cpm')['SLC17A6', ]
+vglut1_expression = assay(clust_filt, 'cpm')['SLC17A7', ]
+
+coGabaGlut_index = gad2_expression * vglut2_expression > 0
+mean(coGabaGlut_index)
+sum(coGabaGlut_index)
+#Get the average expression per cell of the top thalamus markers
+thalamus_markers = cross_donor_hab_markers %>% filter(cell_type %in% c('Excit.Thal', 'Inhib.Thal') & rank <= 25) %>% pull(gene)
+hab_markers = cross_donor_hab_markers %>% filter(cell_type %in% c('LHb.4') & rank <= 50) %>% pull(gene)
+
+avg_thal_expr = colMeans(assay(clust_filt, 'cpm')[thalamus_markers, ])
+avg_hab_expr = colMeans(assay(clust_filt, 'cpm')[hab_markers, ])
+coGabaGlut_label = rep('Not', length = length(coGabaGlut_index))
+coGabaGlut_label[coGabaGlut_index] = 'CoGABA-Glut'
+tissue_label = rep('Habenula', length = length(coGabaGlut_index))
+co_exp_df_1 = data.frame(avg_thal_expr = avg_thal_expr, avg_hab_expr = avg_hab_expr, 
+  coGabaGlut_label = coGabaGlut_label, tissue = tissue_label)
+
+avg_thal_expr = colMeans(assay(thal_filt, 'cpm')[thalamus_markers, ])
+avg_hab_expr = colMeans(assay(thal_filt, 'cpm')[hab_markers, ])
+coGabaGlut_label = rep('Excite.Thal', length = ncol(thal_filt))
+tissue_label = rep('Thalamus', length = ncol(thal_filt))
+co_exp_df_2 = data.frame(avg_thal_expr = avg_thal_expr, avg_hab_expr = avg_hab_expr,  
+  coGabaGlut_label = coGabaGlut_label, tissue = tissue_label)
+
+avg_thal_expr = colMeans(assay(in_thal_filt, 'cpm')[thalamus_markers, ])
+avg_hab_expr = colMeans(assay(in_thal_filt, 'cpm')[hab_markers, ])
+coGabaGlut_label = rep('Inhib.Thal', length = ncol(in_thal_filt))
+tissue_label = rep('Thalamus', length = ncol(in_thal_filt))
+co_exp_df_3 = data.frame(avg_thal_expr = avg_thal_expr, avg_hab_expr = avg_hab_expr,  
+  coGabaGlut_label = coGabaGlut_label, tissue = tissue_label)
+
+co_exp_df = rbind(co_exp_df_1, co_exp_df_2,co_exp_df_3)
+co_exp_df$coGabaGlut_label = factor(co_exp_df$coGabaGlut_label, levels = c('Not', 'CoGABA-Glut', 'Excite.Thal', 'Inhib.Thal'))
+ggplot(co_exp_df, aes(x = coGabaGlut_label, y = avg_thal_expr, fill = tissue)) +
+  geom_violin(scale = 'width') +
+  theme_bw() +
+  xlab("Co-expression of GABA and Glut markers") +
+  ylab("Average expression of top thalamus markers") +
+  ggtitle("Thalamus marker expression in co-GABA-Glut cells vs others in LHb.4")
+
+ggplot(co_exp_df, aes(x = coGabaGlut_label, y = avg_hab_expr, fill = tissue)) +
+  geom_violin(scale = 'width') +
+  theme_bw() +
+  xlab("Co-expression of GABA and Glut markers") +
+  ylab("Average expression of top LHb.4 markers") +
+  ggtitle("Thalamus marker expression in co-GABA-Glut cells vs others in LHb.4")
+
+
+############
+#Okay so not obviously thalamus cells based on thalamus marker expression
+###########
 
 
 
