@@ -23,7 +23,7 @@ seur_path = here(
     "non_pb_seur.qs2"
 )
 out_path = here(
-    "processed-data", "12_new_peaks", "08_tripod_preprocess",
+    "processed-data", "12_new_peaks", "09_tripod_preprocess",
     "preprocessed_objects.qs2"
 )
 
@@ -114,7 +114,7 @@ metacell_seur = getMetacellMatrices(
 pre_list = list(
     tripod_seur = tripod_seur,
     seur = seur,
-    metacell metacell
+    metacell = metacell
 )
 
 qs_save(pre_list, out_path)
