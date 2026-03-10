@@ -174,24 +174,30 @@ hab_markers = cross_donor_hab_markers %>% filter(cell_type %in% c('LHb.4') & ran
 
 avg_thal_expr = colMeans(assay(clust_filt, 'cpm')[thalamus_markers, ])
 avg_hab_expr = colMeans(assay(clust_filt, 'cpm')[hab_markers, ])
+gad2_exp = assay(clust_filt, 'cpm')['GAD2', ]
+gad1_exp = assay(clust_filt, 'cpm')['GAD1', ]
 coGabaGlut_label = rep('Not', length = length(coGabaGlut_index))
 coGabaGlut_label[coGabaGlut_index] = 'CoGABA-Glut'
 tissue_label = rep('Habenula', length = length(coGabaGlut_index))
-co_exp_df_1 = data.frame(avg_thal_expr = avg_thal_expr, avg_hab_expr = avg_hab_expr, 
+co_exp_df_1 = data.frame(avg_thal_expr = avg_thal_expr, avg_hab_expr = avg_hab_expr, gad2_exp = gad2_exp, 
   coGabaGlut_label = coGabaGlut_label, tissue = tissue_label)
 
 avg_thal_expr = colMeans(assay(thal_filt, 'cpm')[thalamus_markers, ])
 avg_hab_expr = colMeans(assay(thal_filt, 'cpm')[hab_markers, ])
+gad2_exp = assay(thal_filt, 'cpm')['GAD2', ]
+gad1_exp = assay(thal_filt, 'cpm')['GAD1', ]
 coGabaGlut_label = rep('Excite.Thal', length = ncol(thal_filt))
 tissue_label = rep('Thalamus', length = ncol(thal_filt))
-co_exp_df_2 = data.frame(avg_thal_expr = avg_thal_expr, avg_hab_expr = avg_hab_expr,  
+co_exp_df_2 = data.frame(avg_thal_expr = avg_thal_expr, avg_hab_expr = avg_hab_expr, gad2_exp = gad2_exp,
   coGabaGlut_label = coGabaGlut_label, tissue = tissue_label)
 
 avg_thal_expr = colMeans(assay(in_thal_filt, 'cpm')[thalamus_markers, ])
 avg_hab_expr = colMeans(assay(in_thal_filt, 'cpm')[hab_markers, ])
+gad2_exp = assay(in_thal_filt, 'cpm')['GAD2', ]
+gad1_exp = assay(in_thal_filt, 'cpm')['GAD1', ]
 coGabaGlut_label = rep('Inhib.Thal', length = ncol(in_thal_filt))
 tissue_label = rep('Thalamus', length = ncol(in_thal_filt))
-co_exp_df_3 = data.frame(avg_thal_expr = avg_thal_expr, avg_hab_expr = avg_hab_expr,  
+co_exp_df_3 = data.frame(avg_thal_expr = avg_thal_expr, avg_hab_expr = avg_hab_expr, gad2_exp = gad2_exp,
   coGabaGlut_label = coGabaGlut_label, tissue = tissue_label)
 
 co_exp_df = rbind(co_exp_df_1, co_exp_df_2,co_exp_df_3)
@@ -209,6 +215,14 @@ ggplot(co_exp_df, aes(x = coGabaGlut_label, y = avg_hab_expr, fill = tissue)) +
   xlab("Co-expression of GABA and Glut markers") +
   ylab("Average expression of top LHb.4 markers") +
   ggtitle("Thalamus marker expression in co-GABA-Glut cells vs others in LHb.4")
+
+ggplot(co_exp_df, aes(x = coGabaGlut_label, y = gad2_exp, fill = tissue)) +
+  geom_violin(scale = 'width') +
+  theme_bw() +
+  xlab("Co-expression of GABA and Glut markers") +
+  ylab("GAD2 expression") +
+  ggtitle("GAD2 expression in co-GABA-Glut cells vs others in LHb.4")
+
 
 
 ############
