@@ -31,24 +31,25 @@ dir.create(dirname(out_path), showWarnings = FALSE)
 
 seur = qs_read(seur_path)
 
-tripod_seur = getObjectsForModelFit(object = seur, chr = paste0("chr", 1:22))
-
-#   Here I manually reimplement TRIPOD::filterSeuratObject(), which hardcodes
-#   the presence of an "SCT" assay. That isn't actually necessary for the TRIPOD
-#   workflow, and we choose to normalize the RNA assay differently
-genes = tripod_seur$transcripts.gr$gene_name
-motifxTF = tripod_seur$motifxTF
-seur@assays$RNA = subset(
-    seur@assays$RNA, features = match(genes, rownames(seur@assays$RNA))
-)
-seur@assays$chromvar = subset(
-    seur@assays$chromvar,
-    features = match(motifxTF[, 1], rownames(seur@assays$chromvar))
+#   Remove unexpressed genes
+seur[['RNA']] = subset(
+    seur[['RNA']],
+    features = rownames(seur[['RNA']])[
+        rowSums(LayerData(seur[['RNA']], layer = "counts") > 0) > 0
+    ]
 )
 
-#   Might want to manually reimplement this also, since it hardcodes many
+#   TRIPOD internal functions rely on the SCT assay in many places. For now, 
+#   just compute it, even though later we might want to use the same
+#   normalization as Cynthia
+DefaultAssay(seur) = "RNA"
+seur = SCTransform(seur, verbose = FALSE)
+
+#   Might want to manually reimplement these steps, since they hardcode many
 #   specific choices about normalization and clustering (that are slightly
 #   different than ours)
+tripod_seur = getObjectsForModelFit(object = seur, chr = paste0("chr", 1:22))
+seur = filterSeuratObject(object = seur, tripod.object = tripod_seur)
 seur = processSeuratObject(
     object = seur, dim.rna = 1:50, dim.atac = 2:50, verbose = FALSE
 )
