@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=100G
+#SBATCH --mem=150G
 #SBATCH --job-name=09_tripod_preprocess
 #SBATCH -c 1
-#SBATCH -t 5-0:00:00
+#SBATCH -t 1-0:00:00
 #SBATCH -o ../../processed-data/12_new_peaks/logs/09_tripod_preprocess.txt
 #SBATCH -e ../../processed-data/12_new_peaks/logs/09_tripod_preprocess.txt
 
