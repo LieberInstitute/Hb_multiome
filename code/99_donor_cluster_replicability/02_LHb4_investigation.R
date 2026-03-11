@@ -15,9 +15,9 @@ library(here)
 here::here()
 
 #Path for new data generated
-new_data_path = here('processed-data', '99_donor_cluster_replicability','01_per_donor_clustering')
+new_data_path = here('processed-data', '99_donor_cluster_replicability','02_LHb4_investigation')
 #Path to plot directory
-plot_path = here('plots', '99_donor_cluster_replicability','01_per_donor_clustering')
+plot_path = here('plots', '99_donor_cluster_replicability','02_LHb4_investigation')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
@@ -33,15 +33,15 @@ multiome_sce
 
 
 #Set up color scale
-color_palette_1 = c('Astrocyte' = 'grey','Endo' = 'firebrick','Microglia' = 'darkred',
-'Oligo' = 'darkgoldenrod','OPC' = 'cornsilk3')
+#color_palette_1 = c('Astrocyte' = 'grey','Endo' = 'firebrick','Microglia' = 'darkred',
+#'Oligo' = 'darkgoldenrod','OPC' = 'cornsilk3')
 
-color_palette_2 = c('Inhib.Thal' = 'dodgerblue','Excit.Thal' = 'indianred2','Thal' = 'lightsteelblue')
+#color_palette_2 = c('Inhib.Thal' = 'dodgerblue','Excit.Thal' = 'indianred2','Thal' = 'lightsteelblue')
 
-color_palette_3 = MetBrewer::met.brewer("Redon", n = 10)
-names(color_palette_3) = c('LHb.1','LHb.1.3','LHb.1.3.4','LHb.2.7','LHb.4','LHb.7','MHb.1','MHb.1.2','MHb.2','MHb.3')
+#color_palette_3 = MetBrewer::met.brewer("Redon", n = 10)
+#names(color_palette_3) = c('LHb.1','LHb.1.3','LHb.1.3.4','LHb.2.7','LHb.4','LHb.7','MHb.1','MHb.1.2','MHb.2','MHb.3')
 
-color_palette = c(color_palette_1, color_palette_2, color_palette_3)
+#color_palette = c(color_palette_1, color_palette_2, color_palette_3)
 
 
 #Initial check on the co-expression of GABA and Glut markers across clusters
@@ -65,6 +65,56 @@ pairwise_coexpression <- function(mat, genes, cluster_name) {
   res
 }
 
+
+#Full dataset. Of note, this does not use the corrected counts, the corrected counts were not saved with this version of the data
+genes <- c('SLC32A1',"GAD1","GAD2","SLC17A6", "SLC17A7")
+expr_mat <- assay(multiome_sce, "logcounts")
+
+cluster_to_annotate = "mid_cluster"
+clusters <- unique(colData(multiome_sce)[[cluster_to_annotate]])
+
+coexp_df <- lapply(clusters, function(cl) {
+  cells <- colData(multiome_sce)[[cluster_to_annotate]] == cl
+  mat_sub <- expr_mat[, cells, drop = FALSE]
+  pairwise_coexpression(mat_sub, genes, cluster_name = cl)
+}) %>%
+  bind_rows()
+
+coexp_df$gene1 <- factor(coexp_df$gene1, levels = genes)
+coexp_df$gene2 <- factor(coexp_df$gene2, levels = rev(genes))
+
+
+#Edited the original code to have grey be between 0-5%, previously the very low percentages were difficult to see.
+p <- ggplot(coexp_df, aes(x = gene1, y = gene2, fill = percent)) +
+  geom_tile(color = "grey70", linewidth = 0.3) +
+  facet_wrap(~ cluster, nrow = 5) +
+  scale_fill_gradientn(
+    colours = c("grey95","#f1e2c6", "#f1e2c6", "#f0c94a", "#df8b27", "#d92523", "#8b0d19"),
+    values = c(0, 0.05, 0.20, 0.40, 0.60, 0.8, 1),
+    limits = c(0, 100),
+    breaks = c(0, 5, 20, 40, 60, 80, 100),
+    name = "Percent of cells expressing\ntwo genes"
+  ) +
+  coord_equal() +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    strip.background = element_blank(),
+    strip.text = element_text(size = 12, face = "bold")
+  ) +
+  xlab(NULL) +
+  ylab(NULL) + ggtitle("Co-expression of GABA and Glut markers in full multiome dataset")
+
+print(p)
+
+ggsave(path = plot_path, filename = 'GABA_Glut_coexpression_full_multiome.pdf', plot = p, 
+device = 'pdf', width = 12, height = 10, useDingbats = FALSE)
+
+
+
+#Check out the signal by donors
+
 donors <- unique(colData(multiome_sce)[['orig.ident']])
 
 for(donor in donors){
@@ -86,6 +136,8 @@ for(donor in donors){
   coexp_df$gene1 <- factor(coexp_df$gene1, levels = genes)
   coexp_df$gene2 <- factor(coexp_df$gene2, levels = rev(genes))
 
+
+#Edited the original code to have grey be between 0-5%, previously the very low percentages were difficult to see.
   p <- ggplot(coexp_df, aes(x = gene1, y = gene2, fill = percent)) +
     geom_tile(color = "grey70", linewidth = 0.3) +
     facet_wrap(~ cluster, nrow = 5) +
@@ -194,29 +246,42 @@ co_exp_df_3 = data.frame(avg_thal_expr = avg_thal_expr, avg_hab_expr = avg_hab_e
 
 co_exp_df = rbind(co_exp_df_1, co_exp_df_2,co_exp_df_3)
 co_exp_df$coGabaGlut_label = factor(co_exp_df$coGabaGlut_label, levels = c('Not', 'CoGABA-Glut', 'Excite.Thal', 'Inhib.Thal'))
-ggplot(co_exp_df, aes(x = coGabaGlut_label, y = avg_thal_expr, fill = tissue)) +
+p_thal = ggplot(co_exp_df, aes(x = coGabaGlut_label, y = avg_thal_expr, fill = tissue)) +
   geom_violin(scale = 'width') +
   theme_bw() +
   xlab("Co-expression of GABA and Glut markers") +
   ylab("Average expression of top thalamus markers") +
   ggtitle("Thalamus marker expression in co-GABA-Glut cells vs others in LHb.4")
 
-ggplot(co_exp_df, aes(x = coGabaGlut_label, y = avg_hab_expr, fill = tissue)) +
+p_hab = ggplot(co_exp_df, aes(x = coGabaGlut_label, y = avg_hab_expr, fill = tissue)) +
   geom_violin(scale = 'width') +
   theme_bw() +
   xlab("Co-expression of GABA and Glut markers") +
   ylab("Average expression of top LHb.4 markers") +
-  ggtitle("Thalamus marker expression in co-GABA-Glut cells vs others in LHb.4")
+  ggtitle("Habenula LHb.4 marker expression in co-GABA-Glut cells vs others in LHb.4")
 
-ggplot(co_exp_df, aes(x = coGabaGlut_label, y = gad2_exp, fill = tissue)) +
+p_gad = ggplot(co_exp_df, aes(x = coGabaGlut_label, y = gad2_exp, fill = tissue)) +
   geom_violin(scale = 'width') +
   theme_bw() +
   xlab("Co-expression of GABA and Glut markers") +
   ylab("GAD2 expression") +
   ggtitle("GAD2 expression in co-GABA-Glut cells vs others in LHb.4")
 
+p_thal
+p_hab
+p_gad
 
 
 ############
 #Okay so not obviously thalamus cells based on thalamus marker expression
 ###########
+
+ggsave(plot = p_thal, filename = 'Thalamus_marker_expression_by_GABA_Glut_coexpression_status.pdf', path = plot_path, 
+device = 'pdf', width = 6, height = 5, useDingbats = FALSE)
+
+ggsave(plot = p_hab, filename = 'habenula_lhb4_marker_expression_by_GABA_Glut_coexpression_status.pdf', path = plot_path, 
+device = 'pdf', width = 6, height = 5, useDingbats = FALSE)
+
+ggsave(plot = p_gad, filename = 'GAD2_expression_by_GABA_Glut_coexpression_status.pdf', path = plot_path, 
+device = 'pdf', width = 6, height = 5, useDingbats = FALSE)
+
