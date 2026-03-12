@@ -71,7 +71,7 @@ color_palette = c(color_palette_1, color_palette_2, color_palette_3)
 
 #Just the medial habenula clusters
 Mhab_clusters = c('MHb.1','MHb.1.2','MHb.2','MHb.3')
-Mhab_sce = multiome_sce[, multiome_sce$mid_cluster %in% Mhab_clusters]
+Mhab_sce = multiome_sce[, multiome_sce$merged_cluster == 'MHb']
 
 rm(multiome_sce)
 gc() 
@@ -95,9 +95,6 @@ plotUMAP(Mhab_sce, colour_by = "orig.ident")
 table(Mhab_sce$orig.ident, Mhab_sce$mid_cluster)
 
 
-
-#Exclude a donor, learn markers from the the remaining donors, project those markers onto the excluded donor.
-
 #All the cell names are unique, so I can break apart by donor and then put it back together
 table(duplicated(rownames(colData(Mhab_sce))))
 
@@ -120,46 +117,46 @@ names(donor_markers_list) = donors
 table(Mhab_sce$orig.ident, Mhab_sce$mid_cluster)
 
 
-test_donor = "S10_Hb_r"
+#test_donor = "S10_Hb_r"
 
 #Donor dimension reduction
-test_sce = Mhab_sce_list[[test_donor]]
-dec <- modelGeneVar(test_sce)
-hvg <- getTopHVGs(dec, n = 2000)
+#test_sce = Mhab_sce_list[[test_donor]]
+#dec <- modelGeneVar(test_sce)
+#hvg <- getTopHVGs(dec, n = 2000)
 
-test_sce <- runPCA(test_sce, subset_row = hvg, exprs_values = "scaledata")
-test_sce <- runUMAP(test_sce, dimred = "PCA", n_dimred = 20)
+#test_sce <- runPCA(test_sce, subset_row = hvg, exprs_values = "scaledata")
+#test_sce <- runUMAP(test_sce, dimred = "PCA", n_dimred = 20)
 
 
 
 #Compute metamarkers excluding a donor
-cross_donor_hab_markers = make_meta_markers(donor_markers_list[names(donor_markers_list) != test_donor], detailed_stats = TRUE)
+#cross_donor_hab_markers = make_meta_markers(donor_markers_list[names(donor_markers_list) != test_donor], detailed_stats = TRUE)
 
 #Project the metamarkers onto the excluded donor
-top_markers = cross_donor_hab_markers %>% filter(cell_type != 'LHb.7' & rank <= 200)
-ct_scores = score_cells(log1p(cpm(Mhab_sce_list[[test_donor]])), top_markers)
-ct_enrichment = compute_marker_enrichment(ct_scores)
-ct_pred = assign_cells(ct_scores)
+#top_markers = cross_donor_hab_markers %>% filter(cell_type != 'LHb.7' & rank <= 200)
+#ct_scores = score_cells(log1p(cpm(Mhab_sce_list[[test_donor]])), top_markers)
+#ct_enrichment = compute_marker_enrichment(ct_scores)
+#ct_pred = assign_cells(ct_scores)
 
-test_sce$cross_donor_pred_200 = ct_pred$predicted
+#test_sce$cross_donor_pred_200 = ct_pred$predicted
 
-top_markers = cross_donor_hab_markers %>% filter(cell_type != 'LHb.7' & rank <= 100)
-ct_scores = score_cells(log1p(cpm(Mhab_sce_list[[test_donor]])), top_markers)
-ct_enrichment = compute_marker_enrichment(ct_scores)
-ct_pred = assign_cells(ct_scores)
+#top_markers = cross_donor_hab_markers %>% filter(cell_type != 'LHb.7' & rank <= 100)
+#ct_scores = score_cells(log1p(cpm(Mhab_sce_list[[test_donor]])), top_markers)
+#ct_enrichment = compute_marker_enrichment(ct_scores)
+#ct_pred = assign_cells(ct_scores)
 
-test_sce$cross_donor_pred_100 = ct_pred$predicted
+#test_sce$cross_donor_pred_100 = ct_pred$predicted
 
-top_markers = cross_donor_hab_markers %>% filter(cell_type != 'LHb.7' & rank <= 50) 
-ct_scores = score_cells(log1p(cpm(Mhab_sce_list[[test_donor]])), top_markers)
-ct_enrichment = compute_marker_enrichment(ct_scores)
-ct_pred = assign_cells(ct_scores)
+#top_markers = cross_donor_hab_markers %>% filter(cell_type != 'LHb.7' & rank <= 50) 
+#ct_scores = score_cells(log1p(cpm(Mhab_sce_list[[test_donor]])), top_markers)
+#ct_enrichment = compute_marker_enrichment(ct_scores)
+#ct_pred = assign_cells(ct_scores)
 
-test_sce$cross_donor_pred_50 = ct_pred$predicted
+#test_sce$cross_donor_pred_50 = ct_pred$predicted
 
 
-plotUMAP(test_sce, colour_by = "mid_cluster") +
-  scale_color_manual(values = color_palette) + ggtitle('Original cluster annots')
+#plotUMAP(test_sce, colour_by = "mid_cluster") +
+#  scale_color_manual(values = color_palette) + ggtitle('Original cluster annots')
 
 #for (cluster in mid_res_annots) {
 #  test_sce$highlight <- ifelse(test_sce$mid_cluster == cluster, cluster, "Other")
@@ -172,17 +169,17 @@ plotUMAP(test_sce, colour_by = "mid_cluster") +
 #}
 
 
-plotUMAP(test_sce, colour_by = "cross_donor_pred_200") +
-  scale_color_manual(values = color_palette) + ggtitle('Predicted cross-donor: top 200 markers')
+#plotUMAP(test_sce, colour_by = "cross_donor_pred_200") +
+#  scale_color_manual(values = color_palette) + ggtitle('Predicted cross-donor: top 200 markers')
 
-plotUMAP(test_sce, colour_by = "cross_donor_pred_100") +
-  scale_color_manual(values = color_palette) + ggtitle('Predicted cross-donor: top 100 markers')
+#plotUMAP(test_sce, colour_by = "cross_donor_pred_100") +
+#  scale_color_manual(values = color_palette) + ggtitle('Predicted cross-donor: top 100 markers')
 
-plotUMAP(test_sce, colour_by = "cross_donor_pred_50") +
-  scale_color_manual(values = color_palette) + ggtitle('Predicted cross-donor: top 50 markers')
+#plotUMAP(test_sce, colour_by = "cross_donor_pred_50") +
+#  scale_color_manual(values = color_palette) + ggtitle('Predicted cross-donor: top 50 markers')
 
 
-table(test_sce$cross_donor_pred_100)
+#table(test_sce$cross_donor_pred_100)
 
 
 
@@ -251,9 +248,9 @@ for (i in seq_along(multiome_seurat_list)) {
 }
 
 #For trying different clustering resolutions
-for (i in seq_along(multiome_seurat_list)) {
-  multiome_seurat_list[[i]] <- FindClusters(multiome_seurat_list[[i]], resolution = .5)
-}
+#for (i in seq_along(multiome_seurat_list)) {
+#  multiome_seurat_list[[i]] <- FindClusters(multiome_seurat_list[[i]], resolution = .8)
+#}
 
 
 
@@ -373,14 +370,14 @@ plotUMAP(all_donor_sce, colour_by = "meta_cluster") +
 
 
 medHab_donors = names(donor_sce_list)
-#Get the markers per donor
+#Get the markers per donor, for the metaclusters
 donor_markers_list = lapply(medHab_donors, function(donor) {
   donor_sce = all_donor_sce[, all_donor_sce$study_id == donor]
   MetaMarkers::compute_markers(assay(donor_sce, 'cpm'), donor_sce$meta_cluster)
 })
 names(donor_markers_list) = medHab_donors
 
-#Make metamarkers, really just interested in the thalamus markers
+#Make metamarkers
 cross_donor_hab_markers = make_meta_markers(donor_markers_list, detailed_stats = TRUE)
 
 cross_donor_hab_markers %>% filter(rank <= 20) %>% View()
@@ -431,13 +428,6 @@ multiome_seurat_integrated[[]]
 full_cluster_study_labels = paste(multiome_seurat_integrated$orig.ident, 
   multiome_seurat_integrated$seurat_clusters, sep = "|")
 
-# Create a vector of meta_cluster names for each element in mclusters
-#meta_cluster_names <- rep(names(mclusters), sapply(mclusters, length))
-# Flatten mclusters to match the order
-#flat_mclusters <- unlist(mclusters)
-# Create a lookup vector
-#mclusters_lookup <- setNames(meta_cluster_names, flat_mclusters)
-# Map each cell's label to its meta_cluster
 multiome_seurat_integrated$meta_cluster <- unname(mclusters_lookup[full_cluster_study_labels])
 
 
