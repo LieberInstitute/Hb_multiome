@@ -406,6 +406,11 @@ table(multiome_seurat_integrated$refined_mid_cluster)
 
 saveRDS(multiome_seurat_integrated, paste0(new_data_path, '/multiome_LHb4_LHb7_integrated_seurat.rds'))
 
+
+#Read in 
+multiome_seurat_integrated = readRDS(paste0(new_data_path, '/multiome_LHb4_LHb7_integrated_seurat.rds'))
+
+
 inhib_meta = multiome_seurat_integrated[[]]
 
 inhib_barcodes_1 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_1']
@@ -599,3 +604,32 @@ device = 'pdf', width = 6, height = 5, useDingbats = FALSE)
 #Okay so not obviously thalamus cells based on thalamus marker expression
 ###########
 
+
+#Check out the markers for those putative inhibitory clusters
+just_hab_sce = multiome_sce[, multiome_sce$merged_cluster %in% c('LHb', 'MHb')]
+table(just_hab_sce$refined_mid_cluster)
+
+# Get unique donor IDs
+donors <- unique(just_hab_sce$orig.ident)
+
+# Create a named list of SCE objects, one per donor
+multiome_sce_list <- lapply(donors, function(donor) {
+  just_hab_sce[, just_hab_sce$orig.ident == donor]
+})
+names(multiome_sce_list) <- donors
+
+#Get the markers per donor. mid_cluster
+donor_ref_clust_markers_list = lapply(donors, function(donor) {
+  MetaMarkers::compute_markers(assay(multiome_sce_list[[donor]], 'cpm'), multiome_sce_list[[donor]]$refined_mid_cluster)
+})
+names(donor_ref_clust_markers_list) = donors
+
+#Make metamarkers, really just interested in the thalamus markers
+cross_donor_ref_clust_hab_markers = make_meta_markers(donor_ref_clust_markers_list, detailed_stats = TRUE)
+
+
+cross_donor_ref_clust_hab_markers %>% filter(rank <= 20 & cell_type %in% c('Putative_Inhib_LHb_1', 'Putative_Inhib_LHb_2')) %>% View()
+
+
+cross_donor_ref_clust_hab_markers %>% filter( gene %in% c('SST','PVALB','LAMP5','LHX6','VIP','PAX6')) %>%
+  group_by(gene) %>% arrange(rank, .by_group = TRUE) %>% View()
