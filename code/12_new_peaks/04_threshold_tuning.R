@@ -3,10 +3,8 @@
 #   yield the largest number of "real" results, while maintaining an acceptable
 #   number of false positives. We assume that linked genes that are unique to a
 #   given cell type are more likely than random to be markers for that cell type.
-#   We'll tune thresholds to maximize the odds ratio for uniquely linked genes
-#   being enriched for markers for the target cell type, provided a minimum
-#   count of linked genes is met (to avoid noise in the OR metric). This metric
-#   will be averaged across cell types
+#   We'll tune thresholds to maximize significance for uniquely linked genes
+#   being enriched for markers for the target cell type
 
 library(here)
 library(tidyverse)
@@ -24,12 +22,17 @@ marker_path = here(
     'processed-data', '10_MAGMA', 'RNA', 'registration_banksy',
     'modeling_results', 'fine.rds'
 )
+out_path = here(
+    'processed-data', '12_new_peaks', '04_threshold_tuning',
+    'marker_enrichment_metrics.csv'
+)
 plot_dir = here("plots", "12_new_peaks")
-min_num_links = 10
 FDR_thresholds = c(0.01, 0.05, 0.1, 0.15, 0.2, 1)
 cor_thresholds = 0.05 * seq(0, 10)
 marker_FDR = 0.1
 max_markers = 100
+
+dir.create(dirname(out_path), showWarnings = FALSE)
 
 ################################################################################
 #   Functions
@@ -135,6 +138,10 @@ for (target_cell_type in cell_types) {
 }
 metric_df = bind_rows(metric_df_list)
 
+#   Save in case we want to plot interactively (the above takes a long time to
+#   compute)
+write_csv(metric_df, out_path)
+
 ################################################################################
 #   Plot heatmaps
 ################################################################################
@@ -144,14 +151,12 @@ metric_df = metric_df |>
         FDR_threshold = factor(
             FDR_threshold, levels = sort(unique(FDR_threshold))
         ),
-        fisher_OR = ifelse(
-            num_linked_genes >= min_num_links, fisher_OR, NaN
-        )
+        fisher_log10p = -log10(fisher_p)
     )
 
 p = ggplot(
         metric_df,
-        aes(x = FDR_threshold, y = cor_threshold, fill = fisher_OR)
+        aes(x = FDR_threshold, y = cor_threshold, fill = fisher_log10p)
     ) +
     geom_tile() +
     scale_fill_viridis_c() +
@@ -159,7 +164,7 @@ p = ggplot(
     labs(
         x = "FDR Threshold",
         y = "Correlation Threshold",
-        fill = "Enrichment OR",
+        fill = "Enrichment -log10(p)",
         title = "Marker Enrichment Across Thresholds"
     ) +
     theme_bw(base_size = 15) +
@@ -170,20 +175,14 @@ dev.off()
 
 p = metric_df |>
     group_by(FDR_threshold, cor_threshold) |>
-    summarize(
-        mean_prop_markers = ifelse(
-            mean(is.na(prop_markers)) > 0.5,
-            NaN,
-            mean(prop_markers, na.rm = TRUE)
-        )
-    ) |>
-    ggplot(aes(x = FDR_threshold, y = cor_threshold, fill = mean_prop_markers)) +
+    summarize(mean_log10p = mean(fisher_log10p)) |>
+    ggplot(aes(x = FDR_threshold, y = cor_threshold, fill = mean_log10p)) +
         geom_tile() +
         scale_fill_viridis_c() +
         labs(
             x = "FDR Threshold",
             y = "Correlation Threshold",
-            fill = "Mean Proportion\nMarkers",
+            fill = "Mean Enrichment -log10(p)",
             title = "Mean Marker Enrichment Across Thresholds"
         ) +
         theme_bw(base_size = 15) +
