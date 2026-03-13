@@ -64,27 +64,50 @@ for (target_cell_type in cell_types) {
     for (FDR_threshold in FDR_thresholds) {
         for (cor_threshold in cor_thresholds) {
             linked_genes = result_df |>
-                #   Filter all linked peaks by thresholds
                 filter(FDR <= FDR_threshold, abs(score) >= cor_threshold) |>
-                #   Take linked peaks now present only in the target cell type
                 group_by(peak, gene) |>
                 filter(identical(target_cell_type, unique(other_cell_type))) |>
                 ungroup() |>
-                #   Then grab their unique genes
                 pull(gene) |>
                 unique()
 
             these_markers = marker_df |>
                 filter(set_id == target_cell_type) |>
                 pull(gene_name)
-            stopifnot(length(these_markers) > 0)
-
+            
+            # Get all genes that could potentially be linked
+            all_possible_genes = result_df |>
+                pull(gene) |>
+                unique()
+            
+            # Build 2x2 contingency table
+            # Rows: is_linked (yes/no), Cols: is_marker (yes/no)
+            in_linked_and_marker = sum(linked_genes %in% these_markers)
+            in_linked_not_marker = length(linked_genes) - in_linked_and_marker
+            not_linked_but_marker = sum(all_possible_genes %in% these_markers) - in_linked_and_marker
+            not_linked_not_marker = length(all_possible_genes) - length(linked_genes) - not_linked_but_marker
+            
+            contingency_table = matrix(
+                c(
+                    in_linked_and_marker, in_linked_not_marker,
+                    not_linked_but_marker, not_linked_not_marker
+                ),
+                dimnames = list(
+                    c("Linked", "Not Linked"),
+                    c("Marker", "Not Marker")
+                ),
+                nrow = 2, byrow = TRUE
+            )
+            
+            fisher_result = fisher.test(contingency_table, alternative = "greater")
+            
             metric_df_list[[length(metric_df_list) + 1]] = tibble(
                 target_cell_type = target_cell_type,
                 FDR_threshold = !!FDR_threshold,
                 cor_threshold = !!cor_threshold,
                 num_linked_genes = length(linked_genes),
-                prop_markers = mean(linked_genes %in% these_markers)
+                fisher_p = fisher_result$p.value,
+                fisher_OR = fisher_result$estimate
             )
         }
     }
