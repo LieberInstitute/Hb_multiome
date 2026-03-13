@@ -42,11 +42,17 @@ if (this_cell_type != "all") {
     seur = subset(seur, mid_cluster == this_cell_type)
 }
 
-#   Remove unexpressed genes
+#   Remove unexpressed genes and peaks
 seur[['RNA']] = subset(
     seur[['RNA']],
     features = rownames(seur[['RNA']])[
         rowSums(LayerData(seur[['RNA']], layer = "counts") > 0) > 0
+    ]
+)
+seur[['ATAC']] = subset(
+    seur[['ATAC']],
+    features = rownames(seur[['ATAC']])[
+        rowSums(LayerData(seur[['ATAC']], layer = "counts") > 0) > 0
     ]
 )
 
@@ -81,10 +87,25 @@ cluster_df = optimizeResolution(
 #        metacells, the majority of which contain 20 or more single cells"
 #   I essentially implement that logic algorithmically here
 best_res = cluster_df |>
-    dplyr::filter(num_clusters >= 80, num_below / num_clusters < 0.02) |>
+    dplyr::filter(num_clusters >= 80, num_below / num_clusters <= 0.05) |>
     arrange(num_clusters) |>
     slice_head(n = 1) |>
     pull(resolution)
+
+#   If no such resolution exists, relax the criteria a bit
+if (length(best_res) == 0) {
+    warning("Failed to find a resolution with the recommended criteria. Relaxing a bit...")
+    best_res = cluster_df |>
+        dplyr::filter(num_clusters >= 30, num_below / num_clusters <= 0.05) |>
+        arrange(desc(num_clusters)) |>
+        slice_head(n = 1) |>
+        pull(resolution)
+}
+
+#   We can't really relax the criteria further and get meaningful results
+if (length(best_res) == 0) {
+    stop("Couldn't find a resolution meeting anything close to the recommended criteria")
+}
 
 message(
     sprintf(
