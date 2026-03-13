@@ -408,126 +408,194 @@ saveRDS(multiome_seurat_integrated, paste0(new_data_path, '/multiome_LHb4_LHb7_i
 
 inhib_meta = multiome_seurat_integrated[[]]
 
+inhib_barcodes_1 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_1']
+inhib_barcodes_2 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_2']
 
 #Exclude them from the rest of the data set
 
-multiome_sce
+multiome_sce$refined_mid_cluster = multiome_sce$mid_cluster
+multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_1'
+multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_2'
+
+table(multiome_sce$refined_mid_cluster, multiome_sce$mid_cluster)
 
 
-
+lhb_inhib_sce = multiome_sce[, multiome_sce$refined_mid_cluster %in% c('Putative_Inhib_LHb_1', 'Putative_Inhib_LHb_2')]
+nonInhib_sce = multiome_sce[, !multiome_sce$refined_mid_cluster %in% c('Putative_Inhib_LHb_1', 'Putative_Inhib_LHb_2')]
 
 #Check out the top markers for the remaining cells, and then look at the expression of those markers 
 #In the putative inhibitory cells.
 
 
-
-
-#All the cell names are unique, so I can break apart by donor and then put it back together
-table(duplicated(rownames(colData(multiome_sce))))
-
 # Get unique donor IDs
-donors <- unique(multiome_sce$orig.ident)
+donors <- unique(nonInhib_sce$orig.ident)
 
 # Create a named list of SCE objects, one per donor
 multiome_sce_list <- lapply(donors, function(donor) {
-  multiome_sce[, multiome_sce$orig.ident == donor]
+  nonInhib_sce[, nonInhib_sce$orig.ident == donor]
 })
 names(multiome_sce_list) <- donors
 
-#Get the markers per donor
-donor_markers_list = lapply(donors, function(donor) {
+#Get the markers per donor. mid_cluster
+donor_mid_clust_markers_list = lapply(donors, function(donor) {
   MetaMarkers::compute_markers(assay(multiome_sce_list[[donor]], 'cpm'), multiome_sce_list[[donor]]$mid_cluster)
 })
-names(donor_markers_list) = donors
+names(donor_mid_clust_markers_list) = donors
+
+#Broader markers
+donor_broad_markers_list = lapply(donors, function(donor) {
+  MetaMarkers::compute_markers(assay(multiome_sce_list[[donor]], 'cpm'), multiome_sce_list[[donor]]$merged_cluster)
+})
+names(donor_broad_markers_list) = donors
 
 #Make metamarkers, really just interested in the thalamus markers
-cross_donor_hab_markers = make_meta_markers(donor_markers_list, detailed_stats = TRUE)
+cross_donor_mid_clust_hab_markers = make_meta_markers(donor_mid_clust_markers_list, detailed_stats = TRUE)
+
+cross_donor_broad_clust_hab_markers = make_meta_markers(donor_broad_markers_list, detailed_stats = TRUE)
 
 
+#These are the markers of interest
+cross_donor_mid_clust_hab_markers %>% filter(rank <= 10) %>% View()
 
-clust_filt = multiome_sce[ , multiome_sce$mid_cluster == 'LHb.4']
-thal_filt = multiome_sce[ , multiome_sce$mid_cluster == 'Excit.Thal']
-in_thal_filt = multiome_sce[ , multiome_sce$mid_cluster == 'Inhib.Thal']
+cross_donor_broad_clust_hab_markers %>% filter(rank <= 10) %>% View()
 
-#This gets the cells that co-express GAD2 and SLC17A6
-gad1_expression = assay(clust_filt, 'cpm')['GAD1', ]
-gad2_expression = assay(clust_filt, 'cpm')['GAD2', ]
-vglut2_expression = assay(clust_filt, 'cpm')['SLC17A6', ]
-vglut1_expression = assay(clust_filt, 'cpm')['SLC17A7', ]
 
-coGabaGlut_index = gad2_expression * vglut2_expression > 0
-mean(coGabaGlut_index)
-sum(coGabaGlut_index)
 #Get the average expression per cell of the top thalamus markers
-thalamus_markers = cross_donor_hab_markers %>% filter(cell_type %in% c('Excit.Thal', 'Inhib.Thal') & rank <= 25) %>% pull(gene)
-hab_markers = cross_donor_hab_markers %>% filter(cell_type %in% c('LHb.4') & rank <= 50) %>% pull(gene)
+num_top_markers = 25
+inhib_thalamus_markers = cross_donor_broad_clust_hab_markers %>% 
+  filter(cell_type %in% c('Inhib_Thal') & rank <= num_top_markers & !gene %in% c('GAD1','GAD2','SLC32A1','SLC17A6','SLC17A7')) %>% pull(gene)
+excite_thalamus_markers = cross_donor_broad_clust_hab_markers %>% 
+  filter(cell_type %in% c('Excit_Thal') & rank <= num_top_markers & !gene %in% c('GAD1','GAD2','SLC32A1','SLC17A6','SLC17A7')) %>% pull(gene)
+MHb_hab_markers = cross_donor_broad_clust_hab_markers %>% 
+  filter(cell_type %in% c('MHb') & rank <= num_top_markers & !gene %in% c('GAD1','GAD2','SLC32A1','SLC17A6','SLC17A7')) %>% pull(gene)
+LHb_hab_markers = cross_donor_broad_clust_hab_markers %>% 
+  filter(cell_type %in% c('LHb') & rank <= num_top_markers & !gene %in% c('GAD1','GAD2','SLC32A1','SLC17A6','SLC17A7')) %>% pull(gene)
 
-avg_thal_expr = colMeans(assay(clust_filt, 'cpm')[thalamus_markers, ])
-avg_hab_expr = colMeans(assay(clust_filt, 'cpm')[hab_markers, ])
-gad2_exp = assay(clust_filt, 'cpm')['GAD2', ]
-gad1_exp = assay(clust_filt, 'cpm')['GAD1', ]
-coGabaGlut_label = rep('Not', length = length(coGabaGlut_index))
-coGabaGlut_label[coGabaGlut_index] = 'CoGABA-Glut'
-tissue_label = rep('Habenula', length = length(coGabaGlut_index))
-co_exp_df_1 = data.frame(avg_thal_expr = avg_thal_expr, avg_hab_expr = avg_hab_expr, gad2_exp = gad2_exp, 
-  coGabaGlut_label = coGabaGlut_label, tissue = tissue_label)
 
-avg_thal_expr = colMeans(assay(thal_filt, 'cpm')[thalamus_markers, ])
-avg_hab_expr = colMeans(assay(thal_filt, 'cpm')[hab_markers, ])
-gad2_exp = assay(thal_filt, 'cpm')['GAD2', ]
-gad1_exp = assay(thal_filt, 'cpm')['GAD1', ]
-coGabaGlut_label = rep('Excite.Thal', length = ncol(thal_filt))
-tissue_label = rep('Thalamus', length = ncol(thal_filt))
-co_exp_df_2 = data.frame(avg_thal_expr = avg_thal_expr, avg_hab_expr = avg_hab_expr, gad2_exp = gad2_exp,
-  coGabaGlut_label = coGabaGlut_label, tissue = tissue_label)
+avg_inhib_thal_expr = colMeans(assay(multiome_sce, 'cpm')[inhib_thalamus_markers, ])
+avg_excite_thal_expr = colMeans(assay(multiome_sce, 'cpm')[excite_thalamus_markers, ])
+avg_MHb_hab_expr = colMeans(assay(multiome_sce, 'cpm')[MHb_hab_markers, ])
+avg_LHb_hab_expr = colMeans(assay(multiome_sce, 'cpm')[LHb_hab_markers, ])
 
-avg_thal_expr = colMeans(assay(in_thal_filt, 'cpm')[thalamus_markers, ])
-avg_hab_expr = colMeans(assay(in_thal_filt, 'cpm')[hab_markers, ])
-gad2_exp = assay(in_thal_filt, 'cpm')['GAD2', ]
-gad1_exp = assay(in_thal_filt, 'cpm')['GAD1', ]
-coGabaGlut_label = rep('Inhib.Thal', length = ncol(in_thal_filt))
-tissue_label = rep('Thalamus', length = ncol(in_thal_filt))
-co_exp_df_3 = data.frame(avg_thal_expr = avg_thal_expr, avg_hab_expr = avg_hab_expr, gad2_exp = gad2_exp,
-  coGabaGlut_label = coGabaGlut_label, tissue = tissue_label)
+labels = multiome_sce$refined_mid_cluster
+broad_labels = multiome_sce$merged_cluster
+broad_labels[labels == 'Putative_Inhib_LHb_1'] = 'Putative_Inhib_LHb_1'
+broad_labels[labels == 'Putative_Inhib_LHb_2'] = 'Putative_Inhib_LHb_2'
+table(broad_labels)
 
-co_exp_df = rbind(co_exp_df_1, co_exp_df_2,co_exp_df_3)
-co_exp_df$coGabaGlut_label = factor(co_exp_df$coGabaGlut_label, levels = c('Not', 'CoGABA-Glut', 'Excite.Thal', 'Inhib.Thal'))
-p_thal = ggplot(co_exp_df, aes(x = coGabaGlut_label, y = avg_thal_expr, fill = tissue)) +
+broad_palette <- c(
+  "LHb" = "#1b9e77",
+  "MHb" = "#d95f02",
+  "Excit_Thal" = "#7570b3",
+  "Inhib_Thal" = "#7570b3",
+  "Astrocyte" = "#66a61e",
+  "Oligo" = "#a6761d",
+  "OPC" = "#a6761d",
+  "Microglia" = "#666666",
+  "Endo" = "#b41f38ff",
+  'Thal' = '#7570b3',
+  'Putative_Inhib_LHb_1' = "#2fe8ebec",
+  'Putative_Inhib_LHb_2' = "#2fe8ebec"
+)
+
+
+marker_df = data.frame(avg_inhib_thal_expr = avg_inhib_thal_expr, avg_excite_thal_expr = avg_excite_thal_expr, 
+  avg_MHb_hab_expr = avg_MHb_hab_expr, avg_LHb_hab_expr = avg_LHb_hab_expr, 
+  cluster = labels, broad_labels = broad_labels)
+
+#Inhibitory thalamus marker expression
+cluster_order <- marker_df |>
+  summarize(med = median(avg_inhib_thal_expr, na.rm = TRUE), .by = cluster) |>
+  arrange(med) |>
+  pull(cluster)
+
+marker_df <- marker_df |>
+  mutate(cluster = factor(cluster, levels = cluster_order))
+
+p_avg_inh_thal = ggplot(marker_df, aes(x = cluster, y = avg_inhib_thal_expr, fill = broad_labels)) +
   geom_violin(scale = 'width') +
   theme_bw() +
-  xlab("Co-expression of GABA and Glut markers") +
-  ylab("Average expression of top thalamus markers") +
-  ggtitle("Thalamus marker expression in co-GABA-Glut cells vs others in LHb.4")
+  scale_fill_manual(values = broad_palette) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  xlab("Cluster") +
+  ylab("Average expression of top 25 inhibitory thalamus markers") +
+  ggtitle("Inhib. Thalamus marker expression across clusters")
 
-p_hab = ggplot(co_exp_df, aes(x = coGabaGlut_label, y = avg_hab_expr, fill = tissue)) +
+#Excitatory thalamus marker expression
+cluster_order <- marker_df |>
+  summarize(med = median(avg_excite_thal_expr, na.rm = TRUE), .by = cluster) |>
+  arrange(med) |>
+  pull(cluster)
+
+marker_df <- marker_df |>
+  mutate(cluster = factor(cluster, levels = cluster_order))
+
+p_avg_excite_thal = ggplot(marker_df, aes(x = cluster, y = avg_excite_thal_expr, fill = broad_labels)) +
   geom_violin(scale = 'width') +
   theme_bw() +
-  xlab("Co-expression of GABA and Glut markers") +
-  ylab("Average expression of top LHb.4 markers") +
-  ggtitle("Habenula LHb.4 marker expression in co-GABA-Glut cells vs others in LHb.4")
+  scale_fill_manual(values = broad_palette) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  xlab("Cluster") +
+  ylab("Average expression of top 25 excitatory thalamus markers") +
+  ggtitle("Excite. Thalamus marker expression across clusters")
 
-p_gad = ggplot(co_exp_df, aes(x = coGabaGlut_label, y = gad2_exp, fill = tissue)) +
+#Medial Hab markers
+cluster_order <- marker_df |>
+  summarize(med = median(avg_MHb_hab_expr, na.rm = TRUE), .by = cluster) |>
+  arrange(med) |>
+  pull(cluster)
+
+marker_df <- marker_df |>
+  mutate(cluster = factor(cluster, levels = cluster_order))
+
+p_avg_MHb =ggplot(marker_df, aes(x = cluster, y = avg_MHb_hab_expr, fill = broad_labels)) +
   geom_violin(scale = 'width') +
   theme_bw() +
-  xlab("Co-expression of GABA and Glut markers") +
-  ylab("GAD2 expression") +
-  ggtitle("GAD2 expression in co-GABA-Glut cells vs others in LHb.4")
+  scale_fill_manual(values = broad_palette) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  xlab("Cluster") +
+  ylab("Average expression of top 25 Medial Habenula markers") +
+  ggtitle("Medial Habenula marker expression across clusters")
 
-p_thal
-p_hab
-p_gad
+
+#Lateral Hab markers
+cluster_order <- marker_df |>
+  summarize(med = median(avg_LHb_hab_expr, na.rm = TRUE), .by = cluster) |>
+  arrange(med) |>
+  pull(cluster)
+
+marker_df <- marker_df |>
+  mutate(cluster = factor(cluster, levels = cluster_order))
+
+p_avg_LHb = ggplot(marker_df, aes(x = cluster, y = avg_LHb_hab_expr, fill = broad_labels)) +
+  geom_violin(scale = 'width') +
+  theme_bw() +
+  scale_fill_manual(values = broad_palette) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  xlab("Cluster") +
+  ylab("Average expression of top 25 Lateral Habenula markers") +
+  ggtitle("Lateral Habenula marker expression across clusters")
+
+
+p_avg_inh_thal
+p_avg_excite_thal
+p_avg_MHb
+p_avg_LHb
+
+ggsave(plot = p_avg_inh_thal, filename = 'Average_top25_inhibitory_thalamus_marker_expression_by_cluster.pdf', path = plot_path,
+device = 'pdf', width = 6, height = 5, useDingbats = FALSE)
+
+ggsave(plot = p_avg_excite_thal, filename = 'Average_top25_excitatory_thalamus_marker_expression_by_cluster.pdf', path = plot_path,
+device = 'pdf', width = 6, height = 5, useDingbats = FALSE)
+
+ggsave(plot = p_avg_MHb, filename = 'Average_top25_MedialHab_marker_expression_by_cluster.pdf', path = plot_path,
+device = 'pdf', width = 6, height = 5, useDingbats = FALSE)
+
+ggsave(plot = p_avg_LHb, filename = 'Average_top25_LateralHab_marker_expression_by_cluster.pdf', path = plot_path,
+device = 'pdf', width = 6, height = 5, useDingbats = FALSE)
 
 
 ############
 #Okay so not obviously thalamus cells based on thalamus marker expression
 ###########
-
-ggsave(plot = p_thal, filename = 'Thalamus_marker_expression_by_GABA_Glut_coexpression_status.pdf', path = plot_path, 
-device = 'pdf', width = 6, height = 5, useDingbats = FALSE)
-
-ggsave(plot = p_hab, filename = 'habenula_lhb4_marker_expression_by_GABA_Glut_coexpression_status.pdf', path = plot_path, 
-device = 'pdf', width = 6, height = 5, useDingbats = FALSE)
-
-ggsave(plot = p_gad, filename = 'GAD2_expression_by_GABA_Glut_coexpression_status.pdf', path = plot_path, 
-device = 'pdf', width = 6, height = 5, useDingbats = FALSE)
 
