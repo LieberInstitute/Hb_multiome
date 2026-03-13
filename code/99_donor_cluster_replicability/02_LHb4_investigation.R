@@ -628,8 +628,18 @@ names(donor_ref_clust_markers_list) = donors
 cross_donor_ref_clust_hab_markers = make_meta_markers(donor_ref_clust_markers_list, detailed_stats = TRUE)
 
 
-cross_donor_ref_clust_hab_markers %>% filter(rank <= 20 & cell_type %in% c('Putative_Inhib_LHb_1', 'Putative_Inhib_LHb_2')) %>% View()
+cross_donor_ref_clust_hab_markers %>% filter(rank <= 50 & cell_type %in% c('Putative_Inhib_LHb_1', 'Putative_Inhib_LHb_2')) %>% View()
 
 
 cross_donor_ref_clust_hab_markers %>% filter( gene %in% c('SST','PVALB','LAMP5','LHX6','VIP','PAX6')) %>%
   group_by(gene) %>% arrange(rank, .by_group = TRUE) %>% View()
+
+
+
+#And just the one versus all 
+
+onevsall_markers = compute_markers(assay(multiome_sce, 'cpm'), multiome_sce$refined_mid_cluster)
+
+onevsall_markers %>% group_by(cell_type) %>% slice_max(order_by = auroc, n = 20) %>% View()
+
+
