@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=150G
-#SBATCH --job-name=09_tripod_preprocess
+#SBATCH --mem=40G
+#SBATCH --job-name=10_tripod_trios
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../processed-data/12_new_peaks/logs/09_tripod_preprocess_%a.txt
-#SBATCH -e ../../processed-data/12_new_peaks/logs/09_tripod_preprocess_%a.txt
+#SBATCH -o ../../processed-data/12_new_peaks/logs/10_tripod_trios_%a.txt
+#SBATCH -e ../../processed-data/12_new_peaks/logs/10_tripod_trios_%a.txt
 #SBATCH --array=1-19%10
 
 set -e
@@ -25,7 +25,7 @@ module load conda_R/4.5
 ## List current modules for reproducibility
 module list
 
-Rscript 09_tripod_preprocess.R
+Rscript 10_tripod_trios.R
 
 echo "**** Job ends ****"
 date
