@@ -22,17 +22,34 @@ result_paths = here(
     'processed-data', '12_new_peaks', '01_link_peaks', '%s_%s.csv.gz'
 )
 gtf_path = '/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-gex-GRCh38-2024-A/genes/genes.gtf.gz'
-marker_path = here("processed-data", "10_MAGMA", "RNA", "gene_sets", "fine.tsv")
+marker_path = here(
+    'processed-data', '10_MAGMA', 'RNA', 'registration_banksy',
+    'modeling_results', 'fine.rds'
+)
 plot_dir = here("plots", "12_new_peaks")
 min_num_links = 10
 FDR_thresholds = c(0.01, 0.05, 0.1, 0.15, 0.2, 1)
 cor_thresholds = 0.05 * seq(0, 10)
+marker_FDR = 0.1
+max_markers = 100
 
 ################################################################################
 #   Import markers
 ################################################################################
 
-marker_df = read_tsv(marker_path, show_col_types = FALSE)
+marker_df = readRDS(marker_path)$enrichment |>
+    as_tibble() |>
+    pivot_longer(
+        cols = matches('^(t_stat|p_value|fdr|logFC)_'),
+        names_to = c('.value', 'cell_type'),
+        names_pattern = '^(t_stat|p_value|fdr|logFC)_(.+)$'
+    ) |>
+    filter(fdr < marker_FDR, logFC > 0) |>
+    group_by(cell_type) |>
+    arrange(fdr) |>
+    slice_head(n = max_markers) |>
+    ungroup() |>
+    select(cell_type, gene)
 
 message(
     sprintf(
@@ -72,8 +89,8 @@ for (target_cell_type in cell_types) {
                 unique()
 
             these_markers = marker_df |>
-                filter(set_id == target_cell_type) |>
-                pull(gene_name)
+                filter(cell_type == target_cell_type) |>
+                pull(gene)
             
             # Get all genes that could potentially be linked
             all_possible_genes = result_df |>
@@ -123,14 +140,14 @@ metric_df = metric_df |>
         FDR_threshold = factor(
             FDR_threshold, levels = sort(unique(FDR_threshold))
         ),
-        prop_markers = ifelse(
-            num_linked_genes >= min_num_links, prop_markers, NaN
+        fisher_OR = ifelse(
+            num_linked_genes >= min_num_links, fisher_OR, NaN
         )
     )
 
 p = ggplot(
         metric_df,
-        aes(x = FDR_threshold, y = cor_threshold, fill = prop_markers)
+        aes(x = FDR_threshold, y = cor_threshold, fill = fisher_OR)
     ) +
     geom_tile() +
     scale_fill_viridis_c() +
@@ -138,7 +155,7 @@ p = ggplot(
     labs(
         x = "FDR Threshold",
         y = "Correlation Threshold",
-        fill = "Proportion\nMarkers",
+        fill = "Enrichment OR",
         title = "Marker Enrichment Across Thresholds"
     ) +
     theme_bw(base_size = 15) +
