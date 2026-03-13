@@ -18,18 +18,29 @@ library(here)
 library(TRIPOD)
 library(sessioninfo)
 
+cell_types = c(
+    'Astrocyte', 'Endo', 'Excit.Thal', 'Inhib.Thal', 'LHb.1', 'LHb.1.3',
+    'LHb.1.3.4', 'LHb.2.7', 'LHb.4', 'LHb.7', 'MHb.1', 'MHb.1.2', 'MHb.2',
+    'MHb.3', 'Microglia', 'Oligo', 'OPC', 'Thal', 'all'
+)
+this_cell_type = cell_types[as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID"))]
+
 seur_path = here(
     "processed-data", "12_new_peaks", "08_chromVAR", "seur.qs2"
 )
 out_path = here(
     "processed-data", "12_new_peaks", "09_tripod_preprocess",
-    "preprocessed_objects.qs2"
+    sprintf("preprocessed_objects_%s.qs2", this_cell_type)
 )
 
 set.seed(0)
 dir.create(dirname(out_path), showWarnings = FALSE)
 
 seur = qs_read(seur_path)
+
+if (this_cell_type != "all") {
+    seur = subset(seur, mid_cluster == this_cell_type)
+}
 
 #   Remove unexpressed genes
 seur[['RNA']] = subset(

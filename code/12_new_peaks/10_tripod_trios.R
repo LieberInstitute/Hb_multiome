@@ -17,9 +17,16 @@ library(GenomeInfoDb)
 library(BiocParallel)
 library(dendextend)
 
+cell_types = c(
+    'Astrocyte', 'Endo', 'Excit.Thal', 'Inhib.Thal', 'LHb.1', 'LHb.1.3',
+    'LHb.1.3.4', 'LHb.2.7', 'LHb.4', 'LHb.7', 'MHb.1', 'MHb.1.2', 'MHb.2',
+    'MHb.3', 'Microglia', 'Oligo', 'OPC', 'Thal', 'all'
+)
+this_cell_type = cell_types[as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID"))]
+
 in_path = here(
     "processed-data", "12_new_peaks", "09_tripod_preprocess",
-    "preprocessed_objects.qs2"
+    sprintf("preprocessed_objects_%s.qs2", this_cell_type)
 )
 out_dir = here("processed-data", "12_new_peaks", "10_tripod_trios")
 fdr_cutoff = 0.05
@@ -43,7 +50,7 @@ seur@meta.data$mid_cluster = factor(seur@meta.data$mid_cluster)
 color_seur = getColors(object = seur, celltype.col.name = "mid_cluster")
 
 #   Fit models
-gene_vec = tripod_seur$transcripts.gr$gene_name[1:100]
+gene_vec = tripod_seur$transcripts.gr$gene_name
 xy_mat_list = bplapply(
     gene_vec,
     getXYMatrices,
@@ -90,17 +97,23 @@ for (condition_type in c("Xt", "Yj")) {
                 level = stringency_level
             ) |>
             as_tibble() |>
-            mutate(condition_on = condition_type, stringency_level = stringency_level)
+            mutate(
+                condition_on = condition_type,
+                stringency_level = stringency_level
+            )
     }
 }
 
 #   Write the main results
 result_list |>
     bind_rows() |>
-    write_csv(file.path(out_dir, "trios.csv.gz"))
+    write_csv(file.path(out_dir, sprintf("trios_%s.csv.gz", this_cell_type)))
 
 #   It also appears from the vignette that the fit model lists are also required
 #   for certain visualizations, so we'll save those too
-qs_save(result_list, file.path(out_dir, "fit_models.qs2"))
+qs_save(
+    result_list,
+    file.path(out_dir, sprintf("fit_models_%s.qs2", this_cell_type))
+)
 
 session_info()
