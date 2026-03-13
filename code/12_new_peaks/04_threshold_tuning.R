@@ -3,15 +3,14 @@
 #   yield the largest number of "real" results, while maintaining an acceptable
 #   number of false positives. We assume that linked genes that are unique to a
 #   given cell type are more likely than random to be markers for that cell type.
-#   We'll tune thresholds to maximize the proportion of uniquely linked genes
-#   that are markers for the target cell type, provided a minimum count of
-#   linked genes is met (to avoid noise in the proportion metric). This metric
+#   We'll tune thresholds to maximize the odds ratio for uniquely linked genes
+#   being enriched for markers for the target cell type, provided a minimum
+#   count of linked genes is met (to avoid noise in the OR metric). This metric
 #   will be averaged across cell types
 
 library(here)
 library(tidyverse)
 library(sessioninfo)
-library(rtracklayer)
 
 cell_types = c(
     'Astrocyte', 'Endo', 'Excit.Thal', 'Inhib.Thal', 'LHb.1', 'LHb.1.3',
@@ -21,7 +20,6 @@ cell_types = c(
 result_paths = here(
     'processed-data', '12_new_peaks', '01_link_peaks', '%s_%s.csv.gz'
 )
-gtf_path = '/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-gex-GRCh38-2024-A/genes/genes.gtf.gz'
 marker_path = here(
     'processed-data', '10_MAGMA', 'RNA', 'registration_banksy',
     'modeling_results', 'fine.rds'
@@ -32,6 +30,19 @@ FDR_thresholds = c(0.01, 0.05, 0.1, 0.15, 0.2, 1)
 cor_thresholds = 0.05 * seq(0, 10)
 marker_FDR = 0.1
 max_markers = 100
+
+################################################################################
+#   Functions
+################################################################################
+
+is_unique_enough = function(target_cell_type, other_cell_type) {
+    unique_enough = identical(target_cell_type, unique(other_cell_type)) ||
+        (
+            grepl('^[ML]Hb', target_cell_type) &&
+            all(grepl('^[ML]Hb', other_cell_type))
+        )
+    return(unique_enough)
+}
 
 ################################################################################
 #   Import markers
@@ -51,19 +62,8 @@ marker_df = readRDS(marker_path)$enrichment |>
     ungroup() |>
     select(cell_type, gene)
 
-message(
-    sprintf(
-        "Proportion of markers with NA gene_name: %.1f%%",
-        100 * mean(is.na(marker_df$gene_name))
-    )
-)
-
-marker_df = marker_df |>
-    filter(!is.na(gene_name)) |>
-    select(set_id, gene_name)
-
 ################################################################################
-#   Collect proportion of markers for each cell type
+#   Collect odds ratio for enrichment of markers for each cell type
 ################################################################################
 
 metric_df_list = list()
@@ -81,10 +81,14 @@ for (target_cell_type in cell_types) {
     for (FDR_threshold in FDR_thresholds) {
         for (cor_threshold in cor_thresholds) {
             linked_genes = result_df |>
+                #   Filter all linked peaks by thresholds
                 filter(FDR <= FDR_threshold, abs(score) >= cor_threshold) |>
+                #   Take linked peaks now present only in the target cell type,
+                #   or only among Hb cell types if the target is a Hb cell type
                 group_by(peak, gene) |>
-                filter(identical(target_cell_type, unique(other_cell_type))) |>
+                filter(is_unique_enough(target_cell_type, other_cell_type)) |>
                 ungroup() |>
+                #   Then grab their unique genes
                 pull(gene) |>
                 unique()
 
