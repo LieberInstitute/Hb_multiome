@@ -128,7 +128,7 @@ DimPlot(all_donor_seurat, reduction = "pca") + NoLegend()
 
 #UMAP
 all_donor_seurat  <- RunUMAP(all_donor_seurat , dims = 1:20)
-
+DimPlot(all_donor_seurat, reduction = "umap") + NoLegend()
 #Seurat object without the larval data, just double checking the developmental data is not driving some of the marker trends
 #specifically the excitatory/inhibitory population
 #no_larva_seurat = subset(all_donor_seurat, subset = study_id != 'Larva')
@@ -359,6 +359,154 @@ dev.off()
 pdf(paste0(plot_path, '/Zebrafish_Hab_regional_marker_bubbles_Zscore_meanExp.pdf'), width = 10, height = 8)
 p_bubble[[2]]
 dev.off()
+
+
+##########################
+#Look for potential lateral habenula GABAergic cells
+#########################
+
+
+custom_markers = c('GAD1A', 'GAD1B',  'GAD2',  'SLC32A1', 'SLC17A6A', 'SLC17A6B', 'SLC17A7A', 'SLC17A7B')
+
+
+p_bubble_gaba_glut_markers = get_bubble_plot(all_donor_seurat , custom_markers, 'Pendey Zebrafish', 
+group_col = 'meta_clust_celltype_annot')
+p_bubble_gaba_glut_markers
+
+
+#Here, the inhibitory_gap43 population clearly has the most distince GAD expression
+zeb_gad1a_p = FeaturePlot(all_donor_seurat, features = "GAD1A", reduction = "umap", pt.size = 1, slot = 'scale.data') +
+  scale_color_gradient(low = "white", high = "red", name = 'z-score')
+
+zeb_gad1b_p = FeaturePlot(all_donor_seurat, features = "GAD1B", reduction = "umap", pt.size = 1, slot = 'scale.data') +
+  scale_color_gradient(low = "white", high = "red", name = 'z-score')
+
+zeb_gad2_p = FeaturePlot(all_donor_seurat, features = "GAD2", reduction = "umap", pt.size = 1, slot = 'scale.data') +
+  scale_color_gradient(low = "white", high = "red", name = 'z-score')
+
+zeb_vgat_p = FeaturePlot(all_donor_seurat, features = "SLC32A1", reduction = "umap", pt.size = 1, slot = 'scale.data') +
+  scale_color_gradient(low = "white", high = "red", name = 'z-score')
+
+
+
+#Look at the co-expression of specific genes
+# Get expression data
+umap_data <- as.data.frame(Embeddings(all_donor_seurat, reduction = "umap"))
+umap_data$GAD2 <- FetchData(all_donor_seurat, vars = "GAD2", slot = "data")[, 1]
+umap_data$SLC17A6A <- FetchData(all_donor_seurat, vars = "SLC17A6A", slot = "data")[, 1]
+
+# Create a coexpression category
+umap_data$coexpression <- ifelse(umap_data$GAD2 > 0 & umap_data$SLC17A6A > 0, "Both",
+                                  ifelse(umap_data$GAD2 > 0, "GAD2 only",
+                                         ifelse(umap_data$SLC17A6A > 0, "SLC17A6A only", "Neither")))
+
+gad2_vglut2_p = ggplot(umap_data, aes(x = umap_1, y = umap_2, color = coexpression)) +
+  geom_point(size = 1) +
+  scale_color_manual(values = c("Both" = "purple", "GAD2 only" = "red", "SLC17A6A only" = "blue", "Neither" = "lightgrey")) +
+  theme_bw() +
+  labs(title = "GAD2 and SLC17A6A Co-expression: Pendey Zebrafish")
+
+
+p_bubble_gaba_glut_markers[[1]]
+p_bubble_gaba_glut_markers[[2]]
+
+zeb_gad1a_p 
+zeb_gad1b_p
+zeb_gad2_p
+zeb_vgat_p
+
+gad2_vglut2_p 
+
+ggsave(p_bubble_gaba_glut_markers[[1]], filename = 'pendey_zeb_gaba_glut_meta_annots_bubble.pdf', path = plot_path,
+device = 'pdf', width = 10, height = 8)
+
+ggsave(p_bubble_gaba_glut_markers[[2]], filename = 'pendey_zeb_gaba_glut_zscore_meta_annots_bubble.pdf', path = plot_path,
+device = 'pdf', width = 10, height = 8)
+
+ggsave(zeb_gad1a_p , filename = 'pendey_zeb_gad1a_exp_umap.pdf', path = plot_path,
+device = 'pdf', width = 6, height = 4)
+
+ggsave(zeb_gad1b_p , filename = 'pendey_zeb_gad1b_exp_umap.pdf', path = plot_path,
+device = 'pdf', width = 6, height = 4)
+
+ggsave(zeb_gad2_p , filename = 'pendey_zeb_gad2_exp_umap.pdf', path = plot_path,
+device = 'pdf', width = 6, height = 4)
+
+ggsave(zeb_vgat_p , filename = 'pendey_zeb_vgat_exp_umap.pdf', path = plot_path,
+device = 'pdf', width = 6, height = 4)
+
+ggsave(gad2_vglut2_p , filename = 'pendey_zeb_gad2_vglut2_coexp_umap.pdf', path = plot_path,
+device = 'pdf', width = 6, height = 4)
+
+#Coexpression plots of the GABA-Glut genes
+
+all_donor_sce$meta_clust_celltype_annot = unname(meta_annot_vec[all_donor_sce$meta_cluster])
+logcounts(all_donor_sce) = log1p(assay(all_donor_sce, "cpm"))
+#Plotting co-expression of excitatory and inhibitory markers
+
+pairwise_coexpression <- function(mat, genes, cluster_name) {
+  # mat: genes x cells matrix for one cluster
+  
+  detected <- mat[genes, , drop = FALSE] > 0
+  
+  res <- expand.grid(gene1 = genes, gene2 = genes, stringsAsFactors = FALSE) %>%
+    rowwise() %>%
+    mutate(percent = mean(detected[gene1, ] & detected[gene2, ]) * 100) %>%
+    ungroup() %>%
+    mutate(cluster = cluster_name)
+  
+  res
+}
+
+
+#Full dataset. Of note, this does not use the corrected counts, the corrected counts were not saved with this version of the data
+genes = c('GAD1A', 'GAD1B',  'GAD2',  'SLC32A1', 'SLC17A6A', 'SLC17A6B', 'SLC17A7A', 'SLC17A7B')
+
+#genes <- c('Slc32a1',"Gad1","Gad2","Slc17a6", "Slc17a7")
+expr_mat <- assay(all_donor_sce, "logcounts")
+
+cluster_to_annotate = "meta_clust_celltype_annot"
+clusters <- unique(colData(all_donor_sce)[[cluster_to_annotate]])
+
+coexp_df <- lapply(clusters, function(cl) {
+  cells <- colData(all_donor_sce)[[cluster_to_annotate]] == cl
+  mat_sub <- expr_mat[, cells, drop = FALSE]
+  pairwise_coexpression(mat_sub, genes, cluster_name = cl)
+}) %>%
+  bind_rows()
+
+coexp_df$gene1 <- factor(coexp_df$gene1, levels = genes)
+coexp_df$gene2 <- factor(coexp_df$gene2, levels = rev(genes))
+
+
+#Edited the original code to have grey be between 0-5%, previously the very low percentages were difficult to see.
+p <- ggplot(coexp_df, aes(x = gene1, y = gene2, fill = percent)) +
+  geom_tile(color = "grey70", linewidth = 0.3) +
+  facet_wrap(~ cluster, nrow = 5) +
+  scale_fill_gradientn(
+    colours = c("grey95","#f1e2c6", "#f1e2c6", "#f0c94a", "#df8b27", "#d92523", "#8b0d19"),
+    values = c(0, 0.05, 0.20, 0.40, 0.60, 0.8, 1),
+    limits = c(0, 100),
+    breaks = c( 5, 20, 40, 60, 80, 100),
+    name = "Percent of cells expressing\ntwo genes"
+  ) +
+  coord_equal() +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    strip.background = element_blank(),
+    strip.text = element_text(size = 12, face = "bold")
+  ) +
+  xlab(NULL) +
+  ylab(NULL) + ggtitle("Co-expression of GABA and Glut markers in Zebrafish Pendey dataset")
+
+print(p)
+
+ggsave(path = plot_path, filename = 'GABA_Glut_coexpression_Pendey_zeb.pdf', plot = p, 
+device = 'pdf', width = 14, height = 10, useDingbats = FALSE)
+
+
 
 
 
