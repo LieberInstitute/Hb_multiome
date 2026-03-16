@@ -500,6 +500,203 @@ table(hashikawa_sce_sub$meta_clust_celltype_annot)
 full_hashikawa_metadata = colData(hashikawa_sce_sub)
 saveRDS(full_hashikawa_metadata, paste0(new_data_path, '/hashikawa_mouse_neuron_metaclust_celltype_annot_metadata.rds'))
 
+##########################
+#Look for potential lateral habenula GABAergic cells
+#########################
+
+#Switch the full dataset to Seurat for the bubble plots
+hashikawa_seurat = as.Seurat(hashikawa_sce_sub, counts = "counts", data = "cpm")
+
+#HVGs
+hashikawa_seurat <- FindVariableFeatures(hashikawa_seurat, selection.method = "vst", nfeatures = 2000)
+
+#Scale data
+all.genes <- rownames(hashikawa_seurat)
+hashikawa_seurat <- ScaleData(hashikawa_seurat, features = all.genes)
+
+#PCA
+hashikawa_seurat  <- RunPCA(hashikawa_seurat , features = VariableFeatures(object = hashikawa_seurat ))
+DimPlot(hashikawa_seurat, reduction = "pca") + NoLegend()
+
+#UMAP
+hashikawa_seurat  <- RunUMAP(hashikawa_seurat , dims = 1:20)
+DimPlot(hashikawa_seurat, reduction = "umap", group.by = 'meta_clust_celltype_annot')
+DimPlot(hashikawa_seurat, reduction = "umap", group.by = 'stim')
+
+
+custom_markers = c('Gad1', 'Gad2', 'Slc32a1', 'Slc17a6', 'Slc17a7')
+
+p_bubble_gaba_glut_markers = get_bubble_plot(hashikawa_seurat , custom_markers, 'Hashikawa: all mouse samples', 
+group_col = 'meta_clust_celltype_annot')
+p_bubble_gaba_glut_markers
+
+
+#The LHb1 has the highest Gad2 expression and VGAT expression, but both are low in general and small percentages. This matches the trend in humans
+mouse_gad1_p = FeaturePlot(hashikawa_seurat, features = "Gad1", reduction = "umap", pt.size = 1, slot = 'scale.data') +
+  scale_color_gradient(low = "white", high = "red", name = 'z-score')
+
+mouse_gad2_p = FeaturePlot(hashikawa_seurat, features = "Gad2", reduction = "umap", pt.size = 1, slot = 'scale.data') +
+  scale_color_gradient(low = "white", high = "red", name = 'z-score')
+
+mouse_vgat_p = FeaturePlot(hashikawa_seurat, features = "Slc32a1", reduction = "umap", pt.size = 1, slot = 'scale.data') +
+  scale_color_gradient(low = "white", high = "red", name = 'z-score')
+
+
+#Look at the co-expression of specific genes
+# Get expression data
+umap_data <- as.data.frame(Embeddings(hashikawa_seurat, reduction = "umap"))
+umap_data$GAD2 <- FetchData(hashikawa_seurat, vars = "Gad2", slot = "data")[, 1]
+umap_data$SLC17A6 <- FetchData(hashikawa_seurat, vars = "Slc17a6", slot = "data")[, 1]
+
+# Create a coexpression category
+umap_data$coexpression <- ifelse(umap_data$GAD2 > 0 & umap_data$SLC17A6 > 0, "Both",
+                                  ifelse(umap_data$GAD2 > 0, "Gad2 only",
+                                         ifelse(umap_data$SLC17A6 > 0, "Slc17a6 only", "Neither")))
+
+gad2_vglut2_p = ggplot(umap_data, aes(x = umap_1, y = umap_2, color = coexpression)) +
+  geom_point(size = 1) +
+  scale_color_manual(values = c("Both" = "purple", "Gad2 only" = "red", "Slc17a6 only" = "blue", "Neither" = "lightgrey")) +
+  theme_bw() +
+  labs(title = "Gad2 and Slc17a6 Co-expression: Hashikawa mouse")
+
+
+p_bubble_gaba_glut_markers[[1]]
+p_bubble_gaba_glut_markers[[2]]
+
+mouse_gad1_p 
+mouse_gad2_p
+mouse_vgat_p
+
+gad2_vglut2_p 
+
+ggsave(p_bubble_gaba_glut_markers[[1]], filename = 'hashikawa_mouse_gaba_glut_meta_annots_bubble.pdf', path = plot_path,
+device = 'pdf', width = 10, height = 8)
+
+ggsave(p_bubble_gaba_glut_markers[[2]], filename = 'hashikawa_mouse_gaba_glut_zscore_meta_annots_bubble.pdf', path = plot_path,
+device = 'pdf', width = 10, height = 8)
+
+ggsave(mouse_gad1_p , filename = 'hashikawa_mouse_gad1_exp_umap.pdf', path = plot_path,
+device = 'pdf', width = 6, height = 4)
+
+ggsave(mouse_gad2_p , filename = 'hashikawa_mouse_gad2_exp_umap.pdf', path = plot_path,
+device = 'pdf', width = 6, height = 4)
+
+ggsave(mouse_vgat_p , filename = 'hashikawa_mouse_vgat_exp_umap.pdf', path = plot_path,
+device = 'pdf', width = 6, height = 4)
+
+ggsave(gad2_vglut2_p , filename = 'hashikawa_mouse_gad2_vglut2_coexp_umap.pdf', path = plot_path,
+device = 'pdf', width = 6, height = 4)
+
+#Coexpression plots of the GABA-Glut genes
+
+
+logcounts(hashikawa_sce_sub) = log1p(assay(hashikawa_sce_sub, "cpm"))
+#Plotting co-expression of excitatory and inhibitory markers
+
+pairwise_coexpression <- function(mat, genes, cluster_name) {
+  # mat: genes x cells matrix for one cluster
+  
+  detected <- mat[genes, , drop = FALSE] > 0
+  
+  res <- expand.grid(gene1 = genes, gene2 = genes, stringsAsFactors = FALSE) %>%
+    rowwise() %>%
+    mutate(percent = mean(detected[gene1, ] & detected[gene2, ]) * 100) %>%
+    ungroup() %>%
+    mutate(cluster = cluster_name)
+  
+  res
+}
+
+
+#Full dataset. Of note, this does not use the corrected counts, the corrected counts were not saved with this version of the data
+genes <- c('Slc32a1',"Gad1","Gad2","Slc17a6", "Slc17a7")
+expr_mat <- assay(hashikawa_sce_sub, "logcounts")
+
+cluster_to_annotate = "meta_clust_celltype_annot"
+clusters <- unique(colData(hashikawa_sce_sub)[[cluster_to_annotate]])
+
+coexp_df <- lapply(clusters, function(cl) {
+  cells <- colData(hashikawa_sce_sub)[[cluster_to_annotate]] == cl
+  mat_sub <- expr_mat[, cells, drop = FALSE]
+  pairwise_coexpression(mat_sub, genes, cluster_name = cl)
+}) %>%
+  bind_rows()
+
+coexp_df$gene1 <- factor(coexp_df$gene1, levels = genes)
+coexp_df$gene2 <- factor(coexp_df$gene2, levels = rev(genes))
+
+
+#Edited the original code to have grey be between 0-5%, previously the very low percentages were difficult to see.
+p <- ggplot(coexp_df, aes(x = gene1, y = gene2, fill = percent)) +
+  geom_tile(color = "grey70", linewidth = 0.3) +
+  facet_wrap(~ cluster, nrow = 5) +
+  scale_fill_gradientn(
+    colours = c("grey95","#f1e2c6", "#f1e2c6", "#f0c94a", "#df8b27", "#d92523", "#8b0d19"),
+    values = c(0, 0.05, 0.20, 0.40, 0.60, 0.8, 1),
+    limits = c(0, 100),
+    breaks = c( 5, 20, 40, 60, 80, 100),
+    name = "Percent of cells expressing\ntwo genes"
+  ) +
+  coord_equal() +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    strip.background = element_blank(),
+    strip.text = element_text(size = 12, face = "bold")
+  ) +
+  xlab(NULL) +
+  ylab(NULL) + ggtitle("Co-expression of GABA and Glut markers in Hashikawa mouse dataset")
+
+print(p)
+
+ggsave(path = plot_path, filename = 'GABA_Glut_coexpression_Hashikawa_mouse.pdf', plot = p, 
+device = 'pdf', width = 14, height = 10, useDingbats = FALSE)
+
+#And Tac1 and cholinergic coexpression
+genes <- c('Tac1',"Chat","Slc5a7")
+expr_mat <- assay(hashikawa_sce_sub, "logcounts")
+
+cluster_to_annotate = "meta_clust_celltype_annot"
+clusters <- unique(colData(hashikawa_sce_sub)[[cluster_to_annotate]])
+
+coexp_df <- lapply(clusters, function(cl) {
+  cells <- colData(hashikawa_sce_sub)[[cluster_to_annotate]] == cl
+  mat_sub <- expr_mat[, cells, drop = FALSE]
+  pairwise_coexpression(mat_sub, genes, cluster_name = cl)
+}) %>%
+  bind_rows()
+
+coexp_df$gene1 <- factor(coexp_df$gene1, levels = genes)
+coexp_df$gene2 <- factor(coexp_df$gene2, levels = rev(genes))
+
+
+#Edited the original code to have grey be between 0-5%, previously the very low percentages were difficult to see.
+p <- ggplot(coexp_df, aes(x = gene1, y = gene2, fill = percent)) +
+  geom_tile(color = "grey70", linewidth = 0.3) +
+  facet_wrap(~ cluster, nrow = 5) +
+  scale_fill_gradientn(
+    colours = c("grey95","#f1e2c6", "#f1e2c6", "#f0c94a", "#df8b27", "#d92523", "#8b0d19"),
+    values = c(0, 0.05, 0.20, 0.40, 0.60, 0.8, 1),
+    limits = c(0, 100),
+    breaks = c( 5, 20, 40, 60, 80, 100),
+    name = "Percent of cells expressing\ntwo genes"
+  ) +
+  coord_equal() +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    strip.background = element_blank(),
+    strip.text = element_text(size = 12, face = "bold")
+  ) +
+  xlab(NULL) +
+  ylab(NULL) + ggtitle("Co-expression of SubP and Chol markers in Hashikawa mouse dataset")
+
+print(p)
+
+ggsave(path = plot_path, filename = 'SubP_Chol_coexpression_Hashikawa_mouse.pdf', plot = p, 
+device = 'pdf', width = 14, height = 10, useDingbats = FALSE)
 
 
 #Compute mouse meta-markers at a broad annotation level
@@ -643,16 +840,3 @@ mouse_neuron_meta_markers %>% filter(rank <= 25) %>% View()
 
 mouse_all_meta_markers = read_meta_markers(paste0(new_data_path, '/mouse_hab_all_celltypes_meta_markers.csv.gz'))
 mouse_all_meta_markers %>% filter(rank <= 25) %>% View()
-
-
-
-
-
-
-
-
-
-
-
-
-
