@@ -492,7 +492,50 @@ ggsave(path = plot_path, filename = 'GABA_Glut_coexpression_wallace_mouse.pdf', 
 device = 'pdf', width = 14, height = 10, useDingbats = FALSE)
 
 
+#And Tac1 and cholinergic coexpression
+genes <- c('Tac1',"Chat","Slc5a7")
+expr_mat <- assay(all_donor_sce, "logcounts")
 
+cluster_to_annotate = "meta_clust_celltype_annot"
+clusters <- unique(colData(all_donor_sce)[[cluster_to_annotate]])
+
+coexp_df <- lapply(clusters, function(cl) {
+  cells <- colData(all_donor_sce)[[cluster_to_annotate]] == cl
+  mat_sub <- expr_mat[, cells, drop = FALSE]
+  pairwise_coexpression(mat_sub, genes, cluster_name = cl)
+}) %>%
+  bind_rows()
+
+coexp_df$gene1 <- factor(coexp_df$gene1, levels = genes)
+coexp_df$gene2 <- factor(coexp_df$gene2, levels = rev(genes))
+
+
+#Edited the original code to have grey be between 0-5%, previously the very low percentages were difficult to see.
+p <- ggplot(coexp_df, aes(x = gene1, y = gene2, fill = percent)) +
+  geom_tile(color = "grey70", linewidth = 0.3) +
+  facet_wrap(~ cluster, nrow = 5) +
+  scale_fill_gradientn(
+    colours = c("grey95","#f1e2c6", "#f1e2c6", "#f0c94a", "#df8b27", "#d92523", "#8b0d19"),
+    values = c(0, 0.05, 0.20, 0.40, 0.60, 0.8, 1),
+    limits = c(0, 100),
+    breaks = c( 5, 20, 40, 60, 80, 100),
+    name = "Percent of cells expressing\ntwo genes"
+  ) +
+  coord_equal() +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    strip.background = element_blank(),
+    strip.text = element_text(size = 12, face = "bold")
+  ) +
+  xlab(NULL) +
+  ylab(NULL) + ggtitle("Co-expression of SubP and Chol markers in Wallace mouse dataset")
+
+print(p)
+
+ggsave(path = plot_path, filename = 'SubP_Chol_coexpression_Wallace_mouse.pdf', plot = p, 
+device = 'pdf', width = 14, height = 10, useDingbats = FALSE)
 
 
 
