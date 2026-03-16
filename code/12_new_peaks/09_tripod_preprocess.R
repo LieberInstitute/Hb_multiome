@@ -32,6 +32,7 @@ out_path = here(
     "processed-data", "12_new_peaks", "09_tripod_preprocess",
     sprintf("preprocessed_objects_%s.qs2", this_cell_type)
 )
+min_num_cells = 200
 
 set.seed(0)
 dir.create(dirname(out_path), showWarnings = FALSE)
@@ -40,6 +41,17 @@ seur = qs_read(seur_path)
 
 if (this_cell_type != "all") {
     seur = subset(seur, mid_cluster == this_cell_type)
+
+    #   For several reasons, TRIPOD doesn't work well with very small numbers
+    #   of cells. We just won't run it on such cell types
+    if (ncol(seur) < min_num_cells) {
+        stop(
+            sprintf(
+                "Only %d cells for cell type %s, which is less than the minimum of %d",
+                ncol(seur), this_cell_type, min_num_cells
+            )
+        )
+    }
 }
 
 #   Remove unexpressed genes and peaks
@@ -77,7 +89,7 @@ seur = processSeuratObject(
 
 cluster_df = optimizeResolution(
         object = seur, graph.name = "wsnn", assay.name = "WNN",
-        resolutions = c(0.5, 1, 2, 4, 8, 16, 32), min.num = 20
+        resolutions = c(0.5, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32), min.num = 20
     ) |>
     as_tibble()
 
@@ -96,15 +108,14 @@ best_res = cluster_df |>
 if (length(best_res) == 0) {
     warning("Failed to find a resolution with the recommended criteria. Relaxing a bit...")
     best_res = cluster_df |>
-        dplyr::filter(num_clusters >= 30, num_below / num_clusters <= 0.05) |>
+        dplyr::filter(num_below / num_clusters <= 0.1) |>
         arrange(desc(num_clusters)) |>
         slice_head(n = 1) |>
         pull(resolution)
 }
 
-#   We can't really relax the criteria further and get meaningful results
-if (length(best_res) == 0) {
-    stop("Couldn't find a resolution meeting anything close to the recommended criteria")
+if (cluster_df$num_clusters[cluster_df$resolution == best_res] < 40) {
+    warning("Had to pick a resolution with less than 40 clusters")
 }
 
 message(
