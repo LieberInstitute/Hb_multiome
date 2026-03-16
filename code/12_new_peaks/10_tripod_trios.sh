@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=40G
+#SBATCH --mem=8G
 #SBATCH --job-name=10_tripod_trios
-#SBATCH -c 1
+#SBATCH -c 2
 #SBATCH -t 1-0:00:00
 #SBATCH -o ../../processed-data/12_new_peaks/logs/10_tripod_trios_%a.txt
 #SBATCH -e ../../processed-data/12_new_peaks/logs/10_tripod_trios_%a.txt
-#SBATCH --array=1-19%10
+#SBATCH --array=2-18%10
 
 set -e
 

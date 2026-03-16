@@ -46,11 +46,11 @@ tripod_seur = pre_list$tripod_seur
 seur = pre_list$seur
 metacell_seur = pre_list$metacell_seur
 
-seur@meta.data$mid_cluster = factor(seur@meta.data$mid_cluster)
-color_seur = getColors(object = seur, celltype.col.name = "mid_cluster")
+# seur@meta.data$mid_cluster = factor(seur@meta.data$mid_cluster)
+# color_seur = getColors(object = seur, celltype.col.name = "mid_cluster")
 
 #   Fit models
-gene_vec = tripod_seur$transcripts.gr$gene_name
+gene_vec = tripod_seur$transcripts.gr$gene_name[1:10]
 xy_mat_list = bplapply(
     gene_vec,
     getXYMatrices,
@@ -61,8 +61,10 @@ xy_mat_list = bplapply(
     metacell.peak = metacell_seur$peak,
     peakxmotif = tripod_seur$peakxmotif,
     motifxTF = tripod_seur$pbmc.motifxTF,
-    metacell.celltype = color_seur$metacell$celltype,
-    metacell.celltype.col = color_seur$metacell$color,
+    #  getColors throws an error with one cell type, but appears to not even be
+    #  necessary in this function. Just set to NA
+    metacell.celltype = NA, # color_seur$metacell$celltype,
+    metacell.celltype.col = NA, # color_seur$metacell$color,
     BPPARAM = BPPARAM
 )
 names(xy_mat_list) = gene_vec
@@ -86,7 +88,6 @@ for (condition_type in c("Xt", "Yj")) {
         BPPARAM = BPPARAM
     )
     names(this_result) = gene_vec
-    result_list[[condition_type]] = this_result
     
     for (stringency_level in c(1, 2)) {
         result_list[[length(result_list) + 1]] = getTrios(
