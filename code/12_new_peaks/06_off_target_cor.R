@@ -18,6 +18,7 @@ out_path = here(
     'processed-data', '12_new_peaks', '01_link_peaks', 'all_data.csv.gz'
 )
 plot_dir = here("plots", "12_new_peaks")
+fdr_cutoffs = c(0.1, 0.2, 0.3, 0.4, 0.425, 0.45, 0.475, 0.5)
 
 #   First gather and write the key columns from every cell-type pair combination
 result_df_list = list()
@@ -44,14 +45,9 @@ result_df = result_df |>
     mutate(
         cell_type_group = ifelse(
             target_cell_type == other_cell_type, "target", "non_target"
-        ),
-        FDR_class = case_when(
-                FDR <= 0.1 ~ "FDR <= 0.1",
-                FDR <= 0.2 ~ "0.1 < FDR <= 0.2",
-                TRUE ~ "FDR > 0.2"
-            ) |>
-            factor(levels = c("FDR <= 0.1", "0.1 < FDR <= 0.2", "FDR > 0.2"))
-    )
+        )
+    ) |>
+    select(cell_type_group, score, FDR)
 
 #   Density plots of correlation scores split by whether target cell type matches
 #   other cell type. No substantial difference is seen at this level
@@ -69,6 +65,19 @@ pdf(file.path(plot_dir, "off_target_cor_global.pdf"), width = 10, height = 5)
 print(p)
 dev.off()
 
+result_df_list = list()
+for (fdr_cutoff in fdr_cutoffs) {
+    result_df_list[[as.character(fdr_cutoff)]] = result_df |>
+        filter(FDR <= fdr_cutoff) |>
+        mutate(FDR_class = sprintf("FDR <= %s", fdr_cutoff))
+}
+result_df = bind_rows(result_df_list) |>
+    mutate(
+        FDR_class = factor(
+            FDR_class, levels = sprintf("FDR <= %s", fdr_cutoffs)
+        )
+    )
+
 #   However when stratifying by FDR class, target-matching pairs have a
 #   substantially larger magnitude of correlation for lower FDRs
 p = ggplot(
@@ -76,7 +85,7 @@ p = ggplot(
         aes(x = abs(score), fill = cell_type_group, color = cell_type_group)
     ) +
     geom_density(alpha = 0.5, linewidth = 1) +
-    facet_wrap(~ FDR_class, nrow = 3) +
+    facet_wrap(~ FDR_class, nrow = 4) +
     labs(
         x = "abs(Correlation Score)", y = "Density", fill = "Cell Type",
         color = "Cell Type"
