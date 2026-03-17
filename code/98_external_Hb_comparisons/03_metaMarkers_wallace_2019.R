@@ -356,6 +356,13 @@ ggsave(p5, filename = 'wallace_mouse_hab_metaCluster_celltype_annot_umap.pdf', p
 device = 'pdf', width = 8, height = 7)
 
 
+#GLS and GLUD1/2 expression
+custom_markers = c('Gls','Gls2', 'Glud1', 'Slc17a7', 'Slc17a6', 'Gad1','Gad2','Slc32a1')
+
+p_bubble_excit_markers = get_bubble_plot(all_donor_seurat , custom_markers, 'Wallace 2019: all mouse samples', 
+group_col = 'meta_clust_celltype_annot')
+p_bubble_excit_markers
+
 
 ##########################
 #Look for potential lateral habenula GABAergic cells
