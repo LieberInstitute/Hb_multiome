@@ -660,6 +660,9 @@ cross_donor_ref_clust_hab_markers %>% filter( gene %in% c('SST','PVALB','LAMP5',
 
 onevsall_markers = compute_markers(assay(multiome_sce, 'cpm'), multiome_sce$refined_mid_cluster)
 
-onevsall_markers %>% group_by(cell_type) %>% slice_max(order_by = auroc, n = 20) %>% View()
+onevsall_markers %>% group_by(cell_type) %>% slice_max(order_by = auroc, n = 30) %>%
+  group_by(gene) %>% filter(n() == 1) %>% ungroup() %>% View()
 
+
+onevsall_markers %>% filter(gene == 'LAMP5') %>% arrange(desc(average_expression)) %>% View()
 
