@@ -298,6 +298,8 @@ pvalb_p = FeaturePlot(multiome_seurat_integrated, features = "PVALB", reduction 
   scale_color_gradient(low = "white", high = "red")
 vgat_p = FeaturePlot(multiome_seurat_integrated, features = "SLC32A1", reduction = "umap", pt.size = 1, slot = 'data') +
   scale_color_gradient(low = "white", high = "red")
+vglut3_p = FeaturePlot(multiome_seurat_integrated, features = "SLC17A8", reduction = "umap", pt.size = 1, slot = 'data') +
+  scale_color_gradient(low = "white", high = "red")
 vglut2_p = FeaturePlot(multiome_seurat_integrated, features = "SLC17A6", reduction = "umap", pt.size = 1, slot = 'data') +
   scale_color_gradient(low = "white", high = "red")
 vglut1_p = FeaturePlot(multiome_seurat_integrated, features = "SLC17A7", reduction = "umap", pt.size = 1, slot = 'data') +
@@ -309,6 +311,7 @@ umap_data <- as.data.frame(Embeddings(multiome_seurat_integrated, reduction = "u
 umap_data$GAD2 <- FetchData(multiome_seurat_integrated, vars = "GAD2", slot = "data")[, 1]
 umap_data$PVALB <- FetchData(multiome_seurat_integrated, vars = "PVALB", slot = "data")[, 1]
 umap_data$SLC17A6 <- FetchData(multiome_seurat_integrated, vars = "SLC17A6", slot = "data")[, 1]
+umap_data$SLC17A8 <- FetchData(multiome_seurat_integrated, vars = "SLC17A8", slot = "data")[, 1]
 umap_data$SLC32A1 <- FetchData(multiome_seurat_integrated, vars = "SLC32A1", slot = "data")[, 1]
 
 # Create a coexpression category
@@ -321,6 +324,17 @@ gad2_vglut2_p = ggplot(umap_data, aes(x = umap_1, y = umap_2, color = coexpressi
   scale_color_manual(values = c("Both" = "purple", "GAD2 only" = "red", "SLC17A6 only" = "blue", "Neither" = "lightgrey")) +
   theme_bw() +
   labs(title = "GAD2 and SLC17A6 Co-expression")
+
+
+umap_data$coexpression <- ifelse(umap_data$GAD2 > 0 & umap_data$SLC17A8 > 0, "Both",
+                                  ifelse(umap_data$GAD2 > 0, "GAD2 only",
+                                         ifelse(umap_data$SLC17A8 > 0, "SLC17A8 only", "Neither")))
+
+gad2_vglut3_p = ggplot(umap_data, aes(x = umap_1, y = umap_2, color = coexpression)) +
+  geom_point(size = 1) +
+  scale_color_manual(values = c("Both" = "purple", "GAD2 only" = "red", "SLC17A8 only" = "blue", "Neither" = "lightgrey")) +
+  theme_bw() +
+  labs(title = "GAD2 and SLC17A8 Co-expression")
 
 umap_data$coexpression <- ifelse(umap_data$GAD2 > 0 & umap_data$PVALB > 0, "Both",
                                   ifelse(umap_data$GAD2 > 0, "GAD2 only",
@@ -368,6 +382,10 @@ ggsave( plot = vglut1_p, path = plot_path, filename = "LHb4_LHb7_integrated_SLC1
 )
 
 ggsave( plot = vglut2_p, path = plot_path, filename = "LHb4_LHb7_integrated_SLC17A6_feature_umap.pdf",
+  device = "pdf", height = 5, width = 6, useDingbats = FALSE
+)
+
+ggsave( plot = vglut3_p, path = plot_path, filename = "LHb4_LHb7_integrated_SLC17A8_feature_umap.pdf",
   device = "pdf", height = 5, width = 6, useDingbats = FALSE
 )
 
