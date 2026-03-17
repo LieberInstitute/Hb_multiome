@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=20G
+#SBATCH --mem=40G
 #SBATCH --job-name=06_off_target_cor
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00

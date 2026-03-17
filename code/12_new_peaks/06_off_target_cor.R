@@ -18,13 +18,16 @@ out_path = here(
     'processed-data', '12_new_peaks', '01_link_peaks', 'all_data.csv.gz'
 )
 plot_dir = here("plots", "12_new_peaks")
-fdr_cutoffs = c(0.1, 0.2, 0.3, 0.4, 0.425, 0.45, 0.475, 0.5)
+fdr_cutoffs = c(0.01, 0.02, 0.03, 0.04, 0.05, 1)
+num_rows_sample = 1e6
+
+set.seed(0)
 
 #   First gather and write the key columns from every cell-type pair combination
 result_df_list = list()
 for (target_cell_type in cell_types) {
     for (other_cell_type in cell_types) {
-        result_df_list[[other_cell_type]] = read_csv(
+        result_df_list[[length(result_df_list) + 1]] = read_csv(
                 sprintf(result_paths, target_cell_type, other_cell_type),
                 show_col_types = FALSE
             ) |>
@@ -69,7 +72,9 @@ result_df_list = list()
 for (fdr_cutoff in fdr_cutoffs) {
     result_df_list[[as.character(fdr_cutoff)]] = result_df |>
         filter(FDR <= fdr_cutoff) |>
-        mutate(FDR_class = sprintf("FDR <= %s", fdr_cutoff))
+        mutate(FDR_class = sprintf("FDR <= %s", fdr_cutoff)) |>
+        #   There are too many rows (> 9e8). Sample to control memory
+        slice_sample(n = num_rows_sample)
 }
 result_df = bind_rows(result_df_list) |>
     mutate(
@@ -78,8 +83,8 @@ result_df = bind_rows(result_df_list) |>
         )
     )
 
-#   However when stratifying by FDR class, target-matching pairs have a
-#   substantially larger magnitude of correlation for lower FDRs
+#   Stratifying by FDR class also shows no substantial difference in the
+#   distributions
 p = ggplot(
         result_df,
         aes(x = abs(score), fill = cell_type_group, color = cell_type_group)
