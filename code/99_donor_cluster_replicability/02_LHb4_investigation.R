@@ -294,6 +294,8 @@ gad2_p = FeaturePlot(multiome_seurat_integrated, features = "GAD2", reduction = 
   scale_color_gradient(low = "white", high = "red")
 gad1_p = FeaturePlot(multiome_seurat_integrated, features = "GAD1", reduction = "umap", pt.size = 1, slot = 'data') +
   scale_color_gradient(low = "white", high = "red")
+pvalb_p = FeaturePlot(multiome_seurat_integrated, features = "PVALB", reduction = "umap", pt.size = 1, slot = 'data') +
+  scale_color_gradient(low = "white", high = "red")
 vgat_p = FeaturePlot(multiome_seurat_integrated, features = "SLC32A1", reduction = "umap", pt.size = 1, slot = 'data') +
   scale_color_gradient(low = "white", high = "red")
 vglut2_p = FeaturePlot(multiome_seurat_integrated, features = "SLC17A6", reduction = "umap", pt.size = 1, slot = 'data') +
@@ -305,6 +307,7 @@ vglut1_p = FeaturePlot(multiome_seurat_integrated, features = "SLC17A7", reducti
 # Get expression data
 umap_data <- as.data.frame(Embeddings(multiome_seurat_integrated, reduction = "umap"))
 umap_data$GAD2 <- FetchData(multiome_seurat_integrated, vars = "GAD2", slot = "data")[, 1]
+umap_data$PVALB <- FetchData(multiome_seurat_integrated, vars = "PVALB", slot = "data")[, 1]
 umap_data$SLC17A6 <- FetchData(multiome_seurat_integrated, vars = "SLC17A6", slot = "data")[, 1]
 umap_data$SLC32A1 <- FetchData(multiome_seurat_integrated, vars = "SLC32A1", slot = "data")[, 1]
 
@@ -319,10 +322,23 @@ gad2_vglut2_p = ggplot(umap_data, aes(x = umap_1, y = umap_2, color = coexpressi
   theme_bw() +
   labs(title = "GAD2 and SLC17A6 Co-expression")
 
+umap_data$coexpression <- ifelse(umap_data$GAD2 > 0 & umap_data$PVALB > 0, "Both",
+                                  ifelse(umap_data$GAD2 > 0, "GAD2 only",
+                                         ifelse(umap_data$PVALB > 0, "PVALB only", "Neither")))
+
+gad2_pvalb_p = ggplot(umap_data, aes(x = umap_1, y = umap_2, color = coexpression)) +
+  geom_point(size = 1) +
+  scale_color_manual(values = c("Both" = "purple", "GAD2 only" = "red", "PVALB only" = "blue", "Neither" = "lightgrey")) +
+  theme_bw() +
+  labs(title = "GAD2 and PVALB Co-expression")
+
 gad2_p
 gad1_p
+pvalb_p
 vglut1_p
 vglut2_p
+
+gad2_pvalb_p
 gad2_vglut2_p
 
 ggsave(plot = int_author_midclust_plot , path = plot_path, filename = 'LHb4_LHb7_integrated_midcluster_annot_umpa.pdf',
@@ -336,6 +352,10 @@ device = 'pdf', height = 5, width = 6, useDingbats = FALSE )
 
 
 ggsave( plot = gad2_p, path = plot_path, filename = "LHb4_LHb7_integrated_GAD2_feature_umap.pdf",
+  device = "pdf", height = 5, width = 6, useDingbats = FALSE
+)
+
+ggsave( plot = pvalb_p, path = plot_path, filename = "LHb4_LHb7_integrated_PVALB_feature_umap.pdf",
   device = "pdf", height = 5, width = 6, useDingbats = FALSE
 )
 
