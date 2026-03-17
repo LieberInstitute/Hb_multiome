@@ -524,7 +524,7 @@ DimPlot(hashikawa_seurat, reduction = "umap", group.by = 'meta_clust_celltype_an
 DimPlot(hashikawa_seurat, reduction = "umap", group.by = 'stim')
 
 
-custom_markers = c('Gad1', 'Gad2', 'Slc32a1', 'Slc17a6', 'Slc17a7')
+custom_markers = c('Gad1', 'Gad2', 'Slc32a1','Pvalb', 'Slc17a6', 'Slc17a7')
 
 p_bubble_gaba_glut_markers = get_bubble_plot(hashikawa_seurat , custom_markers, 'Hashikawa: all mouse samples', 
 group_col = 'meta_clust_celltype_annot')
@@ -538,6 +538,9 @@ mouse_gad1_p = FeaturePlot(hashikawa_seurat, features = "Gad1", reduction = "uma
 mouse_gad2_p = FeaturePlot(hashikawa_seurat, features = "Gad2", reduction = "umap", pt.size = 1, slot = 'scale.data') +
   scale_color_gradient(low = "white", high = "red", name = 'z-score')
 
+mouse_pvalb_p = FeaturePlot(hashikawa_seurat, features = "Pvalb", reduction = "umap", pt.size = 1, slot = 'scale.data') +
+  scale_color_gradient(low = "white", high = "red", name = 'z-score')
+
 mouse_vgat_p = FeaturePlot(hashikawa_seurat, features = "Slc32a1", reduction = "umap", pt.size = 1, slot = 'scale.data') +
   scale_color_gradient(low = "white", high = "red", name = 'z-score')
 
@@ -546,6 +549,7 @@ mouse_vgat_p = FeaturePlot(hashikawa_seurat, features = "Slc32a1", reduction = "
 # Get expression data
 umap_data <- as.data.frame(Embeddings(hashikawa_seurat, reduction = "umap"))
 umap_data$GAD2 <- FetchData(hashikawa_seurat, vars = "Gad2", slot = "data")[, 1]
+umap_data$PVALB <- FetchData(hashikawa_seurat, vars = "Pvalb", slot = "data")[, 1]
 umap_data$SLC17A6 <- FetchData(hashikawa_seurat, vars = "Slc17a6", slot = "data")[, 1]
 
 # Create a coexpression category
@@ -560,14 +564,28 @@ gad2_vglut2_p = ggplot(umap_data, aes(x = umap_1, y = umap_2, color = coexpressi
   labs(title = "Gad2 and Slc17a6 Co-expression: Hashikawa mouse")
 
 
+umap_data$coexpression <- ifelse(umap_data$GAD2 > 0 & umap_data$PVALB > 0, "Both",
+                                  ifelse(umap_data$GAD2 > 0, "Gad2 only",
+                                         ifelse(umap_data$PVALB > 0, "Pvalb only", "Neither")))
+
+gad2_pvalb_p = ggplot(umap_data, aes(x = umap_1, y = umap_2, color = coexpression)) +
+  geom_point(size = 1) +
+  scale_color_manual(values = c("Both" = "purple", "Gad2 only" = "red", "Pvalb only" = "blue", "Neither" = "lightgrey")) +
+  theme_bw() +
+  labs(title = "Gad2 and Pvalb Co-expression: Hashikawa mouse")
+
+
+
 p_bubble_gaba_glut_markers[[1]]
 p_bubble_gaba_glut_markers[[2]]
 
 mouse_gad1_p 
 mouse_gad2_p
+mouse_pvalb_p
 mouse_vgat_p
 
 gad2_vglut2_p 
+gad2_pvalb_p 
 
 ggsave(p_bubble_gaba_glut_markers[[1]], filename = 'hashikawa_mouse_gaba_glut_meta_annots_bubble.pdf', path = plot_path,
 device = 'pdf', width = 10, height = 8)
@@ -578,6 +596,9 @@ device = 'pdf', width = 10, height = 8)
 ggsave(mouse_gad1_p , filename = 'hashikawa_mouse_gad1_exp_umap.pdf', path = plot_path,
 device = 'pdf', width = 6, height = 4)
 
+ggsave(mouse_pvalb_p , filename = 'hashikawa_mouse_pvalb_exp_umap.pdf', path = plot_path,
+device = 'pdf', width = 6, height = 4)
+
 ggsave(mouse_gad2_p , filename = 'hashikawa_mouse_gad2_exp_umap.pdf', path = plot_path,
 device = 'pdf', width = 6, height = 4)
 
@@ -585,6 +606,9 @@ ggsave(mouse_vgat_p , filename = 'hashikawa_mouse_vgat_exp_umap.pdf', path = plo
 device = 'pdf', width = 6, height = 4)
 
 ggsave(gad2_vglut2_p , filename = 'hashikawa_mouse_gad2_vglut2_coexp_umap.pdf', path = plot_path,
+device = 'pdf', width = 6, height = 4)
+
+ggsave(gad2_pvalb_p , filename = 'hashikawa_mouse_gad2_pvalb_coexp_umap.pdf', path = plot_path,
 device = 'pdf', width = 6, height = 4)
 
 #Coexpression plots of the GABA-Glut genes
