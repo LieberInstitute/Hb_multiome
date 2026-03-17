@@ -46,11 +46,8 @@ tripod_seur = pre_list$tripod_seur
 seur = pre_list$seur
 metacell_seur = pre_list$metacell_seur
 
-# seur@meta.data$mid_cluster = factor(seur@meta.data$mid_cluster)
-# color_seur = getColors(object = seur, celltype.col.name = "mid_cluster")
-
 #   Fit models
-gene_vec = tripod_seur$transcripts.gr$gene_name[1:10]
+gene_vec = tripod_seur$transcripts.gr$gene_name
 xy_mat_list = bplapply(
     gene_vec,
     getXYMatrices,
@@ -60,13 +57,16 @@ xy_mat_list = bplapply(
     metacell.rna = metacell_seur$rna,
     metacell.peak = metacell_seur$peak,
     peakxmotif = tripod_seur$peakxmotif,
-    motifxTF = tripod_seur$pbmc.motifxTF,
-    #  getColors throws an error with one cell type, but appears to not even be
-    #  necessary in this function. Just set to NA
-    metacell.celltype = NA, # color_seur$metacell$celltype,
-    metacell.celltype.col = NA, # color_seur$metacell$color,
+    motifxTF = tripod_seur$motifxTF,
     BPPARAM = BPPARAM
 )
+
+#   See https://github.com/yuchaojiang/TRIPOD/issues/8. Basically TRIPOD can
+#   generate output objects that are not valid in further steps (representing
+#   genes without nearby peaks or TF binding sites). Drop those genes
+valid_candidates = sapply(xy_mat_list, function(x) ncol(x[['Xt']]) > 0)
+gene_vec = gene_vec[valid_candidates]
+xy_mat_list = xy_mat_list[valid_candidates]
 names(xy_mat_list) = gene_vec
 
 #   match.by = "Xt": Conditioned on peak accessibility, is TF expression
@@ -113,7 +113,7 @@ result_list |>
 #   It also appears from the vignette that the fit model lists are also required
 #   for certain visualizations, so we'll save those too
 qs_save(
-    result_list,
+    xy_mat_list,
     file.path(out_dir, sprintf("fit_models_%s.qs2", this_cell_type))
 )
 
