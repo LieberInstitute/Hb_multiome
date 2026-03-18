@@ -1,10 +1,10 @@
 **** Job starts ****
-Wed Mar 18 10:35:48 AM EDT 2026
+Wed Mar 18 01:31:08 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30118776
+Job id: 30127443
 Job name: 11_peak_go
-Node name: compute-096
+Node name: compute-168
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -31,10 +31,8 @@ clusterProfiler v4.16.0 Learn more at https://yulab-smu.top/contribution-knowled
 
 Please cite:
 
-Guangchuang Yu, Li-Gen Wang, Yanyan Han and Qing-Yu He.
-clusterProfiler: an R package for comparing biological themes among
-gene clusters. OMICS: A Journal of Integrative Biology. 2012,
-16(5):284-287
+G Yu. Thirteen years of clusterProfiler. The Innovation. 2024,
+5(6):100722
 
 Attaching package: ‘clusterProfiler’
 
@@ -52,7 +50,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 13.
+✔ Number of reports ready for upload: 16.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -165,12 +163,7 @@ The following object is masked from ‘package:dplyr’:
     select
 
 
-Cannot process duckplyr query with DuckDB, falling back to dplyr.
-ℹ Try `summarise(.by = ...)` or `mutate(.by = ...)` instead of `group_by()` and `ungroup()`.
 Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `duckdb_rel_from_df()`:
-! Must pass a plain data frame or a tibble, not a <grouped_df> object.
-ℹ Convert it with `as.data.frame()` or `tibble::as_tibble()`.Error processing duckplyr query with DuckDB, falling back to dplyr.
 Caused by error in `filter()`:
 ! Can't convert columns of class <factor> to relational. Affected
   column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
@@ -342,4 +335,4 @@ Caused by error in `filter()`:
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Mar 18 11:09:06 AM EDT 2026
+Wed Mar 18 01:43:03 PM EDT 2026

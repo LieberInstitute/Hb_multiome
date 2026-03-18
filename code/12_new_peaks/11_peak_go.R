@@ -10,8 +10,8 @@ peak_path = here(
 )
 plot_dir = here("plots", "12_new_peaks", "11_peak_go")
 fdr_cutoff_peak = 0.1
-fdr_cutoff_go = 0.05
-cor_cutoff = 0.3
+fdr_cutoff_go = 0.1
+cor_cutoff = 0.2
 
 dir.create(plot_dir, showWarnings = FALSE)
 
@@ -22,7 +22,7 @@ duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
 #   Functions
 ################################################################################
 
-do_go = function(gene_list, universe, plot_path, num_terms = 2) {
+do_go = function(gene_list, universe, plot_path, num_terms = 3) {
     go_obj = compareCluster(
         gene_list, fun = "enrichGO", universe = universe,
         OrgDb = org.Hs.eg.db, ont = "BP", pAdjustMethod = "BH",
@@ -35,7 +35,7 @@ do_go = function(gene_list, universe, plot_path, num_terms = 2) {
             filter(p.adjust < fdr_cutoff_go)
         
         if(nrow(go_obj@compareClusterResult) > 0) {
-            pdf(plot_path)
+            pdf(plot_path, width = 5)
             print(dotplot(go_obj, showCategory = num_terms))
             dev.off()
         }
@@ -49,32 +49,25 @@ do_go = function(gene_list, universe, plot_path, num_terms = 2) {
 peak_df = read_csv_duckdb(peak_path, prudence = 'lavish')
 background_universe = unique(peak_df$gene)
 
+#   I tried splitting by unique vs. shared links, but almost none were shared.
+#   Here just use all pairs together
 peak_df = peak_df |>
-    filter(FDR < fdr_cutoff_peak, abs(score) >= cor_cutoff) |>
-    group_by(peak, gene, target_cell_type) |>
-    mutate(is_unique = unique(other_cell_type) == target_cell_type) |>
-    ungroup() |>
-    filter(target_cell_type == other_cell_type)
+    filter(
+        FDR < fdr_cutoff_peak, abs(score) >= cor_cutoff,
+        target_cell_type == other_cell_type
+    )
 
 for (cell_type in unique(peak_df$target_cell_type)) {
     this_peak_df = peak_df |>
         filter(target_cell_type == cell_type)
 
     gene_list = list()
-    gene_list[['shared_positive']] = this_peak_df |>
-        filter(score > 0, !is_unique) |>
+    gene_list[['positive']] = this_peak_df |>
+        filter(score > 0) |>
         pull(gene) |>
         unique()
-    gene_list[['unique_positive']] = this_peak_df |>
-        filter(score > 0, is_unique) |>
-        pull(gene) |>
-        unique()
-    gene_list[['shared_negative']] = this_peak_df |>
-        filter(score < 0, !is_unique) |>
-        pull(gene) |>
-        unique()
-    gene_list[['unique_negative']] = this_peak_df |>
-        filter(score < 0, is_unique) |>
+    gene_list[['negative']] = this_peak_df |>
+        filter(score < 0) |>
         pull(gene) |>
         unique()
 
