@@ -826,3 +826,37 @@ full_wnn_vgat_p = FeaturePlot(midSeurat, features = "SLC32A1",reduction = "wnn.u
 
 full_wnn_gad2_p 
 full_wnn_vgat_p 
+
+# Get metadata
+meta <- midSeurat@meta.data
+
+# Count cells in each cluster type
+total_mhb_lhb <- sum(grepl("^(MHb|LHb)", meta$refined_mid_cluster))
+inhib_lhb <- sum(meta$refined_mid_cluster %in% c("Putative_Inhib_LHb_1", "Putative_Inhib_LHb_2"))
+
+# Calculate percentage
+pct_inhib_total <- (inhib_lhb / total_mhb_lhb) * 100
+pct_inhib_total
+
+#6.98% of total habenula cells
+
+
+#Just Lateral
+total_lhb <- sum(grepl("LHb", meta$refined_mid_cluster))
+inhib_lhb <- sum(meta$refined_mid_cluster %in% c("Putative_Inhib_LHb_1", "Putative_Inhib_LHb_2"))
+
+# Calculate percentage
+pct_inhib_lhb <- (inhib_lhb / total_lhb) * 100
+pct_inhib_lhb
+
+#10.15% of total lateral habenula cells
+
+#Just Lateral LHb4 and 7
+total_lhb <- sum(grepl("^(LHb.4|LHb.7)", meta$refined_mid_cluster))
+inhib_lhb <- sum(meta$refined_mid_cluster %in% c("Putative_Inhib_LHb_1", "Putative_Inhib_LHb_2"))
+
+# Calculate percentage
+pct_inhib_lhb <- (inhib_lhb / total_lhb) * 100
+pct_inhib_lhb
+
+#16.76% of total lateral LHb.4 and .7 cells
