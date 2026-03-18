@@ -818,3 +818,11 @@ plt2
 
 ggsave(here(plot_path, "WNN_umap_mid_with_inhibLHb.pdf"), plt2, width = 7, height = 7)
 
+full_wnn_gad2_p = FeaturePlot(midSeurat, features = "GAD2",reduction = "wnn.umap",label = FALSE,pt.size = 1, alpha = .5) +
+  labs(title = "GAD2 expression on WNN UMAP") + scale_color_gradient(low = "white", high = "red", name = 'log_counts')
+
+full_wnn_vgat_p = FeaturePlot(midSeurat, features = "SLC32A1",reduction = "wnn.umap",label = FALSE,pt.size = 1, alpha = .5) +
+  labs(title = "VGAT expression on WNN UMAP") + scale_color_gradient(low = "white", high = "red", name = 'log_counts')
+
+full_wnn_gad2_p 
+full_wnn_vgat_p 
