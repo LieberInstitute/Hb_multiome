@@ -697,12 +697,37 @@ onevsall_markers %>% filter(gene == 'LAMP5') %>% arrange(desc(average_expression
 #https://github.com/LieberInstitute/Hb_multiome/blob/ba13de14c5616b0488eaaab1800199209f89a882/code/05_Clustering_ARCr/22_add_mid_level_clustering.R#L115-L191
 
 
-## save RDS
-rds_file_name <- here(outputRDS_Dir, Seurat_base_name)
-saveRDS(SeuratOBJ, rds_file_name)
+## Seurat object with the mid-level cluster annots and dim reductions saved
+midSeurat_Dir <- here(
+    "processed-data",
+    "05_Clustering_ARCr",
+    "22_add_mid_level_clustering"
+)
+Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
 
-message("Seurat with mid-level clusters meta-data saved!")
+mid_file_name <- here(midSeurat_Dir, Seurat_base_name)
 
+midSeurat = readRDS(mid_file_name)
+midSeurat
+midSeurat_meta = midSeurat[[]]
+#Double check the cell barcodes match up
+table(rownames(inhib_meta) %in% rownames(midSeurat_meta))
+
+index = rownames(midSeurat_meta) %in% rownames(inhib_meta)
+table(midSeurat_meta$mid_cluster[index])
+
+#Looks good.
+# Add the putative Inhibitory neuron annotations to the midSeurat object
+inhib_barcodes_1 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_1']
+inhib_barcodes_2 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_2']
+
+#Exclude them from the rest of the data set
+
+midSeurat$refined_mid_cluster = midSeurat$mid_cluster
+midSeurat$refined_mid_cluster[rownames(midSeurat_meta) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_1'
+midSeurat$refined_mid_cluster[rownames(midSeurat_meta) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_2'
+
+table(midSeurat$refined_mid_cluster, midSeurat$mid_cluster)
 
 ## =============================================================================
 ## Picked up Hex-color codes similar across cell-type
@@ -723,7 +748,7 @@ my_colors <- c(
 ## assign color gradients to mid resolution clusters based on Broad cell-types
 
 # extract LHb and MHb clusters
-cluster_levels <- levels(SeuratOBJ)
+cluster_levels <- levels(midSeurat)
 cluster_levels
 # [1] "Excit.Thal" "LHb.4"      "Inhib.Thal" "Astrocyte"  "MHb.1.2"   
 # [6] "LHb.1"      "OPC"        "Oligo"      "Microglia"  "LHb.2.7"   
@@ -733,8 +758,8 @@ LHb_clusters <- grep("LHb", cluster_levels, value = TRUE)
 MHb_clusters <- grep("MHb", cluster_levels, value = TRUE)
 
 # Create tonal gradients for LHb and MHb
-LHb_colors <- sequential_hcl(length(LHb_clusters), h = 210, c = 80, l = c(30, 80))
-MHb_colors <- sequential_hcl(length(MHb_clusters), h = 320, c = 80, l = c(30, 80))
+LHb_colors <- colorspace::sequential_hcl(length(LHb_clusters), h = 210, c = 80, l = c(30, 80))
+MHb_colors <- colorspace::sequential_hcl(length(MHb_clusters), h = 320, c = 80, l = c(30, 80))
 
 # Build full cluster color map
 my_colors_mid <- setNames(rep("#bdbdbd", length(cluster_levels)), cluster_levels)
@@ -760,11 +785,12 @@ for (category in c("Oligo", "Astrocyte", "OPC", "Microglia", "Endo", "Inhib.Thal
 message("Processing UMAP ...")
 
 ## extract suffix name to give unique name to plots
-seurat_name <- str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
+seurat_name <- stringr::str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
 
-Reductions(SeuratOBJ)
+Reductions(midSeurat)
 
-plt1 <- DimPlot(SeuratOBJ, 
+#Verify original UMAP
+plt1 <- DimPlot(midSeurat, 
                 label = TRUE, 
                 reduction = "wnn.umap",
                 group.by = "mid_cluster",
@@ -773,5 +799,22 @@ plt1 <- DimPlot(SeuratOBJ,
     NoLegend() +
     labs(title = "WNN cell types (Mid-resolution)")
 
-ggsave(here(plotDir, "WNN_umap_mid.pdf"), plt1, width = 7, height = 7)
+#Looks good
+plt1
+
+my_colors_mid
+my_colors_mid["Putative_Inhib_LHb_1"] <- "#8B0000"  # Dark red
+my_colors_mid["Putative_Inhib_LHb_2"] <- "#DC143C"  # Crimson red
+#Highlight the putative inhibitory clusters with red
+plt2 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                group.by = "refined_mid_cluster",
+                label.size = 3,
+                cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "WNN cell types (Mid-resolution)")
+plt2
+
+ggsave(here(plot_path, "WNN_umap_mid_with_inhibLHb.pdf"), plt2, width = 7, height = 7)
 
