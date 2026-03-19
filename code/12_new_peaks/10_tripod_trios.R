@@ -29,7 +29,7 @@ in_path = here(
     sprintf("preprocessed_objects_%s.qs2", this_cell_type)
 )
 out_dir = here("processed-data", "12_new_peaks", "10_tripod_trios")
-fdr_cutoff = 0.05
+fdr_cutoff = 0.1
 
 dir.create(out_dir, showWarnings = FALSE)
 
@@ -51,7 +51,8 @@ gene_vec = tripod_seur$transcripts.gr$gene_name
 xy_mat_list = bplapply(
     gene_vec,
     getXYMatrices,
-    ext.upstream = 1e5,
+    ext.upstream = 5e5,
+    ext.downstream = 5e5,
     transcripts.gr = tripod_seur$transcripts.gr,
     peaks.gr = tripod_seur$peaks.gr,
     metacell.rna = metacell_seur$rna,
