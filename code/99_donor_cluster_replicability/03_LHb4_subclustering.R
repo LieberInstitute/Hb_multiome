@@ -383,7 +383,7 @@ p_avg_ect_thal
 
 #Checking out expression just within the integrated LHb4 clusters
 #Check out aggregate expression in the UMAP
-num_top = 50
+num_top = 20
 EThal_markers_to_use = markers_excluded %>% filter(cell_type == 'Excit_Thal') %>% 
   slice_max(auroc, n = num_top) %>% pull(gene)
 
@@ -402,16 +402,16 @@ multiome_seurat_integrated$EThal_agg = EThal_agg_expression
 multiome_seurat_integrated$IThal_agg = IThal_agg_expression 
 multiome_seurat_integrated$Hab_agg = Hab_agg_expression 
 
-
+max( EThal_agg_expression, max(IThal_agg_expression , Hab_agg_expression ))
 
 FeaturePlot(multiome_seurat_integrated, features = "EThal_agg", reduction = "umap", pt.size = 1) +
-  scale_color_gradient(low = "white", high = "red", name = 'Avg CPM')
+  scale_color_gradient(low = "white", high = "red", name = 'Avg CPM', limits = c(0,4500))
 
 FeaturePlot(multiome_seurat_integrated, features = "IThal_agg", reduction = "umap", pt.size = 1) +
-  scale_color_gradient(low = "white", high = "red", name = 'Avg CPM')
+  scale_color_gradient(low = "white", high = "red", name = 'Avg CPM', limits = c(0,4500))
 
 FeaturePlot(multiome_seurat_integrated, features = "Hab_agg", reduction = "umap", pt.size = 1) +
-  scale_color_gradient(low = "white", high = "red", name = 'Avg CPM')
+  scale_color_gradient(low = "white", high = "red", name = 'Avg CPM', limits = c(0,4500))
 
 DimPlot(multiome_seurat_integrated, group.by = "seurat_clusters", label = TRUE, pt.size = 1)
 
