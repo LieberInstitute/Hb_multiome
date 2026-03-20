@@ -36,12 +36,12 @@ multiome_path = here('processed-data', '08_spatial_registration_vs_multiome_snRN
 #Multiome human data
 multiome_sce = readRDS(paste0(multiome_path, '/seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v5.rds'))
 assay(multiome_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(multiome_sce, 'counts'))
-
+colnames(colData(multiome_sce))
 
 #This is the donor integrated LHb4 and 7 from the previous script, can use to visualize marker expression
 script_02_data_path = here('processed-data', '99_donor_cluster_replicability','02_LHb4_investigation')
 multiome_seurat_integrated = readRDS(paste0(script_02_data_path, '/multiome_LHb4_LHb7_integrated_seurat.rds'))
-multiome_seurat_integrated
+colnames(multiome_seurat_integrated[[]])
 
 
 #Check any previously published habenula markers, from the Yalcinbas paper
