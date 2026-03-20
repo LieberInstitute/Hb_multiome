@@ -24,7 +24,7 @@ seur_in_path = here(
     "general_purpose_seur.qs2"
 )
 seur_out_path = here(
-    "processed-data", "12_new_peaks", "06_non_pb_seur",
+    "processed-data", "12_new_peaks", "07_non_pb_seur",
     "non_pb_seur.qs2"
 )
 example_peaks_path = here(
@@ -66,6 +66,7 @@ peaks_mat = FeatureMatrix(
 new_assay = CreateChromatinAssay(
     counts = peaks_mat,
     ranges = peaks_gr,
+    fragments = Fragments(seur),
     annotation = Annotation(seur)
 )
 seur[['ATAC']] = new_assay
