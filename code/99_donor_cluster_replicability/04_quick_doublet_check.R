@@ -1,7 +1,5 @@
 #Running scdblfinder to check where called doublets fall on umap
 
-
-
 library(SingleCellExperiment)
 library(scDblFinder)
 library(Seurat)
@@ -73,6 +71,49 @@ table(multiome_sce$refined_mid_cluster, multiome_sce$scDblFinder.class)
   # Putative_Inhib_LHb_2     807      64
   # Thal                       4     107
 
+#Finer resolution clusters
+table(multiome_sce$cluster_ann, multiome_sce$scDblFinder.class)
+  #                 singlet doublet
+  # C.04.LHb.4         2454     457
+  # C.05.LHb.2.7       2570     201
+  # C.06.LHb.4         2524     143
+  # C.07.MHb.2         2471     139
+  # C.08.LHb.4         2404     133
+  # C.09.LHb.4         2180     250
+  # C.10.MHb.1         2226     118
+  # C.11.MHb.1.2       1955     257
+  # C.13.LHb.4         1867     169
+  # C.14.MHb.1         1934      92
+  # C.16.MHb.1.2       1512      95
+  # C.18.LHb.1.3.4     1425     110
+  # C.23.LHb.1         1160     109
+  # C.24.LHb.4          276     549
+  # C.30.LHb.7           81     132
+  # C.31.LHb.4          183      26
+  # C.33.LHb.1.3        179       7
+  # C.36.MHb.3          123      22
+  # C.40.LHb.4           41      43
+  # C.01.Inhib.Thal    3663     243
+  # C.02.Oligo         3247     124
+  # C.03.Excit.Thal    3008     263
+  # C.12.Excit.Thal    1809     378
+  # C.15.Excit.Thal    1407     218
+  # C.17.Excit.Thal    1456     131
+  # C.19.Inhib.Thal    1267     113
+  # C.20.Astrocyte     1212     131
+  # C.21.Astrocyte     1093     248
+  # C.22.Oligo         1306      21
+  # C.25.Excit.Thal     700       7
+  # C.26.OPC            616      22
+  # C.27.Microglia      575      12
+  # C.28.Inhib.Thal     463      80
+  # C.29.Endo           306      37
+  # C.32.Excit.Thal     187       9
+  # C.35.Excit.Thal     139      26
+  # C.37.Thal             4     107
+  # C.38.Inhib.Thal      99       6
+  # C.39.Inhib.Thal      15      75
+  # C.41.Microglia       71       5
 
 
 #Visualize doublets on the original umap
@@ -203,11 +244,35 @@ midSeurat@meta.data |>
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
+#Fine resolution clusters
+cluster_order <- midSeurat@meta.data |>
+  dplyr::count(cluster_ann, scDblFinder.class) |>
+  dplyr::group_by(cluster_ann) |>
+  dplyr::mutate(prop = n / sum(n)) |>
+  dplyr::filter(scDblFinder.class == "doublet") |>
+  dplyr::arrange(prop) |>
+  dplyr::pull(cluster_ann)
+
+midSeurat@meta.data |>
+  dplyr::mutate(cluster_ann = factor(cluster_ann, levels = cluster_order)) |>
+  ggplot(aes(x = cluster_ann, fill = scDblFinder.class)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Fine clusters", y = "Proportion", fill = "scDblFinder") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+midSeurat@meta.data |>
+  dplyr::mutate(cluster_ann = factor(cluster_ann, levels = cluster_order)) |>
+  ggplot(aes(x = cluster_ann, y = scDblFinder.score)) +
+  geom_boxplot(outlier.shape = NA) +
+  labs(x = "Fine clusters") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
 
 #Andquick check in the integrated LHb4 and Lhb7 data
 
-multiome_seurat_integrated
 
 index = match(colnames(multiome_seurat_integrated), colnames(multiome_sce))
 
@@ -217,11 +282,32 @@ multiome_seurat_integrated$sclDblFinder.score = multiome_sce$scDblFinder.score[i
 DimPlot(multiome_seurat_integrated, group.by = 'sclDblFinder.class', reduction = 'umap', pt.size = 1)
 DimPlot(multiome_seurat_integrated, group.by = 'seurat_clusters', reduction = 'umap', pt.size = 1)
 DimPlot(multiome_seurat_integrated, group.by = 'refined_mid_cluster', reduction = 'umap', pt.size = 1)
+DimPlot(multiome_seurat_integrated, group.by = 'cluster_ann', reduction = 'umap', pt.size = 1)
 
 FeaturePlot(multiome_seurat_integrated, features = "GPR151", reduction = "umap", pt.size = 1, slot = 'data') +
   scale_color_gradient(low = "white", high = "red", name = 'CPM')
 FeaturePlot(multiome_seurat_integrated, features = "POU4F1", reduction = "umap", pt.size = 1, slot = 'data') +
   scale_color_gradient(low = "white", high = "red", name = 'CPM')
 
+
+#Based on cluster proportions of doublets, these are the ones we would exclude
+#c('C.37.Thal','C.39.Inhib.Thal','C.24.LHb.4','C.30.LHb.7','C.40.LHb.4')
+midSeurat$doublet_exclude = midSeurat$mid_cluster
+midSeurat$doublet_exclude[midSeurat$cluster_ann %in% c('C.37.Thal','C.39.Inhib.Thal','C.24.LHb.4','C.30.LHb.7','C.40.LHb.4')] = 'Exclude'
+
+my_colors_mid["Exclude"] <- "#ff3b3bff"
+
+#Verify original UMAP
+plt4 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                group.by = "doublet_exclude",
+                label.size = 3,
+                cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "WNN cell types (Mid-resolution)")
+
+
+plt4
 
 
