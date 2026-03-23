@@ -1,10 +1,10 @@
 **** Job starts ****
-Fri Mar  6 03:48:51 PM EST 2026
+Fri Mar 20 12:59:56 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 29477008
-Job name: 06_non_pb_seur
-Node name: compute-169
+Job id: 30191324
+Job name: 07_non_pb_seur
+Node name: compute-166
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -140,7 +140,7 @@ The following object is masked from ‘package:base’:
 
 Loading required package: BiocIO
 Loading required package: rtracklayer
-2026-03-06 15:49:06.483265 | Reading in Seurat object and called peaks...
+2026-03-20 13:00:12.464725 | Reading in Seurat object and called peaks...
 Warning messages:
 1: In S4Vectors:::anyMissing(runValue(x_seqnames)) :
   'S4Vectors:::anyMissing()' is deprecated.
@@ -150,7 +150,7 @@ See help("Deprecated")
   'S4Vectors:::anyMissing()' is deprecated.
 Use 'anyNA()' instead.
 See help("Deprecated")
-2026-03-06 15:50:11.271925 | Rebuilding ATAC assay with new peaks...
+2026-03-20 13:01:23.989793 | Rebuilding ATAC assay with new peaks...
 Extracting reads overlapping genomic regions
 Extracting reads overlapping genomic regions
 Extracting reads overlapping genomic regions
@@ -168,14 +168,14 @@ Use 'anyNA()' instead.
 See help("Deprecated")
 Warning message:
 Different cells and/or features from existing assay ATAC 
-2026-03-06 17:55:04.290041 | Normalizing and adding stats...
+2026-03-20 15:40:20.563025 | Normalizing and adding stats...
 Warning in RegionStats.default(object = regions, genome = genome, verbose = verbose,  :
   Not all seqlevels present in supplied genome
 There were 49 warnings (use warnings() to see them)
 Performing TF-IDF normalization
 Running SVD
 Scaling cell embeddings
-2026-03-06 18:08:02.074567 | Saving Seurat object...
+2026-03-20 15:57:26.401414 | Saving Seurat object...
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -186,7 +186,7 @@ Scaling cell embeddings
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-03-06
+ date     2026-03-20
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.8.27 @ /users/neagles/.positron-server/bin/f3aae65e0a1a11d39226cd884520f49301daef82/quarto/bin/quarto
 
@@ -349,4 +349,4 @@ Scaling cell embeddings
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Fri Mar  6 06:09:24 PM EST 2026
+Fri Mar 20 03:58:41 PM EDT 2026
