@@ -18,7 +18,7 @@ seur_in_path = here(
 )
 seur_out_path = here(
     "processed-data", "12_new_peaks", "13_metacell_aggregate",
-    "non_pb_seur.qs2"
+    "seur_meta.qs2"
 )
 plot_path = here(
     "plots", "12_new_peaks", "13_metacell_aggregate",
