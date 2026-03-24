@@ -7,6 +7,7 @@ library(GenomicRanges)
 library(tidyverse)
 library(here)
 library(Matrix)
+library(qs2)
 library(sparseMatrixStats)
 
 # Import command-line parameters
@@ -39,7 +40,7 @@ rna_assay = "RNA"
 dir.create(dirname(out_path), showWarnings = FALSE)
 
 message(Sys.time(), ' | Loading Seurat object')
-seur = readRDS(seur_path)
+seur = qs_read(seur_path)
 
 message(Sys.time(), ' | Subsetting ATAC assay with expressed peaks')
 
