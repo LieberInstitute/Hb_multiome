@@ -24,7 +24,6 @@ plot_path = here(
     "plots", "12_new_peaks", "13_metacell_aggregate",
     "metacell_UMAP.pdf"
 )
-atac_assay = 'ATAC'
 graining_level = 75
 
 dir.create(dirname(seur_out_path), showWarnings = FALSE)
@@ -32,14 +31,20 @@ dir.create(dirname(plot_path), showWarnings = FALSE)
 
 seur = qs_read(seur_in_path)
 
+################################################################################
+#   Form metacells
+################################################################################
+
 #   Form metacells
 seur_meta = SCimplify_for_Seurat(
-    seur, assay = c("RNA", atac_assay),
+    seur, assay = c("RNA", "ATAC"),
     #   These are Harmony-corrected RNA PCs and ATAC LSI embeddings respectively
     reduction = list("integrated.harmony", "integrated.lsi.harmony"), 
-    dims = list(rna.comp, adt.comp), gamma = graining_level,
+    dims = list(1:30, 2:30), gamma = graining_level,
     label = "mid_cluster"
 )
+
+qs_save(seur_meta, seur_out_path)
 
 #   Show metacells on UMAP dimensions
 pdf(plot_path)
@@ -48,6 +53,30 @@ DimPlotSC(
     metacell.col = "mid_cluster"
 )
 dev.off()
+
+FetchData(seur_meta, c("mid_cluster", "mid_cluster_purity")) |>
+    as_tibble() |>
+    pull(mid_cluster_purity) |>
+    summary()
+
+################################################################################
+#   Rebuild missing parts of the metacell-level object
+################################################################################
+
+Fragments(seur_meta) = Fragments(seur)
+
+#   ATAC normalization
+DefaultAssay(seur_meta) = "ATAC"
+seur_meta = seur_meta |>
+    RunTFIDF(assay = "ATAC", method = 1, scale.factor = 10000) |>   
+    FindTopFeatures(assay = "ATAC", min.cutoff = 'q5', verbose = TRUE) |>
+    RunSVD(assay = "ATAC")
+
+#   RNA normalization
+DefaultAssay(seur_meta) = "RNA"
+seur_meta = seur_meta |>
+    NormalizeData() |>
+    FindVariableFeatures(selection.method = "vst")
 
 qs_save(seur_meta, seur_out_path)
 
