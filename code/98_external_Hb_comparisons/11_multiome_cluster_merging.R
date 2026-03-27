@@ -71,6 +71,11 @@ table(multiome_sce$refined_mid_cluster, multiome_sce$mid_cluster)
 #Check the donor distribtion, they have cells from all donors
 table(multiome_sce$refined_mid_cluster, multiome_sce$orig.ident)
 
+#Fine resolution annotations
+multiome_sce$refined_cluster_ann = as.character(multiome_sce$cluster_ann)
+multiome_sce$refined_cluster_ann[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_1'
+multiome_sce$refined_cluster_ann[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_2'
+table(multiome_sce$refined_cluster_ann )
 
 
 #Pseudobulk the clusters from the counts, and then redo CPM on the summed counts
@@ -180,6 +185,77 @@ width = 8, height = 6, device = 'pdf')
 
 ggsave(p_pca_neuron_multiome, filename = 'multiome_pseudobulk_neuron_cluster_pca.pdf', path = plot_path, useDingbats = F,
 width = 8, height = 6, device = 'pdf')
+
+
+
+#And what about a pseudobulk pca with the fine resolution clusters
+#Get the one-hot encoding of the cluster annotations for the multiome data, in this case the midcluster metadata column
+cell_annot_matrix <- Matrix::sparse.model.matrix(~ 0 + refined_cluster_ann, data = colData(multiome_sce))
+colnames(cell_annot_matrix) <- gsub("refined_cluster_ann", "", colnames(cell_annot_matrix))
+
+#Get the pseudobulk counts
+pseudobulk_counts = assay(multiome_sce, 'counts') %*% cell_annot_matrix
+
+#Make a new SCE object with the pseudobulk counts
+pseudobulk_coldata <- DataFrame(
+  cell_type = colnames(pseudobulk_counts),
+  n_cells = colSums(cell_annot_matrix)
+)
+
+pseudobulk_sce <- SingleCellExperiment(
+  assays = list(counts = pseudobulk_counts),
+  colData = pseudobulk_coldata
+)
+
+#Colors for plotting
+color_palette = MetBrewer::met.brewer("Nizami", n = length(pseudobulk_sce$cell_type))
+names(color_palette) = pseudobulk_sce$cell_type
+
+
+#CPM the pseudobulk counts
+assay(pseudobulk_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(pseudobulk_sce, 'counts'))
+
+#Run PCA on the pseudobulked data
+# 1. Log-transform the data 
+assay(pseudobulk_sce, 'logcounts') <- log1p(assay(pseudobulk_sce, 'cpm'))
+
+# 2. Identify highly variable genes
+dec <- modelGeneVar(pseudobulk_sce)
+hvg <- getTopHVGs(dec, n = 2000)
+
+# 3. Run PCA
+pseudobulk_sce <- runPCA(pseudobulk_sce, subset_row = hvg)
+
+# 4. Visualize
+plotPCA(pseudobulk_sce, colour_by = "cell_type", point_size = 5)
+
+#For more control over plotting features
+pca_data <- as.data.frame(reducedDim(pseudobulk_sce, "PCA")[, 1:2])
+pca_data$cell_type <- pseudobulk_sce$cell_type
+
+# Get percent variance explained
+pca_attr <- attr(reducedDim(pseudobulk_sce, "PCA"), "percentVar")
+pc1_var <- round(pca_attr[1], 1)
+pc2_var <- round(pca_attr[2], 1)
+
+p_pca_all_multiome_fine = ggplot(pca_data, aes(x = PC1, y = PC2, color = cell_type, label = cell_type)) +
+  geom_point(size = 5) +
+  ggrepel::geom_label_repel(show.legend = FALSE,
+                            box.padding = 0.5, 
+                            point.padding = 0.5,
+                            max.overlaps = Inf,
+                            min.segment.length = 0) +
+  scale_color_manual(values = color_palette, name = 'Cell-type') +
+  theme_bw() +
+  labs(x = paste0("PC1 (", pc1_var, "%)"),
+       y = paste0("PC2 (", pc2_var, "%)"),
+       title = "Pseudobulk PCA of all Multiome Fine Clusters")
+
+p_pca_all_multiome_fine
+
+ggsave(p_pca_all_multiome_fine, filename = 'multiome_pseudobulk_all_fine_cluster_pca.pdf', path = plot_path, useDingbats = F,
+width = 12, height = 10, device = 'pdf')
+
 
 
 
@@ -433,6 +509,48 @@ cent_hm_500
 dev.off()
 
 
+
+#And what about a fine resolution hierarcy, just try 50 markers
+
+top_markers = compute_markers(assay(multiome_sce, 'cpm'), multiome_sce$refined_cluster_ann)
+
+#Unique list of the top markers
+top_marker_sub = top_markers %>% group_by(cell_type) %>% slice_max(auroc, n= 50) %>%
+  pull(gene) %>% unique()
+
+#Expression data for those genes
+gene_filt = rownames(multiome_sce) %in% top_marker_sub
+exp_data = assay(multiome_sce, 'cpm')[gene_filt, ]
+#Compute centroids of gene expression per subclass
+exp_data = as.data.frame(t(as.matrix(exp_data)))
+exp_data = exp_data %>% mutate(celltype = multiome_sce$refined_cluster_ann)
+centroids = exp_data %>% group_by(celltype) %>% summarize(across(which(colnames(exp_data)!= 'celltype'), median)) %>% as.data.frame()
+#Get back into genes on rows and subclass on columns
+rownames(centroids) = centroids$celltype
+centroids = t(centroids[ ,2:ncol(centroids)])
+
+#Compute a distance matrix from the correlations of the centroids
+centroid_corr = cor(centroids, method = 'spearman')
+
+#Hierarchical clusting on the correlation distance matrix
+hclust_avg <- hclust(as.dist(1-centroid_corr), method = 'average')
+
+#Visualize the correlation matrix the dendrogram is derived from
+
+viridis_map = circlize::colorRamp2(seq(0, 1, length.out = 100),
+                                  viridis::rocket(100))
+
+cent_fine_hm_50 = ComplexHeatmap::Heatmap(centroid_corr, col = viridis_map, name = 'spearman' , show_row_dend = FALSE,
+                                  clustering_distance_columns = function(m) dist(1-m), clustering_method_columns = "average",
+                                  clustering_distance_rows = function(m) dist(1-m), clustering_method_rows = "average",
+                                  column_dend_height = unit(3, "cm"),
+                                  column_title = "Multiome fine cluster taxonomy: top 50 markers")
+cent_fine_hm_50 = ComplexHeatmap::draw(cent_fine_hm_50)
+
+pdf(file = paste0(plot_path, '/multiome_fine_cluster_taxonomy_top50_markers.pdf'), useDingbats = F, 
+width = 6, height = 6)
+cent_fine_hm_50 
+dev.off()
 
 
 
