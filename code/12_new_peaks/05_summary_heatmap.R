@@ -58,34 +58,29 @@ link_df = rbind(
 stopifnot(all(link_df$peak %in% rownames(seur[[atac_assay]])))
 stopifnot(all(link_df$gene %in% rownames(seur[[rna_assay]])))
 
+# Calculate mean values across all cells for each cell type
 count_df_list = list()
 for (cell_type in c(cell_type1, cell_type2)) {
-    for (donor in unique(seur@meta.data$donor)) {
-        #   Determine how to subset by cell type and donor
-        subset_vec = (
-            (seur@meta.data$orig.ident == cell_type) &
-            (seur@meta.data$donor == donor)
+    subset_vec = (seur@meta.data$orig.ident == cell_type)
+    
+    count_df_list[[length(count_df_list) + 1]] <- tibble(
+        cell_type = cell_type,
+        target_cell_type = link_df$target_cell_type,
+        peak = link_df$peak,
+        gene = link_df$gene,
+        peak_value = rowMeans(
+            GetAssayData(
+                seur, assay = atac_assay, layer = "data"
+            )[link_df$peak, subset_vec, drop = FALSE]
+        ),
+        gene_value = rowMeans(
+            GetAssayData(
+                seur, assay = rna_assay, layer = "data"
+            )[link_df$gene, subset_vec, drop = FALSE]
         )
-      
-        count_df_list[[length(count_df_list) + 1]] <- tibble(
-            cell_type = cell_type,
-            target_cell_type = link_df$target_cell_type,
-            donor = donor,
-            peak = link_df$peak,
-            gene = link_df$gene,
-            peak_value = rowMeans(
-                GetAssayData(
-                    seur, assay = atac_assay, layer = "data"
-                )[link_df$peak, subset_vec, drop = FALSE]
-            ),
-            gene_value = rowMeans(
-                GetAssayData(
-                    seur, assay = rna_assay, layer = "data"
-                )[link_df$gene, subset_vec, drop = FALSE]
-            )
-        )
-    }
+    )
 }
+
 count_df = bind_rows(count_df_list) |>
     mutate(row_id = paste(peak, gene, sep = "|")) |>
     group_by(row_id) |>
@@ -101,51 +96,45 @@ count_df = bind_rows(count_df_list) |>
     ) |>
     arrange(target_cell_type)
 
-# Prepare matrices for each cell type
+# Prepare matrices for each cell type and data type
 gene_mat_ct1 <- count_df |>
     filter(cell_type == cell_type1) |>
-    select(row_id, donor, gene_value) |>
-    pivot_wider(names_from = donor, values_from = gene_value) |>
+    select(row_id, gene_value) |>
+    distinct() |>
     column_to_rownames("row_id") |>
     as.matrix()
 
 gene_mat_ct2 <- count_df |>
     filter(cell_type == cell_type2) |>
-    select(row_id, donor, gene_value) |>
-    pivot_wider(names_from = donor, values_from = gene_value) |>
+    select(row_id, gene_value) |>
+    distinct() |>
     column_to_rownames("row_id") |>
     as.matrix()
 
 peak_mat_ct1 <- count_df |>
     filter(cell_type == cell_type1) |>
-    select(row_id, donor, peak_value) |>
-    pivot_wider(names_from = donor, values_from = peak_value) |>
+    select(row_id, peak_value) |>
+    distinct() |>
     column_to_rownames("row_id") |>
     as.matrix()
 
 peak_mat_ct2 <- count_df |>
     filter(cell_type == cell_type2) |>
-    select(row_id, donor, peak_value) |>
-    pivot_wider(names_from = donor, values_from = peak_value) |>
+    select(row_id, peak_value) |>
+    distinct() |>
     column_to_rownames("row_id") |>
     as.matrix()
 
-# Combine all matrices horizontally
-combined_mat <- cbind(gene_mat_ct1, gene_mat_ct2, peak_mat_ct1, peak_mat_ct2)
+# Combine matrices: gene and peak for ct1, then gene and peak for ct2
+combined_mat <- cbind(gene_mat_ct1, peak_mat_ct1, gene_mat_ct2, peak_mat_ct2)
 
 anno_df <- count_df |>
     select(row_id, target_cell_type) |>
     distinct()
 
 # Create color functions
-all_gene_values <- c(
-    count_df$gene_value[count_df$gene_value < 0],
-    count_df$gene_value[count_df$gene_value > 0]
-)
-all_peak_values <- c(
-    count_df$peak_value[count_df$peak_value < 0],
-    count_df$peak_value[count_df$peak_value > 0]
-)
+all_gene_values <- c(count_df$gene_value)
+all_peak_values <- c(count_df$peak_value)
 
 col_fun_gene <- colorRamp2(
     c(min(all_gene_values), max(all_gene_values)),
@@ -161,54 +150,33 @@ cell_type_colors <- c(
     "LHb.2.7" = "#305252", "MHb.2" = "#F9B9B7", "both" = "#F5D491"
 )
 
-donors <- unique(count_df$donor)
-donor_colors <- setNames(
-    c("#4E79A7", "#F28E2B", "#E15759", "#76B7B2", "#59A14F",
-      "#EDC948", "#B07AA1", "#FF9DA7", "#9C755F", "#BAB0AC"),
-    donors
-)
-
 # Create column split and data type vectors
 col_split <- factor(
     c(
-        rep(paste0("Gene: ", cell_type1), ncol(gene_mat_ct1)),
-        rep(paste0("Gene: ", cell_type2), ncol(gene_mat_ct2)),
-        rep(paste0("Peak: ", cell_type1), ncol(peak_mat_ct1)),
-        rep(paste0("Peak: ", cell_type2), ncol(peak_mat_ct2))
+        rep(paste0(cell_type1, " - Gene"), ncol(gene_mat_ct1)),
+        rep(paste0(cell_type1, " - Peak"), ncol(peak_mat_ct1)),
+        rep(paste0(cell_type2, " - Gene"), ncol(gene_mat_ct2)),
+        rep(paste0(cell_type2, " - Peak"), ncol(peak_mat_ct2))
     ),
     levels = c(
-        paste0("Gene: ", cell_type1),
-        paste0("Gene: ", cell_type2),
-        paste0("Peak: ", cell_type1),
-        paste0("Peak: ", cell_type2)
+        paste0(cell_type1, " - Gene"),
+        paste0(cell_type1, " - Peak"),
+        paste0(cell_type2, " - Gene"),
+        paste0(cell_type2, " - Peak")
     )
 )
 
 data_type_vec <- c(
-    rep("Gene", ncol(gene_mat_ct1) + ncol(gene_mat_ct2)),
-    rep("Peak", ncol(peak_mat_ct1) + ncol(peak_mat_ct2))
-)
-
-cell_type_vec <- c(
-    rep(cell_type1, ncol(gene_mat_ct1)),
-    rep(cell_type2, ncol(gene_mat_ct2)),
-    rep(cell_type1, ncol(peak_mat_ct1)),
-    rep(cell_type2, ncol(peak_mat_ct2))
-)
-
-donor_vec <- c(
-    colnames(gene_mat_ct1),
-    colnames(gene_mat_ct2),
-    colnames(peak_mat_ct1),
-    colnames(peak_mat_ct2)
+    rep("Gene", ncol(gene_mat_ct1)),
+    rep("Peak", ncol(peak_mat_ct1)),
+    rep("Gene", ncol(gene_mat_ct2)),
+    rep("Peak", ncol(peak_mat_ct2))
 )
 
 # Create column annotation
 col_ha <- HeatmapAnnotation(
-    `Cell Type` = cell_type_vec,
-    Donor = donor_vec,
-    col = list(`Cell Type` = cell_type_colors, Donor = donor_colors),
-    show_legend = c(`Cell Type` = TRUE, Donor = FALSE)
+    `Data Type` = data_type_vec,
+    show_legend = TRUE
 )
 
 # Split rows by target_cell_type
@@ -216,7 +184,7 @@ rows_ct1 <- which(anno_df$target_cell_type == cell_type1)
 rows_ct2 <- which(anno_df$target_cell_type == cell_type2)
 rows_both <- which(anno_df$target_cell_type == "both")
 
-# Get row orderings by clustering dummy heatmaps on appropriate gene matrices
+# Get row orderings by clustering on gene matrices
 dummy_ht_ct1 <- Heatmap(gene_mat_ct1[rows_ct1, ], cluster_columns = FALSE)
 row_order_ct1 <- row_order(dummy_ht_ct1)
 
@@ -226,22 +194,17 @@ row_order_ct2 <- row_order(dummy_ht_ct2)
 dummy_ht_both <- Heatmap(gene_mat_ct1[rows_both, ], cluster_columns = FALSE)
 row_order_both <- row_order(dummy_ht_both)
 
-# Combine row orders into a single vector
+# Combine row orders
 full_row_order <- c(rows_ct1[row_order_ct1], rows_ct2[row_order_ct2], rows_both[row_order_both])
-
-# Create custom color function that handles both gene and peak values
-col_fun_combined <- function(x, data_type) {
-    if (data_type == "Gene") {
-        col_fun_gene(x)
-    } else {
-        col_fun_peak(x)
-    }
-}
 
 # Map colors to the combined matrix
 color_mat <- matrix(NA, nrow = nrow(combined_mat), ncol = ncol(combined_mat))
 for (i in 1:ncol(combined_mat)) {
-    color_mat[, i] <- col_fun_combined(combined_mat[, i], data_type_vec[i])
+    if (data_type_vec[i] == "Gene") {
+        color_mat[, i] <- col_fun_gene(combined_mat[, i])
+    } else {
+        color_mat[, i] <- col_fun_peak(combined_mat[, i])
+    }
 }
 
 # Create row annotation
@@ -254,9 +217,6 @@ row_ha <- rowAnnotation(
 ht <- Heatmap(
     combined_mat,
     name = "Z-score",
-    col = function(x) {
-        col_fun_gene(x)
-    },
     column_split = col_split,
     cluster_columns = FALSE,
     cluster_rows = FALSE,
@@ -267,7 +227,7 @@ ht <- Heatmap(
     left_annotation = row_ha,
     top_annotation = col_ha,
     border = TRUE,
-    show_heatmap_legend = FALSE,  # Turn off automatic legend
+    show_heatmap_legend = FALSE,
     cell_fun = function(j, i, x, y, width, height, fill) {
         grid.rect(x = x, y = y, width = width, height = height,
                  gp = gpar(fill = color_mat[i, j], col = NA))

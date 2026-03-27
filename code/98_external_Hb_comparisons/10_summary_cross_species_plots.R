@@ -103,7 +103,24 @@ graphics::legend(
     pt.cex = 2, cex = 0.5*2, pch=c(15, 16, 15, 16, 16)
 )
 
-
+pdf(paste0(plot_path, '/clean_cluster_graph_low_MN_human_mouse_zeb_neurons.pdf'), width = 10, height = 8)
+plot(temp_cluster_graph,
+     vertex.size = 8,
+     vertex.label.cex=1.5,
+     vertex.label.family="Helvetica",
+     vertex.label.font=1,
+     vertex.frame.color = 'black',
+     edge.width = igraph::E(temp_cluster_graph)$width * 5,
+     edge.arrow.size=.1*5,
+     edge.arrow.width=0.5*5)
+graphics::legend(
+    "topleft", 
+    legend = names(species_color_palette), 
+    pt.bg = species_color_palette,
+    col = species_color_palette,
+    pt.cex = 2, cex = 0.5*2, pch=c(15, 16, 15, 16, 16)
+)
+dev.off()
 
 
 
