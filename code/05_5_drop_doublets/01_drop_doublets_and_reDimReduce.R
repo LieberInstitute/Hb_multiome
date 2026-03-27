@@ -7,7 +7,8 @@
 library(SingleCellExperiment)
 library(scDblFinder)
 library(Seurat)
-library("Signac") 
+library(Signac)
+library(qs2)
 library(harmony)
 library(dplyr)
 library(ggplot2)
@@ -340,5 +341,85 @@ ggsave(p1.umap.harm.atac.sample , filename = 'ATAC_Harmony_umap.pdf', path = plo
 width = 6, height = 5, useDingbats = FALSE)
 ggsave(p1.tsne.harm.atac.sample , filename = 'ATAC_Harmony_tsne.pdf', path = plot_path, device = 'pdf',
 width = 6, height = 5, useDingbats = FALSE)
+
+###########################################
+#And now do the WNN approach using both assays
+#
+#This code comes from 05_Clustering_ARCr/01_clustering_std_method.R
+###########################################
+
+Reductions(midSeurat)
+
+DefaultAssay(midSeurat) <- "RNA"
+
+midSeurat <- FindMultiModalNeighbors(
+  midSeurat,
+  k.nn = 30,
+  reduction.list = list("integrated.harmony", "integrated.lsi.harmony"),
+  dims.list = list(1:30, 2:20)
+)
+
+midSeurat <- RunUMAP(
+  midSeurat,
+  n.neighbors = 30, 
+  nn.name = "weighted.nn",
+  reduction.name = "wnn.umap",
+  reduction.key = "wnnUMAP_"
+)
+
+plt3 <- DimPlot(
+  midSeurat,
+  reduction = "wnn.umap",
+  group.by = 'mid_cluster', 
+  label = TRUE,
+  label.size = 2.5,
+  cols = my_colors_mid
+) +
+  ggtitle("WNN cell types (Mid-resolution) after doublet removal")
+plt3
+
+
+plt4 <- DimPlot(
+  midSeurat,
+  reduction = "wnn.umap",
+  group.by = 'orig.ident', 
+  label = TRUE,
+  label.size = 2.5
+) +
+  ggtitle("WNN cell types (Mid-resolution) after doublet removal")
+plt4
+
+ggsave(plt3, filename = 'doubletRemoved_mid_res_WNN_umap.pdf', path = plot_path, device = 'pdf',
+width = 6, height = 5, useDingbats = FALSE)
+ggsave(plt4, filename = 'doubletRemoved_donor_WNN_umap.pdf', path = plot_path, device = 'pdf',
+width = 6, height = 5, useDingbats = FALSE)
+
+
+#And now save the seurat object for downstream analyses
+#Go with the qs2 version
+
+#Save as seurat
+qs_save(midSeurat, paste0(new_data_path, '/reprocessed_doubletRemoved_multiomeHab_seurat.qs2'))
+
+#Save as SingleCellExperiment
+# Keep both RNA + ATAC
+sce <- as.SingleCellExperiment(
+  midSeurat,
+  assay = c("RNA", "ATAC")
+)
+
+# Re-add all Seurat reductions explicitly
+for (red in Reductions(midSeurat)) {
+  emb <- Embeddings(midSeurat, reduction = red)
+  emb <- emb[colnames(sce), , drop = FALSE]
+  reducedDim(sce, red) <- emb
+}
+
+# Check what was kept
+assayNames(sce)
+altExpNames(sce)
+reducedDimNames(sce)
+
+qs_save(sce, paste0(new_data_path, '/reprocessed_doubletRemoved_multiomeHab_SCE.qs2'))
 
 
