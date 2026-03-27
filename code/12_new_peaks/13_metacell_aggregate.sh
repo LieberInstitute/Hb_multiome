@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=160G
+#SBATCH --mem=800G
 #SBATCH --job-name=13_metacell_aggregate
 #SBATCH -c 1
-#SBATCH -t 1-0:00:00
+#SBATCH -t 5-0:00:00
 #SBATCH -o ../../processed-data/12_new_peaks/logs/13_metacell_aggregate.txt
 #SBATCH -e ../../processed-data/12_new_peaks/logs/13_metacell_aggregate.txt
 
