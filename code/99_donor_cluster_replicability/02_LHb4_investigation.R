@@ -10,6 +10,7 @@ library(dplyr)
 library(ggplot2)
 library(scater)
 library(scran)
+library(qs2)
 library(here)
 
 here::here()
@@ -26,13 +27,13 @@ if (!dir.exists(plot_path)) dir.create(plot_path)
 source(here('code','98_external_Hb_comparisons', 'bubble_plot_functions.R'))
 
 
-multiome_path = here('processed-data', '08_spatial_registration_vs_multiome_snRNA-seq','mid')
+multiome_path = here('processed-data', '05_5_drop_doublets','01_drop_doublets_and_reDimReduce')
 
 #Multiome human data
-multiome_sce = readRDS(paste0(multiome_path, '/seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v5.rds'))
+multiome_sce = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multiomeHab_SCE.qs2'))
 assay(multiome_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(multiome_sce, 'counts'))
 
-multiome_sce
+
 
 
 #Set up color scale
@@ -246,9 +247,11 @@ device = 'pdf', width = 12, height = 10, useDingbats = FALSE)
 
 #For the subset of GABA-Glut cells in a cluster, compare the expression of thalamus markers for those cells
 
-#First though, let's look at the expression of GADs and VGLUTs in just the LHb4 and LHb7 clusters
+#First though, let's look at the expression of GADs and VGLUTs in just the LHb4 clusters
 
-Lhab_sce = multiome_sce[, multiome_sce$mid_cluster %in% c('LHb.4', 'LHb.7')]
+Lhab_sce = multiome_sce[, multiome_sce$mid_cluster == 'LHb.4']
+#Drop the ATAC experiment
+altExps(Lhab_sce) <- NULL
 
 # Get unique donor IDs
 donors <- unique(Lhab_sce$orig.ident)
@@ -348,12 +351,14 @@ gad2_pvalb_p = ggplot(umap_data, aes(x = umap_1, y = umap_2, color = coexpressio
 
 gad2_p
 gad1_p
+vgat_p
 pvalb_p
 vglut1_p
 vglut2_p
 
 gad2_pvalb_p
 gad2_vglut2_p
+gad2_vglut3_p
 
 ggsave(plot = int_author_midclust_plot , path = plot_path, filename = 'LHb4_LHb7_integrated_midcluster_annot_umpa.pdf',
 device = 'pdf', height = 5, width = 6, useDingbats = FALSE )
@@ -401,9 +406,9 @@ multiome_seurat_integrated <- FindVariableFeatures(multiome_seurat_integrated, s
 
 # Find neighbors and clusters
 multiome_seurat_integrated <- FindNeighbors(multiome_seurat_integrated, dims = 1:20)
-multiome_seurat_integrated <- FindClusters(multiome_seurat_integrated, resolution = .3)
+multiome_seurat_integrated <- FindClusters(multiome_seurat_integrated, resolution = .25)
 
-int_clust_p = DimPlot(multiome_seurat_integrated, reduction = "umap", group.by = "integrated_snn_res.0.3", pt.size = 1, label = TRUE)
+int_clust_p = DimPlot(multiome_seurat_integrated, reduction = "umap", group.by = "integrated_snn_res.0.25", pt.size = 1, label = TRUE)
 int_clust_p
 
 ggsave( plot =int_clust_p, path = plot_path, filename = "LHb4_LHb7_integrated_initial_new_cluster_umap.pdf",
@@ -414,7 +419,7 @@ DefaultAssay(multiome_seurat_integrated) <- "RNA"
 p_bubble = get_bubble_plot(multiome_seurat_integrated, 
   top_markers = c('CHAT', 'SLC5A7','SLC18A3', 'TAC1', 'TACR1','TAC3', 'GPR151', 'GAP43','SNAP25', 'POU4F1', 
   'SLC17A6', 'SLC17A7', 'GAD1', 'GAD2', 'SLC32A1'),
- sample_name = "Multiome Habenula LHb4 and 7", group_col = "integrated_snn_res.0.3")
+ sample_name = "Multiome Habenula LHb4 and 7", group_col = "integrated_snn_res.0.25")
 
 p_bubble[[1]]
 p_bubble[[2]]
@@ -427,17 +432,16 @@ pdf(paste0(plot_path, '/Lhb4_7_integrated_multiome_bubble_Hab_marker_zscore_mean
 p_bubble[[2]]
 dev.off()
 
-#Clearly cluster 5 snd 7
+#Clearly cluster 4 snd 5
 
 multiome_seurat_integrated$refined_mid_cluster = multiome_seurat_integrated$mid_cluster
-multiome_seurat_integrated$refined_mid_cluster[multiome_seurat_integrated$integrated_snn_res.0.3 %in% c(5)] = 'Putative_Inhib_LHb_1'
-multiome_seurat_integrated$refined_mid_cluster[multiome_seurat_integrated$integrated_snn_res.0.3 %in% c(7)] = 'Putative_Inhib_LHb_2'
+multiome_seurat_integrated$refined_mid_cluster[multiome_seurat_integrated$integrated_snn_res.0.25 %in% c(4)] = 'Putative_Inhib_LHb_4.1'
+multiome_seurat_integrated$refined_mid_cluster[multiome_seurat_integrated$integrated_snn_res.0.25 %in% c(5)] = 'Putative_Inhib_LHb_4.2'
 
 table(multiome_seurat_integrated$refined_mid_cluster)
-#LHb.4: 11704 cells
-#LHb.7: 211 cells
-#Putative_Inhib_LHb_1: 1126 cells
-#Putative_Inhib_LHb_2: 871 cells
+#LHb.4: 10735 cells
+#Putative_Inhib_LHb_1: 1123 cells
+#Putative_Inhib_LHb_2: 932 cells
 
 
 #Save the integrated seurat object
@@ -451,20 +455,20 @@ multiome_seurat_integrated = readRDS(paste0(new_data_path, '/multiome_LHb4_LHb7_
 
 inhib_meta = multiome_seurat_integrated[[]]
 
-inhib_barcodes_1 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_1']
-inhib_barcodes_2 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_2']
+inhib_barcodes_1 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_4.1']
+inhib_barcodes_2 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_4.2']
 
 #Exclude them from the rest of the data set
 
 multiome_sce$refined_mid_cluster = multiome_sce$mid_cluster
-multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_1'
-multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_2'
+multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_4.1'
+multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_4.2'
 
 table(multiome_sce$refined_mid_cluster, multiome_sce$mid_cluster)
 
 
-lhb_inhib_sce = multiome_sce[, multiome_sce$refined_mid_cluster %in% c('Putative_Inhib_LHb_1', 'Putative_Inhib_LHb_2')]
-nonInhib_sce = multiome_sce[, !multiome_sce$refined_mid_cluster %in% c('Putative_Inhib_LHb_1', 'Putative_Inhib_LHb_2')]
+lhb_inhib_sce = multiome_sce[, multiome_sce$refined_mid_cluster %in% c('Putative_Inhib_LHb_4.1', 'Putative_Inhib_LHb_4.2')]
+nonInhib_sce = multiome_sce[, !multiome_sce$refined_mid_cluster %in% c('Putative_Inhib_LHb_4.1', 'Putative_Inhib_LHb_4.2')]
 
 #Check out the top markers for the remaining cells, and then look at the expression of those markers 
 #In the putative inhibitory cells.
@@ -522,8 +526,8 @@ avg_LHb_hab_expr = colMeans(assay(multiome_sce, 'cpm')[LHb_hab_markers, ])
 
 labels = multiome_sce$refined_mid_cluster
 broad_labels = multiome_sce$merged_cluster
-broad_labels[labels == 'Putative_Inhib_LHb_1'] = 'Putative_Inhib_LHb_1'
-broad_labels[labels == 'Putative_Inhib_LHb_2'] = 'Putative_Inhib_LHb_2'
+broad_labels[labels == 'Putative_Inhib_LHb_4.1'] = 'Putative_Inhib_LHb_4.1'
+broad_labels[labels == 'Putative_Inhib_LHb_4.2'] = 'Putative_Inhib_LHb_4.2'
 table(broad_labels)
 
 broad_palette <- c(
@@ -537,8 +541,8 @@ broad_palette <- c(
   "Microglia" = "#666666",
   "Endo" = "#b41f38ff",
   'Thal' = '#7570b3',
-  'Putative_Inhib_LHb_1' = "#2fe8ebec",
-  'Putative_Inhib_LHb_2' = "#2fe8ebec"
+  'Putative_Inhib_LHb_4.1' = "#2fe8ebec",
+  'Putative_Inhib_LHb_4.2' = "#2fe8ebec"
 )
 
 
@@ -718,16 +722,17 @@ table(midSeurat_meta$mid_cluster[index])
 
 #Looks good.
 # Add the putative Inhibitory neuron annotations to the midSeurat object
-inhib_barcodes_1 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_1']
-inhib_barcodes_2 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_2']
+inhib_barcodes_1 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_4.1']
+inhib_barcodes_2 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_4.2']
 
 #Exclude them from the rest of the data set
 
 midSeurat$refined_mid_cluster = midSeurat$mid_cluster
-midSeurat$refined_mid_cluster[rownames(midSeurat_meta) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_1'
-midSeurat$refined_mid_cluster[rownames(midSeurat_meta) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_2'
+midSeurat$refined_mid_cluster[rownames(midSeurat_meta) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_4.1'
+midSeurat$refined_mid_cluster[rownames(midSeurat_meta) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_4.2'
 
 table(midSeurat$refined_mid_cluster, midSeurat$mid_cluster)
+
 
 ## =============================================================================
 ## Picked up Hex-color codes similar across cell-type
