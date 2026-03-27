@@ -7,6 +7,8 @@
 library(SingleCellExperiment)
 library(scDblFinder)
 library(Seurat)
+library("Signac") 
+library(harmony)
 library(dplyr)
 library(ggplot2)
 library(here)
@@ -181,10 +183,162 @@ midSeurat@reductions <- list()
 Reductions(midSeurat)
 
 
-#Rescale the data 
+
+###############################
+#From here, going to be using the same code as in the original reductions. Some of these steps are spread out across scripts
+#But mostly getting code from 03_pseudobulking/08_harmony_CR_ARCr.R
+###############################
+
+#Rescale the data and find variable RNA features
+midSeurat <- FindVariableFeatures(midSeurat, selection.method = "vst") 
+
+all.genes <- rownames(midSeurat)
+midSeurat<- ScaleData(midSeurat, features = all.genes)
+
+## Run PCA
+midSeurat <- RunPCA(midSeurat)
+
+## Re run UMAP on QCed dataset
+midSeurat<- RunUMAP(midSeurat, dims = 1:30, reduction = "pca", reduction.name = "umap.unintegrated")
+
+p1 <- DimPlot(midSeurat, reduction = 'umap.unintegrated', group.by = "orig.ident") + ggtitle("UMAP on RNA")
+
+p1.umap.rna.sample <- DimPlot(midSeurat, reduction = 'umap.unintegrated', group.by = "orig.ident",
+                              label = T, label.size = 2.5, repel = T) + theme(legend.position="none") + ggtitle("UMAP on RNA QCed (sample)")
+
+p1
+p1.umap.rna.sample
+
+#Re-prep the ATAC data
+
+DefaultAssay(midSeurat) <- "ATAC"
+
+# Run term frequency inverse document frequency (TF-IDF) normalization on a matrix.
+midSeurat <- RunTFIDF(midSeurat,
+                        method = 1,  # computes log(𝑇𝐹×𝐼𝐷𝐹).
+                        scale.factor = 10000)
+midSeurat <- FindTopFeatures(midSeurat,
+                               min.cutoff = 'q5', # 95% most common features coverage as VariableFeatures
+                               verbose = TRUE)
+midSeurat <- RunSVD(midSeurat)
+
+#Unintegrated UMAP on the ATAC data
+midSeurat <- RunUMAP(midSeurat, dims = 2:20, reduction = "lsi", reduction.name = "umap.lsi.unintegrated")
+
+p1.umap.atac.sample <- DimPlot(midSeurat, reduction = 'umap.lsi.unintegrated', group.by = "orig.ident",
+                                label = T, label.size = 2.5, repel = T)  + theme(legend.position="none") + ggtitle("UMAP on ATAC QCed (sample)")
+
+p1.umap.atac.sample
 
 
 
+#Rerun harmony on the RNA
+# dd/mm/yyyy. #Original seed used
+set.seed(12022025)
 
+# use k-means centroids initialization
+midSeurat  <- midSeurat |>
+  RunHarmony(group.by.vars = "orig.ident",
+             reduction = "pca",
+             assay.use = "RNA",
+             reduction.save = "integrated.harmony",
+             plot_convergence = TRUE,
+             #nclust = 50,                     # Number of clusters in model. nclust=1 equivalent to simple linear regression
+             #max.iter = 10,                   # One round of Harmony involves one clustering and one correction step
+             #max.iter.cluster = 20,          # Maximum number of rounds to run clustering at each round of Harmony
+             early_stop = T)
+## rewrite harmony assay
+Reductions(midSeurat )
+
+p1.harm.rna.sample <- DimPlot(midSeurat , reduction = 'integrated.harmony', group.by = "orig.ident") + 
+  ggtitle("Harmony on RNA QCed")
+p1.harm.rna.sample
+
+## Run UMAP on harmonized RNA data
+midSeurat  <- RunUMAP(midSeurat , dims = 1:30, reduction = "integrated.harmony", reduction.name = "umap.integrated")
+
+p1.umap.harm.rna.sample <- DimPlot(midSeurat , reduction = 'umap.integrated', group.by = "orig.ident") +
+  ggtitle("UMAP on Harmony RNA QCed")
+p1.umap.harm.rna.sample 
+
+## Run TSNE
+midSeurat  <- RunTSNE(midSeurat , dims = 1:30, reduction = "integrated.harmony", reduction.name = "tsne.integrated")
+
+p1.tsne.harm.rna.sample <- DimPlot(midSeurat , reduction = 'tsne.integrated', group.by = "orig.ident") +
+  ggtitle("TSNE on Harmony RNA QCed")
+p1.tsne.harm.rna.sample 
+
+
+#And now Harmony on the ATAC data
+midSeurat <- midSeurat|> 
+  RunHarmony(group.by.vars = "orig.ident", 
+             reduction.save = "integrated.lsi.harmony",
+             assay.use = "ATAC",
+             reduction.use= 'lsi',
+             plot_convergence = TRUE,
+             #max.iter = 10,  # To avoid warning() message: Quick-TRANSfer stage steps exceeded maximum (= 2785100)  
+             #                  left empty as it could need more or less lters to complete
+             early_stop = T,
+             project.dim = F) 
+
+## Re-join layers after RNA integration
+# Assays(SeuratOBJ.1)
+# [1] "RNA"  "ATAC"
+midSeurat[["RNA"]] <- JoinLayers(midSeurat[["RNA"]])
+
+## more plots after correction for comparison purposes 
+p1.harm.atac.sample <- DimPlot(midSeurat, reduction = 'integrated.lsi.harmony', group.by = "orig.ident") +
+  ggtitle("Harmony on ATAC QCed")
+p1.harm.atac.sample
+
+## Run UMAP on harmonized RNA data
+midSeurat <- RunUMAP(midSeurat, dims = 2:30, reduction = "integrated.lsi.harmony", reduction.name = "umap.lsi.integrated")
+
+p1.umap.harm.atac.sample <- DimPlot(midSeurat, reduction = 'umap.lsi.integrated', group.by = "orig.ident") +
+  ggtitle("UMAP on Harmony ATAC QCed")
+p1.umap.harm.atac.sample 
+
+## Run TSNE
+midSeurat<- RunTSNE(midSeurat, dims = 2:30, reduction = "integrated.lsi.harmony", reduction.name = "tsne.lsi.integrated")
+
+p1.tsne.harm.atac.sample <- DimPlot(midSeurat, reduction = 'tsne.lsi.integrated', group.by = "orig.ident") +
+  ggtitle("TSNE on Harmony ATAC QCed")
+p1.tsne.harm.atac.sample 
+
+
+
+#Save plots and seurat object up till now
+#unintegrated plots
+p1.umap.rna.sample
+p1.umap.atac.sample
+
+ggsave(p1.umap.rna.sample, filename = 'unint_donor_RNA_umap.pdf', path = plot_path, device = 'pdf',
+width = 6, height = 5, useDingbats = FALSE)
+ggsave(p1.umap.atac.sample, filename = 'unint_donor_ATAC_umap.pdf', path = plot_path, device = 'pdf',
+width = 6, height = 5, useDingbats = FALSE)
+
+#Integrated RNA PCA, UMAP, TSNE
+p1.harm.rna.sample
+p1.umap.harm.rna.sample 
+p1.tsne.harm.rna.sample 
+
+ggsave(p1.harm.rna.sample, filename = 'RNA_Harmony_pca.pdf', path = plot_path, device = 'pdf',
+width = 6, height = 5, useDingbats = FALSE)
+ggsave(p1.umap.harm.rna.sample , filename = 'RNA_Harmony_umap.pdf', path = plot_path, device = 'pdf',
+width = 6, height = 5, useDingbats = FALSE)
+ggsave(p1.tsne.harm.rna.sample , filename = 'RNA_Harmony_tsne.pdf', path = plot_path, device = 'pdf',
+width = 6, height = 5, useDingbats = FALSE)
+
+#Integrated ATAC PCA, UMAP, TSNE
+p1.harm.atac.sample
+p1.umap.harm.atac.sample 
+p1.tsne.harm.atac.sample 
+
+ggsave(p1.harm.atac.sample, filename = 'ATAC_Harmony_pca.pdf', path = plot_path, device = 'pdf',
+width = 6, height = 5, useDingbats = FALSE)
+ggsave(p1.umap.harm.atac.sample , filename = 'ATAC_Harmony_umap.pdf', path = plot_path, device = 'pdf',
+width = 6, height = 5, useDingbats = FALSE)
+ggsave(p1.tsne.harm.atac.sample , filename = 'ATAC_Harmony_tsne.pdf', path = plot_path, device = 'pdf',
+width = 6, height = 5, useDingbats = FALSE)
 
 
