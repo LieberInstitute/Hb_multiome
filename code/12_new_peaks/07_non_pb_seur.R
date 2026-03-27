@@ -107,12 +107,14 @@ seur = FindTopFeatures(
 seur = RunSVD(seur, assay = "ATAC")
 
 #   Following Cynthia's code here (https://github.com/LieberInstitute/Hb_multiome/blob/7f749651cb989c7f072c239a704b7f22933d4b4b/code/03_pseudobulking/08_harmony_CR_ARCr.R#L211-L219)
+pdf(plot_path)
 seur = RunHarmony(
     seur, group.by.vars = "orig.ident",
     reduction.save = "integrated.lsi.harmony", assay.use = "ATAC",
-    reduction.use= 'lsi', plot_convergence = TRUE, early_stop = TRUE,
-    project.dim = FALSE
+    reduction.use = 'lsi', plot_convergence = TRUE, project.dim = FALSE,
+    early_stop = TRUE
 )
+dev.off()
 
 ################################################################################
 #   Save the Seurat object
