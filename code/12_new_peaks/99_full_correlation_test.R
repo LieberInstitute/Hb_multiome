@@ -155,6 +155,102 @@ dim(seurat_multiome@assays$ATAC@data)
 
 
 
+#And donor-specific networks
+#MHb.2 cell number 2610
+rna_meta = as.data.frame(seurat_multiome[[]])
+current_donors = rna_meta %>% group_by(orig.ident, mid_cluster) %>% summarise(n_cells = n()) %>% 
+  filter(n_cells >= 100 & mid_cluster == 'MHb.2') %>% pull(orig.ident)
 
 
+gene_index = rowSums(seurat_multiome@assays$RNA@layers$data[, seurat_multiome$mid_cluster == 'MHb.2']) > 0
+table(gene_index)
+
+library(Matrix)
+
+rank_normalize_dense <- function(x, ties.method = "average", na.last = "keep") {
+  stopifnot(inherits(x, "dgeMatrix") || is.matrix(x))
+  
+  vals <- as.numeric(x)
+  ok <- !is.na(vals)
+  
+  r <- rank(vals[ok], ties.method = ties.method, na.last = na.last)
+  vals[ok] <- r / max(r)
+  
+  if (inherits(x, "dgeMatrix")) {
+    x@x <- vals
+    x
+  } else {
+    matrix(vals, nrow = nrow(x), ncol = ncol(x), dimnames = dimnames(x))
+  }
+}
+
+pearson_mat_rank <- rank_normalize_dense(pearson_mat)
+
+donor_mat_list = vector(mode = 'list', length = length(current_donors))
+
+peak_index = grepl('MHb.2',peaks_df$peak_called_in)
+gene_index = rowSums(seurat_multiome@assays$RNA@layers$data[, seurat_multiome$mid_cluster == 'MHb.2']) > 0
+
+for(i in 1:length(current_donors)){
+  i = 1
+  donor_index = rna_meta$orig.ident == current_donors[i] & rna_meta$mid_cluster == 'MHb.2'
+
+  test_peaks = seurat_multiome@assays$ATAC@data[peak_index, donor_index ]
+  test_genes = seurat_multiome@assays$RNA@layers$data[gene_index , donor_index]
+  rownames(test_genes) = gene_names[gene_index]
+
+
+  start_time <- Sys.time()
+  n_cells = ncol(test_peaks)
+
+  M <- test_peaks %*% t(test_genes)
+
+  mu_peaks = Matrix::rowMeans(test_peaks)
+  mu_genes = Matrix::rowMeans(test_genes)
+
+  #Covariance
+  cov_peaks_genes = (M / n_cells ) - (mu_peaks %o% mu_genes)
+
+  #Standard deviations
+  # Peaks
+  P_sq <- test_peaks
+  P_sq@x <- P_sq@x^2  # square only the non-zero entries
+  var_P <- rowMeans(P_sq) - (rowMeans(test_peaks)^2)
+  std_P <- sqrt(var_P)
+  std_P[std_P == 0] <- 1e-8  # avoid division by zero
+  #Genes
+  G_sq <- test_genes
+  G_sq@x <- G_sq@x^2  # square only the non-zero entries
+  var_G <- rowMeans(G_sq) - (rowMeans(test_genes)^2)
+  std_G <- sqrt(var_G)
+  std_G[std_G == 0] <- 1e-8  # avoid division by zero
+
+  #Compute pearsons
+  # usage
+  pearson_mat = cov_peaks_genes / (std_P %o% std_G)
+  pearson_mat_rank <- rank_normalize_dense(pearson_mat)
+  donor_mat_list[[i]] = pearson_mat_rank
+
+  rm(pearson_mat, pearson_mat_rank)
+  Sys.time() - start_time
+
+}
+
+ pearson_mat[1:10, 1:10]
+
+long_pearson = reshape2::melt(as.matrix(pearson_mat))
+dim(long_pearson)
+
+long_pearson %>% filter(value >0.5 & value != 1) %>% head() %>% View()
+length(donor_corrs)
+hist(sample(donor_corrs, 1000000), breaks = 50)
+
+rownames(seurat_multiome@assays$RNA@layers$data) = gene_names
+
+peak_index = rownames(seurat_multiome@assays$ATAC@data) == 'chr1-17409419-17409777'
+gene_index = rownames(seurat_multiome@assays$RNA@layers$data) == 'AL627309.5'
+atac_signal = seurat_multiome@assays$ATAC@data[peak_index, donor_index ]
+gene_signal = seurat_multiome@assays$RNA@layers$data[gene_index, donor_index]
+
+plot(atac_signal, gene_signal)
 
