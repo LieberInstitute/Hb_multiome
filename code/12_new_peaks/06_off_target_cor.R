@@ -5,6 +5,7 @@
 library(here)
 library(tidyverse)
 library(sessioninfo)
+library(duckplyr)
 
 cell_types = c(
     'Astrocyte', 'Endo', 'Excit.Thal', 'Inhib.Thal', 'LHb.1', 'LHb.1.3',
@@ -15,34 +16,32 @@ result_paths = here(
     'processed-data', '12_new_peaks', '01_link_peaks', '%s_%s.csv.gz'
 )
 out_path = here(
-    'processed-data', '12_new_peaks', '01_link_peaks', 'all_data.csv.gz'
+    'processed-data', '12_new_peaks', '01_link_peaks', 'all_data.parquet'
 )
 plot_dir = here("plots", "12_new_peaks")
 fdr_cutoffs = c(0.01, 0.02, 0.03, 0.04, 0.05, 1)
 num_rows_sample = 1e6
 
 set.seed(0)
+num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
+duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
+fallback_config(info = FALSE)
 
 #   First gather and write the key columns from every cell-type pair combination
 result_df_list = list()
 for (target_cell_type in cell_types) {
     for (other_cell_type in cell_types) {
-        result_df_list[[length(result_df_list) + 1]] = read_csv(
+        result_df_list[[length(result_df_list) + 1]] = read_csv_duckdb(
                 sprintf(result_paths, target_cell_type, other_cell_type),
-                show_col_types = FALSE
+                prudence = "lavish",
             ) |>
-            select(peak, gene, score, FDR, target_cell_type, other_cell_type) |>
-            mutate(
-                target_cell_type = factor(
-                    target_cell_type, levels = cell_types
-                ),
-                other_cell_type = factor(other_cell_type, levels = cell_types)
-            )
+            select(peak, gene, score, FDR, target_cell_type, other_cell_type)
     }
 }
-result_df = bind_rows(result_df_list)
+result_df = bind_rows(result_df_list) |>
+    collect()
 
-write_csv(result_df, out_path)
+compute_parquet(result_df, out_path)
 
 result_df = result_df |>
     mutate(

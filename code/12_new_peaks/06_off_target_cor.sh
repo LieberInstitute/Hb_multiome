@@ -2,7 +2,7 @@
 #SBATCH -p katun
 #SBATCH --mem=40G
 #SBATCH --job-name=06_off_target_cor
-#SBATCH -c 1
+#SBATCH -c 4
 #SBATCH -t 1-0:00:00
 #SBATCH -o ../../processed-data/12_new_peaks/logs/06_off_target_cor.txt
 #SBATCH -e ../../processed-data/12_new_peaks/logs/06_off_target_cor.txt
