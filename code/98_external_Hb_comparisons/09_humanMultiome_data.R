@@ -4,6 +4,7 @@ library(SingleCellExperiment)
 library(Seurat)
 library(MetaNeighbor)
 library(MetaMarkers)
+library(qs2)
 library(dplyr)
 library(ggplot2)
 library(ggrepel)
@@ -14,7 +15,7 @@ here::here()
 
 #Path to the human multiome data
 #Using the v5.rds object, says seurat, but is SCE object
-multiome_path = here('processed-data', '08_spatial_registration_vs_multiome_snRNA-seq','mid')
+multiome_path = here('processed-data', '05_5_drop_doublets','01_drop_doublets_and_reDimReduce')
 list.files(multiome_path)
 
 #Path to the Yalcinbas pilot data
@@ -47,7 +48,7 @@ source(here('code','98_external_Hb_comparisons', 'bubble_plot_functions.R'))
 
 
 #Multiome human data
-multiome_sce = readRDS(paste0(multiome_path, '/seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v5.rds'))
+multiome_sce = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multiomeHab_SCE.qs2'))
 assay(multiome_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(multiome_sce, 'counts'))
 
 names(colData(multiome_sce))
@@ -57,8 +58,6 @@ table(multiome_sce$merged_cluster)
 table(multiome_sce$mid_cluster)
 #Donor ID
 table(multiome_sce$orig.ident)
-#Cluster LHb.7 looks to be a donor cluster, 200 cells from 1 donor, 13 cells from 5 others
-
 
 #Yalcinbas data
 #Loads as an object labeled 'sce'
@@ -425,7 +424,7 @@ saveRDS(all_donor_sce, file = paste0(new_data_path, '/cross_species_merged_sce_n
 #LHb.4
 
 #And the collection that maps to the second mouse LHb cluster
-#LHb.2.7, LHb.7
+#LHb.2.7
 
 
 #multiome marker profile
@@ -711,7 +710,6 @@ width = 4, height = 4,device = 'pdf', useDingbats = F, onefile = FALSE)
 #Check out some DE and markers
 #Check out the markers when including all the data
 all_multiome_markers = compute_markers(assay(multiome_sce, 'cpm'), multiome_sce$mid_cluster)
-#all_multiome_markers %>% group_by(cell_type) %>% slice_max(order_by = auroc, n = 25) %>% View()
 all_multiome_markers %>% filter(gene %in% c('ESR1', 'PVALB', 'KIT')) %>% group_by(gene) %>% arrange(average_expression, .by_group = T) %>% View()
 
 table(multiome_sce$mid_cluster, multiome_sce$orig.ident)
