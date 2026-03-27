@@ -25,7 +25,6 @@ cell_type2 = "LHb.2.7"
 cor_thres = 0.3
 FDR_thres = 0.1
 num_expected_donors = 10
-color_quantile = 0.99
 
 dir.create(dirname(plot_path), showWarnings = FALSE)
 
@@ -149,18 +148,12 @@ all_peak_values <- c(
 )
 
 col_fun_gene <- colorRamp2(
-    c(
-        quantile(all_gene_values[all_gene_values < 0], 1 - color_quantile),
-        quantile(all_gene_values[all_gene_values > 0], color_quantile)
-    ),
+    c(min(all_gene_values), max(all_gene_values)),
     c("#440154FF", "#FDE725FF")
 )
 
 col_fun_peak <- colorRamp2(
-    c(
-        quantile(all_peak_values[all_peak_values < 0], 1 - color_quantile),
-        quantile(all_peak_values[all_peak_values > 0], color_quantile)
-    ), 
+    c(min(all_peak_values), max(all_peak_values)),
     c("#000004FF", "#FCFDBFFF")
 )
 
