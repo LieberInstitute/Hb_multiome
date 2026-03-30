@@ -1,3 +1,7 @@
+#   How much are overall peak-gene correlations measured by linked peaks
+#   influenced by a handful of donors? Produce various visualizations and
+#   metrics to quantify this bias
+
 library(sessioninfo)
 library(Seurat)
 library(Signac)
@@ -14,9 +18,7 @@ seur_path = here(
 link_path = here(
     'processed-data', '12_new_peaks', '01_link_peaks', 'all_data.parquet'
 )
-plot_path = here(
-    "plots", "12_new_peaks", "15_donor_specificity", "donor_specificity.pdf"
-)
+plot_dir = here("plots", "12_new_peaks", "15_donor_specificity")
 atac_assay = "ATAC_macs2_pseudo"
 rna_assay = "RNA"
 cor_thres = 0.3
@@ -28,7 +30,7 @@ num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
 fallback_config(info = FALSE)
 
-dir.create(dirname(plot_path), showWarnings = FALSE)
+dir.create(plot_dir, showWarnings = FALSE)
 
 seur = readRDS(seur_path)
 seur@meta.data$donor = str_extract(colnames(seur), 'S[0-9]{2}.*')
@@ -142,6 +144,58 @@ legend <- get_legend(
 grid <- plot_grid(plotlist = plot_list, ncol = length(percentiles))
 final <- plot_grid(grid, legend, rel_widths = c(1, 0.15))
 
-pdf(plot_path, width = 10, height = 3 * length(cell_types))
+pdf(
+    file.path(plot_dir, "specificity_scatter.pdf"),
+    width = 10, height = 3 * length(cell_types)
+)
 print(final)
 dev.off()
+
+p = count_df |>
+    group_by(cell_type, percentile, donor) |>
+    #   Since we Z-scored across donors, a donor's typical distance from the
+    #   origin can be an indirect measure of its contribution to the correlation
+    summarize(
+        contribution_score = mean(peak_value ** 2 + gene_value ** 2)
+    ) |>
+    ggplot(aes(x = donor, y = contribution_score, fill = donor)) +
+        geom_bar(stat = "identity") +
+        facet_grid(cell_type ~ percentile) +
+        scale_fill_manual(values = donor_colors) +
+        theme_bw(base_size = 15) +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+pdf(
+    file.path(plot_dir, "contribution_score_barplots.pdf"),
+    width = 10, height = 1.5 * length(cell_types)
+)
+print(p)
+dev.off()
+
+p = count_df |>
+    group_by(cell_type, donor) |>
+    summarize(
+        contribution_score = mean(peak_value ** 2 + gene_value ** 2)
+    ) |>
+    ggplot(aes(x = donor, y = contribution_score, color = donor)) +
+        geom_boxplot() +
+        scale_color_manual(values = donor_colors) +
+        theme_bw(base_size = 20) +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+        labs(x = "Donor", y = "Contribution Score") +
+        guides(color = "none")
+pdf(file.path(plot_dir, "contribution_score_boxplots.pdf"))
+print(p)
+dev.off()
+
+#   Compute a metric measuring the lopsidedness of donor contributions to
+#   peak-gene correlations (higher is worse)
+overall_score = count_df |>
+    group_by(cell_type, donor) |>
+    summarize(
+        contribution_score = mean(peak_value ** 2 + gene_value ** 2)
+    ) |>
+    pull(contribution_score) |>
+    var()
+message(sprintf("Overall donor-specificity score: %.2f", overall_score))
+
+session_info()
