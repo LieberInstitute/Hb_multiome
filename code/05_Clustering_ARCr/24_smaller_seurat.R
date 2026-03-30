@@ -16,7 +16,10 @@ out_path = here(
     "processed-data", "05_Clustering_ARCr", "24_smaller_seurat",
     "general_purpose_seur.qs2"
 )
-keep_reductions = c("pca", "umap.integrated", "umap.lsi.integrated", "wnn.umap")
+keep_reductions = c(
+    "pca", "integrated.harmony", "umap.integrated", "umap.lsi.integrated",
+    "wnn.umap"
+)
 
 dir.create(dirname(out_path), showWarnings = FALSE)
 
