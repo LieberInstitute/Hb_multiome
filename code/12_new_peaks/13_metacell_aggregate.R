@@ -24,7 +24,7 @@ plot_path = here(
     "plots", "12_new_peaks", "13_metacell_aggregate",
     "metacell_UMAP.pdf"
 )
-graining_level = 35
+graining_level = 20
 
 dir.create(dirname(seur_out_path), showWarnings = FALSE)
 dir.create(dirname(plot_path), showWarnings = FALSE)
@@ -75,7 +75,13 @@ dev.off()
 #   For now, we won't build aggregated fragments. See 
 #   https://github.com/GfellerLab/SuperCell/issues/36
 
-granges(seur_meta[["ATAC"]]) = granges(seur[["ATAC"]])
+#   Retain peak metadata. This is for some reason quite complicated
+gr_src <- granges(seur[["ATAC"]])
+gr_tgt <- granges(seur_meta[["ATAC"]])
+stopifnot(identical(rownames(seur[["ATAC"]]), rownames(seur_meta[["ATAC"]])))
+stopifnot(identical(as.character(gr_src), as.character(gr_tgt)))
+mcols(gr_tgt) <- mcols(gr_src)
+methods::slot(seur_meta[["ATAC"]], "ranges") <- gr_tgt
 
 #   ATAC normalization
 DefaultAssay(seur_meta) = "ATAC"
