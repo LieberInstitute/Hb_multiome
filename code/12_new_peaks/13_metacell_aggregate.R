@@ -24,12 +24,21 @@ plot_path = here(
     "plots", "12_new_peaks", "13_metacell_aggregate",
     "metacell_UMAP.pdf"
 )
-graining_level = 75
+graining_level = 35
 
 dir.create(dirname(seur_out_path), showWarnings = FALSE)
 dir.create(dirname(plot_path), showWarnings = FALSE)
 
 seur = qs_read(seur_in_path)
+
+#   Manual cell-type edits while we decide the final definitions
+cells_keep <- Cells(seur)[!seur@meta.data$mid_cluster %in% c("Thal", "LHb.7")]
+seur <- subset(seur, cells = cells_keep)
+seur@meta.data$mid_cluster = ifelse(
+    seur@meta.data$mid_cluster %in% c("LHb.1", "LHb.1.3", "LHb.1.3.4"),
+    "LHb.1.3.4",
+    seur@meta.data$mid_cluster
+)
 
 ################################################################################
 #   Form metacells
@@ -48,6 +57,9 @@ stopifnot(all(seur_meta@meta.data$mid_cluster_purity == 1))
 message("Donor purity:")
 summary(seur_meta@meta.data$orig.ident_purity)
 
+message("Number of metacells per cell type:")
+table(seur_meta@meta.data$mid_cluster)
+
 #   Show metacells on UMAP dimensions
 pdf(plot_path)
 DimPlotSC(
@@ -62,6 +74,8 @@ dev.off()
 
 #   For now, we won't build aggregated fragments. See 
 #   https://github.com/GfellerLab/SuperCell/issues/36
+
+granges(seur_meta[["ATAC"]]) = granges(seur[["ATAC"]])
 
 #   ATAC normalization
 DefaultAssay(seur_meta) = "ATAC"
