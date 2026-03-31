@@ -1,10 +1,10 @@
 **** Job starts ****
-Tue Mar 24 04:02:55 PM EDT 2026
+Mon Mar 30 04:49:57 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30298262
+Job id: 30438862
 Job name: 07_non_pb_seur
-Node name: compute-169
+Node name: compute-168
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -141,7 +141,7 @@ The following object is masked from ‘package:base’:
 Loading required package: BiocIO
 Loading required package: rtracklayer
 Loading required package: Rcpp
-2026-03-24 16:03:10.070556 | Reading in Seurat object and called peaks...
+2026-03-30 16:50:13.618682 | Reading in Seurat object and called peaks...
 Warning messages:
 1: In S4Vectors:::anyMissing(runValue(x_seqnames)) :
   'S4Vectors:::anyMissing()' is deprecated.
@@ -151,7 +151,7 @@ See help("Deprecated")
   'S4Vectors:::anyMissing()' is deprecated.
 Use 'anyNA()' instead.
 See help("Deprecated")
-2026-03-24 16:05:34.970226 | Rebuilding ATAC assay with new peaks...
+2026-03-30 16:50:34.978183 | Rebuilding ATAC assay with new peaks...
 Extracting reads overlapping genomic regions
 Extracting reads overlapping genomic regions
 Extracting reads overlapping genomic regions
@@ -169,7 +169,7 @@ Use 'anyNA()' instead.
 See help("Deprecated")
 Warning message:
 Different cells and/or features from existing assay ATAC 
-2026-03-24 18:28:27.798667 | Normalizing and adding stats...
+2026-03-30 19:45:42.290501 | Normalizing and adding stats...
 Warning in RegionStats.default(object = regions, genome = genome, verbose = verbose,  :
   Not all seqlevels present in supplied genome
 There were 49 warnings (use warnings() to see them)
@@ -195,7 +195,7 @@ Harmony 2/10
 Harmony converged after 2 iterations
 null device 
           1 
-2026-03-24 18:37:58.809841 | Saving Seurat object...
+2026-03-30 19:54:51.148567 | Saving Seurat object...
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -206,7 +206,7 @@ null device
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-03-24
+ date     2026-03-30
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.8.27 @ /users/neagles/.positron-server/bin/f3aae65e0a1a11d39226cd884520f49301daef82/quarto/bin/quarto
 
@@ -372,4 +372,4 @@ null device
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Tue Mar 24 06:40:00 PM EDT 2026
+Mon Mar 30 07:56:03 PM EDT 2026
