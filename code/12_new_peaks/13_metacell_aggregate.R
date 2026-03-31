@@ -43,8 +43,10 @@ seur_meta = SCimplify_for_Seurat(
     dims = list(1:30, 2:30), gamma = graining_level,
     label = "mid_cluster"
 )
+stopifnot(all(seur_meta@meta.data$mid_cluster_purity == 1))
 
-qs_save(seur_meta, seur_out_path)
+message("Donor purity:")
+summary(seur_meta@meta.data$orig.ident_purity)
 
 #   Show metacells on UMAP dimensions
 pdf(plot_path)
@@ -54,16 +56,12 @@ DimPlotSC(
 )
 dev.off()
 
-FetchData(seur_meta, c("mid_cluster", "mid_cluster_purity")) |>
-    as_tibble() |>
-    pull(mid_cluster_purity) |>
-    summary()
-
 ################################################################################
 #   Rebuild missing parts of the metacell-level object
 ################################################################################
 
-Fragments(seur_meta) = Fragments(seur)
+#   For now, we won't build aggregated fragments. See 
+#   https://github.com/GfellerLab/SuperCell/issues/36
 
 #   ATAC normalization
 DefaultAssay(seur_meta) = "ATAC"
