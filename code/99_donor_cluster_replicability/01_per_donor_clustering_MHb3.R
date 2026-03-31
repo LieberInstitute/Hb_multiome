@@ -538,4 +538,318 @@ p_bubble = get_bubble_plot(multiome_seurat_integrated,
 p_bubble[[1]]
 p_bubble[[2]]
 
-  
+p_bubble = get_bubble_plot(multiome_seurat_integrated, 
+  top_markers = c('CHAT', 'SLC5A7','SLC18A3', 'TAC1', 'TACR1','TAC3', 'GPR151', 'GAP43','SNAP25', 'POU4F1', 
+  'SLC17A6', 'SLC17A7', 'GAD1', 'GAD2', 'SLC32A1', 'MBP'),
+ sample_name = "Multiome Medial Habenula", group_col = "cluster_ann")
+
+p_bubble[[1]]
+p_bubble[[2]]
+
+#Quick check for the expression of GAD1/2 and VGAT, are there any medial GABAergic cells
+
+med_vgat_p = FeaturePlot(multiome_seurat_integrated, features = "SLC32A1", reduction = "umap", pt.size = 1, slot = 'data') +
+  scale_color_gradient(low = "white", high = "red", name = 'CPM')
+
+med_gad1_p = FeaturePlot(multiome_seurat_integrated, features = "GAD1", reduction = "umap", pt.size = 1, slot = 'data') +
+  scale_color_gradient(low = "white", high = "red", name = 'CPM')
+
+med_gad2_p = FeaturePlot(multiome_seurat_integrated, features = "GAD2", reduction = "umap", pt.size = 1, slot = 'data') +
+  scale_color_gradient(low = "white", high = "red", name = 'CPM')
+
+med_vgat_p
+med_gad1_p
+med_gad2_p
+
+ggsave(filename = 'medial_hab_VGAT_umap.pdf', path = plot_path, 
+plot = med_vgat_p, device = 'pdf', width = 8, height = 6, useDingbats = FALSE)
+
+ggsave(filename = 'medial_hab_GAD1_umap.pdf', path = plot_path, 
+plot = med_gad1_p, device = 'pdf', width = 8, height = 6, useDingbats = FALSE)
+
+ggsave(filename = 'medial_hab_GAD2_umap.pdf', path = plot_path, 
+plot = med_gad2_p, device = 'pdf', width = 8, height = 6, useDingbats = FALSE)
+
+
+#And check our the updated annotations in the full UMAP
+
+midSeurat = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multiomeHab_seurat.qs2'))
+
+my_colors <- c(
+    LHb = "#1f78b4",
+    MHb = "#ad1d8c",
+    Oligo = "#384a08",
+    Astrocyte = "#532222", 
+    OPC = "#829454",
+    Microglia = "#141b02",
+    Endo = "#d95f02",
+    Inhib_Thal = "#9a9fe7",
+    Excit_Thal = "#42467b",
+    Thal = "#4d55b7"
+)
+
+## assign color gradients to mid resolution clusters based on Broad cell-types
+
+# extract LHb and MHb clusters
+cluster_levels <- levels(midSeurat)
+cluster_levels
+LHb_clusters <- grep("LHb", cluster_levels, value = TRUE)
+MHb_clusters <- grep("MHb", cluster_levels, value = TRUE)
+
+# Create tonal gradients for LHb and MHb
+LHb_colors <- colorspace::sequential_hcl(length(LHb_clusters), h = 210, c = 80, l = c(30, 80))
+MHb_colors <- colorspace::sequential_hcl(length(MHb_clusters), h = 320, c = 80, l = c(30, 80))
+
+# Build full cluster color map
+my_colors_mid <- setNames(rep("#bdbdbd", length(cluster_levels)), cluster_levels)
+my_colors_mid[LHb_clusters] <- LHb_colors
+my_colors_mid[MHb_clusters] <- MHb_colors
+
+# assign base color for other types from your existing palette
+for (category in c("Oligo", "Astrocyte", "OPC", "Microglia", "Endo", "Inhib.Thal", "Excit.Thal", "Thal")) {
+    matched <- grep(category, cluster_levels, value = TRUE)
+    my_colors_mid[matched] <- my_colors[[gsub("\\.", "_", category)]]
+}
+
+## =============================================================================
+
+
+#Verify original UMAP
+plt1 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                group.by = "mid_cluster",
+                label.size = 3,
+                cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "WNN cell types (Mid-resolution)")
+
+#Looks good
+plt1
+
+
+# Add the adjusted medial annotations
+medial_adjusted_barcodes = rownames(multiome_seurat_integrated[[]])
+table(medial_adjusted_barcodes %in% rownames(midSeurat[[]]))
+
+midSeurat$refined_mid_cluster = midSeurat$mid_cluster
+
+index = match(medial_adjusted_barcodes, rownames(midSeurat[[]]))
+midSeurat$refined_mid_cluster[index] = multiome_seurat_integrated$refined_mid_cluster
+
+table(midSeurat$refined_mid_cluster, midSeurat$mid_cluster)
+
+
+
+plt2 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                group.by = "refined_mid_cluster",
+                label.size = 3,
+                cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "WNN cell types (Mid-resolution)")
+
+
+plt2
+
+
+#And highlight the changes in red
+my_colors_mid['Changed'] <- '#f5093cff'
+
+midSeurat$highlight_annot = midSeurat$mid_cluster
+midSeurat$highlight_annot[midSeurat$refined_mid_cluster == 'Oligo' & midSeurat$mid_cluster != 'Oligo'] = 'Changed'
+
+plt3 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                group.by = "highlight_annot",
+                label.size = 3, cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "WNN cell types: updated Oligos in red")
+
+
+plt3
+
+
+midSeurat$highlight_annot = midSeurat$mid_cluster
+midSeurat$highlight_annot[midSeurat$refined_mid_cluster == 'MHb.2' & midSeurat$mid_cluster != 'MHb.2'] = 'Changed'
+
+plt4 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                group.by = "highlight_annot",
+                label.size = 3, cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "WNN cell types: updated MHb.2 in red")
+
+
+plt4
+
+midSeurat$highlight_annot = midSeurat$mid_cluster
+midSeurat$highlight_annot[midSeurat$refined_mid_cluster == 'MHb.3' & midSeurat$mid_cluster != 'MHb.3'] = 'Changed'
+
+plt5 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                group.by = "highlight_annot",
+                label.size = 3, cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "WNN cell types: updated MHb.3 in red")
+
+
+plt5
+
+
+midSeurat$highlight_annot = midSeurat$mid_cluster
+midSeurat$highlight_annot[midSeurat$cluster_ann == 'C.11.MHb.1.2' ] = 'Changed'
+
+plt6 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                group.by = "highlight_annot",
+                label.size = 3, cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "RNA UMAP cell types: mid resolution")
+
+
+plt6
+
+plt1
+plt2
+plt3
+plt4
+plt5
+
+#And now just the RNA umap with the changed annots in red
+midSeurat$highlight_annot = midSeurat$mid_cluster
+midSeurat$highlight_annot[midSeurat$refined_mid_cluster == 'Oligo' & midSeurat$mid_cluster != 'Oligo' ] = 'Changed'
+
+plt6 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "umap.integrated",
+                group.by = "highlight_annot",
+                label.size = 3, cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "RNA UMAP cell types: Updated Oligos in red")
+
+
+plt6
+
+midSeurat$highlight_annot = midSeurat$mid_cluster
+midSeurat$highlight_annot[midSeurat$refined_mid_cluster == 'MHb.2' & midSeurat$mid_cluster != 'MHb.2' ] = 'Changed'
+
+plt7 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "umap.integrated",
+                group.by = "highlight_annot",
+                label.size = 3, cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "RNA UMAP cell types: Updated MHb2 in red")
+
+
+plt7
+
+
+midSeurat$highlight_annot = midSeurat$mid_cluster
+midSeurat$highlight_annot[midSeurat$refined_mid_cluster == 'MHb.3' & midSeurat$mid_cluster != 'MHb.3' ] = 'Changed'
+
+plt8 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "umap.integrated",
+                group.by = "highlight_annot",
+                label.size = 3, cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "RNA UMAP cell types: Updated MHb.3 in red")
+
+
+plt8
+
+#And now just the C.11.MHb.1.2 cluster in red
+midSeurat$highlight_annot = midSeurat$mid_cluster
+midSeurat$highlight_annot[midSeurat$cluster_ann == 'C.11.MHb.1.2'  ] = 'Changed'
+
+plt9 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "umap.integrated",
+                group.by = "highlight_annot",
+                label.size = 3, cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "RNA UMAP cell types: Fine C.11.MHb.1.2 in red")
+
+
+plt9
+
+
+
+
+FeaturePlot(midSeurat, features = "scDblFinder.score", reduction = "umap.integrated")
+
+
+
+
+#Check out doublet scores of the adjusted annotations. 
+
+midSeurat$new_annot_doublet = midSeurat$mid_cluster
+midSeurat$new_annot_doublet[midSeurat$refined_mid_cluster == 'MHb.3' & midSeurat$mid_cluster != 'MHb.3'] = 'New MHb.3'
+midSeurat$new_annot_doublet[midSeurat$refined_mid_cluster == 'MHb.2' & midSeurat$mid_cluster != 'MHb.2'] = 'New MHb.2'
+midSeurat$new_annot_doublet[midSeurat$refined_mid_cluster == 'Oligo' & midSeurat$mid_cluster != 'Oligo'] = 'New Oligo'
+
+cluster_order <- midSeurat@meta.data |>
+  dplyr::count(new_annot_doublet, scDblFinder.class) |>
+  dplyr::group_by(new_annot_doublet) |>
+  dplyr::mutate(prop = n / sum(n)) |>
+  dplyr::filter(scDblFinder.class == "doublet") |>
+  dplyr::arrange(prop) |>
+  dplyr::pull(new_annot_doublet)
+
+midSeurat@meta.data |>
+  dplyr::mutate(new_annot_doublet = factor(new_annot_doublet, levels = cluster_order)) |>
+  ggplot(aes(x = new_annot_doublet, fill = scDblFinder.class)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Fine clusters", y = "Proportion", fill = "scDblFinder") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+midSeurat@meta.data |>
+  dplyr::mutate(new_annot_doublet = factor(new_annot_doublet, levels = cluster_order)) |>
+  ggplot(aes(x = new_annot_doublet, y = scDblFinder.score)) +
+  geom_boxplot(outlier.shape = NA) +
+  labs(x = "Fine clusters") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+
+
+#This is the donor integrated LHb4 and 7 from the previous script, can use to visualize marker expression
+script_02_data_path = here('processed-data', '99_donor_cluster_replicability','02_LHb4_investigation')
+latHb_seurat = readRDS(paste0(script_02_data_path, '/multiome_LHb4_LHb7_integrated_seurat.rds'))
+colnames(latHb_seurat[[]])
+
+ 
+inhib_meta = latHb_seurat[[]]
+# Add the putative Inhibitory neuron annotations to the midSeurat object
+inhib_barcodes_1 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_4.1']
+inhib_barcodes_2 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_4.2']
+
+#Exclude them from the rest of the data set
+
+midSeurat$refined_mid_cluster_2 = midSeurat$mid_cluster
+midSeurat$refined_mid_cluster_2[rownames(midSeurat[[]]) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_4.1'
+midSeurat$refined_mid_cluster_2[rownames(midSeurat[[]]) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_4.2'
+
+my_colors_mid["Putative_Inhib_LHb_4.1"] <- "#8B0000"  # Dark red
+my_colors_mid["Putative_Inhib_LHb_4.2"] <- "#DC143C"  # Crimson red
+
+plt10 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "umap.integrated",
+                group.by = "refined_mid_cluster_2",
+                label.size = 3, cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "RNA UMAP cell types")
+
+
+plt10
+
