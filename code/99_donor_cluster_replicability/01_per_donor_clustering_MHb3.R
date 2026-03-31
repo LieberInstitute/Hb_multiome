@@ -15,6 +15,7 @@ library(dplyr)
 library(ggplot2)
 library(scater)
 library(scran)
+library(qs2)
 library(here)
 
 here::here()
@@ -28,13 +29,13 @@ if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
 
 
-multiome_path = here('processed-data', '08_spatial_registration_vs_multiome_snRNA-seq','mid')
+multiome_path = here('processed-data', '05_5_drop_doublets','01_drop_doublets_and_reDimReduce')
 
 #Multiome human data
-multiome_sce = readRDS(paste0(multiome_path, '/seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v5.rds'))
+multiome_sce = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multiomeHab_SCE.qs2'))
 assay(multiome_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(multiome_sce, 'counts'))
 
-multiome_sce
+
 
 
 #Set up color scale
@@ -49,23 +50,6 @@ names(color_palette_3) = c('LHb.1','LHb.1.3','LHb.1.3.4','LHb.2.7','LHb.4','LHb.
 color_palette = c(color_palette_1, color_palette_2, color_palette_3)
 
 
-#This doesn't have any saved dimension reductions
-#Going back to when the data was converted from Seurat object to SCE, the reductions were not included
-#See https://github.com/LieberInstitute/Hb_multiome/blob/master/code/08_spatial_registration_vs_multiome_snRNA-seq/01_multiome_rna_reference.R
-
-#From whaT I can tell, the original umaps were generated in Seurat, using 30 nearest neighbores
-#See https://github.com/LieberInstitute/Hb_multiome/blob/master/code/05_Clustering_ARCr/01_clustering_std_method.R
-
-#Example, clust_knn was an argument passed to the batch job, assuming that matches the k30 in the data object name
-#SeuratOBJ.1 <- RunUMAP(
-#  SeuratOBJ.1,
-#  n.neighbors = as.integer(clust_knn), # Default n.neighbors=30
-#  nn.name = "weighted.nn",
-#  reduction.name = "wnn.umap",
-#  reduction.key = "wnnUMAP_"
-#)
-
-
 #Here, we're going to start with the default scran and scatter, runPCA, runUMAP functions
 #The logcounts assay is the default used for PCA
 
@@ -73,8 +57,8 @@ color_palette = c(color_palette_1, color_palette_2, color_palette_3)
 Mhab_clusters = c('MHb.1','MHb.1.2','MHb.2','MHb.3')
 Mhab_sce = multiome_sce[, multiome_sce$merged_cluster == 'MHb']
 
-rm(multiome_sce)
-gc() 
+#rm(multiome_sce)
+#gc() 
 
 #This is uncorrected data, across all the donors
 # 1. Identify highly variable genes
@@ -221,6 +205,7 @@ keep_donors = c("S03_Hb_r", "S07_Hb_r", "S08_Hb_r", "S10_Hb_r", "S11_Hb_r", 'S12
 
 #Convert first to seurats
 multiome_seurat_list <- lapply(Mhab_sce_list[keep_donors], function(sce) {
+  altExps(sce) <- NULL
   as.Seurat(sce, counts = "counts", data = "cpm")
 })
 
@@ -256,10 +241,10 @@ for (i in seq_along(multiome_seurat_list)) {
 
 #Check out the UMAPs for each donor
 for (i in seq_along(multiome_seurat_list)) {
-  p <- DimPlot(multiome_seurat_list[[i]], reduction = "umap", group.by = 'seurat_clusters', label = TRUE) + 
+  p <- DimPlot(multiome_seurat_list[[i]], reduction = "umap", group.by = 'seurat_clusters', label = TRUE, pt.size = 2) + 
     ggtitle(names(multiome_seurat_list)[i])
   print(p)
-  p <- DimPlot(multiome_seurat_list[[i]], reduction = "umap",group.by = 'mid_cluster' , label = TRUE) + 
+  p <- DimPlot(multiome_seurat_list[[i]], reduction = "umap",group.by = 'mid_cluster' , label = TRUE, pt.size = 2) + 
     ggtitle(names(multiome_seurat_list)[i]) + scale_color_manual(values = color_palette)
   print(p)
 
@@ -325,7 +310,7 @@ MetaNeighbor::plotHeatmap(MN_best_aurocs,
 dev.off()
 
 #Get the metaclusters from the best vs next results, add those annotations to the full SCE object
-mclusters = extractMetaClusters(MN_best_aurocs, threshold = .5)
+mclusters = extractMetaClusters(MN_best_aurocs, threshold = .6)
 mclusters
 
 full_cluster_study_labels = paste(all_donor_sce$study_id, all_donor_sce$seurat_clusters, sep = "|")
@@ -353,6 +338,26 @@ pdf(file = paste0(plot_path, '/confusMat_metacluster_author_annots.pdf'), width 
 ComplexHeatmap::Heatmap(all_celltype_conf_mat, name = 'Proportion of cells', col = col_fun, column_title = 'Metacluster vs integrated mid-res' ,
 cluster_rows = TRUE, cluster_columns = TRUE, show_row_names = TRUE, show_column_names = TRUE )
 dev.off()
+
+colnames(colData(all_donor_sce))
+#Confusion matrix with the higher resolution existing clusters
+all_celltype_conf_mat = as.matrix(table(all_donor_sce$meta_cluster, all_donor_sce$cluster_ann))
+all_celltype_sum_vec = colSums(all_celltype_conf_mat)
+all_celltype_conf_mat  = sweep(all_celltype_conf_mat , 2, all_celltype_sum_vec, "/")
+
+#Filter for just the MHb clusters
+all_celltype_conf_mat = all_celltype_conf_mat[, grepl('MHb', colnames(all_celltype_conf_mat ))]
+
+col_fun = circlize::colorRamp2(c(0, 1), c("white", "red"))
+ComplexHeatmap::Heatmap(all_celltype_conf_mat, name = 'Proportion of cells', col = col_fun, column_title = 'Metacluster vs integrated high-res' ,
+cluster_rows = TRUE, cluster_columns = TRUE, show_row_names = TRUE, show_column_names = TRUE )
+
+pdf(file = paste0(plot_path, '/confusMat_metacluster_highRes_author_annots.pdf'), width = 8, height = 8, useDingbats = FALSE)
+ComplexHeatmap::Heatmap(all_celltype_conf_mat, name = 'Proportion of cells', col = col_fun, column_title = 'Metacluster vs integrated high-res' ,
+cluster_rows = TRUE, cluster_columns = TRUE, show_row_names = TRUE, show_column_names = TRUE )
+dev.off()
+
+
 
 logcounts(all_donor_sce) = log1p(cpm(all_donor_sce))
 dec <- modelGeneVar(all_donor_sce)
@@ -387,12 +392,17 @@ mc2_pareto = plot_pareto_markers(cross_donor_hab_markers, "meta_cluster2", min_r
 mc3_pareto = plot_pareto_markers(cross_donor_hab_markers, "meta_cluster3", min_recurrence = 0) + ggtitle('MetaCluster 3')
 mc4_pareto = plot_pareto_markers(cross_donor_hab_markers, "meta_cluster4", min_recurrence = 0) + ggtitle('MetaCluster 4')
 mc5_pareto = plot_pareto_markers(cross_donor_hab_markers, "meta_cluster5", min_recurrence = 0) + ggtitle('MetaCluster 5')
+mc6_pareto = plot_pareto_markers(cross_donor_hab_markers, "meta_cluster6", min_recurrence = 0) + ggtitle('MetaCluster 6')
+mc7_pareto = plot_pareto_markers(cross_donor_hab_markers, "meta_cluster7", min_recurrence = 0) + ggtitle('MetaCluster 7')
+
 
 mc1_pareto
 mc2_pareto
 mc3_pareto
 mc4_pareto
 mc5_pareto
+mc6_pareto
+mc7_pareto
 
 ggsave(plot = mc1_pareto, filename = 'meta_cluster1_pareto_plot.pdf', 
 path = plot_path, device = 'pdf', width = 8, height = 6, useDingbats = FALSE)
@@ -404,6 +414,21 @@ ggsave(plot = mc4_pareto, filename = 'meta_cluster4_pareto_plot.pdf',
 path = plot_path, device = 'pdf', width = 8, height = 6, useDingbats = FALSE)
 ggsave(plot = mc5_pareto, filename = 'meta_cluster5_pareto_plot.pdf', 
 path = plot_path, device = 'pdf', width = 8, height = 6, useDingbats = FALSE)
+ggsave(plot = mc6_pareto, filename = 'meta_cluster6_pareto_plot.pdf', 
+path = plot_path, device = 'pdf', width = 8, height = 6, useDingbats = FALSE)
+ggsave(plot = mc7_pareto, filename = 'meta_cluster7_pareto_plot.pdf', 
+path = plot_path, device = 'pdf', width = 8, height = 6, useDingbats = FALSE)
+
+
+
+#From all of the above, annotating the metaclustes
+#meta_cluster1 = MHb.1
+#meta_cluster2 = MHb.2
+#meta_cluster3 = MHb.1.2
+#meta_cluster4 = MHb.3
+#meta_cluster5 = MHb.1.2
+#meta_cluster6 = MHb.1
+#meta_cluster7 = oligos
 
 
 
@@ -455,6 +480,7 @@ plot = int_donor_plot, device = 'pdf', width = 8, height = 6, useDingbats = FALS
 
 #Check out the marker gene panels for the metaclusters
 #Source the bubble plot functions
+#meta_cluster3 actually has the highest expression of the cholinergic markers, so should be grouped with MHb2
 source(here('code','98_external_Hb_comparisons', 'bubble_plot_functions.R'))
 DefaultAssay(multiome_seurat_integrated) <- "RNA"
 p_bubble = get_bubble_plot(multiome_seurat_integrated, 
@@ -485,11 +511,31 @@ p_bubble[[2]]
 
 
 
+#Make adjustments
+#meta_cluster4 is MHb.3
+#meta_cluster3 is MHb.2
+#meta_cluster7 is oligodendrocytes
+
+#Keep everything else the same.
+
+colnames(multiome_seurat_integrated[[]])
+
+multiome_seurat_integrated$refined_mid_cluster = multiome_seurat_integrated$mid_cluster
+multiome_seurat_integrated$refined_mid_cluster[multiome_seurat_integrated$meta_cluster == "meta_cluster4"] = "MHb.3"
+multiome_seurat_integrated$refined_mid_cluster[multiome_seurat_integrated$meta_cluster == "meta_cluster3"] = "MHb.2"
+multiome_seurat_integrated$refined_mid_cluster[multiome_seurat_integrated$meta_cluster == "meta_cluster7"] = "Oligo"
+
+int_author_refined_clust_plot = DimPlot(multiome_seurat_integrated, reduction = "umap", group.by = "refined_mid_cluster", pt.size = 1) +
+  scale_color_manual(values = color_palette)
+int_author_refined_clust_plot
 
 
+p_bubble = get_bubble_plot(multiome_seurat_integrated, 
+  top_markers = c('CHAT', 'SLC5A7','SLC18A3', 'TAC1', 'TACR1','TAC3', 'GPR151', 'GAP43','SNAP25', 'POU4F1', 
+  'SLC17A6', 'SLC17A7', 'GAD1', 'GAD2', 'SLC32A1', 'MBP'),
+ sample_name = "Multiome Medial Habenula", group_col = "refined_mid_cluster")
 
-
-
-
+p_bubble[[1]]
+p_bubble[[2]]
 
   
