@@ -16,13 +16,10 @@ seur_path = here(
 link_path = here(
     'processed-data', '12_new_peaks', '01_link_peaks', 'all_data.parquet'
 )
-plot_path = here(
-    "plots", "12_new_peaks", "05_summary_heatmap", "heatmap.pdf"
-)
+plot_dir = here("plots", "12_new_peaks", "05_summary_heatmap")
 atac_assay = "ATAC_macs2_pseudo"
 rna_assay = "RNA"
-cell_type1 = "MHb.2"
-cell_type2 = "LHb.2.7"
+highlight_cell_type = c("MHb.2", "LHb.2.7")
 cor_thres = 0.3
 FDR_thres = 0.1
 
@@ -44,7 +41,7 @@ cell_type_colors = c(
     "MHb.3" = "#fa246a"
 )
 
-dir.create(dirname(plot_path), showWarnings = FALSE)
+dir.create(plot_dir, showWarnings = FALSE)
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
@@ -139,9 +136,24 @@ generate_summary_heatmap = function(
     }))
 
     # Create column annotation
+    cell_type_vec <- factor(
+        unlist(lapply(cell_types, function(ct) {
+            rep(ct, ncol(gene_mat_list[[ct]]) + ncol(peak_mat_list[[ct]]))
+        })),
+        levels = cell_types
+    )
+
+    data_type_colors <- c("Gene" = "#E69F00", "Peak" = "#56B4E9")
+
     col_ha <- HeatmapAnnotation(
+        `Cell Type` = cell_type_vec,
         `Data Type` = data_type_vec,
-        show_legend = TRUE
+        col = list(
+            `Cell Type` = cell_type_colors,
+            `Data Type` = data_type_colors
+        ),
+        show_legend = TRUE,
+        show_annotation_name = FALSE
     )
 
     # Get row orderings by clustering on gene matrices per cell type
@@ -172,7 +184,8 @@ generate_summary_heatmap = function(
     # Create row annotation
     row_ha <- rowAnnotation(
         `Target Cell Type` = anno_df$target_cell_type,
-        col = list(`Target Cell Type` = cell_type_colors)
+        col = list(`Target Cell Type` = cell_type_colors),
+        show_annotation_name = FALSE
     )
 
     # Create the main heatmap
@@ -186,6 +199,9 @@ generate_summary_heatmap = function(
         row_split = anno_df$target_cell_type,
         cluster_row_slices = FALSE,
         show_row_names = FALSE,
+        show_column_names = FALSE,
+        row_title = "Link Cell Type",
+        column_title = "Measured Cell Type",
         left_annotation = row_ha,
         top_annotation = col_ha,
         border = TRUE,
@@ -272,8 +288,26 @@ count_df = bind_rows(count_df_list) |>
 cell_type_colors = cell_type_colors[
     names(cell_type_colors) %in% count_df$cell_type
 ]
+
+#   All cell types
 generate_summary_heatmap(
-    count_df, cell_type_colors, plot_path, pdf_width = 20, pdf_height = 18
+    count_df,
+    cell_type_colors,
+    plot_path = file.path(plot_dir, "all_cell_types.pdf"),
+    pdf_width = 20,
+    pdf_height = 18
+)
+
+#   Highlighted cell types
+generate_summary_heatmap(
+    count_df |>
+        filter(
+            target_cell_type %in% highlight_cell_type,
+            cell_type %in% highlight_cell_type
+        ),
+    cell_type_colors[highlight_cell_type],
+    plot_path = file.path(plot_dir, "highlighted_cell_types.pdf"),
+    pdf_width = 10, pdf_height = 7
 )
 
 session_info()
