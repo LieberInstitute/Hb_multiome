@@ -11,6 +11,7 @@ library(SuperCell)
 library(here)
 library(qs2)
 library(sessioninfo)
+library(GenomicRanges)
 
 seur_in_path = here(
     "processed-data", "12_new_peaks", "07_non_pb_seur",

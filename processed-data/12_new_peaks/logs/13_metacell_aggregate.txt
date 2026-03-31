@@ -1,8 +1,8 @@
 **** Job starts ****
-Tue Mar 31 09:56:41 AM EDT 2026
+Tue Mar 31 02:15:45 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30450121
+Job id: 30460842
 Job name: 13_metacell_aggregate
 Node name: compute-168
 Task id: 
@@ -36,6 +36,90 @@ The following objects are masked from ‘package:base’:
 
 here() starts at /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome
 qs2 0.1.7
+Loading required package: stats4
+Loading required package: BiocGenerics
+Loading required package: generics
+
+Attaching package: ‘generics’
+
+The following object is masked from ‘package:lubridate’:
+
+    as.difftime
+
+The following object is masked from ‘package:dplyr’:
+
+    explain
+
+The following objects are masked from ‘package:base’:
+
+    as.difftime, as.factor, as.ordered, intersect, is.element, setdiff,
+    setequal, union
+
+
+Attaching package: ‘BiocGenerics’
+
+The following object is masked from ‘package:dplyr’:
+
+    combine
+
+The following objects are masked from ‘package:stats’:
+
+    IQR, mad, sd, var, xtabs
+
+The following objects are masked from ‘package:base’:
+
+    anyDuplicated, aperm, append, as.data.frame, basename, cbind,
+    colnames, dirname, do.call, duplicated, eval, evalq, Filter, Find,
+    get, grep, grepl, is.unsorted, lapply, Map, mapply, match, mget,
+    order, paste, pmax, pmax.int, pmin, pmin.int, Position, rank,
+    rbind, Reduce, rownames, sapply, saveRDS, table, tapply, unique,
+    unsplit, which.max, which.min
+
+Loading required package: S4Vectors
+
+Attaching package: ‘S4Vectors’
+
+The following objects are masked from ‘package:lubridate’:
+
+    second, second<-
+
+The following objects are masked from ‘package:dplyr’:
+
+    first, rename
+
+The following object is masked from ‘package:tidyr’:
+
+    expand
+
+The following object is masked from ‘package:utils’:
+
+    findMatches
+
+The following objects are masked from ‘package:base’:
+
+    expand.grid, I, unname
+
+Loading required package: IRanges
+
+Attaching package: ‘IRanges’
+
+The following object is masked from ‘package:sp’:
+
+    %over%
+
+The following object is masked from ‘package:lubridate’:
+
+    %within%
+
+The following objects are masked from ‘package:dplyr’:
+
+    collapse, desc, slice
+
+The following object is masked from ‘package:purrr’:
+
+    reduce
+
+Loading required package: GenomeInfoDb
 metacells identified
 metadata assignement
 Warning messages:
@@ -53,7 +137,13 @@ Use 'anyNA()' instead.
 See help("Deprecated")
 Donor purity:
    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
- 0.1842  0.3497  0.4545  0.5064  0.6364  1.0000 
+ 0.1667  0.3889  0.5000  0.5509  0.6923  1.0000 
+Number of metacells per cell type:
+
+ Astrocyte       Endo Excit.Thal Inhib.Thal  LHb.1.3.4    LHb.2.7      LHb.4 
+       143         16        502        252        163        184        540 
+     MHb.1    MHb.1.2      MHb.2      MHb.3  Microglia      Oligo        OPC 
+       226        245        140          9         27        289         23 
 null device 
           1 
 Performing TF-IDF normalization
@@ -90,7 +180,7 @@ Calculating feature variances of standardized and clipped values
 ─ Packages ───────────────────────────────────────────────────────────────────
  package          * version date (UTC) lib source
  abind              1.4-8   2024-09-12 [1] CRAN (R 4.5.0)
- BiocGenerics       0.54.0  2025-04-15 [1] Bioconduc~
+ BiocGenerics     * 0.54.0  2025-04-15 [1] Bioconduc~
  BiocParallel       1.42.1  2025-06-01 [1] Bioconduc~
  Biostrings         2.76.0  2025-04-15 [2] Bioconductor 3.21 (R 4.5.0)
  bitops             1.0-9   2024-10-03 [2] CRAN (R 4.5.0)
@@ -114,10 +204,10 @@ Calculating feature variances of standardized and clipped values
  foreach            1.5.2   2022-02-02 [2] CRAN (R 4.5.0)
  future           * 1.49.0  2025-05-09 [2] CRAN (R 4.5.0)
  future.apply       1.11.3  2024-10-27 [2] CRAN (R 4.5.0)
- generics           0.1.4   2025-05-09 [1] CRAN (R 4.5.0)
- GenomeInfoDb       1.44.0  2025-04-15 [2] Bioconductor 3.21 (R 4.5.0)
+ generics         * 0.1.4   2025-05-09 [1] CRAN (R 4.5.0)
+ GenomeInfoDb     * 1.44.0  2025-04-15 [2] Bioconductor 3.21 (R 4.5.0)
  GenomeInfoDbData   1.2.14  2025-05-21 [2] Bioconductor
- GenomicRanges      1.60.0  2025-04-15 [2] Bioconductor 3.21 (R 4.5.0)
+ GenomicRanges    * 1.60.0  2025-04-15 [2] Bioconductor 3.21 (R 4.5.0)
  ggplot2          * 3.5.2   2025-04-09 [1] CRAN (R 4.5.0)
  ggrepel            0.9.6   2024-09-07 [1] CRAN (R 4.5.0)
  ggridges           0.5.6   2024-01-23 [2] CRAN (R 4.5.0)
@@ -134,7 +224,7 @@ Calculating feature variances of standardized and clipped values
  httr               1.4.7   2023-08-15 [1] CRAN (R 4.5.0)
  ica                1.0-3   2022-07-08 [2] CRAN (R 4.5.0)
  igraph             2.1.4   2025-01-23 [1] CRAN (R 4.5.0)
- IRanges            2.42.0  2025-04-15 [1] Bioconduc~
+ IRanges          * 2.42.0  2025-04-15 [1] Bioconduc~
  irlba              2.3.5.1 2022-10-03 [1] CRAN (R 4.5.0)
  iterators          1.0.14  2022-02-05 [2] CRAN (R 4.5.0)
  jsonlite           2.0.0   2025-03-27 [1] CRAN (R 4.5.0)
@@ -184,7 +274,7 @@ Calculating feature variances of standardized and clipped values
  Rsamtools          2.24.0  2025-04-15 [2] Bioconductor 3.21 (R 4.5.0)
  RSpectra           0.16-2  2024-07-18 [1] CRAN (R 4.5.0)
  Rtsne              0.17    2023-12-07 [2] CRAN (R 4.5.0)
- S4Vectors          0.48.0  2025-10-29 [1] Bioconductor 3.22 (R 4.5.0)
+ S4Vectors        * 0.48.0  2025-10-29 [1] Bioconductor 3.22 (R 4.5.0)
  scales             1.4.0   2025-04-24 [1] CRAN (R 4.5.0)
  scattermore        1.2     2023-06-12 [1] CRAN (R 4.5.0)
  sctransform        0.4.2   2025-04-30 [2] CRAN (R 4.5.0)
@@ -230,4 +320,4 @@ Calculating feature variances of standardized and clipped values
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Tue Mar 31 10:12:34 AM EDT 2026
+Tue Mar 31 02:49:07 PM EDT 2026
