@@ -702,17 +702,24 @@ onevsall_markers %>% filter(gene == 'LAMP5') %>% arrange(desc(average_expression
 
 
 ## Seurat object with the mid-level cluster annots and dim reductions saved
-midSeurat_Dir <- here(
-    "processed-data",
-    "05_Clustering_ARCr",
-    "22_add_mid_level_clustering"
-)
-Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
+#midSeurat_Dir <- here(
+#    "processed-data",
+#    "05_Clustering_ARCr",
+#    "22_add_mid_level_clustering"
+#)
+#Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
+#
+#mid_file_name <- here(midSeurat_Dir, Seurat_base_name)
+#
+#midSeurat = readRDS(mid_file_name)
 
-mid_file_name <- here(midSeurat_Dir, Seurat_base_name)
 
-midSeurat = readRDS(mid_file_name)
+#Multiome human data, seurat object
+midSeurat = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multiomeHab_seurat.qs2'))
+
 midSeurat
+
+
 midSeurat_meta = midSeurat[[]]
 #Double check the cell barcodes match up
 table(rownames(inhib_meta) %in% rownames(midSeurat_meta))
@@ -787,12 +794,6 @@ for (category in c("Oligo", "Astrocyte", "OPC", "Microglia", "Endo", "Inhib.Thal
 
 ## =============================================================================
 
-message("Processing UMAP ...")
-
-## extract suffix name to give unique name to plots
-seurat_name <- stringr::str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
-
-Reductions(midSeurat)
 
 #Verify original UMAP
 plt1 <- DimPlot(midSeurat, 
@@ -807,9 +808,8 @@ plt1 <- DimPlot(midSeurat,
 #Looks good
 plt1
 
-my_colors_mid
-my_colors_mid["Putative_Inhib_LHb_1"] <- "#8B0000"  # Dark red
-my_colors_mid["Putative_Inhib_LHb_2"] <- "#DC143C"  # Crimson red
+my_colors_mid["Putative_Inhib_LHb_4.1"] <- "#8B0000"  # Dark red
+my_colors_mid["Putative_Inhib_LHb_4.2"] <- "#DC143C"  # Crimson red
 #Highlight the putative inhibitory clusters with red
 plt2 <- DimPlot(midSeurat, 
                 label = TRUE, 
@@ -821,7 +821,7 @@ plt2 <- DimPlot(midSeurat,
     labs(title = "WNN cell types (Mid-resolution)")
 plt2
 
-ggsave(here(plot_path, "WNN_umap_mid_with_inhibLHb.pdf"), plt2, width = 7, height = 7)
+ggsave(here(plot_path, "WNN_umap_mid_with_inhibLHb.pdf"), plt2, width = 7, height = 7, device = 'pdf')
 
 full_wnn_gad2_p = FeaturePlot(midSeurat, features = "GAD2",reduction = "wnn.umap",label = FALSE,pt.size = 1, alpha = .5) +
   labs(title = "GAD2 expression on WNN UMAP") + scale_color_gradient(low = "white", high = "red", name = 'log_counts')
@@ -832,36 +832,42 @@ full_wnn_vgat_p = FeaturePlot(midSeurat, features = "SLC32A1",reduction = "wnn.u
 full_wnn_gad2_p 
 full_wnn_vgat_p 
 
+ggsave(here(plot_path, "WNN_umap_mid_GAD2_logcounts.pdf"), full_wnn_gad2_p , 
+width = 7, height = 7, useDingbats = FALSE, device = 'pdf')
+
+ggsave(here(plot_path, "WNN_umap_mid_VGAT_logcounts.pdf"), full_wnn_vgat_p , 
+width = 7, height = 7, useDingbats = FALSE, device = 'pdf')
+
 # Get metadata
 meta <- midSeurat@meta.data
 
 # Count cells in each cluster type
 total_mhb_lhb <- sum(grepl("^(MHb|LHb)", meta$refined_mid_cluster))
-inhib_lhb <- sum(meta$refined_mid_cluster %in% c("Putative_Inhib_LHb_1", "Putative_Inhib_LHb_2"))
+inhib_lhb <- sum(meta$refined_mid_cluster %in% c("Putative_Inhib_LHb_4.1", "Putative_Inhib_LHb_4.2"))
 
 # Calculate percentage
 pct_inhib_total <- (inhib_lhb / total_mhb_lhb) * 100
 pct_inhib_total
 
-#6.98% of total habenula cells
+#7.49% of total habenula cells
 
 
 #Just Lateral
 total_lhb <- sum(grepl("LHb", meta$refined_mid_cluster))
-inhib_lhb <- sum(meta$refined_mid_cluster %in% c("Putative_Inhib_LHb_1", "Putative_Inhib_LHb_2"))
+inhib_lhb <- sum(meta$refined_mid_cluster %in% c("Putative_Inhib_LHb_4.1", "Putative_Inhib_LHb_4.2"))
 
 # Calculate percentage
 pct_inhib_lhb <- (inhib_lhb / total_lhb) * 100
 pct_inhib_lhb
 
-#10.15% of total lateral habenula cells
+#11.08% of total lateral habenula cells
 
 #Just Lateral LHb4 and 7
-total_lhb <- sum(grepl("^(LHb.4|LHb.7)", meta$refined_mid_cluster))
-inhib_lhb <- sum(meta$refined_mid_cluster %in% c("Putative_Inhib_LHb_1", "Putative_Inhib_LHb_2"))
+total_lhb <- sum(grepl("^(LHb.4)", meta$refined_mid_cluster))
+inhib_lhb <- sum(meta$refined_mid_cluster %in% c("Putative_Inhib_LHb_4.1", "Putative_Inhib_LHb_4.2"))
 
 # Calculate percentage
 pct_inhib_lhb <- (inhib_lhb / total_lhb) * 100
 pct_inhib_lhb
 
-#16.76% of total lateral LHb.4 and .7 cells
+#19.14% of total lateral LHb.4 cells
