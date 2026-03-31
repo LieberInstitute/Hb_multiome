@@ -10,7 +10,7 @@
 library(SingleCellExperiment)
 library(Seurat)
 library(MetaMarkers)
-#library(MetaNeighbor)
+library(qs2)
 library(dplyr)
 library(ggplot2)
 library(scater)
@@ -31,12 +31,15 @@ if (!dir.exists(plot_path)) dir.create(plot_path)
 source(here('code','98_external_Hb_comparisons', 'bubble_plot_functions.R'))
 
 
-multiome_path = here('processed-data', '08_spatial_registration_vs_multiome_snRNA-seq','mid')
+multiome_path = here('processed-data', '05_5_drop_doublets','01_drop_doublets_and_reDimReduce')
 
 #Multiome human data
-multiome_sce = readRDS(paste0(multiome_path, '/seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v5.rds'))
+multiome_sce = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multiomeHab_SCE.qs2'))
 assay(multiome_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(multiome_sce, 'counts'))
-colnames(colData(multiome_sce))
+
+
+## Seurat object with the mid-level cluster annots and dim reductions saved
+midSeurat = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multiomeHab_seurat.qs2'))
 
 #This is the donor integrated LHb4 and 7 from the previous script, can use to visualize marker expression
 script_02_data_path = here('processed-data', '99_donor_cluster_replicability','02_LHb4_investigation')
@@ -164,19 +167,6 @@ multiome_seurat_integrated[[]]
 #Adapting code from code/05_Clustering_ARCr/22_add_mid_level_clustering.R
 #https://github.com/LieberInstitute/Hb_multiome/blob/ba13de14c5616b0488eaaab1800199209f89a882/code/05_Clustering_ARCr/22_add_mid_level_clustering.R#L115-L191
 
-
-## Seurat object with the mid-level cluster annots and dim reductions saved
-midSeurat_Dir <- here(
-    "processed-data",
-    "05_Clustering_ARCr",
-    "22_add_mid_level_clustering"
-)
-Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
-
-mid_file_name <- here(midSeurat_Dir, Seurat_base_name)
-
-midSeurat = readRDS(mid_file_name)
-
 ## =============================================================================
 ## Picked up Hex-color codes similar across cell-type
 
@@ -218,12 +208,6 @@ for (category in c("Oligo", "Astrocyte", "OPC", "Microglia", "Endo", "Inhib.Thal
 
 ## =============================================================================
 
-message("Processing UMAP ...")
-
-## extract suffix name to give unique name to plots
-seurat_name <- stringr::str_extract(Seurat_base_name, pattern = "k[3:4]0\\_C\\.\\w*")
-
-Reductions(midSeurat)
 
 #Verify original UMAP
 plt1 <- DimPlot(midSeurat, 
