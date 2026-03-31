@@ -30,6 +30,7 @@
 
 library(SingleCellExperiment)
 library(MetaMarkers)
+library(qs2)
 library(dplyr)
 library(ggplot2)
 library(scater)
@@ -47,10 +48,10 @@ if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
 
 
-multiome_path = here('processed-data', '08_spatial_registration_vs_multiome_snRNA-seq','mid')
+multiome_path = here('processed-data', '05_5_drop_doublets','01_drop_doublets_and_reDimReduce')
 
 #Multiome human data
-multiome_sce = readRDS(paste0(multiome_path, '/seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_v5.rds'))
+multiome_sce = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multiomeHab_SCE.qs2'))
 assay(multiome_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(multiome_sce, 'counts'))
 
 # Add in the putative inhibitory cluster annotations
@@ -58,13 +59,13 @@ inhib_data_path = here('processed-data', '99_donor_cluster_replicability','02_LH
 multiome_seurat_integrated = readRDS(paste0(inhib_data_path, '/multiome_LHb4_LHb7_integrated_seurat.rds'))
 inhib_meta = multiome_seurat_integrated[[]]
 
-inhib_barcodes_1 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_1']
-inhib_barcodes_2 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_2']
+inhib_barcodes_1 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_4.1']
+inhib_barcodes_2 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putative_Inhib_LHb_4.2']
 
 # Add annotations
 multiome_sce$refined_mid_cluster = multiome_sce$mid_cluster
-multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_1'
-multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_2'
+multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_4.1'
+multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_4.2'
 
 table(multiome_sce$refined_mid_cluster, multiome_sce$mid_cluster)
 
@@ -73,8 +74,8 @@ table(multiome_sce$refined_mid_cluster, multiome_sce$orig.ident)
 
 #Fine resolution annotations
 multiome_sce$refined_cluster_ann = as.character(multiome_sce$cluster_ann)
-multiome_sce$refined_cluster_ann[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_1'
-multiome_sce$refined_cluster_ann[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_2'
+multiome_sce$refined_cluster_ann[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_4.1'
+multiome_sce$refined_cluster_ann[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_4.2'
 table(multiome_sce$refined_cluster_ann )
 
 
