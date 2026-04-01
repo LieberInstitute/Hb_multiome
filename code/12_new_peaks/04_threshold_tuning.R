@@ -27,7 +27,7 @@ out_path = here(
     'processed-data', '12_new_peaks', '04_threshold_tuning',
     'marker_enrichment_metrics.csv'
 )
-plot_dir = here("plots", "12_new_peaks")
+plot_dir = here("plots", "12_new_peaks", "04_threshold_tuning")
 FDR_thresholds = c(0.01, 0.05, 0.1, 0.15, 0.2, 1)
 cor_thresholds = 0.05 * seq(0, 10)
 marker_FDR = 0.1
@@ -38,19 +38,7 @@ duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
 fallback_config(info = FALSE)
 
 dir.create(dirname(out_path), showWarnings = FALSE)
-
-################################################################################
-#   Functions
-################################################################################
-
-is_unique_enough = function(target_cell_type, other_cell_type) {
-    unique_enough = identical(target_cell_type, unique(other_cell_type)) ||
-        (
-            grepl('^[ML]Hb', target_cell_type) &&
-            all(grepl('^[ML]Hb', other_cell_type))
-        )
-    return(unique_enough)
-}
+dir.create(plot_dir, showWarnings = FALSE)
 
 ################################################################################
 #   Import markers
@@ -150,45 +138,53 @@ metric_df = metric_df |>
         FDR_threshold = factor(
             FDR_threshold, levels = sort(unique(FDR_threshold))
         ),
-        fisher_log10p = -log10(fisher_p)
+        fisher_log10p = -log10(fisher_p),
+        fisher_logOR = replace_na(log(fisher_OR + 1), 0)
     )
 
-p = ggplot(
-        metric_df,
-        aes(x = FDR_threshold, y = cor_threshold, fill = fisher_log10p)
-    ) +
-    geom_tile() +
-    scale_fill_viridis_c() +
-    facet_wrap(~cell_type) +
-    labs(
-        x = "FDR Threshold",
-        y = "Correlation Threshold",
-        fill = "Enrichment -log10(p)",
-        title = "Marker Enrichment Across Thresholds"
-    ) +
-    theme_bw(base_size = 15) +
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
-pdf(file.path(plot_dir, "threshold_heatmap_faceted.pdf"))
-print(p)
-dev.off()
-
-p = metric_df |>
-    group_by(FDR_threshold, cor_threshold) |>
-    summarize(mean_log10p = mean(fisher_log10p)) |>
-    ggplot(aes(x = FDR_threshold, y = cor_threshold, fill = mean_log10p)) +
+for (this_metric in c("fisher_log10p", "fisher_logOR")) {
+    if (this_metric == "fisher_log10p") {
+        fill_title = "Enrichment\n-log10(p-value)"
+    } else if (this_metric == "fisher_logOR") {
+        fill_title = "Enrichment\nlog(OR + 1)"
+    }
+  
+    p = ggplot(
+            metric_df,
+            aes(x = FDR_threshold, y = cor_threshold, fill = !!sym(this_metric))
+        ) +
         geom_tile() +
         scale_fill_viridis_c() +
+        facet_wrap(~cell_type) +
         labs(
             x = "FDR Threshold",
             y = "Correlation Threshold",
-            fill = "Mean Enrichment -log10(p)",
-            title = "Mean Marker Enrichment Across Thresholds"
+            fill = fill_title,
+            title = "Marker Enrichment Across Thresholds"
         ) +
         theme_bw(base_size = 15) +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
-pdf(file.path(plot_dir, "threshold_heatmap_mean.pdf"))
-print(p)
-dev.off()
+    pdf(file.path(plot_dir, sprintf("faceted_%s.pdf", this_metric)))
+    print(p)
+    dev.off()
+
+    p = metric_df |>
+        group_by(FDR_threshold, cor_threshold) |>
+        summarize(mean_metric = mean(!!sym(this_metric))) |>
+        ggplot(aes(x = FDR_threshold, y = cor_threshold, fill = mean_metric)) +
+            geom_tile() +
+            scale_fill_viridis_c() +
+            labs(
+                x = "FDR Threshold",
+                y = "Correlation Threshold",
+                fill = paste("Mean", fill_title)
+            ) +
+            theme_bw(base_size = 15) +
+            theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+    pdf(file.path(plot_dir, sprintf("mean_%s.pdf", this_metric)))
+    print(p)
+    dev.off()
+}
 
 session_info()
   
