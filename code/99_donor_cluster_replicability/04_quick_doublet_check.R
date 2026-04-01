@@ -13,6 +13,68 @@ library(here)
 here::here()
 
 
+#Original Seurat dim Reductions
+
+## Seurat object with the mid-level cluster annots and dim reductions saved
+midSeurat_Dir <- here(
+    "processed-data",
+    "05_Clustering_ARCr",
+    "22_add_mid_level_clustering"
+)
+Seurat_base_name <- "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds"
+
+mid_file_name <- here(midSeurat_Dir, Seurat_base_name)
+
+midSeurat = readRDS(mid_file_name)
+midSeurat
+
+my_colors <- c(
+    LHb = "#1f78b4",
+    MHb = "#ad1d8c",
+    Oligo = "#384a08",
+    Astrocyte = "#532222", 
+    OPC = "#829454",
+    Microglia = "#141b02",
+    Endo = "#d95f02",
+    Inhib_Thal = "#9a9fe7",
+    Excit_Thal = "#42467b",
+    Thal = "#4d55b7"
+)
+
+## assign color gradients to mid resolution clusters based on Broad cell-types
+
+# extract LHb and MHb clusters
+cluster_levels <- levels(midSeurat)
+cluster_levels
+LHb_clusters <- grep("LHb", cluster_levels, value = TRUE)
+MHb_clusters <- grep("MHb", cluster_levels, value = TRUE)
+
+# Create tonal gradients for LHb and MHb
+LHb_colors <- colorspace::sequential_hcl(length(LHb_clusters), h = 210, c = 80, l = c(30, 80))
+MHb_colors <- colorspace::sequential_hcl(length(MHb_clusters), h = 320, c = 80, l = c(30, 80))
+
+# Build full cluster color map
+my_colors_mid <- setNames(rep("#bdbdbd", length(cluster_levels)), cluster_levels)
+my_colors_mid[LHb_clusters] <- LHb_colors
+my_colors_mid[MHb_clusters] <- MHb_colors
+
+# assign base color for other types from your existing palette
+for (category in c("Oligo", "Astrocyte", "OPC", "Microglia", "Endo", "Inhib.Thal", "Excit.Thal", "Thal")) {
+    matched <- grep(category, cluster_levels, value = TRUE)
+    my_colors_mid[matched] <- my_colors[[gsub("\\.", "_", category)]]
+}
+Reductions(midSeurat)
+plt1 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "umap.unintegrated",
+                group.by = "orig.ident",
+                label.size = 3) + 
+    NoLegend() +
+    labs(title = "RNA UMAP cell types (Mid-resolution)")
+
+plt1
+
+
 multiome_path = here('processed-data', '08_spatial_registration_vs_multiome_snRNA-seq','mid')
 
 #Multiome human data
