@@ -9,14 +9,15 @@
 library(here)
 library(tidyverse)
 library(sessioninfo)
+library(duckplyr)
 
 cell_types = c(
     'Astrocyte', 'Endo', 'Excit.Thal', 'Inhib.Thal', 'LHb.1', 'LHb.1.3',
     'LHb.1.3.4', 'LHb.2.7', 'LHb.4', 'LHb.7', 'MHb.1', 'MHb.1.2', 'MHb.2',
     'MHb.3', 'Microglia', 'Oligo', 'OPC', 'Thal'
 )
-result_paths = here(
-    'processed-data', '12_new_peaks', '01_link_peaks', '%s_%s.csv.gz'
+link_path = here(
+    'processed-data', '12_new_peaks', '01_link_peaks', 'all_data.parquet'
 )
 marker_path = here(
     'processed-data', '10_MAGMA', 'RNA', 'registration_banksy',
@@ -31,6 +32,10 @@ FDR_thresholds = c(0.01, 0.05, 0.1, 0.15, 0.2, 1)
 cor_thresholds = 0.05 * seq(0, 10)
 marker_FDR = 0.1
 max_markers = 100
+
+num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
+duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
+fallback_config(info = FALSE)
 
 dir.create(dirname(out_path), showWarnings = FALSE)
 
@@ -69,41 +74,35 @@ marker_df = readRDS(marker_path)$enrichment |>
 #   Collect odds ratio for enrichment of markers for each cell type
 ################################################################################
 
+all_possible_genes = read_parquet_duckdb(link_path, prudence = 'stingy') |>
+    distinct(gene) |>
+    collect() |>
+    pull(gene)
+
 metric_df_list = list()
-for (target_cell_type in cell_types) {
-    result_df_list = list()
-    for (other_cell_type in cell_types) {
-        result_df_list[[other_cell_type]] = read_csv(
-            sprintf(result_paths, target_cell_type, other_cell_type),
-            show_col_types = FALSE
-        ) |>
-        select(peak, gene, score, FDR, other_cell_type)
-    }
-    result_df = bind_rows(result_df_list)
+for (FDR_threshold in FDR_thresholds) {
+    for (cor_threshold in cor_thresholds) {
+        link_unique_df = read_parquet_duckdb(link_path, prudence = 'lavish') |>
+            filter(score > abs(cor_threshold), FDR < FDR_threshold) |>
+            distinct(peak, gene, other_cell_type) |>
+            group_by(peak, gene) |>
+            filter(
+                (n() == 1) | all(grepl('^[ML]Hb', unique(other_cell_type)))
+            ) |>
+            ungroup() |>
+            dplyr::rename(cell_type = other_cell_type) |>
+            collect()
 
-    for (FDR_threshold in FDR_thresholds) {
-        for (cor_threshold in cor_thresholds) {
-            linked_genes = result_df |>
-                #   Filter all linked peaks by thresholds
-                filter(FDR <= FDR_threshold, abs(score) >= cor_threshold) |>
-                #   Take linked peaks now present only in the target cell type,
-                #   or only among Hb cell types if the target is a Hb cell type
-                group_by(peak, gene) |>
-                filter(is_unique_enough(target_cell_type, other_cell_type)) |>
-                ungroup() |>
-                #   Then grab their unique genes
+        for (this_cell_type in cell_types) {
+            linked_genes = link_unique_df |>
+                filter(cell_type == this_cell_type) |>
                 pull(gene) |>
                 unique()
-
+            
             these_markers = marker_df |>
-                filter(cell_type == target_cell_type) |>
+                filter(cell_type == this_cell_type) |>
                 pull(gene)
-            
-            # Get all genes that could potentially be linked
-            all_possible_genes = result_df |>
-                pull(gene) |>
-                unique()
-            
+          
             # Build 2x2 contingency table
             # Rows: is_linked (yes/no), Cols: is_marker (yes/no)
             in_linked_and_marker = sum(linked_genes %in% these_markers)
@@ -126,7 +125,7 @@ for (target_cell_type in cell_types) {
             fisher_result = fisher.test(contingency_table, alternative = "greater")
             
             metric_df_list[[length(metric_df_list) + 1]] = tibble(
-                target_cell_type = target_cell_type,
+                cell_type = this_cell_type,
                 FDR_threshold = !!FDR_threshold,
                 cor_threshold = !!cor_threshold,
                 num_linked_genes = length(linked_genes),
@@ -160,7 +159,7 @@ p = ggplot(
     ) +
     geom_tile() +
     scale_fill_viridis_c() +
-    facet_wrap(~target_cell_type) +
+    facet_wrap(~cell_type) +
     labs(
         x = "FDR Threshold",
         y = "Correlation Threshold",
@@ -192,3 +191,4 @@ print(p)
 dev.off()
 
 session_info()
+  
