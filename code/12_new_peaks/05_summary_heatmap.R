@@ -58,12 +58,6 @@ generate_summary_heatmap = function(
     stopifnot(setequal(count_df$target_cell_type, names(cell_type_colors)))
   
     count_df = count_df |>
-        group_by(row_id) |>
-        mutate(
-            peak_value = (peak_value - mean(peak_value)) / sd(peak_value),
-            gene_value = (gene_value - mean(gene_value)) / sd(gene_value)
-        ) |>
-        ungroup() |>
         mutate(
             target_cell_type = factor(
                 target_cell_type, levels = names(cell_type_colors)
@@ -113,20 +107,7 @@ generate_summary_heatmap = function(
         c("#000004FF", "#FCFDBFFF")
     )
 
-    # Create column split and data type vectors
     cell_types <- names(cell_type_colors)
-    col_split_labels <- unlist(lapply(cell_types, function(ct) {
-        c(
-            rep(paste0(ct, " - Gene"), ncol(gene_mat_list[[ct]])),
-            rep(paste0(ct, " - Peak"), ncol(peak_mat_list[[ct]]))
-        )
-    }))
-    col_split <- factor(
-        col_split_labels,
-        levels = unlist(lapply(
-            cell_types, function(ct) paste0(ct, c(" - Gene", " - Peak"))
-        ))
-    )
 
     data_type_vec <- unlist(lapply(cell_types, function(ct) {
         c(
@@ -156,21 +137,6 @@ generate_summary_heatmap = function(
         show_annotation_name = FALSE
     )
 
-    # Get row orderings by clustering on gene matrices per cell type
-    full_row_order <- c()
-    for (ct in cell_types) {
-        rows_ct <- which(anno_df$target_cell_type == ct)
-        if (length(rows_ct) > 0) {
-            dummy_ht <- Heatmap(
-                gene_mat_list[[ct]][rows_ct, , drop = FALSE],
-                cluster_columns = FALSE
-            )
-            full_row_order <- c(
-                full_row_order, rows_ct[row_order(dummy_ht)]
-            )
-        }
-    }
-
     # Map colors to the combined matrix
     color_mat <- matrix(NA, nrow = nrow(combined_mat), ncol = ncol(combined_mat))
     for (i in seq_len(ncol(combined_mat))) {
@@ -192,12 +158,10 @@ generate_summary_heatmap = function(
     ht <- Heatmap(
         combined_mat,
         name = "Z-score",
-        column_split = col_split,
         cluster_columns = FALSE,
-        cluster_rows = FALSE,
-        row_order = full_row_order,
         row_split = anno_df$target_cell_type,
         cluster_row_slices = FALSE,
+        show_row_dend = FALSE,
         show_row_names = FALSE,
         show_column_names = FALSE,
         row_title = "Link Cell Type",
@@ -283,7 +247,14 @@ count_df = bind_rows(count_df_list) |>
     filter(
         target_cell_type %in% names(cell_type_colors),
         cell_type %in% names(cell_type_colors)
-    )
+    ) |>
+    #   Z-score across all cell types (for a link)
+    group_by(row_id) |>
+    mutate(
+        peak_value = (peak_value - mean(peak_value)) / sd(peak_value),
+        gene_value = (gene_value - mean(gene_value)) / sd(gene_value)
+    ) |>
+    ungroup()
 
 cell_type_colors = cell_type_colors[
     names(cell_type_colors) %in% count_df$cell_type
@@ -293,9 +264,7 @@ cell_type_colors = cell_type_colors[
 generate_summary_heatmap(
     count_df,
     cell_type_colors,
-    plot_path = file.path(plot_dir, "all_cell_types.pdf"),
-    pdf_width = 20,
-    pdf_height = 18
+    plot_path = file.path(plot_dir, "all_cell_types.pdf")
 )
 
 #   Highlighted cell types
@@ -306,8 +275,7 @@ generate_summary_heatmap(
             cell_type %in% highlight_cell_type
         ),
     cell_type_colors[highlight_cell_type],
-    plot_path = file.path(plot_dir, "highlighted_cell_types.pdf"),
-    pdf_width = 10, pdf_height = 7
+    plot_path = file.path(plot_dir, "highlighted_cell_types.pdf")
 )
 
 session_info()
