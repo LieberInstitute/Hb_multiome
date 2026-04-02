@@ -42,13 +42,14 @@ dir.create(dirname(out_path), showWarnings = FALSE)
 message(Sys.time(), ' | Loading Seurat object')
 seur = qs_read(seur_path)
 
+seur = RegionStats(
+    object = seur, assay = "ATAC", genome = BSgenome.Hsapiens.UCSC.hg38
+)
+
 message(Sys.time(), ' | Subsetting ATAC assay with expressed peaks')
 
-#   Set Idents and subset to the other cell type
-seur$cluster_pb = sub("[-_].*$", "", colnames(seur))
-seur$cluster_pb = trimws(seur$cluster_pb)
-Idents(seur) = seur$cluster_pb
-seur = subset(seur, idents = opt$other_cell_type)
+#   Subset to the other cell type
+seur = subset(seur, subset = mid_cluster == opt$other_cell_type)
 
 peaks_gr = granges(seur[[atac_assay]])
 peaks_gr$peak_id = GRangesToString(peaks_gr)
@@ -73,8 +74,9 @@ stopifnot(all(peaks_called %in% rownames(seur[[atac_assay]])))
 counts_mat = GetAssayData(seur, assay = atac_assay, layer = "counts")[
     peaks_called, , drop = FALSE
 ]
+min_cells = as.integer(0.05 * ncol(seur))
 keep_peaks = rownames(counts_mat)[
-    (Matrix::rowSums(counts_mat > 0) >= 0.05 * ncol(seur)) &
+    (Matrix::rowSums(counts_mat > 0) >= min_cells) &
     (sparseMatrixStats::rowSds(counts_mat) > 0)
 ]
 stopifnot(length(keep_peaks) > 0)

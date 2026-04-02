@@ -6,7 +6,7 @@
 #SBATCH -t 10-00:00:00
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
-#SBATCH --array=1-324%10
+#SBATCH --array=133
 
 ## Define loops and appropriately subset each variable for the array task ID
 all_target_cell_type=(Astrocyte Endo Excit.Thal Inhib.Thal LHb.1 LHb.1.3 LHb.1.3.4 LHb.2.7 LHb.4 LHb.7 MHb.1 MHb.1.2 MHb.2 MHb.3 Microglia Oligo OPC Thal)
