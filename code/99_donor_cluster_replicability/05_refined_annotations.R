@@ -326,3 +326,9 @@ ggsave(here(plot_path, "donor_num_per_cluster_proportionbarplot.pdf"), Propdonor
 
 ggsave(here(plot_path, "cell_count_donor_cluster_heatmap.pdf"), count_heatmap, width = 7, height = 9, device = 'pdf')
 
+
+
+#And save the singlecellexperiment and seurat objects
+
+qs_save(multiome_sce, paste0(new_data_path, '/refined_annotation_multiomeHab_SCE.qs2'))
+qs_save(midSeurat, paste0(new_data_path, '/refined_annotation_multiomeHab_Seurat.qs2'))
