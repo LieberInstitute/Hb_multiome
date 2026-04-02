@@ -1,6 +1,6 @@
 #   Using the data from every combination of two cell types, explore how the
 #   distribution of correlation scores differ between the target and non-target
-#   cell types. Also write a merged CSV of this data
+#   cell types
 
 library(here)
 library(tidyverse)
@@ -12,14 +12,11 @@ cell_types = c(
     'LHb.1.3.4', 'LHb.2.7', 'LHb.4', 'LHb.7', 'MHb.1', 'MHb.1.2', 'MHb.2',
     'MHb.3', 'Microglia', 'Oligo', 'OPC', 'Thal'
 )
-result_paths = here(
-    'processed-data', '12_new_peaks', '01_link_peaks', '%s_%s.csv.gz'
-)
-out_path = here(
+link_path = here(
     'processed-data', '12_new_peaks', '01_link_peaks', 'all_data.parquet'
 )
 plot_dir = here("plots", "12_new_peaks")
-fdr_cutoffs = c(0.01, 0.02, 0.03, 0.04, 0.05, 1)
+fdr_cutoffs = c(0.01, 0.05, 0.1, 0.2, 1)
 num_rows_sample = 1e6
 
 set.seed(0)
@@ -27,29 +24,17 @@ num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
 fallback_config(info = FALSE)
 
-#   First gather and write the key columns from every cell-type pair combination
-result_df_list = list()
-for (target_cell_type in cell_types) {
-    for (other_cell_type in cell_types) {
-        result_df_list[[length(result_df_list) + 1]] = read_csv_duckdb(
-                sprintf(result_paths, target_cell_type, other_cell_type),
-                prudence = "lavish",
-            ) |>
-            select(peak, gene, score, FDR, target_cell_type, other_cell_type)
-    }
-}
-result_df = bind_rows(result_df_list) |>
-    collect()
-
-compute_parquet(result_df, out_path)
-
-result_df = result_df |>
+result_df = read_parquet_duckdb(link_path, prudence = 'lavish') |>
+    group_by(peak, gene) |>
     mutate(
         cell_type_group = ifelse(
-            target_cell_type == other_cell_type, "target", "non_target"
+            other_cell_type %in% target_cell_type, "target", "non_target"
         )
     ) |>
-    select(cell_type_group, score, FDR)
+    ungroup() |>
+    distinct(peak, gene, other_cell_type, .keep_all = TRUE) |>
+    select(cell_type_group, score, FDR) |>
+    collect()
 
 #   Density plots of correlation scores split by whether target cell type matches
 #   other cell type. No substantial difference is seen at this level
