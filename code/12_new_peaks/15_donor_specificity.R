@@ -16,13 +16,11 @@ seur_path = here(
     "Mid_pseudobulk.spearman.5e5.rds"
 )
 link_path = here(
-    'processed-data', '12_new_peaks', '01_link_peaks', 'all_data.parquet'
+    'processed-data', '12_new_peaks', '01_link_peaks', 'filtered_data.parquet'
 )
 plot_dir = here("plots", "12_new_peaks", "15_donor_specificity")
 atac_assay = "ATAC_macs2_pseudo"
 rna_assay = "RNA"
-cor_thres = 0.3
-FDR_thres = 0.1
 num_expected_donors = 10
 num_links = 20
 
@@ -40,17 +38,8 @@ donor_colors = palette36.colors(num_expected_donors)
 names(donor_colors) = unique(seur@meta.data$donor)
 
 link_df = read_parquet_duckdb(link_path) |>
-    #   Note the lack of abs() is intentional here; we only want to visualize
-    #   positive correlations in the heatmap
-    filter(
-        score > cor_thres, FDR < FDR_thres, target_cell_type == other_cell_type
-    ) |>
-    select(peak, gene, target_cell_type, FDR) |>
-    #   Here I use a more relaxed definition of cell-type specificity. This is
-    #   really one of two ways of doing this with the results that we have
-    group_by(peak, gene) |>
-    filter(n() == 1) |>
-    ungroup() |>
+    #   Cell-type specific, positively correlated links only
+    filter(!is_shared, score > 0) |>
     collect()
 
 stopifnot(all(link_df$peak %in% rownames(seur[[atac_assay]])))
@@ -60,7 +49,7 @@ stopifnot(all(link_df$gene %in% rownames(seur[[rna_assay]])))
 link_df_list = list()
 for (this_percentile in c(0, 0.5)) {
     link_df_list[[as.character(this_percentile)]] = link_df |>
-        group_by(target_cell_type) |>
+        group_by(cell_type) |>
         filter(
             FDR > quantile(FDR, this_percentile),
             n() > num_links * 4
@@ -71,7 +60,7 @@ for (this_percentile in c(0, 0.5)) {
         mutate(percentile = this_percentile)
 }
 link_df_list[['1']] = link_df |>
-    group_by(target_cell_type) |>
+    group_by(cell_type) |>
     filter(n() > num_links * 4) |>
     arrange(desc(FDR)) |>
     slice_head(n = num_links) |>
@@ -80,29 +69,36 @@ link_df_list[['1']] = link_df |>
 link_sub_df = bind_rows(link_df_list)
 
 count_df_list = list()
-for (this_donor in unique(seur@meta.data$donor)) {
-    subset_vec = (seur@meta.data$donor == this_donor)
-    
-    count_df_list[[length(count_df_list) + 1]] = tibble(
-        cell_type = link_sub_df$target_cell_type,
-        donor = this_donor,
-        percentile = link_sub_df$percentile,
-        peak = link_sub_df$peak,
-        gene = link_sub_df$gene,
-        peak_value = rowMeans(
-            GetAssayData(
-                seur, assay = atac_assay, layer = "data"
-            )[link_sub_df$peak, subset_vec, drop = FALSE]
-        ),
-        gene_value = rowMeans(
-            GetAssayData(
-                seur, assay = rna_assay, layer = "data"
-            )[link_sub_df$gene, subset_vec, drop = FALSE]
+for (this_cell_type in unique(link_sub_df$cell_type)) {
+    this_link_sub_df = link_sub_df |>
+        filter(cell_type == this_cell_type)
+
+    for (this_donor in unique(seur@meta.data$donor)) {
+        subset_vec = (seur@meta.data$donor == this_donor) &
+            (seur@meta.data$orig.ident == this_cell_type)
+        
+        count_df_list[[length(count_df_list) + 1]] = tibble(
+            cell_type = this_link_sub_df$cell_type,
+            donor = this_donor,
+            percentile = this_link_sub_df$percentile,
+            peak = this_link_sub_df$peak,
+            gene = this_link_sub_df$gene,
+            peak_value = rowMeans(
+                GetAssayData(
+                    seur, assay = atac_assay, layer = "data"
+                )[this_link_sub_df$peak, subset_vec, drop = FALSE]
+            ),
+            gene_value = rowMeans(
+                GetAssayData(
+                    seur, assay = rna_assay, layer = "data"
+                )[this_link_sub_df$gene, subset_vec, drop = FALSE]
+            )
         )
-    )
+    }
 }
 count_df = bind_rows(count_df_list) |>
-    group_by(peak, gene) |>
+    filter(!is.na(peak_value), !is.na(gene_value)) |>
+    group_by(peak, gene, cell_type) |>
     #   Z-scoring across donors helps show the influence of donor independent of
     #   the magnitiudes of peak or gene expression
     mutate(
@@ -199,3 +195,4 @@ overall_score = count_df |>
 message(sprintf("Overall donor-specificity score: %.2f", overall_score))
 
 session_info()
+    
