@@ -49,17 +49,280 @@ inhib_barcodes_2 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putat
 
 
 midSeurat$refined_mid_cluster = midSeurat$mid_cluster
-midSeurat$refined_mid_cluster[rownames(midSeurat[[]]) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_4.1'
-midSeurat$refined_mid_cluster[rownames(midSeurat[[]]) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_4.2'
+midSeurat$refined_mid_cluster[rownames(midSeurat[[]]) %in% inhib_barcodes_1] = 'Inhib_LHb_4.1'
+midSeurat$refined_mid_cluster[rownames(midSeurat[[]]) %in% inhib_barcodes_2] = 'Inhib_LHb_4.2'
 
 table(midSeurat$refined_mid_cluster, midSeurat$mid_cluster)
 
 multiome_sce$refined_mid_cluster = multiome_sce$mid_cluster
-multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_4.1'
-multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_4.2'
+multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Inhib_LHb_4.1'
+multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Inhib_LHb_4.2'
 
 
 table(multiome_sce$refined_mid_cluster,multiome_sce$mid_cluster)
 
 
+#Now merge the LHb.1, LHb.1.3, and LHb.1.3.4 clusters into one cluster called LHb.1.3.4
+midSeurat$refined_mid_cluster[midSeurat$refined_mid_cluster %in% c('LHb.1', 'LHb.1.3')] = 'LHb.1.3.4'
+table(midSeurat$refined_mid_cluster, midSeurat$mid_cluster)
+
+multiome_sce$refined_mid_cluster[multiome_sce$refined_mid_cluster %in% c('LHb.1', 'LHb.1.3')] = 'LHb.1.3.4'
+table(multiome_sce$refined_mid_cluster,multiome_sce$mid_cluster)
+
+#Now change the MHb.1.2 cluster to MHb.2
+midSeurat$refined_mid_cluster[midSeurat$cluster_ann == 'C.11.MHb.1.2'] = 'MHb.2'
+table(midSeurat$refined_mid_cluster, midSeurat$mid_cluster)
+
+multiome_sce$refined_mid_cluster[multiome_sce$cluster_ann == 'C.11.MHb.1.2'] = 'MHb.2'
+table(multiome_sce$refined_mid_cluster, multiome_sce$mid_cluster)
+
+
+
+#Some summary plots
+#UMAP with the new annotations
+#And the donor proportion barplot per cluster
+
+
+my_colors <- c(
+    LHb = "#1f78b4",
+    MHb = "#ad1d8c",
+    Oligo = "#384a08",
+    Astrocyte = "#532222", 
+    OPC = "#829454",
+    Microglia = "#141b02",
+    Endo = "#d95f02",
+    Inhib_Thal = "#9a9fe7",
+    Excit_Thal = "#42467b",
+    Thal = "#4d55b7"
+)
+
+## assign color gradients to mid resolution clusters based on Broad cell-types
+
+# extract LHb and MHb clusters
+cluster_levels <- levels(midSeurat)
+cluster_levels
+LHb_clusters <- grep("LHb", cluster_levels, value = TRUE)
+MHb_clusters <- grep("MHb", cluster_levels, value = TRUE)
+
+# Create tonal gradients for LHb and MHb
+LHb_colors <- colorspace::sequential_hcl(length(LHb_clusters), h = 210, c = 80, l = c(30, 80))
+MHb_colors <- colorspace::sequential_hcl(length(MHb_clusters), h = 320, c = 80, l = c(30, 80))
+
+# Build full cluster color map
+my_colors_mid <- setNames(rep("#bdbdbd", length(cluster_levels)), cluster_levels)
+my_colors_mid[LHb_clusters] <- LHb_colors
+my_colors_mid[MHb_clusters] <- MHb_colors
+
+# assign base color for other types from your existing palette
+for (category in c("Oligo", "Astrocyte", "OPC", "Microglia", "Endo", "Inhib.Thal", "Excit.Thal", "Thal")) {
+    matched <- grep(category, cluster_levels, value = TRUE)
+    my_colors_mid[matched] <- my_colors[[gsub("\\.", "_", category)]]
+}
+
+my_colors_mid["Inhib_LHb_4.1"] <- "#8B0000"  # Dark red
+my_colors_mid["Inhib_LHb_4.2"] <- "#DC143C"  # Crimson red
+#Adjust color for MHb3, too light
+my_colors_mid["MHb.3"] <- "#56204eff" 
+
+
+
+plt1 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "wnn.umap",
+                group.by = "refined_mid_cluster",
+                label.size = 3,
+                cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "WNN cell types (refined Mid-resolution)")
+
+plt1
+
+plt2 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "umap.integrated",
+                group.by = "refined_mid_cluster",
+                label.size = 3,
+                cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "RNA UMAP (refined Mid-resolution)")
+
+plt2
+
+plt3 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "umap.lsi.integrated",
+                group.by = "refined_mid_cluster",
+                label.size = 3,
+                cols = my_colors_mid) + 
+    NoLegend() +
+    labs(title = "ATAC UMAP (refined Mid-resolution)")
+
+plt3
+
+
+ggsave(here(plot_path, "WNN_umap_refined_mid_cluster.pdf"), plt1, width = 7, height = 7, device = 'pdf')
+ggsave(here(plot_path, "RNA_umap_refined_mid_cluster.pdf"), plt2, width = 7, height = 7, device = 'pdf')
+ggsave(here(plot_path, "ATAC_umap_refined_mid_cluster.pdf"), plt3, width = 7, height = 7, device = 'pdf')
+
+
+
+#And now donor proportion plots
+donor_order <- multiome_sce@colData |>
+  as.data.frame() |>
+  group_by(orig.ident) |>
+  summarise(cell_counts = n()) |> 
+  arrange(desc(cell_counts)) |>
+  pull(orig.ident)
+
+cellNum_plot <- multiome_sce@colData |>
+  as.data.frame() |>
+  mutate(orig.ident = factor(orig.ident, levels = donor_order)) |>
+  group_by(orig.ident, refined_mid_cluster) |>
+  summarise(cell_count = n(), .groups = "drop") |>
+  ggplot(aes(x = orig.ident, y = cell_count, fill = refined_mid_cluster)) +
+  geom_col() +
+  scale_fill_manual(values = my_colors_mid) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Donor", y = "Cell Count", fill = "Refined Mid Cluster") +
+  ggtitle("Multiome clusters per donor")
+
+cellNum_plot
+
+PropcellNum_plot <- multiome_sce@colData |>
+  as.data.frame() |>
+  mutate(orig.ident = factor(orig.ident, levels = donor_order)) |>
+  group_by(orig.ident, refined_mid_cluster) |>
+  summarise(cell_count = n(), .groups = "drop") |>
+  ggplot(aes(x = orig.ident, y = cell_count, fill = refined_mid_cluster)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = my_colors_mid) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Donor", y = "Proportion", fill = "Refined Mid Cluster") +
+  ggtitle("Multiome cluster proportions per donor")
+
+PropcellNum_plot
+
+
+
+donor_colors = MetBrewer::met.brewer("Hokusai1", length(donor_order))
+
+
+cluster_order <- multiome_sce@colData |>
+  as.data.frame() |>
+  group_by(refined_mid_cluster) |>
+  summarise(n = n()) |> 
+  arrange(desc(n)) |>
+  pull(refined_mid_cluster)
+
+donorNum_plot <- multiome_sce@colData |>
+  as.data.frame() |>
+  mutate(refined_mid_cluster = factor(refined_mid_cluster, levels = cluster_order)) |>
+  group_by(refined_mid_cluster, orig.ident) |>
+  summarise(cell_count = n(), .groups = "drop") |>
+  ggplot(aes(x = refined_mid_cluster, y = cell_count, fill = orig.ident)) +
+  geom_col() +
+  scale_fill_manual(values = donor_colors) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Refined Mid Cluster", y = "Cell Count", fill = "Donor") +
+  ggtitle("Multiome donors per cluster")
+
+donorNum_plot
+
+PropdonorNum_plot <- multiome_sce@colData |>
+  as.data.frame() |>
+  mutate(refined_mid_cluster = factor(refined_mid_cluster, levels = cluster_order)) |>
+  group_by(refined_mid_cluster, orig.ident) |>
+  summarise(cell_count = n(), .groups = "drop") |>
+  ggplot(aes(x = refined_mid_cluster, y = cell_count, fill = orig.ident)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = donor_colors) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Refined Mid Cluster", y = "Proportion", fill = "Donor") +
+  ggtitle("Multiome donors per cluster")
+
+PropdonorNum_plot 
+
+
+heat_df <- multiome_sce@colData |>
+  as.data.frame() |>
+  count(refined_mid_cluster, orig.ident, name = "cell_count") |>
+  mutate(
+    refined_mid_cluster = factor(refined_mid_cluster, levels = cluster_order),
+    orig.ident = factor(orig.ident, levels = donor_order)
+  ) |>
+  tidyr::complete(refined_mid_cluster, orig.ident, fill = list(cell_count = 0)) |>
+  mutate(
+    # keep your existing rule: <10 shown as grey
+    cell_count_plot = if_else(cell_count < 10 & cell_count > 0, NA_real_, as.numeric(cell_count))
+  ) |> View()
+
+special_df <- heat_df |>
+  mutate(
+    special_class = case_when(
+      cell_count == 0 ~ "No cells",
+      cell_count < 10 ~ "< 10 cells",
+      TRUE ~ NA_character_
+    )
+  ) |>
+  filter(!is.na(special_class))
+
+
+count_heatmap <- ggplot() +
+  # special tiles (black + grey) with legend
+  geom_tile(
+    data = special_df,
+    aes(x = orig.ident, y = refined_mid_cluster, fill = special_class),
+    color = "black", linewidth = 0.2
+  ) +
+  scale_fill_manual(
+    name = "Can't pseudobulk",
+    values = c("No cells" = "black", "< 10 cells" = "grey70"),
+    breaks = c("No cells", "< 10 cells")
+  ) +
+  ggnewscale::new_scale_fill() +
+  # regular tiles (>=10) with continuous legend
+  geom_tile(
+    data = filter(heat_df, cell_count >= 10),
+    aes(x = orig.ident, y = refined_mid_cluster, fill = cell_count),
+    color = "black", linewidth = 0.2
+  ) +
+  scale_fill_viridis_c(
+    option = "viridis",
+    name = "Cell count",
+    trans = "sqrt"
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid = element_blank()
+  ) +
+  labs(
+    x = "orig.ident",
+    y = "refined_mid_cluster",
+    title = "Cell counts per cluster × donor"
+  )
+
+count_heatmap
+
+
+cellNum_plot
+PropcellNum_plot
+
+donorNum_plot
+PropdonorNum_plot 
+
+count_heatmap
+
+
+ggsave(here(plot_path, "cluster_cell_num_per_donor_barplot.pdf"), cellNum_plot, width = 7, height = 7, device = 'pdf')
+ggsave(here(plot_path, "cluster_cell_num_per_donor_proportionbarplot.pdf"), PropcellNum_plot, width = 7, height = 7, device = 'pdf')
+
+ggsave(here(plot_path, "donor_num_per_cluster_barplot.pdf"), donorNum_plot, width = 7, height = 7, device = 'pdf')
+ggsave(here(plot_path, "donor_num_per_cluster_proportionbarplot.pdf"), PropdonorNum_plot , width = 7, height = 7, device = 'pdf')
+
+ggsave(here(plot_path, "cell_count_donor_cluster_heatmap.pdf"), count_heatmap, width = 7, height = 9, device = 'pdf')
 
