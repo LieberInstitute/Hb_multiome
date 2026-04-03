@@ -72,13 +72,11 @@ for (FDR_threshold in FDR_thresholds) {
     for (cor_threshold in cor_thresholds) {
         link_unique_df = read_parquet_duckdb(link_path, prudence = 'lavish') |>
             filter(score > abs(cor_threshold), FDR < FDR_threshold) |>
-            distinct(peak, gene, other_cell_type) |>
             group_by(peak, gene) |>
             filter(
-                (n() == 1) | all(grepl('^[ML]Hb', unique(other_cell_type)))
+                (n() == 1) | all(grepl('^[ML]Hb', unique(cell_type)))
             ) |>
             ungroup() |>
-            dplyr::rename(cell_type = other_cell_type) |>
             collect()
 
         for (this_cell_type in cell_types) {
