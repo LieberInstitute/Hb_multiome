@@ -7,11 +7,9 @@ library(here)
 library(duckplyr)
 
 link_path = here(
-    'processed-data', '12_new_peaks', '01_link_peaks', 'all_data.parquet'
+    'processed-data', '12_new_peaks', '01_link_peaks', 'filtered_data.parquet'
 )
 plot_dir = here("plots", "12_new_peaks", "16_shared_unique")
-cor_thres = 0.3
-FDR_thres = 0.1
 
 cell_type_colors = c(
     "shared" = "gray",
@@ -38,32 +36,25 @@ fallback_config(info = FALSE)
 dir.create(plot_dir, showWarnings = FALSE)
 
 link_df = read_parquet_duckdb(link_path) |>
-    filter(
-        score > abs(cor_thres), FDR < FDR_thres,
-        target_cell_type == other_cell_type
-    ) |>
-    select(peak, gene, target_cell_type, FDR) |>
-    #   Here I use a more relaxed definition of cell-type specificity. This is
-    #   really one of two ways of doing this with the results that we have
-    group_by(peak, gene) |>
-    mutate(link_type = ifelse(n() == 1, target_cell_type, 'shared')) |>
-    ungroup() |>
-    select(target_cell_type, link_type) |>
     collect()
 
-p = link_df |>
+link_df = link_df |>
     mutate(
-        target_cell_type = factor(
-            target_cell_type,
+        cell_type = factor(
+            cell_type,
             levels = link_df |>
-                group_by(target_cell_type) |>
+                group_by(cell_type) |>
                 summarise(n_links = n()) |>
                 arrange(desc(n_links)) |>
-                pull(target_cell_type)
+                pull(cell_type)
         ),
-        link_type = factor(link_type, levels = names(cell_type_colors))
-    ) |>
-    ggplot(aes(x = target_cell_type, fill = link_type)) +
+        link_type = factor(
+            ifelse(is_shared, "shared", as.character(cell_type)),
+            levels = names(cell_type_colors)
+        )
+    )
+
+p = ggplot(link_df, aes(x = cell_type, fill = link_type)) +
         geom_bar() +
         scale_fill_manual(values = cell_type_colors) +
         theme_bw(base_size = 20) +
