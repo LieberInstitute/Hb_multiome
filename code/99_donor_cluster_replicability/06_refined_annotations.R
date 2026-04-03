@@ -18,15 +18,15 @@ library(here)
 here::here()
 
 #Path for new data generated
-new_data_path = here('processed-data', '99_donor_cluster_replicability','05_refined_annotations')
+new_data_path = here('processed-data', '99_donor_cluster_replicability','06_refined_annotations')
 #Path to plot directory
-plot_path = here('plots', '99_donor_cluster_replicability','05_refined_annotations')
+plot_path = here('plots', '99_donor_cluster_replicability','06_refined_annotations')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
 
 
-multiome_path = here('processed-data', '05_5_drop_doublets','01_drop_doublets_and_reDimReduce')
+multiome_path = here('processed-data', '05_01_drop_doublets','01_drop_doublets_and_reDimReduce')
 
 #Multiome human data, singlecellexperiment
 multiome_sce = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multiomeHab_SCE.qs2'))
