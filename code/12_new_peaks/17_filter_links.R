@@ -1,7 +1,9 @@
 #   After computing linked peaks, there are a huge number of individual CSV
-#   files for each combination of cell types. In this script, produce one
-#   merged version of these files as a parquet, then produce a filtered version
-#   that contains unique-to-one-cell-type, significant, highly correlated links
+#   files for each combination of cell types, and there are duplicate results
+#   (rows) across these files. Deduplicate, compute FDR from the deduplicated
+#   p-values, and retain info about if the peak was called in the cell type
+#   where the link was measured. Save a combined parquet file with this info,
+#   as well as a version filtered by correlation and FDR thresholds
 
 library(here)
 library(tidyverse)
@@ -30,7 +32,7 @@ num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
 fallback_config(info = FALSE)
 
-#   First gather and write the key columns from every cell-type pair combination
+#   First gather the key columns from every cell-type pair combination
 result_df_list = list()
 for (target_cell_type in cell_types) {
     for (other_cell_type in cell_types) {
@@ -38,26 +40,32 @@ for (target_cell_type in cell_types) {
                 sprintf(result_paths, target_cell_type, other_cell_type),
                 prudence = "lavish"
             ) |>
-            select(peak, gene, score, FDR, target_cell_type, other_cell_type)
+            select(peak, gene, score, pvalue, target_cell_type, other_cell_type)
     }
 }
 result_df = bind_rows(result_df_list) |>
-    collect() |>
-    #   A combined version of the existing individual files, unfiltered in any
-    #   way
+    #   Was the peak called in 'other_cell_type'?
+    group_by(peak, gene) |>
+    mutate(peak_called = other_cell_type %in% target_cell_type) |>
+    ungroup() |>
+    #   In many cases a link may have multiple rows indicating the peak was
+    #   called in multiple cell types ('target_cell_type'), but we only care
+    #   about each cell type where the link was measured ('other_cell_type') 
+    distinct(peak, gene, other_cell_type, .keep_all = TRUE) |>
+    dplyr::rename(cell_type = other_cell_type) |>
+    group_by(cell_type) |>
+    mutate(FDR = p.adjust(pvalue, method = "fdr")) |>
+    ungroup() |>
+    select(peak, gene, cell_type, score, FDR, peak_called) |>
+    #   A combined version of the existing individual files, not filtered by
+    #   correlation or FDR
     compute_parquet(full_out_path) |>
     #   Significance + correlation threshold
     filter(score > abs(cor_thres), FDR < FDR_thres) |>
     #   Is the link measured in multiple cell types?
     group_by(peak, gene) |>
-    mutate(is_shared = length(unique(other_cell_type)) > 1) |>
-    ungroup() |>
-    #   In some cases a link may have multiple rows indicating the peak was
-    #   called in multiple cell types ('target_cell_type'), but we only care
-    #   about each cell type where the link was measured ('other_cell_type')  
-    distinct(peak, gene, other_cell_type, .keep_all = TRUE) |>
-    dplyr::rename(cell_type = other_cell_type) |>
-    select(peak, gene, cell_type, score, FDR, is_shared) |>
+    mutate(is_shared = length(unique(cell_type)) > 1) |>
+    ungroup() |> 
     compute_parquet(filtered_out_path)
 
 session_info()
