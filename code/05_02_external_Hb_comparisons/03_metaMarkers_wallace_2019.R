@@ -13,21 +13,21 @@ library(here)
 here::here()
 
 #Path to the Wallace 2019 data
-wallace_path = here('processed-data', '98_external_Hb_comparisons', 'Wallace_etal_2019_habenula_scseq')
+wallace_path = here('processed-data', '05_02_external_Hb_comparisons', 'Wallace_etal_2019_habenula_scseq')
 list.files(wallace_path)
 #Path to save any generated data
-new_data_path = here('processed-data', '98_external_Hb_comparisons', '03_metaMarkers_wallace_2019')
+new_data_path = here('processed-data', '05_02_external_Hb_comparisons', '03_metaMarkers_wallace_2019')
 #Path to already generated data
-prev_data_path = here('processed-data', '98_external_Hb_comparisons', '02_qc_and_clust_wallace_2019')
+prev_data_path = here('processed-data', '05_02_external_Hb_comparisons', '02_qc_and_clust_wallace_2019')
 #Path to plot directory
-plot_path = here('plots', '98_external_Hb_comparisons', '03_metaMarkers_wallace_2019')
+plot_path = here('plots', '05_02_external_Hb_comparisons', '03_metaMarkers_wallace_2019')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
 
 
 #Source the bubble plot functions
-source(here('code','98_external_Hb_comparisons', 'bubble_plot_functions.R'))
+source(here('code','05_02_external_Hb_comparisons', 'bubble_plot_functions.R'))
 
 
 #Load up the full SCE object, contains the metacluster annotations

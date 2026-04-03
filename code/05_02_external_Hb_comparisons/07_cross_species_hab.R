@@ -13,26 +13,26 @@ here::here()
 
 
 #Paths to Wallace annotated data
-wallace_02_data_path = here('processed-data','98_external_Hb_comparisons','02_qc_and_clust_wallace_2019')
-wallace_03_data_path = here('processed-data','98_external_Hb_comparisons','03_metaMarkers_wallace_2019')
+wallace_02_data_path = here('processed-data','05_02_external_Hb_comparisons','02_qc_and_clust_wallace_2019')
+wallace_03_data_path = here('processed-data','05_02_external_Hb_comparisons','03_metaMarkers_wallace_2019')
 
 #Paths to Hashikawa annotated data
 hashikawa_path = '/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/09_cross_species_analysis/Hashikawa_data'
 
 #Path to the Hashikawa metadata I want
-hashikawa_data_path = here('processed-data','98_external_Hb_comparisons','04_wallace_hashikawa_mouse')
+hashikawa_data_path = here('processed-data','05_02_external_Hb_comparisons','04_wallace_hashikawa_mouse')
 
 #Paths to Pendey annotated data
-pendey_05_data_path = here('processed-data','98_external_Hb_comparisons','05_initial_qc_pandey_2018')
-pendey_06_data_path = here('processed-data', '98_external_Hb_comparisons', '06_metaMarkers_pandey_2018')
+pendey_05_data_path = here('processed-data','05_02_external_Hb_comparisons','05_initial_qc_pandey_2018')
+pendey_06_data_path = here('processed-data', '05_02_external_Hb_comparisons', '06_metaMarkers_pandey_2018')
 
 
 #Path to orthologs
-path_to_orthologs = here('processed-data','98_external_Hb_comparisons','human_mouse_zebrafish_orthologs.txt.gz')
+path_to_orthologs = here('processed-data','05_02_external_Hb_comparisons','human_mouse_zebrafish_orthologs.txt.gz')
 
 
-new_data_path = here('processed-data','98_external_Hb_comparisons','07_cross_species_hab')
-plot_path = here('plots','98_external_Hb_comparisons','07_cross_species_hab')
+new_data_path = here('processed-data','05_02_external_Hb_comparisons','07_cross_species_hab')
+plot_path = here('plots','05_02_external_Hb_comparisons','07_cross_species_hab')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)

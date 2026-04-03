@@ -16,19 +16,19 @@ here::here()
 
 
 #Path to save any generated data
-new_data_path = here('processed-data', '98_external_Hb_comparisons', '04_wallace_hashikawa_mouse')
+new_data_path = here('processed-data', '05_02_external_Hb_comparisons', '04_wallace_hashikawa_mouse')
 #Path to already generated data
-wallace_data_path = here('processed-data', '98_external_Hb_comparisons', '02_qc_and_clust_wallace_2019')
-wallace_meta_path = here('processed-data', '98_external_Hb_comparisons', '03_metaMarkers_wallace_2019')
+wallace_data_path = here('processed-data', '05_02_external_Hb_comparisons', '02_qc_and_clust_wallace_2019')
+wallace_meta_path = here('processed-data', '05_02_external_Hb_comparisons', '03_metaMarkers_wallace_2019')
 #Path to plot directory
-plot_path = here('plots', '98_external_Hb_comparisons', '04_wallace_hashikawa_mouse')
+plot_path = here('plots', '05_02_external_Hb_comparisons', '04_wallace_hashikawa_mouse')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
 
 
 #Source the bubble plot functions
-source(here('code','98_external_Hb_comparisons', 'bubble_plot_functions.R'))
+source(here('code','05_02_external_Hb_comparisons', 'bubble_plot_functions.R'))
 
 
 

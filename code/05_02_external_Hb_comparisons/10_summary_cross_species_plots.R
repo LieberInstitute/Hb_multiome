@@ -10,9 +10,9 @@ library(here)
 
 
 #Path to previous generated cross-species aurocs
-auroc_data_path = here('processed-data', '98_external_Hb_comparisons','09_humanMultiome_data')
+auroc_data_path = here('processed-data', '05_02_external_Hb_comparisons','09_humanMultiome_data')
 #Path to plot directory
-plot_path = here('plots', '98_external_Hb_comparisons', '10_summary_cross_species_plots')
+plot_path = here('plots', '05_02_external_Hb_comparisons', '10_summary_cross_species_plots')
 
 if (!dir.exists(plot_path)) dir.create(plot_path)
 

@@ -12,12 +12,12 @@ library(here)
 here::here()
 
 #Path to the Wallace 2019 data
-wallace_path = here('processed-data', '98_external_Hb_comparisons', 'Wallace_etal_2019_habenula_scseq')
+wallace_path = here('processed-data', '05_02_external_Hb_comparisons', 'Wallace_etal_2019_habenula_scseq')
 list.files(wallace_path)
 #Path to save any generated data
-new_data_path = here('processed-data', '98_external_Hb_comparisons', '02_qc_and_clust_wallace_2019')
+new_data_path = here('processed-data', '05_02_external_Hb_comparisons', '02_qc_and_clust_wallace_2019')
 #Path to plot directory
-plot_path = here('plots', '98_external_Hb_comparisons', '02_qc_and_clust_wallace_2019')
+plot_path = here('plots', '05_02_external_Hb_comparisons', '02_qc_and_clust_wallace_2019')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)

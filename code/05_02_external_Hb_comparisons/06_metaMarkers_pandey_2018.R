@@ -13,26 +13,26 @@ library(here)
 here::here()
 
 #Path to the Pandey 2018 data
-pandey_10x_path = here('processed-data', '98_external_Hb_comparisons', 'Pandey_etal_2018_habenula_scseq', '10X')
+pandey_10x_path = here('processed-data', '05_02_external_Hb_comparisons', 'Pandey_etal_2018_habenula_scseq', '10X')
 list.files(pandey_10x_path)
-pandey_ss_path = here('processed-data', '98_external_Hb_comparisons', 'Pandey_etal_2018_habenula_scseq', 'smartSeq')
+pandey_ss_path = here('processed-data', '05_02_external_Hb_comparisons', 'Pandey_etal_2018_habenula_scseq', 'smartSeq')
 list.files(pandey_ss_path)
 
-path_to_orthologs = here('processed-data', '98_external_Hb_comparisons', 'human_mouse_zebrafish_orthologs.txt.gz')
+path_to_orthologs = here('processed-data', '05_02_external_Hb_comparisons', 'human_mouse_zebrafish_orthologs.txt.gz')
 
 #Path to save any generated data
-new_data_path = here('processed-data', '98_external_Hb_comparisons', '06_metaMarkers_pandey_2018')
+new_data_path = here('processed-data', '05_02_external_Hb_comparisons', '06_metaMarkers_pandey_2018')
 #Path to already generated data
-prev_data_path = here('processed-data', '98_external_Hb_comparisons', '05_initial_qc_pandey_2018')
+prev_data_path = here('processed-data', '05_02_external_Hb_comparisons', '05_initial_qc_pandey_2018')
 #Path to plot directory
-plot_path = here('plots', '98_external_Hb_comparisons', '06_metaMarkers_pandey_2018')
+plot_path = here('plots', '05_02_external_Hb_comparisons', '06_metaMarkers_pandey_2018')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
 
 
 #Source the bubble plot functions
-source(here('code','98_external_Hb_comparisons', 'bubble_plot_functions.R'))
+source(here('code','05_02_external_Hb_comparisons', 'bubble_plot_functions.R'))
 
 
 #Load up the full SCE object, contains the metacluster annotations

@@ -15,7 +15,7 @@ here::here()
 
 #Path to the human multiome data
 #Using the v5.rds object, says seurat, but is SCE object
-multiome_path = here('processed-data', '05_5_drop_doublets','01_drop_doublets_and_reDimReduce')
+multiome_path = here('processed-data', '05_01_drop_doublets','01_drop_doublets_and_reDimReduce')
 list.files(multiome_path)
 
 #Path to the Yalcinbas pilot data
@@ -24,27 +24,27 @@ yalcinbas_path = '/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/proce
 list.files(yalcinbas_path)
 
 #Nonhuman data paths
-zeb_data_path = here('processed-data', '98_external_Hb_comparisons','07_cross_species_hab')
-mouse_data_path = here('processed-data', '98_external_Hb_comparisons', '02_qc_and_clust_wallace_2019')
-wallace_03_data_path = here('processed-data', '98_external_Hb_comparisons', '03_metaMarkers_wallace_2019')
+zeb_data_path = here('processed-data', '05_02_external_Hb_comparisons','07_cross_species_hab')
+mouse_data_path = here('processed-data', '05_02_external_Hb_comparisons', '02_qc_and_clust_wallace_2019')
+wallace_03_data_path = here('processed-data', '05_02_external_Hb_comparisons', '03_metaMarkers_wallace_2019')
 
 hashikawa_path = '/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/09_cross_species_analysis/Hashikawa_data'
-hashikawa_data_path = here('processed-data','98_external_Hb_comparisons','04_wallace_hashikawa_mouse')
+hashikawa_data_path = here('processed-data','05_02_external_Hb_comparisons','04_wallace_hashikawa_mouse')
 
 #Path to orthologs
-path_to_orthologs = here('processed-data', '98_external_Hb_comparisons', 'human_mouse_zebrafish_orthologs.txt.gz')
+path_to_orthologs = here('processed-data', '05_02_external_Hb_comparisons', 'human_mouse_zebrafish_orthologs.txt.gz')
 
 
 #Path for new data generated
-new_data_path = here('processed-data', '98_external_Hb_comparisons','09_humanMultiome_data')
+new_data_path = here('processed-data', '05_02_external_Hb_comparisons','09_humanMultiome_data')
 #Path to plot directory
-plot_path = here('plots', '98_external_Hb_comparisons', '09_humanMultiome_data')
+plot_path = here('plots', '05_02_external_Hb_comparisons', '09_humanMultiome_data')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
 
 #Source the bubble plot functions
-source(here('code','98_external_Hb_comparisons', 'bubble_plot_functions.R'))
+source(here('code','05_02_external_Hb_comparisons', 'bubble_plot_functions.R'))
 
 
 #Multiome human data
