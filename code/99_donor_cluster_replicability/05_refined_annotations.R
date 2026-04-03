@@ -77,7 +77,6 @@ multiome_sce$refined_mid_cluster[multiome_sce$cluster_ann == 'C.11.MHb.1.2'] = '
 table(multiome_sce$refined_mid_cluster, multiome_sce$mid_cluster)
 
 
-
 #Some summary plots
 #UMAP with the new annotations
 #And the donor proportion barplot per cluster
@@ -332,3 +331,10 @@ ggsave(here(plot_path, "cell_count_donor_cluster_heatmap.pdf"), count_heatmap, w
 
 qs_save(multiome_sce, paste0(new_data_path, '/refined_annotation_multiomeHab_SCE.qs2'))
 qs_save(midSeurat, paste0(new_data_path, '/refined_annotation_multiomeHab_Seurat.qs2'))
+
+## Reproducibility information
+print("Reproducibility information:")
+Sys.time()
+proc.time()
+options(width = 120)
+sessioninfo::session_info()
