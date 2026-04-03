@@ -17,9 +17,9 @@ library(here)
 here::here()
 
 #Path for new data generated
-new_data_path = here('processed-data', '05_5_drop_doublets','01_drop_doublets_and_reDimReduce')
+new_data_path = here('processed-data', '05_01_drop_doublets','01_drop_doublets_and_reDimReduce')
 #Path to plot directory
-plot_path = here('plots', '05_5_drop_doublets', '01_drop_doublets_and_reDimReduce')
+plot_path = here('plots', '05_01_drop_doublets', '01_drop_doublets_and_reDimReduce')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
@@ -57,7 +57,7 @@ cluster_order <- midSeurat@meta.data |>
   dplyr::arrange(prop) |>
   dplyr::pull(cluster_ann)
 
-midSeurat@meta.data |>
+fineCluster_doublet_class_p = midSeurat@meta.data |>
   dplyr::mutate(cluster_ann = factor(cluster_ann, levels = cluster_order)) |>
   ggplot(aes(x = cluster_ann, fill = scDblFinder.class)) +
   geom_bar(position = "fill") +
@@ -66,7 +66,7 @@ midSeurat@meta.data |>
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
-midSeurat@meta.data |>
+fineCluster_doublet_score_p = midSeurat@meta.data |>
   dplyr::mutate(cluster_ann = factor(cluster_ann, levels = cluster_order)) |>
   ggplot(aes(x = cluster_ann, y = scDblFinder.score)) +
   geom_boxplot(outlier.shape = NA) +
@@ -74,6 +74,13 @@ midSeurat@meta.data |>
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
+fineCluster_doublet_class_p 
+fineCluster_doublet_score_p
+
+ggsave(fineCluster_doublet_class_p , filename = 'proportionBarplot_fineCluster_doublets.pdf', path = plot_path, device = 'pdf',
+width = 7, height = 5, useDingbats = FALSE)
+ggsave(fineCluster_doublet_score_p , filename = 'boxplot_fineCluster_doublet_score.pdf', path = plot_path, device = 'pdf',
+width = 7, height = 5, useDingbats = FALSE)
 
 #Check out current UMAP and the clusters we will drop
 ## =============================================================================
