@@ -1,10 +1,10 @@
 **** Job starts ****
-Thu Apr  2 04:51:27 PM EDT 2026
+Fri Apr  3 01:02:55 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30537821
+Job id: 30567947
 Job name: 15_donor_specificity
-Node name: compute-178
+Node name: compute-099
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -42,7 +42,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 35.
+✔ Number of reports ready for upload: 47.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -67,7 +67,7 @@ null device
           1 
 `summarise()` has grouped output by 'cell_type'. You can override using the
 `.groups` argument.
-Overall donor-specificity score: 1.30
+Overall donor-specificity score: 1.38
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -78,7 +78,7 @@ Overall donor-specificity score: 1.30
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-04-02
+ date     2026-04-03
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.8.27 @ /users/neagles/.positron-server/bin/f3aae65e0a1a11d39226cd884520f49301daef82/quarto/bin/quarto
 
@@ -228,4 +228,4 @@ Overall donor-specificity score: 1.30
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Thu Apr  2 04:52:04 PM EDT 2026
+Fri Apr  3 01:04:13 PM EDT 2026
