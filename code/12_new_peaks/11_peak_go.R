@@ -5,18 +5,22 @@ library(clusterProfiler)
 library(duckplyr)
 library(org.Hs.eg.db)
 
-peak_path = here(
-    'processed-data', '12_new_peaks', '01_link_peaks', 'all_data.csv.gz'
+link_all_path = here(
+    'processed-data', '12_new_peaks', '01_link_peaks', 'all_data.parquet'
+)
+link_filtered_path = here(
+    'processed-data', '12_new_peaks', '01_link_peaks', 'filtered_data.parquet'
 )
 plot_dir = here("plots", "12_new_peaks", "11_peak_go")
 fdr_cutoff_peak = 0.1
 fdr_cutoff_go = 0.1
-cor_cutoff = 0.2
+cor_cutoff = 0.3
 
 dir.create(plot_dir, showWarnings = FALSE)
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", 1))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
+fallback_config(info = FALSE)
 
 ################################################################################
 #   Functions
@@ -46,34 +50,31 @@ do_go = function(gene_list, universe, plot_path, num_terms = 3) {
 #   Main
 ################################################################################
 
-peak_df = read_csv_duckdb(peak_path, prudence = 'lavish')
-background_universe = unique(peak_df$gene)
+link_df = read_parquet_duckdb(link_all_path, prudence = 'lavish')
+background_universe = unique(link_df$gene)
 
 #   I tried splitting by unique vs. shared links, but almost none were shared.
 #   Here just use all pairs together
-peak_df = peak_df |>
-    filter(
-        FDR < fdr_cutoff_peak, abs(score) >= cor_cutoff,
-        target_cell_type == other_cell_type
-    )
+link_df = read_parquet_duckdb(link_filtered_path, prudence = 'stingy') |>
+    collect()
 
-for (cell_type in unique(peak_df$target_cell_type)) {
-    this_peak_df = peak_df |>
-        filter(target_cell_type == cell_type)
+for (this_cell_type in unique(link_df$cell_type)) {
+    this_link_df = link_df |>
+        filter(cell_type == this_cell_type)
 
     gene_list = list()
-    gene_list[['positive']] = this_peak_df |>
+    gene_list[['positive']] = this_link_df |>
         filter(score > 0) |>
         pull(gene) |>
         unique()
-    gene_list[['negative']] = this_peak_df |>
+    gene_list[['negative']] = this_link_df |>
         filter(score < 0) |>
         pull(gene) |>
         unique()
 
     do_go(
         gene_list, background_universe,
-        file.path(plot_dir, sprintf("%s_GO.pdf", cell_type))
+        file.path(plot_dir, sprintf("%s_GO.pdf", this_cell_type))
     )
 }
 

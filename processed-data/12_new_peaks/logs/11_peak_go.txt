@@ -1,10 +1,10 @@
 **** Job starts ****
-Wed Mar 18 01:31:08 PM EDT 2026
+Fri Apr  3 01:06:04 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30127443
+Job id: 30568564
 Job name: 11_peak_go
-Node name: compute-168
+Node name: compute-178
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -31,8 +31,10 @@ clusterProfiler v4.16.0 Learn more at https://yulab-smu.top/contribution-knowled
 
 Please cite:
 
-G Yu. Thirteen years of clusterProfiler. The Innovation. 2024,
-5(6):100722
+T Wu, E Hu, S Xu, M Chen, P Guo, Z Dai, T Feng, L Zhou, W Tang, L Zhan,
+X Fu, S Liu, X Bo, and G Yu. clusterProfiler 4.0: A universal
+enrichment tool for interpreting omics data. The Innovation. 2021,
+2(3):100141
 
 Attaching package: ‘clusterProfiler’
 
@@ -50,7 +52,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 16.
+✔ Number of reports ready for upload: 48.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -163,55 +165,7 @@ The following object is masked from ‘package:dplyr’:
     select
 
 
-Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.Error processing duckplyr query with DuckDB, falling back to dplyr.
-Caused by error in `filter()`:
-! Can't convert columns of class <factor> to relational. Affected
-  column: `Cluster`.─ Session info ───────────────────────────────────────────────────────────────
+─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
  os       Rocky Linux 9.4 (Blue Onyx)
@@ -221,7 +175,7 @@ Caused by error in `filter()`:
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-03-18
+ date     2026-04-03
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.8.27 @ /users/neagles/.positron-server/bin/f3aae65e0a1a11d39226cd884520f49301daef82/quarto/bin/quarto
 
@@ -335,4 +289,4 @@ Caused by error in `filter()`:
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Mar 18 01:43:03 PM EDT 2026
+Fri Apr  3 01:10:43 PM EDT 2026
