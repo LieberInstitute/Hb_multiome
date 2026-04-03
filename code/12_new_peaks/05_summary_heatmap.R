@@ -14,14 +14,12 @@ seur_path = here(
     "Mid_pseudobulk.spearman.5e5.rds"
 )
 link_path = here(
-    'processed-data', '12_new_peaks', '01_link_peaks', 'all_data.parquet'
+    'processed-data', '12_new_peaks', '01_link_peaks', 'filtered_data.parquet'
 )
 plot_dir = here("plots", "12_new_peaks", "05_summary_heatmap")
 atac_assay = "ATAC_macs2_pseudo"
 rna_assay = "RNA"
 highlight_cell_type = c("MHb.2", "LHb.2.7")
-cor_thres = 0.3
-FDR_thres = 0.1
 
 cell_type_colors = c(
     "Oligo" = "#4d5802",
@@ -55,15 +53,15 @@ generate_summary_heatmap = function(
         count_df, cell_type_colors, plot_path, pdf_width = 10, pdf_height = 7
     ) {
     stopifnot(setequal(count_df$cell_type, names(cell_type_colors)))
-    stopifnot(setequal(count_df$target_cell_type, names(cell_type_colors)))
+    stopifnot(setequal(count_df$measured_cell_type, names(cell_type_colors)))
   
     count_df = count_df |>
         mutate(
-            target_cell_type = factor(
-                target_cell_type, levels = names(cell_type_colors)
+            measured_cell_type = factor(
+                measured_cell_type, levels = names(cell_type_colors)
             )
         ) |>
-        arrange(target_cell_type)
+        arrange(measured_cell_type)
 
     gene_mat_list = list()
     peak_mat_list = list()
@@ -93,7 +91,7 @@ generate_summary_heatmap = function(
     )
 
     anno_df <- count_df |>
-        select(row_id, target_cell_type) |>
+        select(row_id, measured_cell_type) |>
         distinct()
 
     # Create color functions
@@ -149,8 +147,8 @@ generate_summary_heatmap = function(
 
     # Create row annotation
     row_ha <- rowAnnotation(
-        `Target Cell Type` = anno_df$target_cell_type,
-        col = list(`Target Cell Type` = cell_type_colors),
+        `Measured Cell Type` = anno_df$measured_cell_type,
+        col = list(`Measured Cell Type` = cell_type_colors),
         show_annotation_name = FALSE
     )
 
@@ -159,7 +157,7 @@ generate_summary_heatmap = function(
         combined_mat,
         name = "Z-score",
         cluster_columns = FALSE,
-        row_split = anno_df$target_cell_type,
+        row_split = anno_df$measured_cell_type,
         cluster_row_slices = FALSE,
         show_row_dend = FALSE,
         show_row_names = FALSE,
@@ -202,17 +200,9 @@ seur = readRDS(seur_path)
 seur@meta.data$donor = str_extract(colnames(seur), 'S[0-9]{2}.*')
 
 link_df = read_parquet_duckdb(link_path) |>
-    #   Note the lack of abs() is intentional here; we only want to visualize
-    #   positive correlations in the heatmap
-    filter(
-        score > cor_thres, FDR < FDR_thres, target_cell_type == other_cell_type
-    ) |>
-    select(peak, gene, target_cell_type, FDR) |>
-    #   Here I use a more relaxed definition of cell-type specificity. This is
-    #   really one of two ways of doing this with the results that we have
-    group_by(peak, gene) |>
-    filter(n() == 1) |>
-    ungroup() |>
+    #   We only want to visualize unique, positive correlations in the heatmap
+    filter(score > 0, !is_shared) |>
+    select(peak, gene, cell_type, FDR) |>
     collect()
 
 stopifnot(all(link_df$peak %in% rownames(seur[[atac_assay]])))
@@ -220,12 +210,12 @@ stopifnot(all(link_df$gene %in% rownames(seur[[rna_assay]])))
 
 # Calculate mean values across all cells for each cell type
 count_df_list = list()
-for (cell_type in unique(link_df$target_cell_type)) {
+for (cell_type in unique(link_df$cell_type)) {
     subset_vec = (seur@meta.data$orig.ident == cell_type)
     
     count_df_list[[length(count_df_list) + 1]] <- tibble(
         cell_type = cell_type,
-        target_cell_type = link_df$target_cell_type,
+        measured_cell_type = link_df$cell_type,
         peak = link_df$peak,
         gene = link_df$gene,
         peak_value = rowMeans(
@@ -245,7 +235,7 @@ count_df = bind_rows(count_df_list) |>
     mutate(row_id = paste(peak, gene, sep = "|")) |>
     #   Temporary fix since the old object has extra cell types
     filter(
-        target_cell_type %in% names(cell_type_colors),
+        measured_cell_type %in% names(cell_type_colors),
         cell_type %in% names(cell_type_colors)
     ) |>
     #   Z-score across all cell types (for a link)
@@ -271,7 +261,7 @@ generate_summary_heatmap(
 generate_summary_heatmap(
     count_df |>
         filter(
-            target_cell_type %in% highlight_cell_type,
+            measured_cell_type %in% highlight_cell_type,
             cell_type %in% highlight_cell_type
         ),
     cell_type_colors[highlight_cell_type],

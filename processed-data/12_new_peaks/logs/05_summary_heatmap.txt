@@ -1,10 +1,10 @@
 **** Job starts ****
-Tue Mar 31 02:43:25 PM EDT 2026
+Fri Apr  3 12:46:42 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30461367
+Job id: 30564663
 Job name: 05_summary_heatmap
-Node name: compute-168
+Node name: compute-169
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -146,7 +146,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 28.
+✔ Number of reports ready for upload: 42.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -157,19 +157,16 @@ be uploaded.
 TRUE/FALSE to it.
 
 Set `ht_opt$message = FALSE` to turn off this message.
-pdf 
-  2 
-There were 14 warnings (use warnings() to see them)
-pdf 
-  2 
-Warning messages:
-1: The heatmap has not been initialized. You might have different results
-if you repeatedly execute this function, e.g. when row_km/column_km was
-set. It is more suggested to do as `ht = draw(ht); row_order(ht)`. 
-2: The heatmap has not been initialized. You might have different results
-if you repeatedly execute this function, e.g. when row_km/column_km was
-set. It is more suggested to do as `ht = draw(ht); row_order(ht)`. 
-3: You defined `cell_fun` for a heatmap with more than 100 rows or
+null device 
+          1 
+Warning message:
+You defined `cell_fun` for a heatmap with more than 100 rows or
+columns, which might be very slow to draw. Consider to use the
+vectorized version `layer_fun`. 
+null device 
+          1 
+Warning message:
+You defined `cell_fun` for a heatmap with more than 100 rows or
 columns, which might be very slow to draw. Consider to use the
 vectorized version `layer_fun`. 
 ─ Session info ───────────────────────────────────────────────────────────────
@@ -182,7 +179,7 @@ vectorized version `layer_fun`.
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-03-31
+ date     2026-04-03
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.8.27 @ /users/neagles/.positron-server/bin/f3aae65e0a1a11d39226cd884520f49301daef82/quarto/bin/quarto
 
@@ -341,4 +338,4 @@ vectorized version `layer_fun`.
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Tue Mar 31 02:51:15 PM EDT 2026
+Fri Apr  3 12:49:44 PM EDT 2026

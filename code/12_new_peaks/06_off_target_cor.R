@@ -15,7 +15,7 @@ cell_types = c(
 link_path = here(
     'processed-data', '12_new_peaks', '01_link_peaks', 'all_data.parquet'
 )
-plot_dir = here("plots", "12_new_peaks")
+plot_dir = here("plots", "12_new_peaks", "06_off_target_cor")
 fdr_cutoffs = c(0.01, 0.05, 0.1, 0.2, 1)
 num_rows_sample = 1e6
 
@@ -24,23 +24,17 @@ num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
 fallback_config(info = FALSE)
 
-result_df = read_parquet_duckdb(link_path, prudence = 'lavish') |>
-    group_by(peak, gene) |>
-    mutate(
-        cell_type_group = ifelse(
-            other_cell_type %in% target_cell_type, "target", "non_target"
-        )
-    ) |>
-    ungroup() |>
-    distinct(peak, gene, other_cell_type, .keep_all = TRUE) |>
-    select(cell_type_group, score, FDR) |>
+dir.create(plot_dir, showWarnings = FALSE)
+
+result_df = read_parquet_duckdb(link_path, prudence = 'stingy') |>
+    select(peak_called, score, FDR) |>
     collect()
 
 #   Density plots of correlation scores split by whether target cell type matches
 #   other cell type. No substantial difference is seen at this level
 p = ggplot(
         result_df,
-        aes(x = abs(score), fill = cell_type_group, color = cell_type_group)
+        aes(x = abs(score), fill = peak_called, color = peak_called)
     ) +
     geom_density(alpha = 0.5, linewidth = 1) +
     theme_bw(base_size = 20) +
@@ -71,13 +65,13 @@ result_df = bind_rows(result_df_list) |>
 #   distributions
 p = ggplot(
         result_df,
-        aes(x = abs(score), fill = cell_type_group, color = cell_type_group)
+        aes(x = abs(score), fill = peak_called, color = peak_called)
     ) +
     geom_density(alpha = 0.5, linewidth = 1) +
     facet_wrap(~ FDR_class, nrow = 4) +
     labs(
-        x = "abs(Correlation Score)", y = "Density", fill = "Cell Type",
-        color = "Cell Type"
+        x = "abs(Correlation Score)", y = "Density", fill = "Target Cell Type",
+        color = "Target Cell Type"
     ) +
     theme_bw(base_size = 20)
 pdf(file.path(plot_dir, "off_target_cor_stratified.pdf"), width = 10, height = 10)

@@ -1,10 +1,10 @@
 **** Job starts ****
-Fri Mar 27 03:10:01 PM EDT 2026
+Fri Apr  3 12:53:40 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30381672
+Job id: 30565890
 Job name: 06_off_target_cor
-Node name: compute-169
+Node name: compute-099
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -32,26 +32,12 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 23.
+✔ Number of reports ready for upload: 45.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
 ✔ Overwriting dplyr methods with duckplyr methods.
 ℹ Turn off with `duckplyr::methods_restore()`.
-# A duckplyr data frame: 6 variables
-   peak               gene       score    FDR target_cell_type other_cell_type
-   <chr>              <chr>      <dbl>  <dbl> <chr>            <chr>          
- 1 chr1-629146-629354 LINC01128 -0.184 0.500  Astrocyte        Astrocyte      
- 2 chr1-629146-629354 FAM41C     0.650 0.442  Astrocyte        Astrocyte      
- 3 chr1-629146-629354 SAMD11     0.706 0.500  Astrocyte        Astrocyte      
- 4 chr1-629146-629354 NOC2L      0.769 0.398  Astrocyte        Astrocyte      
- 5 chr1-629146-629354 KLHL17     0.413 0.0318 Astrocyte        Astrocyte      
- 6 chr1-629146-629354 HES4       0.203 0.108  Astrocyte        Astrocyte      
- 7 chr1-629146-629354 ISG15      0.699 0.208  Astrocyte        Astrocyte      
- 8 chr1-629146-629354 AGRN       0.788 0.262  Astrocyte        Astrocyte      
- 9 chr1-629146-629354 C1orf159   0.286 0.500  Astrocyte        Astrocyte      
-10 chr1-629811-630032 LINC01128 -0.479 0.500  Astrocyte        Astrocyte      
-# ℹ more rows
 null device 
           1 
 null device 
@@ -66,7 +52,7 @@ null device
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-03-27
+ date     2026-04-03
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.8.27 @ /users/neagles/.positron-server/bin/f3aae65e0a1a11d39226cd884520f49301daef82/quarto/bin/quarto
 
@@ -113,7 +99,6 @@ null device
  tidyverse    * 2.0.0   2023-02-22 [2] CRAN (R 4.5.0)
  timechange     0.3.0   2024-01-18 [2] CRAN (R 4.5.0)
  tzdb           0.5.0   2025-03-15 [2] CRAN (R 4.5.0)
- utf8           1.2.6   2025-06-08 [1] CRAN (R 4.5.0)
  vctrs          0.6.5   2023-12-01 [1] CRAN (R 4.5.0)
  withr          3.0.2   2024-10-28 [1] CRAN (R 4.5.0)
 
@@ -124,4 +109,4 @@ null device
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Fri Mar 27 03:16:51 PM EDT 2026
+Fri Apr  3 12:54:27 PM EDT 2026
