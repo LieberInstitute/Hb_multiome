@@ -40,22 +40,22 @@ library(here)
 here::here()
 
 #Path for new data generated
-new_data_path = here('processed-data', '98_external_Hb_comparisons','11_multiome_cluster_merging')
+new_data_path = here('processed-data', '05_03_annotation_adjustments','05_multiome_cluster_merging')
 #Path to plot directory
-plot_path = here('plots', '98_external_Hb_comparisons', '11_multiome_cluster_merging')
+plot_path = here('plots', '05_03_annotation_adjustments', '05_multiome_cluster_merging')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
 
 
-multiome_path = here('processed-data', '05_5_drop_doublets','01_drop_doublets_and_reDimReduce')
+multiome_path = here('processed-data', '05_01_drop_doublets','01_drop_doublets_and_reDimReduce')
 
 #Multiome human data
 multiome_sce = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multiomeHab_SCE.qs2'))
 assay(multiome_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(multiome_sce, 'counts'))
 
 # Add in the putative inhibitory cluster annotations
-inhib_data_path = here('processed-data', '99_donor_cluster_replicability','02_LHb4_investigation')
+inhib_data_path = here('processed-data', '05_03_annotation_adjustments','02_LHb4_investigation')
 multiome_seurat_integrated = readRDS(paste0(inhib_data_path, '/multiome_LHb4_LHb7_integrated_seurat.rds'))
 inhib_meta = multiome_seurat_integrated[[]]
 

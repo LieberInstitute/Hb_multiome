@@ -96,7 +96,7 @@ table(multiome_sce$scDblFinder.class)
 multiome_sce_meta = colData(multiome_sce)
 
 #This is the donor integrated LHb4 and 7, has the putative inhibitory cluster annotations
-script_02_data_path = here('processed-data', '99_donor_cluster_replicability','02_LHb4_investigation')
+script_02_data_path = here('processed-data', '05_03_annotation_adjustments','02_LHb4_investigation')
 multiome_seurat_integrated = readRDS(paste0(script_02_data_path, '/multiome_LHb4_LHb7_integrated_seurat.rds'))
 
 inhib_meta = multiome_seurat_integrated[[]]

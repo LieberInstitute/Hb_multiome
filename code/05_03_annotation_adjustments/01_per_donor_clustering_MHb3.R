@@ -21,15 +21,15 @@ library(here)
 here::here()
 
 #Path for new data generated
-new_data_path = here('processed-data', '99_donor_cluster_replicability','01_per_donor_clustering_MHb3')
+new_data_path = here('processed-data', '05_03_annotation_adjustments','01_per_donor_clustering_MHb3')
 #Path to plot directory
-plot_path = here('plots', '99_donor_cluster_replicability','01_per_donor_clustering_MHb3')
+plot_path = here('plots', '05_03_annotation_adjustments','01_per_donor_clustering_MHb3')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
 
 
-multiome_path = here('processed-data', '05_5_drop_doublets','01_drop_doublets_and_reDimReduce')
+multiome_path = here('processed-data', '05_01_drop_doublets','01_drop_doublets_and_reDimReduce')
 
 #Multiome human data
 multiome_sce = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multiomeHab_SCE.qs2'))
@@ -481,7 +481,7 @@ plot = int_donor_plot, device = 'pdf', width = 8, height = 6, useDingbats = FALS
 #Check out the marker gene panels for the metaclusters
 #Source the bubble plot functions
 #meta_cluster3 actually has the highest expression of the cholinergic markers, so should be grouped with MHb2
-source(here('code','98_external_Hb_comparisons', 'bubble_plot_functions.R'))
+source(here('code','05_02_external_Hb_comparisons', 'bubble_plot_functions.R'))
 DefaultAssay(multiome_seurat_integrated) <- "RNA"
 p_bubble = get_bubble_plot(multiome_seurat_integrated, 
   top_markers = c('CHAT', 'SLC5A7','SLC18A3', 'TAC1', 'TACR1','TAC3', 'GPR151', 'GAP43','SNAP25', 'POU4F1', 
@@ -823,7 +823,7 @@ midSeurat@meta.data |>
 
 
 #This is the donor integrated LHb4 and 7 from the previous script, can use to visualize marker expression
-script_02_data_path = here('processed-data', '99_donor_cluster_replicability','02_LHb4_investigation')
+script_02_data_path = here('processed-data', '05_03_annotation_adjustments','02_LHb4_investigation')
 latHb_seurat = readRDS(paste0(script_02_data_path, '/multiome_LHb4_LHb7_integrated_seurat.rds'))
 colnames(latHb_seurat[[]])
 

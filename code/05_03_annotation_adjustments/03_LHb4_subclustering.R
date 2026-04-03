@@ -20,18 +20,18 @@ library(here)
 here::here()
 
 #Path for new data generated
-new_data_path = here('processed-data', '99_donor_cluster_replicability','03_LHb4_subclustering')
+new_data_path = here('processed-data', '05_03_annotation_adjustments','03_LHb4_subclustering')
 #Path to plot directory
-plot_path = here('plots', '99_donor_cluster_replicability','03_LHb4_subclustering')
+plot_path = here('plots', '05_03_annotation_adjustments','03_LHb4_subclustering')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
 
 #Source the bubble plot functions
-source(here('code','98_external_Hb_comparisons', 'bubble_plot_functions.R'))
+source(here('code','05_02_external_Hb_comparisons', 'bubble_plot_functions.R'))
 
 
-multiome_path = here('processed-data', '05_5_drop_doublets','01_drop_doublets_and_reDimReduce')
+multiome_path = here('processed-data', '05_01_drop_doublets','01_drop_doublets_and_reDimReduce')
 
 #Multiome human data
 multiome_sce = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multiomeHab_SCE.qs2'))
@@ -42,7 +42,7 @@ assay(multiome_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(multiome_sce, 'co
 midSeurat = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multiomeHab_seurat.qs2'))
 
 #This is the donor integrated LHb4 and 7 from the previous script, can use to visualize marker expression
-script_02_data_path = here('processed-data', '99_donor_cluster_replicability','02_LHb4_investigation')
+script_02_data_path = here('processed-data', '05_03_annotation_adjustments','02_LHb4_investigation')
 multiome_seurat_integrated = readRDS(paste0(script_02_data_path, '/multiome_LHb4_LHb7_integrated_seurat.rds'))
 colnames(multiome_seurat_integrated[[]])
 

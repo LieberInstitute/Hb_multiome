@@ -16,18 +16,18 @@ library(here)
 here::here()
 
 #Path for new data generated
-new_data_path = here('processed-data', '99_donor_cluster_replicability','02_LHb4_investigation')
+new_data_path = here('processed-data', '05_03_annotation_adjustments','02_LHb4_investigation')
 #Path to plot directory
-plot_path = here('plots', '99_donor_cluster_replicability','02_LHb4_investigation')
+plot_path = here('plots', '05_03_annotation_adjustments','02_LHb4_investigation')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
 
 #Source the bubble plot functions
-source(here('code','98_external_Hb_comparisons', 'bubble_plot_functions.R'))
+source(here('code','05_02_external_Hb_comparisons', 'bubble_plot_functions.R'))
 
 
-multiome_path = here('processed-data', '05_5_drop_doublets','01_drop_doublets_and_reDimReduce')
+multiome_path = here('processed-data', '05_01_drop_doublets','01_drop_doublets_and_reDimReduce')
 
 #Multiome human data
 multiome_sce = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multiomeHab_SCE.qs2'))

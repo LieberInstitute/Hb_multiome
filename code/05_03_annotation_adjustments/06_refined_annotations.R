@@ -18,9 +18,9 @@ library(here)
 here::here()
 
 #Path for new data generated
-new_data_path = here('processed-data', '99_donor_cluster_replicability','06_refined_annotations')
+new_data_path = here('processed-data', '05_03_annotation_adjustments','06_refined_annotations')
 #Path to plot directory
-plot_path = here('plots', '99_donor_cluster_replicability','06_refined_annotations')
+plot_path = here('plots', '05_03_annotation_adjustments','06_refined_annotations')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
@@ -35,7 +35,7 @@ multiome_sce = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multio
 midSeurat = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multiomeHab_seurat.qs2'))
 
 #This has the inhibitory LHb annotations
-script_02_data_path = here('processed-data', '99_donor_cluster_replicability','02_LHb4_investigation')
+script_02_data_path = here('processed-data', '05_03_annotation_adjustments','02_LHb4_investigation')
 multiome_seurat_integrated = readRDS(paste0(script_02_data_path, '/multiome_LHb4_LHb7_integrated_seurat.rds'))
 colnames(multiome_seurat_integrated[[]])
 
