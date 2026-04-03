@@ -1,12 +1,17 @@
-#   At the time of creating this script, in order to use MACS3 rather than
-#   MACS2, I had to:
-#       in R: remotes::install_github('stuart-lab/signac@v2')
-#       in terminal: uv pip install --upgrade macs3
-#   The MACS3 binary seems to work without needing the specific Python
-#   environment loaded, so maybe this could be made into a module to more
-#   easily reproduce this code as a different user?
-#
 #   Call peaks, providing cell types as the grouping variable
+#
+#   It appears that MACS3 is usable with CallPeaks from Signac 1.17.0
+#   (see https://github.com/stuart-lab/signac/issues/1085#issuecomment-2402690609).
+#   Note that I didn't do the officially recommended solution
+#   (https://github.com/stuart-lab/signac/issues/1085#issuecomment-4115198769),
+#   which uses the v2 (beta) branch of the github version of Signac, as this
+#   version introduces breaking changes that prevent interacting with the Seurat
+#   object imported in this script. I figured it would be better to use the stable
+#   version, with the hack of providing the MACS3 path to the macs2.path parameter
+#   of CallPeaks. To install MACS3, I ran:
+#       uv pip install --upgrade macs3
+#   The resulting binary, despite being installed in a python environment,
+#   appears to work as a standalone tool (maybe it could be made into a module?)
 
 library(sessioninfo)
 library(Seurat)
@@ -31,7 +36,7 @@ seur = qs_read(seur_path)
 DefaultAssay(seur) = "ATAC"
 
 peaks = CallPeaks(
-    object = seur, group.by = 'refined_mid_cluster', macs3.path = macs3_path,
+    object = seur, group.by = 'refined_mid_cluster', macs2.path = macs3_path,
     verbose = TRUE
 )
 
