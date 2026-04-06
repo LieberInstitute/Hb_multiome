@@ -4,16 +4,20 @@ library(Signac)
 library(tidyverse)
 library(here)
 library(qs2)
-library(BSgenome.Hsapiens.UCSC.hg38)
-library(GenomicRanges)
 library(Matrix)
+library(edgeR)
 
 seur_in_path = here(
     'processed-data', '11_link_prep', '02_rebuild_atac_assay',
     'cell_level_seur.qs2'
 )
+seur_out_path = here(
+    'processed-data', '11_link_prep', '03_pseudobulk', 'pb_seur.qs2'
+)
 pseudobulk_vars = c("refined_mid_cluster", "orig.ident")
 prop_genes = 0.02
+
+dir.create(dirname(seur_out_path), showWarnings = FALSE)
 
 seur = qs_read(seur_in_path)
 
@@ -29,3 +33,16 @@ seur_pb = AggregateExpression(
     return.seurat = FALSE,
     verbose = TRUE
 )
+
+#   Use bulk-style normalization (logCPM) for ATAC, since the TFIDF
+LayerData(seur_pb, assay = "ATAC", layer = "data") = GetAssayData(
+        seur_pb, assay = "ATAC", layer = "counts"
+    ) |>
+    calcNormFactors() |>
+    edgeR::cpm(log = TRUE, prior.count = 1)
+
+seur_pb[["RNA"]] = NormalizeData(seur_pb[["RNA"]])
+
+qs_save(seur_pb, seur_out_path)
+
+session_info()
