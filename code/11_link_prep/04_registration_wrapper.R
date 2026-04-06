@@ -19,7 +19,7 @@ pseudo_path = here(
 )
 model_path = here(
     'processed-data', '11_link_prep', '04_registration_wrapper',
-    'modeling_results', 'model_results.rds'
+    'model_results.rds'
 )
 reference_gtf = '/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0/genes/genes.gtf.gz'
 
