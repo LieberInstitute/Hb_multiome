@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=60G
+#SBATCH --mem=100G
 #SBATCH --job-name=01_call_peaks
 #SBATCH -c 1
 #SBATCH -t 5-0:00:00

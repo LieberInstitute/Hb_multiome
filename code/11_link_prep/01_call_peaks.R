@@ -35,11 +35,11 @@ dir.create(dirname(out_path), showWarnings = FALSE, recursive = TRUE)
 seur = qs_read(seur_path)
 DefaultAssay(seur) = "ATAC"
 
-peaks = CallPeaks(
-    object = seur, group.by = 'refined_mid_cluster', macs2.path = macs3_path,
-    verbose = TRUE
-)
-
-write_csv(peaks, out_path)
+CallPeaks(
+        object = seur, group.by = 'refined_mid_cluster',
+        macs2.path = macs3_path, verbose = TRUE
+    ) |>
+    as.data.frame() |>
+    write_csv(out_path)
 
 session_info()
