@@ -326,6 +326,67 @@ ggsave(here(plot_path, "donor_num_per_cluster_proportionbarplot.pdf"), Propdonor
 ggsave(here(plot_path, "cell_count_donor_cluster_heatmap.pdf"), count_heatmap, width = 7, height = 9, device = 'pdf')
 
 
+#########
+# Add doublet proportional plots for the redone mid clusters and fine as well
+#########
+
+#Fine resolution clusters
+cluster_order <- midSeurat@meta.data |>
+  dplyr::count(cluster_ann, scDblFinder.class) |>
+  dplyr::group_by(cluster_ann) |>
+  dplyr::mutate(prop = n / sum(n)) |>
+  dplyr::filter(scDblFinder.class == "doublet") |>
+  dplyr::arrange(prop) |>
+  dplyr::pull(cluster_ann)
+
+fineCluster_doublet_class_p = midSeurat@meta.data |>
+  dplyr::mutate(cluster_ann = factor(cluster_ann, levels = cluster_order)) |>
+  ggplot(aes(x = cluster_ann, fill = scDblFinder.class)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Fine clusters", y = "Proportion", fill = "scDblFinder") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+fineCluster_doublet_score_p = midSeurat@meta.data |>
+  dplyr::mutate(cluster_ann = factor(cluster_ann, levels = cluster_order)) |>
+  ggplot(aes(x = cluster_ann, y = scDblFinder.score)) +
+  geom_boxplot(outlier.shape = NA) +
+  labs(x = "Fine clusters") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+fineCluster_doublet_class_p 
+fineCluster_doublet_score_p
+
+plt5 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "umap.integrated",
+                group.by = "cluster_ann",
+                label.size = 3) + 
+    NoLegend() +
+    labs(title = "RNA UMAP (fine-resolution)")
+
+plt5
+
+plt6 <- DimPlot(midSeurat, 
+                label = TRUE, 
+                reduction = "umap.integrated",
+                group.by = "scDblFinder.class",
+                label.size = 3) + 
+    NoLegend() +
+    labs(title = "RNA UMAP (doublet class)")
+
+plt6
+
+
+ggsave(here(plot_path, "fineCluster_doublet_class_proportionalbarplot.pdf"), fineCluster_doublet_class_p , width = 7, height = 7, device = 'pdf')
+ggsave(here(plot_path, "fineCluster_doublet_score_boxplot.pdf"), fineCluster_doublet_score_p, width = 7, height = 7, device = 'pdf')
+
+ggsave(here(plot_path, "rna_umap_fineCluster_annots.pdf"), plt5, width = 7, height = 7, device = 'pdf')
+ggsave(here(plot_path, "rna_umap_fineCluster_doublet_annots.pdf"), plt6, width = 7, height = 7, device = 'pdf')
+
+
 
 #And save the singlecellexperiment and seurat objects
 
