@@ -47,7 +47,6 @@ peaks_gr = read_csv(peak_path, show_col_types = FALSE) |>
         start.field = "start",
         end.field = "end"
     )
-seqlevelsStyle(peaks_gr) = "UCSC"
 
 #   Drop 'scale.data' from the RNA assay; IMO we don't use it enough to justify
 #   the amount of extra time it takes to load the object

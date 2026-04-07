@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=20G
+#SBATCH --mem=50G
 #SBATCH --job-name=02_rebuild_atac_assay
 #SBATCH -c 1
 #SBATCH -t 5-0:00:00
