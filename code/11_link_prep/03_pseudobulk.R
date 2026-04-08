@@ -6,6 +6,7 @@ library(here)
 library(qs2)
 library(Matrix)
 library(edgeR)
+library(BSgenome.Hsapiens.UCSC.hg38)
 
 seur_in_path = here(
     'processed-data', '11_link_prep', '02_rebuild_atac_assay',
@@ -19,29 +20,49 @@ prop_genes = 0.02
 
 dir.create(dirname(seur_out_path), showWarnings = FALSE)
 
+################################################################################
+#   Pseudobulk
+################################################################################
+
 seur = qs_read(seur_in_path)
 
-#   As Cynthia originally did, filter genes to those in a minimum proportion of cells
+#   As Cynthia originally did, filter genes to those in a minimum proportion of
+#   cells
 keep_genes = rownames(seur[["RNA"]])[
-    Matrix::rowSums(seur[["RNA"]]@counts > 0) > prop_genes * ncol(seur[["RNA"]])
+    Matrix::rowSums(
+        GetAssayData(seur[["RNA"]], layer = "counts") > 0) > prop_genes * ncol(seur[["RNA"]]
+    )
 ]
 seur[["RNA"]] = subset(seur[["RNA"]], features = keep_genes)
 
-seur_pb = AggregateExpression(
-    seur, assays = c("RNA", "ATAC"),
-    group.by = pseudobulk_vars,
-    return.seurat = FALSE,
-    verbose = TRUE
+counts_list = AggregateExpression(
+    seur, assays = c("RNA", "ATAC"), group.by = pseudobulk_vars
 )
 
-#   Use bulk-style normalization (logCPM) for ATAC, since the TFIDF
-LayerData(seur_pb, assay = "ATAC", layer = "data") = GetAssayData(
-        seur_pb, assay = "ATAC", layer = "counts"
+################################################################################
+#   Rebuild and renormalize
+################################################################################
+
+seur_pb = CreateSeuratObject(counts = counts_list$RNA, assay = "RNA")
+seur_pb[['ATAC']] = CreateChromatinAssay(
+    counts = counts_list$ATAC, ranges = granges(seur[["ATAC"]]),
+    annotation = Annotation(seur[["ATAC"]])
+)
+
+#   Use bulk-style normalization (logCPM) for ATAC, since the TFIDF aproach
+#   is designed specifically for sparse single-cell data
+LayerData(seur_pb, assay = "ATAC", layer = "data") = DGEList(
+        counts = GetAssayData(seur_pb, assay = "ATAC", layer = "counts")
     ) |>
     calcNormFactors() |>
     edgeR::cpm(log = TRUE, prior.count = 1)
 
 seur_pb[["RNA"]] = NormalizeData(seur_pb[["RNA"]])
+
+#   Not sure how to preserve this info instead of recomputing here
+seur_pb = RegionStats(
+    object = seur_pb, assay = 'ATAC', genome = BSgenome.Hsapiens.UCSC.hg38
+)
 
 qs_save(seur_pb, seur_out_path)
 
