@@ -76,8 +76,8 @@ stopifnot(identical(as.character(gr_src), as.character(gr_tgt)))
 mcols(gr_tgt) <- mcols(gr_src)
 methods::slot(seur_meta[["ATAC"]], "ranges") <- gr_tgt
 
-seur = RegionStats(
-    object = seur, assay = "ATAC", genome = BSgenome.Hsapiens.UCSC.hg38
+seur_meta = RegionStats(
+    object = seur_meta, assay = "ATAC", genome = BSgenome.Hsapiens.UCSC.hg38
 )
 
 #   ATAC normalization. Note we're using method 2 for TFIDF, whereas for the

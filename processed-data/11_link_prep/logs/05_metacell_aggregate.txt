@@ -1,10 +1,10 @@
 **** Job starts ****
-Wed Apr  8 11:15:25 AM EDT 2026
+Wed Apr  8 04:36:07 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30684641
+Job id: 30700801
 Job name: 05_metacell_aggregate
-Node name: compute-175
+Node name: compute-095
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -321,11 +321,10 @@ Calculating feature variances of standardized and clipped values
  Seurat                      * 5.3.0     2025-04-23 [2] CRAN (R 4.5.0)
  SeuratObject                * 5.1.0     2025-04-22 [2] CRAN (R 4.5.0)
  shiny                         1.10.0    2024-12-14 [2] CRAN (R 4.5.0)
- Signac                      * 1.17.1    2026-04-06 [1] CRAN (R 4.5.0)
+ Signac                      * 1.16.0    2025-10-10 [1] CRAN (R 4.5.0)
  sp                          * 2.2-0     2025-02-01 [2] CRAN (R 4.5.0)
  spam                          2.11-1    2025-01-20 [2] CRAN (R 4.5.0)
  SparseArray                   1.8.1     2025-07-23 [1] Bioconduc~
- sparseMatrixStats             1.20.0    2025-04-15 [1] Bioconduc~
  spatstat.data                 3.1-6     2025-03-17 [2] CRAN (R 4.5.0)
  spatstat.explore              3.4-3     2025-05-21 [2] CRAN (R 4.5.0)
  spatstat.geom                 3.4-1     2025-05-20 [2] CRAN (R 4.5.0)
@@ -364,4 +363,4 @@ Calculating feature variances of standardized and clipped values
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Apr  8 11:26:31 AM EDT 2026
+Wed Apr  8 04:59:45 PM EDT 2026
