@@ -37,12 +37,12 @@ seur = qs_read(seur_in_path)
 #   Form metacells
 ################################################################################
 
-#   Form metacells
+#   Form metacells using just the RNA, since even the harmonized ATAC data has
+#   a notable donor structure, and the goal is to avoid donor-driven linked
+#   peaks downstream
 seur_meta = SCimplify_for_Seurat(
-    seur, assay = c("RNA", "ATAC"),
-    #   These are Harmony-corrected RNA PCs and ATAC LSI embeddings respectively
-    reduction = list("integrated.harmony", "integrated.lsi.harmony"), 
-    dims = list(1:30, 2:30), gamma = graining_level,
+    seur, assay = "RNA", reduction = list("integrated.harmony"), 
+    dims = list(1:30), gamma = graining_level,
     label = "refined_mid_cluster"
 )
 stopifnot(all(seur_meta@meta.data$refined_mid_cluster_purity == 1))
