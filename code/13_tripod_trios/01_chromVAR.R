@@ -67,6 +67,8 @@ motif_obj = CreateMotifObject(data = motif_mat, pwm = pwm_set)
 seur = SetAssayData(
     seur, assay = 'ATAC', layer = 'motifs', new.data = motif_obj
 )
+
+#   Note this requires Signac <= 1.16.0
 seur = RunChromVAR(object = seur, genome = BSgenome.Hsapiens.UCSC.hg38)
 
 qs_save(seur, out_path)
