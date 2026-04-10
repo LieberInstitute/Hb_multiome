@@ -4,8 +4,9 @@
 #SBATCH --job-name=15_donor_specificity
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../processed-data/12_new_peaks/logs/15_donor_specificity.txt
-#SBATCH -e ../../processed-data/12_new_peaks/logs/15_donor_specificity.txt
+#SBATCH -o ../../processed-data/12_new_peaks/logs/15_donor_specificity_%s.txt
+#SBATCH -e ../../processed-data/12_new_peaks/logs/15_donor_specificity_%s.txt
+#SBATCH --array=1-2%2
 
 set -e
 
