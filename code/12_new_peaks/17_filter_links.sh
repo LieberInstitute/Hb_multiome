@@ -4,8 +4,9 @@
 #SBATCH --job-name=17_filter_links
 #SBATCH -c 2
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../processed-data/12_new_peaks/logs/17_filter_links.txt
-#SBATCH -e ../../processed-data/12_new_peaks/logs/17_filter_links.txt
+#SBATCH -o ../../processed-data/12_new_peaks/logs/17_filter_links_%a.txt
+#SBATCH -e ../../processed-data/12_new_peaks/logs/17_filter_links_%a.txt
+#SBATCH --array=1-2%2
 
 set -e
 
