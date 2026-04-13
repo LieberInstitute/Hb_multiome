@@ -40,7 +40,7 @@ dir.create(dirname(out_path), showWarnings = FALSE)
 seur = qs_read(seur_path)
 
 if (this_cell_type != "all") {
-    seur = subset(seur, mid_cluster == this_cell_type)
+    seur = subset(seur, refined_mid_cluster == this_cell_type)
 
     #   For several reasons, TRIPOD doesn't work well with very small numbers
     #   of cells. We just won't run it on such cell types
