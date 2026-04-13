@@ -1,0 +1,78 @@
+#Getting the donor metamarkers from the current annotations
+
+
+library(SingleCellExperiment)
+library(MetaMarkers)
+library(dplyr)
+library(ggplot2)
+library(qs2)
+library(here)
+
+here::here()
+
+
+#Path to save any generated data
+new_data_path = here('processed-data', '05_03_annotation_adjustments', '08_metamarkers')
+#Path to plot directory
+plot_path = here('plots','05_03_annotation_adjustments', '08_metamarkers')
+
+if (!dir.exists(new_data_path)) dir.create(new_data_path)
+if (!dir.exists(plot_path)) dir.create(plot_path)
+
+
+multiome_path = here('processed-data', '05_03_annotation_adjustments','06_refined_annotations')
+multiome_sce = qs_read(paste0(multiome_path, '/refined_annotation_multiomeHab_SCE.qs2'))
+
+multiome_sce
+assay(multiome_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(multiome_sce, 'counts'))
+
+
+
+#There's some decent donor variability in cell numbers for some clusters, so the stats might be weird, but the rankings should still be informative
+
+all_donors = unique(multiome_sce$orig.ident)
+
+#Get all the donor specific markers
+
+for(i in 1:length(all_donors)){
+
+  sce_sub = multiome_sce[, multiome_sce$orig.ident == all_donors[i]]
+
+  markers_sub = compute_markers(assay(sce_sub, "cpm"), sce_sub$refined_mid_cluster)
+
+  export_markers(markers_sub, paste0(new_data_path, sprintf('/markers_%s_refined_mid_markers.csv', all_donors[i])))
+
+}
+
+
+#Load up markers and get the metaMarkers 
+multiome_refined_mid_markers = list(
+    all_donors_1 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_mid_markers.csv.gz', all_donors[1]))),
+    all_donors_2 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_mid_markers.csv.gz', all_donors[2]))),
+    all_donors_3 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_mid_markers.csv.gz', all_donors[3]))),
+    all_donors_4 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_mid_markers.csv.gz', all_donors[4]))),
+    all_donors_5 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_mid_markers.csv.gz', all_donors[5]))),
+    all_donors_6 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_mid_markers.csv.gz', all_donors[6]))),
+    all_donors_7 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_mid_markers.csv.gz', all_donors[7]))),
+    all_donors_8 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_mid_markers.csv.gz', all_donors[8]))),
+    all_donors_9 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_mid_markers.csv.gz', all_donors[9]))),
+    all_donors_10 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_mid_markers.csv.gz', all_donors[10])))
+ 
+)
+
+names(multiome_refined_mid_markers) = all_donors
+multiome_refined_mid_markers
+
+multiome_mid_metaMarkers = make_meta_markers(multiome_refined_mid_markers, detailed_stats = TRUE)
+
+#Save the metamarkers
+export_meta_markers(multiome_mid_metaMarkers, 
+  paste0(new_data_path, '/multiome_refined_mid_meta_markers.csv'), 
+  names(multiome_mid_metaMarkers))
+
+multiome_mid_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_refined_mid_meta_markers.csv.gz'))
+
+multiome_mid_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
+
+
+
