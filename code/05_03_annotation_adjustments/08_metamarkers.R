@@ -27,6 +27,11 @@ multiome_sce
 assay(multiome_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(multiome_sce, 'counts'))
 
 
+#Try some markers where the LHb4 inhib neurons are still just LHb4
+table(multiome_sce$refined_mid_cluster)
+multiome_sce$refined_noLHB4Inhib = multiome_sce$refined_mid_cluster
+multiome_sce$refined_noLHB4Inhib[multiome_sce$refined_mid_cluster %in% c('Inhib_LHb_4.1','Inhib_LHb_4.2')] = 'LHb.4'
+table(multiome_sce$refined_noLHB4Inhib)
 
 #There's some decent donor variability in cell numbers for some clusters, so the stats might be weird, but the rankings should still be informative
 
@@ -42,7 +47,13 @@ for(i in 1:length(all_donors)){
 
   export_markers(markers_sub, paste0(new_data_path, sprintf('/markers_%s_refined_mid_markers.csv', all_donors[i])))
 
+  markers_sub = compute_markers(assay(sce_sub, "cpm"), sce_sub$refined_noLHB4Inhib)
+
+  export_markers(markers_sub, paste0(new_data_path, sprintf('/markers_%s_refined_noLHb4Inhib.csv', all_donors[i])))
+
 }
+
+
 
 
 #Load up markers and get the metaMarkers 
@@ -73,6 +84,36 @@ export_meta_markers(multiome_mid_metaMarkers,
 multiome_mid_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_refined_mid_meta_markers.csv.gz'))
 
 multiome_mid_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
+
+
+
+multiome_refined_noInhib_mid_markers = list(
+    all_donors_1 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_noLHb4Inhib.csv.gz', all_donors[1]))),
+    all_donors_2 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_noLHb4Inhib.csv.gz', all_donors[2]))),
+    all_donors_3 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_noLHb4Inhib.csv.gz', all_donors[3]))),
+    all_donors_4 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_noLHb4Inhib.csv.gz', all_donors[4]))),
+    all_donors_5 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_noLHb4Inhib.csv.gz', all_donors[5]))),
+    all_donors_6 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_noLHb4Inhib.csv.gz', all_donors[6]))),
+    all_donors_7 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_noLHb4Inhib.csv.gz', all_donors[7]))),
+    all_donors_8 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_noLHb4Inhib.csv.gz', all_donors[8]))),
+    all_donors_9 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_noLHb4Inhib.csv.gz', all_donors[9]))),
+    all_donors_10 = read_markers(paste0(new_data_path, sprintf('/markers_%s_refined_noLHb4Inhib.csv.gz', all_donors[10])))
+ 
+)
+
+names(multiome_refined_noInhib_mid_markers) = all_donors
+multiome_refined_noInhib_mid_markers
+
+multiome_mid_noInhib_metaMarkers = make_meta_markers(multiome_refined_noInhib_mid_markers, detailed_stats = TRUE)
+
+#Save the metamarkers
+export_meta_markers(multiome_mid_noInhib_metaMarkers, 
+  paste0(new_data_path, '/multiome_refined_mid_noInhibLHb4_meta_markers.csv'), 
+  names(multiome_mid_noInhib_metaMarkers))
+
+multiome_mid_noInhib_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_refined_mid_noInhibLHb4_meta_markers.csv.gz'))
+
+multiome_mid_noInhib_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
 
 
 
