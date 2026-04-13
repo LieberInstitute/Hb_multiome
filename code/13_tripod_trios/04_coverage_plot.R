@@ -37,7 +37,7 @@ seur_path = here(
 #     "processed-data", "13_tripod_trios", "01_chromVAR", "seur.qs2"
 # )
 plot_path = here(
-    "plots", "13_tripod_trios", "04_trio_heatmap", "heatmap.pdf"
+    "plots", "13_tripod_trios", "04_coverage_plot", "coverage_plot.pdf"
 )
 cell_type1 = "MHb.2"
 cell_type2 = "LHb.2.7"
