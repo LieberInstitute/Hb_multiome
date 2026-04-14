@@ -59,8 +59,12 @@ for(i in 1:length(all_donors)){
   markers_sub = compute_markers(assay(sce_sub, "cpm"), sce_sub$refined_noLHB4Inhib)
   export_markers(markers_sub, paste0(new_data_path, sprintf('/markers_%s_refined_noLHb4Inhib.csv', all_donors[i])))
   
+  #Class markers
   markers_sub = compute_markers(assay(sce_sub, "cpm"), sce_sub$class_label)
   export_markers(markers_sub, paste0(new_data_path, sprintf('/markers_%s_class_label.csv', all_donors[i])))
+  #Celltype markers but with hierarchical information
+  markers_sub = compute_markers(assay(sce_sub, "cpm"),sce_sub$refined_noLHB4Inhib, sce_sub$class_label)
+  export_markers(markers_sub, paste0(new_data_path, sprintf('/markers_%s_hierarchical_celltype_markers.csv', all_donors[i])))
 
 
 }
@@ -156,5 +160,35 @@ export_meta_markers(multiome_class_metaMarkers,
 multiome_class_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_class_meta_markers.csv.gz'))
 
 multiome_class_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
+plot_pareto_summary(multiome_class_metaMarkers , min_recurrence = 0)
 
+#And cell-type metamarkers taking into account the hierarchy information
+multiome_hier_ct_markers = list(
+    all_donors_1 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_celltype_markers.csv.gz', all_donors[1]))),
+    all_donors_2 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_celltype_markers.csv.gz', all_donors[2]))),
+    all_donors_3 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_celltype_markers.csv.gz', all_donors[3]))),
+    all_donors_4 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_celltype_markers.csv.gz', all_donors[4]))),
+    all_donors_5 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_celltype_markers.csv.gz', all_donors[5]))),
+    all_donors_6 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_celltype_markers.csv.gz', all_donors[6]))),
+    all_donors_7 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_celltype_markers.csv.gz', all_donors[7]))),
+    all_donors_8 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_celltype_markers.csv.gz', all_donors[8]))),
+    all_donors_9 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_celltype_markers.csv.gz', all_donors[9]))),
+    all_donors_10 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_celltype_markers.csv.gz', all_donors[10])))
+ 
+)
+
+names(multiome_hier_ct_markers ) = all_donors
+multiome_hier_ct_markers 
+
+multiome_hier_ct_metaMarkers = make_meta_markers(multiome_hier_ct_markers , detailed_stats = TRUE)
+
+#Save the metamarkers
+export_meta_markers(multiome_hier_ct_metaMarkers, 
+  paste0(new_data_path, '/multiome_hier_ct_meta_markers.csv'), 
+  names(multiome_hier_ct_metaMarkers))
+
+multiome_hier_ct_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_hier_ct_meta_markers.csv.gz'))
+
+multiome_hier_ct_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
+plot_pareto_summary(multiome_hier_ct_metaMarkers, min_recurrence = 0)
 
