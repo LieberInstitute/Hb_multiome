@@ -26,9 +26,6 @@ cell_types = c(
     "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1", "MHb.1.2",
     "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC"
 )
-result_paths = here(
-    'processed-data', '12_new_peaks', '01_link_peaks', '%s_%s.csv.gz'
-)
 peak_path = here(
     'processed-data', '11_link_prep', '01_call_peaks',
     'macs3_peaks.csv.gz'
@@ -49,8 +46,10 @@ num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
 fallback_config(info = FALSE)
 
-peak_df = read_csv_duckdb(peak_path, prudence = "stingy") |>
-    mutate(peak = paste(seqnames, start, end, sep = "_")) |>
+dir.create(dirname(full_out_path), showWarnings = FALSE)
+
+peak_df = read_csv_duckdb(peak_path, prudence = "lavish") |>
+    mutate(peak = paste(seqnames, start, end, sep = "-")) |>
     select(peak, peak_called_in) |>
     collect()
 
@@ -65,8 +64,8 @@ for (this_cell_type in cell_types) {
 result_df = bind_rows(result_df_list) |>
     left_join(peak_df, by = "peak") |>
     mutate(
-        peak_called = grepl(
-            sprintf('(^|,)%s(,|$)', cell_type), peak_called_in
+        peak_called = str_detect(
+            peak_called_in, sprintf('(^|,)%s(,|$)', cell_type)
         )
     ) |>
     select(peak, gene, cell_type, score, FDR, peak_called) |>
