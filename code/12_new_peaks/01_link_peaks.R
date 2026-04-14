@@ -62,10 +62,9 @@ filter_features = function(seur, assay_name, min_donors) {
 message(Sys.time(), ' | Loading Seurat object')
 seur = qs_read(seur_path)
 
-#   Set Idents and subset to the other cell type
-seur$cluster_pb = sub("[-_].*$", "", colnames(seur))
-seur$cluster_pb = trimws(seur$cluster_pb)
-Idents(seur) = seur$cluster_pb
+#   Subset to this cell type
+seur@meta.data$cell_type = gsub("-", "_", seur@meta.data$orig.ident)
+Idents(seur) = "cell_type"
 seur = subset(seur, idents = this_cell_type)
 
 #   Require both genes and peaks to be present in at least 6 donors. We can't
@@ -87,7 +86,12 @@ message(Sys.time(), ' | Exporting to parquet')
 Links(seur[[atac_assay]]) |>
     as.data.frame() |>
     as_tibble() |>
-    mutate(cell_type = this_cell_type) |>
+    mutate(
+        cell_type = this_cell_type,
+        FDR = p.adjust(pvalue, method = "BH"),
+        #  Avoids duckplyr issues
+        across(where(is.factor), as.character)
+    ) |>
     compute_parquet(out_path)
 
 message("Memory usage:")
