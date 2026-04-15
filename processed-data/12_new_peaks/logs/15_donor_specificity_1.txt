@@ -1,8 +1,8 @@
 **** Job starts ****
-Tue Apr 14 03:00:54 PM EDT 2026
+Wed Apr 15 03:12:54 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30794540
+Job id: 30814063
 Job name: 15_donor_specificity
 Node name: compute-169
 Task id: 1
@@ -42,7 +42,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 89.
+✔ Number of reports ready for upload: 98.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -77,7 +77,7 @@ Overall donor-specificity score: 0.93
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-04-14
+ date     2026-04-15
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.9.36 @ /users/neagles/.positron-server/bin/ae29de6747f9f15cc38783410ec9a46a5b428393/quarto/bin/quarto
 
@@ -230,4 +230,4 @@ Overall donor-specificity score: 0.93
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Tue Apr 14 03:02:25 PM EDT 2026
+Wed Apr 15 03:13:41 PM EDT 2026

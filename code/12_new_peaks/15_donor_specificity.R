@@ -125,68 +125,49 @@ cell_types <- unique(count_df$cell_type)
 percentiles <- unique(count_df$percentile)
 
 for (color_by in c("donor", "link")) {
-    # Generate one plot per cell_type x percentile
-    plots <- lapply(cell_types, function(ct) {
-        lapply(percentiles, function(perc) {
-            df_sub <- count_df |>
-                filter(cell_type == ct, percentile == perc)
-            
-            if (color_by == 'link') {
-                p = df_sub |>
+    if (color_by == "donor") {
+        p = ggplot(
+                count_df, aes(x = peak_value, y = gene_value, color = donor)
+            ) +
+            scale_color_manual(values = donor_colors) +
+            geom_point(size = 0.5) +
+            facet_grid(cell_type ~ percentile) +
+            labs(x = "Peak", y = "Gene") +
+            theme_bw(base_size = 20) +
+            guides(color = guide_legend(override.aes = list(size = 4)))
+    } else {
+        # Generate one plot per cell_type x percentile
+        plots <- lapply(cell_types, function(ct) {
+            lapply(percentiles, function(perc) {
+                p = count_df |>
+                    filter(cell_type == ct, percentile == perc) |>
                     mutate(link = paste(peak, gene, sep = "_")) |>
                     ggplot(aes(x = peak_value, y = gene_value, color = link)) +
-                        scale_color_manual(values = link_colors)
-            } else {
-                p = ggplot(
-                        df_sub,
-                        aes(x = peak_value, y = gene_value, color = donor)
-                    ) +
-                    scale_color_manual(values = donor_colors)
-            }
+                        scale_color_manual(values = link_colors) +
+                        geom_point(size = 0.5) +
+                        labs(
+                            title = sprintf("%s | perc.=%.1f", ct, perc),
+                            x = "Peak", y = "Gene"
+                        ) +
+                        theme_bw(base_size = 15) +
+                        theme(legend.position = "none")
 
-            p = p +
-                geom_point(size = 0.5) +
-                labs(
-                    title = sprintf("%s | perc.=%.1f", ct, perc),
-                    x = "Peak", y = "Gene"
-                ) +
-                theme_bw(base_size = 15) +
-                theme(legend.position = "none")
-
-            return(p)
+                return(p)
+            })
         })
-    })
 
-    # Flatten to a single list, row-major (cell_type changes slowly)
-    plot_list <- unlist(plots, recursive = FALSE)
+        # Flatten to a single list, row-major (cell_type changes slowly)
+        plot_list <- unlist(plots, recursive = FALSE)
 
-    grid <- plot_grid(plotlist = plot_list, ncol = length(percentiles))
+        p <- plot_grid(plotlist = plot_list, ncol = length(percentiles))
 
-    # Extract shared legend (when coloring by donor)
-    if (color_by == 'donor') {
-        p = ggplot(
-                count_df,
-                aes(x = peak_value, y = gene_value, color = donor)
-            ) +
-            scale_color_manual(values = donor_colors)
-
-        legend <- get_legend(
-            p +
-                geom_point() +
-                theme_bw(base_size = 10) +
-                guides(color = guide_legend(override.aes = list(size = 2)))
-        )
-        final <- plot_grid(grid, legend, rel_widths = c(1, 0.15))
-    } else {
-        final <- grid
     }
     
-
     pdf(
         file.path(plot_dir, sprintf("%s_%s_scatter.pdf", dataset, color_by)),
         width = 10, height = 3 * length(cell_types)
     )
-    print(final)
+    print(p)
     dev.off()
 }
 
