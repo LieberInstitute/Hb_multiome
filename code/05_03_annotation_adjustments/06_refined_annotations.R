@@ -4,7 +4,9 @@
 #C.11.MHb.1.2 changes from MHb.1.2 to MHb.2
 #LHb.4 gets split into LHb.4 and inhib.LHb.4.1 and inhib.LHb.4.2
 #LHb.1, LHb.1.3, and LHb.1.3.4 all get merged into LHb.1.3.4
+#C.21.Astrocyte changes to Ependymal
 
+#Make sure the mid resolution annotation changes are reflected in the cluster_ann (fine resolution) annotations
 
 
 library(SingleCellExperiment)
@@ -54,12 +56,26 @@ midSeurat$refined_mid_cluster[rownames(midSeurat[[]]) %in% inhib_barcodes_2] = '
 
 table(midSeurat$refined_mid_cluster, midSeurat$mid_cluster)
 
+#And the finer resolution annotations
+midSeurat$refined_cluster_ann = as.character(midSeurat$cluster_ann)
+midSeurat$refined_cluster_ann[rownames(midSeurat[[]]) %in% inhib_barcodes_1] = 'Inhib_LHb_4.1'
+midSeurat$refined_cluster_ann[rownames(midSeurat[[]]) %in% inhib_barcodes_2] = 'Inhib_LHb_4.2'
+
+table(midSeurat$refined_cluster_ann, midSeurat$cluster_ann)
+
+#And then with the SingleCellExperiment object too
 multiome_sce$refined_mid_cluster = multiome_sce$mid_cluster
 multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Inhib_LHb_4.1'
 multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Inhib_LHb_4.2'
 
-
 table(multiome_sce$refined_mid_cluster,multiome_sce$mid_cluster)
+
+#Finer resolution annotations
+multiome_sce$refined_cluster_ann = as.character(multiome_sce$cluster_ann)
+multiome_sce$refined_cluster_ann[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Inhib_LHb_4.1'
+multiome_sce$refined_cluster_ann[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Inhib_LHb_4.2'
+
+table(multiome_sce$refined_cluster_ann, multiome_sce$cluster_ann)
 
 
 #Now merge the LHb.1, LHb.1.3, and LHb.1.3.4 clusters into one cluster called LHb.1.3.4
@@ -77,6 +93,21 @@ multiome_sce$refined_mid_cluster[multiome_sce$cluster_ann == 'C.11.MHb.1.2'] = '
 table(multiome_sce$refined_mid_cluster, multiome_sce$mid_cluster)
 
 
+#And update the C.21.Astrocyte to Ependymal
+#Fine cluster first
+midSeurat$refined_cluster_ann[midSeurat$cluster_ann == 'C.21.Astrocyte'] = 'C.21.Ependymal'
+multiome_sce$refined_cluster_ann[multiome_sce$cluster_ann == 'C.21.Astrocyte'] = 'C.21.Ependymal'
+
+#And match at the mid resolution
+midSeurat$refined_mid_cluster[midSeurat$cluster_ann == 'C.21.Astrocyte'] = 'Ependymal'
+multiome_sce$refined_mid_cluster[multiome_sce$cluster_ann == 'C.21.Astrocyte'] = 'Ependymal'
+
+
+#Double check
+table(multiome_sce$refined_mid_cluster, multiome_sce$refined_cluster_ann)
+
+
+
 #Some summary plots
 #UMAP with the new annotations
 #And the donor proportion barplot per cluster
@@ -92,13 +123,14 @@ my_colors <- c(
     Endo = "#d95f02",
     Inhib_Thal = "#9a9fe7",
     Excit_Thal = "#42467b",
-    Thal = "#4d55b7"
+    Thal = "#4d55b7",
+    Ependymal = "#f5a105ff"
 )
 
 ## assign color gradients to mid resolution clusters based on Broad cell-types
 
 # extract LHb and MHb clusters
-cluster_levels <- levels(midSeurat)
+cluster_levels <- c(levels(midSeurat), 'Ependymal')
 cluster_levels
 LHb_clusters <- grep("LHb", cluster_levels, value = TRUE)
 MHb_clusters <- grep("MHb", cluster_levels, value = TRUE)
@@ -113,7 +145,7 @@ my_colors_mid[LHb_clusters] <- LHb_colors
 my_colors_mid[MHb_clusters] <- MHb_colors
 
 # assign base color for other types from your existing palette
-for (category in c("Oligo", "Astrocyte", "OPC", "Microglia", "Endo", "Inhib.Thal", "Excit.Thal", "Thal")) {
+for (category in c("Oligo", "Astrocyte", "OPC", "Microglia", "Endo", "Inhib.Thal", "Excit.Thal", "Thal", 'Ependymal')) {
     matched <- grep(category, cluster_levels, value = TRUE)
     my_colors_mid[matched] <- my_colors[[gsub("\\.", "_", category)]]
 }
@@ -123,7 +155,7 @@ my_colors_mid["Inhib_LHb_4.2"] <- "#DC143C"  # Crimson red
 #Adjust color for MHb3, too light
 my_colors_mid["MHb.3"] <- "#56204eff" 
 
-
+my_colors_mid["Inhib.Thal"] <- "#9a9fe7"
 
 plt1 <- DimPlot(midSeurat, 
                 label = TRUE, 
@@ -257,7 +289,7 @@ heat_df <- multiome_sce@colData |>
   mutate(
     # keep your existing rule: <10 shown as grey
     cell_count_plot = if_else(cell_count < 10 & cell_count > 0, NA_real_, as.numeric(cell_count))
-  ) |> View()
+  )
 
 special_df <- heat_df |>
   mutate(
@@ -332,16 +364,16 @@ ggsave(here(plot_path, "cell_count_donor_cluster_heatmap.pdf"), count_heatmap, w
 
 #Fine resolution clusters
 cluster_order <- midSeurat@meta.data |>
-  dplyr::count(cluster_ann, scDblFinder.class) |>
-  dplyr::group_by(cluster_ann) |>
+  dplyr::count(refined_cluster_ann, scDblFinder.class) |>
+  dplyr::group_by(refined_cluster_ann) |>
   dplyr::mutate(prop = n / sum(n)) |>
   dplyr::filter(scDblFinder.class == "doublet") |>
   dplyr::arrange(prop) |>
-  dplyr::pull(cluster_ann)
+  dplyr::pull(refined_cluster_ann)
 
 fineCluster_doublet_class_p = midSeurat@meta.data |>
-  dplyr::mutate(cluster_ann = factor(cluster_ann, levels = cluster_order)) |>
-  ggplot(aes(x = cluster_ann, fill = scDblFinder.class)) +
+  dplyr::mutate(refined_cluster_ann = factor(refined_cluster_ann, levels = cluster_order)) |>
+  ggplot(aes(x = refined_cluster_ann, fill = scDblFinder.class)) +
   geom_bar(position = "fill") +
   scale_y_continuous(labels = scales::percent) +
   labs(x = "Fine clusters", y = "Proportion", fill = "scDblFinder") +
@@ -349,8 +381,8 @@ fineCluster_doublet_class_p = midSeurat@meta.data |>
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
 fineCluster_doublet_score_p = midSeurat@meta.data |>
-  dplyr::mutate(cluster_ann = factor(cluster_ann, levels = cluster_order)) |>
-  ggplot(aes(x = cluster_ann, y = scDblFinder.score)) +
+  dplyr::mutate(refined_cluster_ann = factor(refined_cluster_ann, levels = cluster_order)) |>
+  ggplot(aes(x = refined_cluster_ann, y = scDblFinder.score)) +
   geom_boxplot(outlier.shape = NA) +
   labs(x = "Fine clusters") +
   theme_bw() +
@@ -362,7 +394,7 @@ fineCluster_doublet_score_p
 plt5 <- DimPlot(midSeurat, 
                 label = TRUE, 
                 reduction = "umap.integrated",
-                group.by = "cluster_ann",
+                group.by = "refined_cluster_ann",
                 label.size = 3) + 
     NoLegend() +
     labs(title = "RNA UMAP (fine-resolution)")
