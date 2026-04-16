@@ -1,115 +1,102 @@
-library(getopt)
+#   As an array job over cell types, compute linked peaks using all peaks, even
+#   those only called for other cell types
+
 library(sessioninfo)
 library(Seurat)
 library(Signac)
-library(BSgenome.Hsapiens.UCSC.hg38)
-library(GenomicRanges) 
 library(tidyverse)
 library(here)
 library(Matrix)
-library(qs2)
 library(sparseMatrixStats)
+library(qs2)
+library(duckplyr)
 
-# Import command-line parameters
-spec <- matrix(
-    c(
-        c("target_cell_type", "other_cell_type"),
-        c("t", "o"),
-        rep("1", 2),
-        rep("character", 2),
-        rep("Add variable description here", 2)
-    ),
-    ncol = 5
+cell_types = c(
+    "Astrocyte", "Endo", "Excit.Thal", "Inhib_LHb_4.1", "Inhib_LHb_4.2",
+    "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1", "MHb.1.2",
+    "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC"
 )
-opt <- getopt(spec)
-
-message("Using the following parameters:")
-print(opt)
+this_cell_type = cell_types[as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID"))]
 
 seur_path = here(
-    "processed-data", "12_new_peaks", "13_metacell_aggregate",
-    "seur_meta.qs2"
+    "processed-data", "11_link_prep", "05_metacell_aggregate",
+    "meta_seur.qs2"
 )
 out_path = here(
     "processed-data", "12_new_peaks", "14_metacell_link_peaks",
-    sprintf("%s_%s.csv.gz", opt$target_cell_type, opt$other_cell_type)
+    sprintf("%s.parquet", this_cell_type)
 )
+min_cells = 6
+min_prop_cells = 0.05
 atac_assay = "ATAC"
 rna_assay = "RNA"
 
+num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
+duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
+fallback_config(info = FALSE)
+
 dir.create(dirname(out_path), showWarnings = FALSE)
+
+################################################################################
+#   Functions
+################################################################################
+
+filter_features = function(seur, assay_name, min_cells) {
+    counts_mat = GetAssayData(seur, assay = assay_name, layer = "counts")
+
+    keep_features = rownames(counts_mat)[
+        (Matrix::rowSums(counts_mat > 0) >= min_cells) &
+        (sparseMatrixStats::rowSds(counts_mat) > 0)
+    ]
+
+    message(
+        sprintf(
+            "Filtering %s assay to %d of %d (%.1f%%) features (present in at least %d metacells)",
+            assay_name, length(keep_features), nrow(counts_mat),
+            100 * length(keep_features) / nrow(counts_mat), min_cells
+        )
+    )
+
+    return(subset(seur[[assay_name]], features = keep_features))
+}
+
+################################################################################
+#   Main
+################################################################################
 
 message(Sys.time(), ' | Loading Seurat object')
 seur = qs_read(seur_path)
 
-seur = RegionStats(
-    object = seur, assay = "ATAC", genome = BSgenome.Hsapiens.UCSC.hg38
-)
+#   Subset to this cell type
+seur = subset(seur, subset = refined_mid_cluster == this_cell_type)
 
-message(Sys.time(), ' | Subsetting ATAC assay with expressed peaks')
-
-#   Subset to the other cell type
-seur = subset(seur, subset = mid_cluster == opt$other_cell_type)
-
-peaks_gr = granges(seur[[atac_assay]])
-peaks_gr$peak_id = GRangesToString(peaks_gr)
-
-#   Get peaks called in the target cell type
-peaks_called = as.data.frame(peaks_gr) |>
-    transmute(
-        peak_id = peak_id,
-        peak_called_in = as.character(peak_called_in)
-    ) |>
-    mutate(peak_called_in = str_split(peak_called_in, "\\s*,\\s*")) |>
-    unnest(peak_called_in) |>
-    mutate(peak_called_in = trimws(peak_called_in)) |>
-    filter(!is.na(peak_called_in), peak_called_in != "") |>
-    distinct() |>
-    filter(peak_called_in == opt$target_cell_type) |>
-    pull(peak_id)
-stopifnot(all(peaks_called %in% rownames(seur[[atac_assay]])))
-
-#   Filter peaks to those present in at least 5% of metacells in the other cell
-#   type
-counts_mat = GetAssayData(seur, assay = atac_assay, layer = "counts")[
-    peaks_called, , drop = FALSE
-]
-min_cells = as.integer(0.05 * ncol(seur))
-keep_peaks = rownames(counts_mat)[
-    (Matrix::rowSums(counts_mat > 0) >= min_cells) &
-    (sparseMatrixStats::rowSds(counts_mat) > 0)
-]
-stopifnot(length(keep_peaks) > 0)
-message(
-    sprintf(
-        "Retained %.1f%% of peaks (%d / %d) based on expression",
-        100 * length(keep_peaks) / length(peaks_called),
-        length(keep_peaks),
-        length(peaks_called)
-    )
-)
-seur[['ATAC']] = subset(seur[[atac_assay]], features = keep_peaks)
+#   Require both genes and peaks to be present in at least 6 metacells, or 5%,
+#   whichever is larger
+message(Sys.time(), ' | Filtering features')
+this_min_cells = max(min_cells, as.integer(ncol(seur) * min_prop_cells))
+seur[[atac_assay]] = filter_features(seur, atac_assay, this_min_cells)
+seur[[rna_assay]] = filter_features(seur, rna_assay, this_min_cells)
 
 #   Compute links without any filtering of outputs
 message(Sys.time(), ' | Running LinkPeaks')
-DefaultAssay(seur) = rna_assay
 seur = LinkPeaks(
     object = seur, peak.assay = atac_assay, expression.assay = rna_assay,
-    min.cells = min_cells, pvalue_cutoff = 1, score_cutoff = 0,
+    min.cells = this_min_cells, pvalue_cutoff = 1, score_cutoff = 0,
     method = "spearman"
 )
 
 #   Export linked peaks
-message(Sys.time(), ' | Exporting to CSV')
+message(Sys.time(), ' | Exporting to parquet')
 Links(seur[[atac_assay]]) |>
     as.data.frame() |>
     as_tibble() |>
     mutate(
+        cell_type = this_cell_type,
         FDR = p.adjust(pvalue, method = "BH"),
-        target_cell_type = opt$target_cell_type,
-        other_cell_type = opt$other_cell_type
+        #  Avoids duckplyr issues
+        across(where(is.factor), as.character)
     ) |>
-    write_csv(out_path)
+    compute_parquet(out_path)
 
 message("Memory usage:")
 gc()
