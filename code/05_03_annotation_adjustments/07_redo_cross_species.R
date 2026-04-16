@@ -271,7 +271,7 @@ table(zeb_sce$final_Annotations)
 yalcinbas_sce = yalcinbas_sce[, !yalcinbas_sce$final_Annotations %in% c('Astrocyte', 'Endo','Microglia','Oligo', 'OPC', 'Excit.Thal','Inhib.Thal')]
 table(yalcinbas_sce$final_Annotations)
 
-multiome_sce = multiome_sce[, !multiome_sce$final_Annotations %in% c('Astrocyte', 'Endo','Microglia','Oligo', 'OPC', 'Excit.Thal','Inhib.Thal', 'Thal')]
+multiome_sce = multiome_sce[, !multiome_sce$final_Annotations %in% c('Astrocyte', 'Endo','Microglia','Oligo', 'OPC', 'Excit.Thal','Inhib.Thal', 'Thal', 'Ependymal')]
 table(multiome_sce$final_Annotations)
 
 
