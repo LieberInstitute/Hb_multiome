@@ -4,8 +4,9 @@
 #SBATCH --job-name=04_registration_wrapper
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../processed-data/11_link_prep/logs/04_registration_wrapper.txt
-#SBATCH -e ../../processed-data/11_link_prep/logs/04_registration_wrapper.txt
+#SBATCH -o ../../processed-data/11_link_prep/logs/04_registration_wrapper_%a.txt
+#SBATCH -e ../../processed-data/11_link_prep/logs/04_registration_wrapper_%a.txt
+#SBATCH --array=2
 
 set -e
 
