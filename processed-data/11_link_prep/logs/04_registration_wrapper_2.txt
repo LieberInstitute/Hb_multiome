@@ -1,8 +1,8 @@
 **** Job starts ****
-Fri Apr 17 12:27:52 PM EDT 2026
+Fri Apr 17 03:21:05 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30873995
+Job id: 30884544
 Job name: 04_registration_wrapper
 Node name: compute-169
 Task id: 2
@@ -136,19 +136,19 @@ See help("Deprecated")
 Use 'anyNA()' instead.
 See help("Deprecated")
 Removed 10 genes without Ensembl IDs
-2026-04-17 12:29:05.369349 make pseudobulk object
-2026-04-17 12:29:10.707717 dropping 70 pseudo-bulked samples that are below 'min_ncells'.
-2026-04-17 12:29:10.758636 drop lowly expressed genes
-2026-04-17 12:29:11.113903 normalize expression
-2026-04-17 12:29:16.192482 saving sce_pseudo to /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/11_link_prep/04_registration_wrapper/pb_sce_fine.rds
-2026-04-17 12:29:20.840446 create model matrix
-2026-04-17 12:29:20.877692 run duplicateCorrelation()
-2026-04-17 12:29:57.416413 The estimated correlation is: 0.11664289580245
-2026-04-17 12:29:57.420242 computing enrichment statistics
-2026-04-17 12:30:17.720448 extract and reformat enrichment results
-2026-04-17 12:30:17.88657 running the baseline pairwise model
-2026-04-17 12:30:18.8942 computing pairwise statistics
-2026-04-17 12:30:34.264062 computing F-statistics
+2026-04-17 15:22:24.216372 make pseudobulk object
+2026-04-17 15:22:28.068761 dropping 70 pseudo-bulked samples that are below 'min_ncells'.
+2026-04-17 15:22:28.111418 drop lowly expressed genes
+2026-04-17 15:22:28.400333 normalize expression
+2026-04-17 15:22:32.11009 saving sce_pseudo to /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/11_link_prep/04_registration_wrapper/pb_sce_fine.rds
+2026-04-17 15:22:35.331985 create model matrix
+2026-04-17 15:22:35.359359 run duplicateCorrelation()
+2026-04-17 15:23:06.671363 The estimated correlation is: 0.11664289580245
+2026-04-17 15:23:06.676394 computing enrichment statistics
+2026-04-17 15:23:26.253716 extract and reformat enrichment results
+2026-04-17 15:23:26.422667 running the baseline pairwise model
+2026-04-17 15:23:27.415261 computing pairwise statistics
+2026-04-17 15:23:41.275564 computing F-statistics
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -324,4 +324,4 @@ Removed 10 genes without Ensembl IDs
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Fri Apr 17 12:30:50 PM EDT 2026
+Fri Apr 17 03:23:57 PM EDT 2026
