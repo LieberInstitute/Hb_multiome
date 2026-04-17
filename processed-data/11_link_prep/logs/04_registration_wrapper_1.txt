@@ -1,11 +1,11 @@
 **** Job starts ****
-Mon Apr  6 01:36:23 PM EDT 2026
+Fri Apr 17 02:27:19 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30611619
+Job id: 30884199
 Job name: 04_registration_wrapper
-Node name: compute-175
-Task id: 
+Node name: compute-169
+Task id: 1
 Unloading conda_R/4.5
 Loading conda_R/4.5
 
@@ -136,19 +136,19 @@ See help("Deprecated")
 Use 'anyNA()' instead.
 See help("Deprecated")
 Removed 10 genes without Ensembl IDs
-2026-04-06 13:38:49.168883 make pseudobulk object
-2026-04-06 13:38:51.565423 dropping 16 pseudo-bulked samples that are below 'min_ncells'.
-2026-04-06 13:38:51.593891 drop lowly expressed genes
-2026-04-06 13:38:51.77108 normalize expression
-2026-04-06 13:38:53.235894 saving sce_pseudo to /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/11_link_prep/04_registration_wrapper/pb_sce.rds
-2026-04-06 13:38:54.666617 create model matrix
-2026-04-06 13:38:54.697684 run duplicateCorrelation()
-2026-04-06 13:39:09.19343 The estimated correlation is: 0.153206917391455
-2026-04-06 13:39:09.195529 computing enrichment statistics
-2026-04-06 13:39:11.987726 extract and reformat enrichment results
-2026-04-06 13:39:12.050505 running the baseline pairwise model
-2026-04-06 13:39:12.293004 computing pairwise statistics
-2026-04-06 13:39:13.459608 computing F-statistics
+2026-04-17 14:28:20.515756 make pseudobulk object
+2026-04-17 14:28:22.887093 dropping 17 pseudo-bulked samples that are below 'min_ncells'.
+2026-04-17 14:28:22.916972 drop lowly expressed genes
+2026-04-17 14:28:23.106511 normalize expression
+2026-04-17 14:28:24.727034 saving sce_pseudo to /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/11_link_prep/04_registration_wrapper/pb_sce_mid.rds
+2026-04-17 14:28:26.157805 create model matrix
+2026-04-17 14:28:26.189287 run duplicateCorrelation()
+2026-04-17 14:28:40.752081 The estimated correlation is: 0.153082833711319
+2026-04-17 14:28:40.75536 computing enrichment statistics
+2026-04-17 14:28:43.909561 extract and reformat enrichment results
+2026-04-17 14:28:43.975003 running the baseline pairwise model
+2026-04-17 14:28:44.263991 computing pairwise statistics
+2026-04-17 14:28:45.658381 computing F-statistics
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -159,9 +159,9 @@ Removed 10 genes without Ensembl IDs
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-04-06
+ date     2026-04-17
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.8.27 @ /users/neagles/.positron-server/bin/f3aae65e0a1a11d39226cd884520f49301daef82/quarto/bin/quarto
+ quarto   1.9.37 @ /users/neagles/.positron-server/bin/5dfc92424b4381ca7139f3f0a122a65abc2a9383/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package              * version   date (UTC) lib source
@@ -324,4 +324,4 @@ Removed 10 genes without Ensembl IDs
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Mon Apr  6 01:39:17 PM EDT 2026
+Fri Apr 17 02:28:49 PM EDT 2026
