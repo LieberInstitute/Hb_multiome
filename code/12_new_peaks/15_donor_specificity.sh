@@ -6,7 +6,7 @@
 #SBATCH -t 1-0:00:00
 #SBATCH -o ../../processed-data/12_new_peaks/logs/15_donor_specificity_%a.txt
 #SBATCH -e ../../processed-data/12_new_peaks/logs/15_donor_specificity_%a.txt
-#SBATCH --array=1
+#SBATCH --array=2
 
 set -e
 
