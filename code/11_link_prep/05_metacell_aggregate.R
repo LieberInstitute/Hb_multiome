@@ -27,11 +27,25 @@ plot_path = here(
     "metacell_UMAP.pdf"
 )
 graining_level = 20
+prop_genes = 0.02
 
 dir.create(dirname(seur_out_path), showWarnings = FALSE)
 dir.create(dirname(plot_path), showWarnings = FALSE, recursive = TRUE)
 
+################################################################################
+#   Filter genes
+################################################################################
+
 seur = qs_read(seur_in_path)
+
+#   As Cynthia originally did, filter genes to those in a minimum proportion of
+#   cells
+keep_genes = rownames(seur[["RNA"]])[
+    Matrix::rowSums(
+        GetAssayData(seur[["RNA"]], layer = "counts") > 0) > prop_genes * ncol(seur[["RNA"]]
+    )
+]
+seur[["RNA"]] = subset(seur[["RNA"]], features = keep_genes)
 
 ################################################################################
 #   Form metacells
