@@ -56,13 +56,13 @@ get_bubble_plot = function(seurat_object, top_markers, sample_name, group_col = 
 
 #Same function but for SCE objects
 
-get_bubble_plot_sce = function(sce_object, top_markers, sample_name, group_col = "meta_cluster"){
+get_bubble_plot_sce = function(sce_object, top_markers, sample_name, group_col = "meta_cluster", group_order = NULL){
   # Extract expression data and metadata
   expr_data <- assay(sce_object, "cpm")[top_markers, ]
   metadata <- colData(sce_object)
 
   # Convert to data frame for plotting
-  plot_data <- as.data.frame(t(expr_data)) %>%
+  plot_data <- as.data.frame(t(as.matrix(expr_data))) %>%
     tibble::rownames_to_column("cell_id") %>%
     cbind(group_var = metadata[[group_col]]) %>%
     tidyr::pivot_longer(cols = -c(cell_id, group_var), names_to = "gene", values_to = "expression")
@@ -82,17 +82,21 @@ get_bubble_plot_sce = function(sce_object, top_markers, sample_name, group_col =
 
   # Set factor levels to control axis order
   summary_data$gene <- factor(summary_data$gene, levels = top_markers)
-  summary_data$group_var <- factor(summary_data$group_var, 
+  if(is.null(group_order)){
+    summary_data$group_var <- factor(summary_data$group_var, 
                                       levels = sort(unique(summary_data$group_var)))
-
+  } else {
+    summary_data$group_var <- factor(summary_data$group_var, levels = group_order)
+  }
+  
   # Create bubble plot
-  p1 = ggplot(summary_data, aes(x = gene, y = group_var, size = mean_expression, color = pct_expressing)) +
+  p1 = ggplot(summary_data, aes(x = gene, y = group_var, size = pct_expressing, color = mean_expression)) +
     geom_point() +
-    scale_color_gradient(low = "lightgrey", high = "red") +
+    scale_color_gradient2(low = "blue", mid = 'white', high = "red") +
     scale_size_continuous(range = c(2, 8)) +
     theme_minimal() + ggtitle(sample_name) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    labs(x = "Gene", y = group_col, size = "Mean Expression", color = "% Expressing")
+    labs(x = "Gene", y = group_col, size = "% Expression", color = "Mean Expression")
 
   p2 = ggplot(summary_data, aes(x = gene, y = group_var, size = pct_expressing, color = mean_expression_zscore)) +
     geom_point() +
