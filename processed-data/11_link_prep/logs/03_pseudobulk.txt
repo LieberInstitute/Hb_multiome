@@ -1,10 +1,10 @@
 **** Job starts ****
-Wed Apr  8 10:07:43 AM EDT 2026
+Tue Apr 21 12:36:27 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30678929
+Job id: 30934294
 Job name: 03_pseudobulk
-Node name: compute-178
+Node name: compute-176
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -186,9 +186,9 @@ There were 49 warnings (use warnings() to see them)
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-04-08
+ date     2026-04-21
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.8.27 @ /users/neagles/.positron-server/bin/f3aae65e0a1a11d39226cd884520f49301daef82/quarto/bin/quarto
+ quarto   1.9.37 @ /users/neagles/.positron-server/bin/5dfc92424b4381ca7139f3f0a122a65abc2a9383/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package                     * version   date (UTC) lib source
@@ -308,11 +308,10 @@ There were 49 warnings (use warnings() to see them)
  Seurat                      * 5.3.0     2025-04-23 [2] CRAN (R 4.5.0)
  SeuratObject                * 5.1.0     2025-04-22 [2] CRAN (R 4.5.0)
  shiny                         1.10.0    2024-12-14 [2] CRAN (R 4.5.0)
- Signac                      * 1.17.1    2026-04-06 [1] CRAN (R 4.5.0)
+ Signac                      * 1.16.0    2025-10-10 [1] CRAN (R 4.5.0)
  sp                          * 2.2-0     2025-02-01 [2] CRAN (R 4.5.0)
  spam                          2.11-1    2025-01-20 [2] CRAN (R 4.5.0)
  SparseArray                   1.8.1     2025-07-23 [1] Bioconduc~
- sparseMatrixStats             1.20.0    2025-04-15 [1] Bioconduc~
  spatstat.data                 3.1-6     2025-03-17 [2] CRAN (R 4.5.0)
  spatstat.explore              3.4-3     2025-05-21 [2] CRAN (R 4.5.0)
  spatstat.geom                 3.4-1     2025-05-20 [2] CRAN (R 4.5.0)
@@ -351,4 +350,4 @@ There were 49 warnings (use warnings() to see them)
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Apr  8 10:11:24 AM EDT 2026
+Tue Apr 21 12:38:42 PM EDT 2026
