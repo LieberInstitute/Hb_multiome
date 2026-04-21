@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=20G
+#SBATCH --mem=10G
 #SBATCH --job-name=03_link_peaks_global
 #SBATCH -c 1
 #SBATCH -t 30-0:00:00
