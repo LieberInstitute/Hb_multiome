@@ -192,3 +192,11 @@ multiome_hier_ct_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiom
 multiome_hier_ct_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
 plot_pareto_summary(multiome_hier_ct_metaMarkers, min_recurrence = 0)
 
+
+plot_pareto_markers(multiome_hier_ct_metaMarkers , "Inhib.Thal", min_recurrence=0) + ggtitle('Inhibitory Thalamus')
+plot_pareto_markers(multiome_hier_ct_metaMarkers , "Astrocyte", min_recurrence=0) + ggtitle('Astrocyte')
+plot_pareto_markers(multiome_hier_ct_metaMarkers , "MHb.2", min_recurrence=0) + ggtitle('MHb.2')
+
+
+
+
