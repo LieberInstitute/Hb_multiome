@@ -88,11 +88,12 @@ get_bubble_plot_sce = function(sce_object, top_markers, sample_name, group_col =
   } else {
     summary_data$group_var <- factor(summary_data$group_var, levels = group_order)
   }
-  
+  max_val = max(summary_data$mean_expression)
   # Create bubble plot
   p1 = ggplot(summary_data, aes(x = gene, y = group_var, size = pct_expressing, color = mean_expression)) +
     geom_point() +
-    scale_color_gradient2(low = "blue", mid = 'white', high = "red") +
+    scale_color_gradientn(colours = c("grey70", viridisLite::viridis(256)[20:256]),
+      limits = c(0, max_val)) +
     scale_size_continuous(range = c(2, 8)) +
     theme_minimal() + ggtitle(sample_name) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -100,7 +101,10 @@ get_bubble_plot_sce = function(sce_object, top_markers, sample_name, group_col =
 
   p2 = ggplot(summary_data, aes(x = gene, y = group_var, size = pct_expressing, color = mean_expression_zscore)) +
     geom_point() +
-    scale_color_gradient2(low = "blue", mid = 'white', high = "red", name = "Mean Exp. z-score") +
+    scale_color_gradient2(low = "blue", mid = 'white', high = "red", midpoint = 0,
+    limits = c(-2, 2),
+    oob = scales::squish,
+    name = "Mean Exp. z-score") +
     scale_size_continuous(range = c(2, 8)) +
     theme_minimal() + ggtitle(sample_name) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +

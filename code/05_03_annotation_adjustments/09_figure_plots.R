@@ -27,7 +27,7 @@ multiome_sce = qs_read(paste0(multiome_path, '/refined_annotation_multiomeHab_SC
 assay(multiome_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(multiome_sce, 'counts'))
 colnames(colData(multiome_sce))
 
-SingleCellExperiment::altExp(multiome_sce, "ATAC") <- NULL
+#SingleCellExperiment::altExp(multiome_sce, "ATAC") <- NULL
 
 
 source(here('code','05_02_external_Hb_comparisons', 'bubble_plot_functions.R'))
@@ -224,10 +224,15 @@ celltype_order = c('MHb.1','MHb.1.2','MHb.2', 'MHb.3',
 'Ependymal','Astrocyte','Microglia','Endo','Oligo','OPC')
 
 p_bubble = get_bubble_plot_sce(multiome_sce, 
-  top_markers = c('OLIG2', 'PDGFRA','MOG','S100B','CLDN5', 'PECAM1', 'P2RY12','CX3CR1',
-'SLC1A2', 'GFAP', 'FOXJ1', 'PIFO','GAP43','SNAP25', 'SLC17A6','SLC17A7','GAD1','GAD2','SLC32A1',
-'SOX14','RORB','DRD2','LYPD6B','ADARB2',
-'GPR151','POU4F1','HTR2C','CHRNB4', 'CHAT','SLC5A7','SLC18A3','TAC1','TAC3'),
+  top_markers = c(
+    'OLIG2', 'PDGFRA','MOG','S100B','CLDN5', 'PECAM1', 'P2RY12','CX3CR1',
+'SLC1A2', 'GFAP', 'FOXJ1', 'PIFO', #Non-neuronal markers
+'GAP43','SNAP25', 'SLC17A6','SLC17A7', #Neuronal markers
+'LYPD6B','ADARB2','DRD2','SOX14','RORB', #THalamus markers
+'GAD1','GAD2','SLC32A1', #Inhibitory markers
+'LYNX1','CHRM3','GABRA1','PCDH10','HTR2C', #Lateral habenula markers
+'GPR151','POU4F1', #Habenula markers
+'CHRNB4', 'CHAT','SLC5A7','SLC18A3','TAC1','TAC3'), #medial habenula markers
  sample_name = "Multiome Habenula: Broad marker annotations", group_col = "mid_cluster_adj", group_order = celltype_order)
 
 p_bubble[[1]]
@@ -236,8 +241,10 @@ p_bubble[[2]]
 c('OLIG2', 'PDGFRA','MOG','S100B','CLDN5', 'PECAM1', 'P2RY12','CX3CR1',
 'SLC1A2', 'GFAP', 'FOXJ1', 'PIFO','GAP43','SNAP25', 'SLC17A6','SLC17A7','GAD1','GAD2','SLC32A1', 'GPR151','POU4F1')
 
-
-
+ggsave(p_bubble[[1]], filename = paste0(plot_path, '/all_celltypes_and_markers_meanExp.pdf'), device = 'pdf', 
+width = 10, height = 6)
+ggsave(p_bubble[[2]], filename = paste0(plot_path, '/all_celltypes_and_markers_zscore.pdf'), device = 'pdf', 
+width = 10, height = 6)
 
 #Some violin plots across cell-types of specific genes of interest
 
