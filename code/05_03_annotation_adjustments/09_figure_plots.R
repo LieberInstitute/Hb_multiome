@@ -48,6 +48,14 @@ my_colors <- c(
     Ependymal = "#f5a105ff"
 )
 
+my_colors_class <- c(
+    LHb = "#1f78b4",
+    MHb = "#ad1d8c",
+    `Non-neurons` = "#532222", 
+    Thalamus = "#4d55b7"
+    
+)
+
 ## assign color gradients to mid resolution clusters based on Broad cell-types
 
 # extract LHb and MHb clusters
@@ -131,7 +139,7 @@ multiome_sce$mid_cluster_adj[multiome_sce$cluster_ann == 'C.21.Astrocyte'] = 'Ep
 multiome_sce$mid_cluster_adj[multiome_sce$cluster_ann == 'C.11.MHb.1.2'] = 'MHb.2'
 
 
-
+#General umaps with the annotations before any cross-species comparisons
 
 plt1 <- plotReducedDim(multiome_sce, 
                 dimred = "wnn.umap",
@@ -227,6 +235,34 @@ p_bubble[[2]]
 
 c('OLIG2', 'PDGFRA','MOG','S100B','CLDN5', 'PECAM1', 'P2RY12','CX3CR1',
 'SLC1A2', 'GFAP', 'FOXJ1', 'PIFO','GAP43','SNAP25', 'SLC17A6','SLC17A7','GAD1','GAD2','SLC32A1', 'GPR151','POU4F1')
+
+
+
+
+#Some violin plots across cell-types of specific genes of interest
+
+multiome_sce$class_label = 'Non-neurons'
+multiome_sce$class_label[multiome_sce$mid_cluster_adj %in% c('MHb.1','MHb.1.2','MHb.2', 'MHb.3')] = 'MHb'
+multiome_sce$class_label[multiome_sce$mid_cluster_adj %in% c('LHb.2.7','LHb.1','LHb.1.3','LHb.1.3.4','LHb.4')] = 'LHb'
+multiome_sce$class_label[multiome_sce$mid_cluster_adj %in% c('Inhib.Thal','Excit.Thal')] = 'Thalamus'
+
+
+target_gene = 'POU4F1'
+
+gene_exp = assay(multiome_sce, 'scaledata')[target_gene, ]
+cell_type_labels = multiome_sce$class_label
+donors = multiome_sce$orig.ident
+violin_df = data.frame(CPM = gene_exp, Celltype = cell_type_labels, donor = donors)
+
+ggplot(violin_df, aes(x = Celltype, y = CPM, fill = Celltype)) +
+  geom_violin(scale = 'width') +
+  scale_fill_manual(values = my_colors_class) +
+  labs(title = paste("Expression of", target_gene), x = "Cell Type", y = "z-score EXP") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  facet_wrap(~ donor) 
+
+
 
 
 
