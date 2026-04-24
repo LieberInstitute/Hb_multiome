@@ -88,7 +88,6 @@ my_colors_mid["Ependymal"] <- "#f5a105ff"
 
 names(my_colors_mid)
 
-
 #First are the fine to mid cluster adjustments that should have been done before any cross-species
 #This is the C.21.Astrocyte being called ependymal and the C.11.MHb.1.2 being called MHb2 based on cholinergic markers
 
@@ -273,5 +272,311 @@ ggplot(violin_df, aes(x = Celltype, y = CPM, fill = Celltype)) +
 
 
 
+
+#############################
+#
+#
+#UMAPs of the zebrafish, mouse, and yalcinbas datasets
+#Will be small, and will need to try out different colors, having them all be the same would be odd
+#
+#
+###############################
+
+
+#Path to the Yalcinbas pilot data
+#Going with the official_final_sce.RDATA
+yalcinbas_path = '/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/sce_objects'
+
+#Nonhuman data paths
+zeb_data_path = here('processed-data', '05_02_external_Hb_comparisons','07_cross_species_hab')
+mouse_data_path = here('processed-data', '05_02_external_Hb_comparisons', '02_qc_and_clust_wallace_2019')
+wallace_03_data_path = here('processed-data', '05_02_external_Hb_comparisons', '03_metaMarkers_wallace_2019')
+
+hashikawa_path = '/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/09_cross_species_analysis/Hashikawa_data'
+hashikawa_data_path = here('processed-data','05_02_external_Hb_comparisons','04_wallace_hashikawa_mouse')
+
+#Path to orthologs
+path_to_orthologs = here('processed-data', '05_02_external_Hb_comparisons', 'human_mouse_zebrafish_orthologs.txt.gz')
+
+
+
+#Yalcinbas data
+#Loads as an object labeled 'sce'
+#16437 cells
+load(paste0(yalcinbas_path, '/official_final_sce.RDATA'))
+yalcinbas_sce = sce
+rm(sce)
+
+assay(yalcinbas_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(yalcinbas_sce, 'counts'))
+
+
+#Load up the zebrafish and mouse data, filter down to the present genes
+#Zebrafish data, using the summed paralog version
+zeb_sce = readRDS(file = paste0(zeb_data_path, '/adult_zebrafish_summed_paralogs.rds'))
+
+#Wallace mouse data
+all_mouse_sce = readRDS(paste0(mouse_data_path, '/all_donor_sce_with_denovo_clusters.rds'))
+
+#Hashikawa mouse data
+load(paste0(hashikawa_path, '/sce_mouse_habenula.Rdata'))
+hashikawa_sce_sub = sce_mouse_sub$all
+rm(sce_mouse_sub)
+#Gene symbols as the rownames
+rownames(hashikawa_sce_sub) = rowData(hashikawa_sce_sub)$Symbol
+#Add CPM
+assay(hashikawa_sce_sub, "cpm") = MetaMarkers::convert_to_cpm(assay(hashikawa_sce_sub, "counts"))
+
+
+# Add the mouse metadata for wallace
+current_mouse_metadata = readRDS(paste0(wallace_03_data_path, '/wallace_mouse_metaclust_celltype_annot_metadata.rds'))
+colData(all_mouse_sce) = S4Vectors::DataFrame(current_mouse_metadata)
+
+
+
+#Only has the updated annotations for the neurons
+neuron_hashikawa_metadata = readRDS(paste0(hashikawa_data_path, '/hashikawa_mouse_neuron_metaclust_celltype_annot_metadata.rds'))
+
+#Filter out any cells that are listed as neurons in the full dataset but not present in the annotated neuron subset I have
+cell_subset = colnames(hashikawa_sce_sub)[hashikawa_sce_sub$celltype %in% c('Neuron1','Neuron2','Neuron3','Neuron4','Neuron5','Neuron6','Neuron7', 'Neuron8')]
+cells_exclude = cell_subset[!cell_subset %in% rownames(neuron_hashikawa_metadata)]
+
+hashikawa_sce_sub = hashikawa_sce_sub[, !colnames(hashikawa_sce_sub) %in% cells_exclude]
+
+#Pass on the neuron annotations
+hashikawa_sce_sub$meta_clust_celltype_annot = hashikawa_sce_sub$celltype
+index = match(rownames(neuron_hashikawa_metadata) , colnames(hashikawa_sce_sub))
+hashikawa_sce_sub$meta_clust_celltype_annot[index] = neuron_hashikawa_metadata$meta_clust_celltype_annot
+
+
+#Match annotation name
+zeb_sce$final_Annotations = zeb_sce$meta_clust_celltype_annot
+all_mouse_sce$final_Annotations = all_mouse_sce$meta_clust_celltype_annot
+hashikawa_sce_sub$final_Annotations = hashikawa_sce_sub$meta_clust_celltype_annot
+
+
+#Will need to add umaps for the mouse datasets, keep standard, match what I did with the zebrafish
+
+#Wallace dataset
+# HVGs
+dec <- scran::modelGeneVar(all_mouse_sce, assay.type = 'cpm')
+hvg <- scran::getTopHVGs(dec, n = 2000)
+
+# PCA (on HVGs)
+all_mouse_sce <- runPCA(all_mouse_sce, subset_row = hvg, ncomponents = 30, assay.type = 'cpm')
+
+# UMAP (from PCA)
+all_mouse_sce <- runUMAP(all_mouse_sce, dimred = "PCA", n_dimred = 20)
+all_mouse_sce
+
+#Hashikawa dataset
+# HVGs
+dec <- scran::modelGeneVar(hashikawa_sce_sub, assay.type = 'cpm')
+hvg <- scran::getTopHVGs(dec, n = 2000)
+
+# PCA (on HVGs)
+hashikawa_sce_sub <- runPCA(hashikawa_sce_sub, subset_row = hvg, ncomponents = 30, assay.type = 'cpm')
+
+# UMAP (from PCA)
+hashikawa_sce_sub <- runUMAP(hashikawa_sce_sub, dimred = "PCA", n_dimred = 20)
+hashikawa_sce_sub
+
+
+#
+# Adjust annotations for coherent colors/labels across the datasets. Just plot Lateral and Medial, and then numbers for each dataset specific number of clusters
+#
+
+my_colors_class <- c(
+    LHb = "#1f78b4",
+    MHb = "#ad1d8c",
+    `Non-neurons` = "#532222", 
+    Thalamus = "#4d55b7"
+    
+)
+
+library(colorspace)
+
+# Generate n related colors around a base color
+make_cluster_shades <- function(base_color, n, span = 0.35) {
+  # span controls how far from the base color you go
+  shifts <- seq(-span, span, length.out = n)
+  vapply(
+    shifts,
+    \(s) if (s < 0) darken(base_color, amount = -s) else lighten(base_color, amount = s),
+    character(1)
+  )
+}
+
+
+broad_lateral_color <- my_colors_class['LHb'] 
+broad_medial_color <- my_colors_class['MHb'] 
+broad_nonN_color <- my_colors_class['Non-neurons'] 
+
+
+#Zebrafish palette
+zeb_lat_fine <- c("ventral", "ventral_immediate_early", 'inhibitory_gap43')
+zeb_med_fine <- c("dorsolateral_left_subP_BDNF", "dorsomedial_neuron", 'dorsomedial_right_cholinergic', 'dorsomedial_right_cholinergic_GAT1')
+
+zeb_lat_fine_colors <- setNames(make_cluster_shades(broad_lateral_color, length(zeb_lat_fine)), zeb_lat_fine)
+zeb_med_fine_colors <- setNames(make_cluster_shades(broad_medial_color, length(zeb_med_fine)), zeb_med_fine)
+
+zeb_palette_vec <- c(broad_nonN_color, 'outliers' = 'grey50', zeb_lat_fine_colors, zeb_med_fine_colors)
+
+#yalcinbas palette
+yalcinbas_lat_fine <- c("LHb.1", "LHb.2", 'LHb.3', 'LHb.4', 'LHb.5', 'LHb.6', 'LHb.7')
+yalcinbas_med_fine <- c('MHb.1','MHb.2','MHb.3')
+
+yalcinbas_lat_fine_colors <- setNames(make_cluster_shades(broad_lateral_color, length(yalcinbas_lat_fine)), yalcinbas_lat_fine)
+yalcinbas_med_fine_colors <- setNames(make_cluster_shades(broad_medial_color, length(yalcinbas_med_fine)), yalcinbas_med_fine)
+
+yalcinbas_palette_vec <- c(broad_nonN_color, 'outliers' = 'grey50', 
+yalcinbas_lat_fine_colors, yalcinbas_med_fine_colors,
+'Thalamus' = "#a253ebff")
+
+#wallace palette
+wallace_lat_fine <- c("LHb_1", "LHb_2")
+wallace_med_fine <- c('MHb_cholinergic','MHb_subP','MHb_subP_cholinergic')
+
+wallace_lat_fine_colors <- setNames(make_cluster_shades(broad_lateral_color, length(wallace_lat_fine)), wallace_lat_fine)
+wallace_med_fine_colors <- setNames(make_cluster_shades(broad_medial_color, length(wallace_med_fine)), wallace_med_fine)
+
+wallace_palette_vec <- c(broad_nonN_color, 'outliers' = 'grey50', wallace_lat_fine_colors, wallace_med_fine_colors)
+
+#hashikawa palette
+hashikawa_lat_fine <- c("LHb_1_1", "LHb_1_2", 'LHb_1_3', 'LHb_1_4', 'LHb_1_5', 'LHb_2')
+hashikawa_med_fine <- c('MHb_cholinergic_1','MHb_cholinergic_2','MHb_cholinergic_3', 'MHb_cholinergic_4','MHb_subP', 'MHb_subP_cholinergic')
+
+hashikawa_lat_fine_colors <- setNames(make_cluster_shades(broad_lateral_color, length(hashikawa_lat_fine)), hashikawa_lat_fine)
+hashikawa_med_fine_colors <- setNames(make_cluster_shades(broad_medial_color, length(hashikawa_med_fine)), hashikawa_med_fine)
+
+hashikawa_palette_vec <- c(broad_nonN_color, 'outliers' = 'grey50', hashikawa_lat_fine_colors, hashikawa_med_fine_colors)
+
+
+
+#Group the non-neurons
+zeb_sce$plot_annot = zeb_sce$final_Annotations
+zeb_sce$plot_annot[zeb_sce$final_Annotations %in% c('non_neuronal')] = 'Non-neurons'
+
+yalcinbas_sce$plot_annot = yalcinbas_sce$final_Annotations
+yalcinbas_sce$plot_annot[yalcinbas_sce$final_Annotations %in% c('Astrocyte', 'Endo', 'Microglia','Oligo','OPC')] = 'Non-neurons'
+yalcinbas_sce$plot_annot[yalcinbas_sce$final_Annotations %in% c('Excit.Thal', 'Inhib.Thal')] = 'Thalamus'
+
+all_mouse_sce$plot_annot = all_mouse_sce$final_Annotations
+all_mouse_sce$plot_annot[all_mouse_sce$final_Annotations %in% c('Astrocytes', 'Differentiating Oligodendrocytes', 'Endothelial', 'Fibroblasts', 
+'Macrophages', 'Microglia', 'Oligodendrocytes', 'Pericytes', 'Polydendrocytes')] = 'Non-neurons'
+
+hashikawa_sce_sub$plot_annot = hashikawa_sce_sub$final_Annotations
+hashikawa_sce_sub$plot_annot[hashikawa_sce_sub$final_Annotations %in% c('Astrocyte1', 'Astrocyte2','Endothelial','Epen','Microglia',
+'Mural', 'Oligo1','Oligo2','Oligo3','OPC1', 'OPC2', 'OPC3')] = 'Non-neurons'
+
+
+umap_wallace <- plotReducedDim(all_mouse_sce, 
+                dimred = "UMAP",
+                colour_by = "plot_annot", 
+              point_size = .5) +
+  scale_color_manual(values = wallace_palette_vec) +
+  guides(colour = guide_legend(override.aes = list(size = 3))) +
+  labs(
+    title = "Wallace et. al UMAP",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Cell type"
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
+
+umap_wallace
+
+
+umap_hashikawa <- plotReducedDim(hashikawa_sce_sub, 
+                dimred = "UMAP",
+                colour_by = "plot_annot", 
+              point_size = .5) +
+  scale_color_manual(values = hashikawa_palette_vec) +
+  guides(colour = guide_legend(override.aes = list(size = 3))) +
+  labs(
+    title = "Hashikawa et. al UMAP",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Cell type"
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
+
+umap_hashikawa
+
+umap_yalcinbas <- plotReducedDim(yalcinbas_sce, 
+                dimred = "UMAP",
+                colour_by = "plot_annot", 
+              point_size = .5) +
+  scale_color_manual(values = yalcinbas_palette_vec) +
+  guides(colour = guide_legend(override.aes = list(size = 3))) +
+  labs(
+    title = "Yalcinbas et. al UMAP",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Cell type"
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
+
+umap_yalcinbas
+
+
+umap_zebrafish <- plotReducedDim(zeb_sce, 
+                dimred = "UMAP",
+                colour_by = "plot_annot",
+              point_size = .5) +
+  scale_color_manual(values = zeb_palette_vec) +
+  guides(colour = guide_legend(override.aes = list(size = 3))) +
+  labs(
+    title = "Pendey et. al UMAP",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Cell type"
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
+
+umap_zebrafish
+umap_yalcinbas
+umap_wallace
+umap_hashikawa
+
+ggsave(umap_zebrafish, filename = 'zebrafish_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(umap_yalcinbas, filename = 'yalcinbas_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(umap_wallace, filename = 'wallace_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(umap_hashikawa, filename = 'hashikawa_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+
+
+
+
+
+###############################
+#
+#
+#Select marker gene panels for the conserved cell-types across the species
+#
+#
+###############################
 
 
