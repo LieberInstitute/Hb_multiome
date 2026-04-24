@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=3G
-#SBATCH --job-name=08_GWAS_map
+#SBATCH --mem=80G
+#SBATCH --job-name=01_mean_ratio
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../../processed-data/10_MAGMA/RNA/logs/08_GWAS_map.txt
-#SBATCH -e ../../../processed-data/10_MAGMA/RNA/logs/08_GWAS_map.txt
+#SBATCH -o ../../../processed-data/10_MAGMA/RNA/logs/01_mean_ratio.txt
+#SBATCH -e ../../../processed-data/10_MAGMA/RNA/logs/01_mean_ratio.txt
 
 set -e
 
@@ -22,7 +22,7 @@ echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 module load conda_R/4.5
 module list
 
-Rscript 08_GWAS_map.R
+Rscript 01_mean_ratio.R
 
 echo "**** Job ends ****"
 date

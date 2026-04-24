@@ -1,215 +1,0 @@
-**** Job starts ****
-Thu Apr 16 10:14:10 PM EDT 2026
-**** JHPCE info ****
-User: cliu3
-Job id: 30840312
-Job name: 05_mean_ratio_MAGMA
-Node name: compute-175
-Task id: 11
-Loading LIBD SLURM module for magma/1.10
-
-Currently Loaded Modules:
-  1) JHPCE_ROCKY9_DEFAULT_ENV   2) JHPCE_tools/3.0   3) magma/1.10
-
- 
-
-Processing GWAS compulsive
-Using SNP location file: /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/compulsive/SNPs.tsv
-Using p-value file: /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/compulsive/p_values.tsv
-Welcome to MAGMA v1.10 (linux/s)
-Using flags:
-	--annotate
-	--snp-loc /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/compulsive/SNPs.tsv
-	--gene-loc /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Habenula_Visium/processed-data/09_HD_cell_level/no_secondary/MAGMA/hg19_gene_loc.tsv
-	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/compulsive/mean_ratio_compulsive
-
-Start time is 22:14:10, Thursday 16 Apr 2026
-
-Starting annotation...
-Reading gene locations from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Habenula_Visium/processed-data/09_HD_cell_level/no_secondary/MAGMA/hg19_gene_loc.tsv... 
-	WARNING: on line 17088, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198695)
-	WARNING: on line 17093, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198712)
-	WARNING: on line 17101, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198727)
-	WARNING: on line 17120, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198763)
-	WARNING: on line 17128, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198786)
-	WARNING: on line 17139, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198804)
-	WARNING: on line 17161, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198840)
-	WARNING: on line 17186, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198886)
-	WARNING: on line 17188, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198888)
-	WARNING: on line 17194, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198899)
-	WARNING: on line 17217, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000198938)
-	WARNING: on line 18241, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000212907)
-	WARNING: on line 20308, chromosome code 'M' not recognised; skipping gene (ID = ENSG00000228253)
-	38511 gene locations read from file
-	chromosome  1: 3581 genes
-	chromosome  2: 2691 genes
-	chromosome  3: 2009 genes
-	chromosome  4: 1606 genes
-	chromosome  5: 1898 genes
-	chromosome  6: 1943 genes
-	chromosome  7: 1797 genes
-	chromosome  8: 1563 genes
-	chromosome  9: 1407 genes
-	chromosome 10: 1486 genes
-	chromosome 11: 2176 genes
-	chromosome 12: 2012 genes
-	chromosome 13: 844 genes
-	chromosome 14: 1541 genes
-	chromosome 15: 1363 genes
-	chromosome 16: 1754 genes
-	chromosome 17: 2085 genes
-	chromosome 18: 800 genes
-	chromosome 19: 2114 genes
-	chromosome 20: 1000 genes
-	chromosome 21: 548 genes
-	chromosome 22: 947 genes
-	chromosome  X: 1208 genes
-	chromosome  Y: 138 genes
-Reading SNP locations from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/compulsive/SNPs.tsv... 
-	WARNING: on line 1, chromosome code 'CHR' not recognised; skipping SNP (ID = SNP)
-	SNPs mapped so far: 1145189                                                                                                 	2795800 SNP locations read from file
-	of those, 1606994 (57.48%) mapped to at least one gene
-Writing annotation to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/compulsive/mean_ratio_compulsive.genes.annot
-	for chromosome  1, 851 genes are empty (out of 3581)
-	for chromosome  2, 513 genes are empty (out of 2691)
-	for chromosome  3, 237 genes are empty (out of 2009)
-	for chromosome  4, 205 genes are empty (out of 1606)
-	for chromosome  5, 250 genes are empty (out of 1898)
-	for chromosome  6, 313 genes are empty (out of 1943)
-	for chromosome  7, 353 genes are empty (out of 1797)
-	for chromosome  8, 286 genes are empty (out of 1563)
-	for chromosome  9, 419 genes are empty (out of 1407)
-	for chromosome 10, 254 genes are empty (out of 1486)
-	for chromosome 11, 373 genes are empty (out of 2176)
-	for chromosome 12, 355 genes are empty (out of 2012)
-	for chromosome 13, 119 genes are empty (out of 844)
-	for chromosome 14, 516 genes are empty (out of 1541)
-	for chromosome 15, 349 genes are empty (out of 1363)
-	for chromosome 16, 575 genes are empty (out of 1754)
-	for chromosome 17, 684 genes are empty (out of 2085)
-	for chromosome 18, 205 genes are empty (out of 800)
-	for chromosome 19, 643 genes are empty (out of 2114)
-	for chromosome 20, 192 genes are empty (out of 1000)
-	for chromosome 21, 141 genes are empty (out of 548)
-	for chromosome 22, 294 genes are empty (out of 947)
-	for chromosome  X, 1208 genes are empty (out of 1208)
-	for chromosome  Y, 138 genes are empty (out of 138)
-	at least one SNP mapped to each of a total of 29038 genes (out of 38511)
-
-
-End time is 22:14:12, Thursday 16 Apr 2026 (elapsed: 00:00:02)
-Welcome to MAGMA v1.10 (linux/s)
-Using flags:
-	--bfile /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/g1000_eur/g1000_eur
-	--pval /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/compulsive/p_values.tsv ncol=N
-	--gene-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/compulsive/compulsive.genes.annot
-	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/compulsive/mean_ratio_compulsive
-
-Start time is 22:14:12, Thursday 16 Apr 2026
-
-Loading PLINK-format data...
-Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/g1000_eur/g1000_eur.fam... 503 individuals read
-Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/g1000_eur/g1000_eur.bim... 22665064 SNPs read
-Preparing file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/g1000_eur/g1000_eur.bed... 
-
-Reading SNP synonyms from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/habenula_pilot_gwas/g1000_eur/g1000_eur.synonyms (auto-detected)
-	read 6016767 mapped synonyms from file, mapping to 3921040 SNPs in the data
-	WARNING: detected 133 synonymous SNP pairs in the data
-	         skipped all synonym entries involved, synonymous SNPs are kept in analysis
-	         writing list of detected synonyms in data to supplementary log file
-Reading SNP p-values from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/compulsive/p_values.tsv... 
-	detected 3 variables in file
-	using variable: SNP (SNP id)
-	using variable: P (p-value)
-	using variable: N (sample size; discarding SNPs with N < 50)
-	read 2795801 lines from file, containing valid SNP p-values for 2795800 SNPs in data (100% of lines, 12.34% of SNPs in data)
-Loading gene annotation from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/compulsive/compulsive.genes.annot... 
-	29038 gene definitions read from file
-	found 29038 genes containing valid SNPs in genotype data
-
-
-Starting gene analysis... 
-	using model: SNPwise-mean
-	processed genes: 312 (1.1%)     	processed genes: 642 (2.2%)     	processed genes: 900 (3.1%)     	processed genes: 1084 (3.7%)     	processed genes: 1362 (4.7%)     	processed genes: 1753 (6%)     	processed genes: 1990 (6.9%)     	processed genes: 2234 (7.7%)     	processed genes: 2489 (8.6%)     	processed genes: 2719 (9.4%)     	processed genes: 2989 (10.3%)     	processed genes: 3169 (10.9%)     	processed genes: 3324 (11.4%)     	processed genes: 3546 (12.2%)     	processed genes: 3845 (13.2%)     	processed genes: 4071 (14%)     	processed genes: 4240 (14.6%)     	processed genes: 4441 (15.3%)     	processed genes: 4652 (16%)     	processed genes: 4853 (16.7%)     	processed genes: 5060 (17.4%)     	processed genes: 5223 (18%)     	processed genes: 5369 (18.5%)     	processed genes: 5371 (18.5%)     	processed genes: 5373 (18.5%)     	processed genes: 5376 (18.5%)     	processed genes: 5386 (18.5%)     	processed genes: 5484 (18.9%)     	processed genes: 5639 (19.4%)     	processed genes: 5849 (20.1%)     	processed genes: 6031 (20.8%)     	processed genes: 6230 (21.5%)     	processed genes: 6408 (22.1%)     	processed genes: 6660 (22.9%)     	processed genes: 6887 (23.7%)     	processed genes: 7073 (24.4%)     	processed genes: 7306 (25.2%)     	processed genes: 7461 (25.7%)     	processed genes: 7653 (26.4%)     	processed genes: 7865 (27.1%)     	processed genes: 8100 (27.9%)     	processed genes: 8356 (28.8%)     	processed genes: 8630 (29.7%)     	processed genes: 8853 (30.5%)     	processed genes: 9018 (31.1%)     	processed genes: 9251 (31.9%)     	processed genes: 9406 (32.4%)     	processed genes: 9644 (33.2%)     	processed genes: 9902 (34.1%)     	processed genes: 10235 (35.2%)     	processed genes: 10450 (36%)     	processed genes: 10625 (36.6%)     	processed genes: 10858 (37.4%)     	processed genes: 11069 (38.1%)     	processed genes: 11257 (38.8%)     	processed genes: 11492 (39.6%)     	processed genes: 11719 (40.4%)     	processed genes: 11984 (41.3%)     	processed genes: 12261 (42.2%)     	processed genes: 12475 (43%)     	processed genes: 12747 (43.9%)     	processed genes: 12943 (44.6%)     	processed genes: 13113 (45.2%)     	processed genes: 13369 (46%)     	processed genes: 13570 (46.7%)     	processed genes: 13772 (47.4%)     	processed genes: 13961 (48.1%)     	processed genes: 14192 (48.9%)     	processed genes: 14517 (50%)     	processed genes: 14721 (50.7%)     	processed genes: 14966 (51.5%)     	processed genes: 15251 (52.5%)     	processed genes: 15482 (53.3%)     	processed genes: 15640 (53.9%)     	processed genes: 15862 (54.6%)     	processed genes: 16076 (55.4%)     	processed genes: 16393 (56.5%)     	processed genes: 16560 (57%)     	processed genes: 16741 (57.7%)     	processed genes: 16993 (58.5%)     	processed genes: 17354 (59.8%)     	processed genes: 17567 (60.5%)     	processed genes: 17759 (61.2%)     	processed genes: 18047 (62.1%)     	processed genes: 18331 (63.1%)     	processed genes: 18537 (63.8%)     	processed genes: 18780 (64.7%)     	processed genes: 19058 (65.6%)     	processed genes: 19265 (66.3%)     	processed genes: 19507 (67.2%)     	processed genes: 19722 (67.9%)     	processed genes: 19959 (68.7%)     	processed genes: 20156 (69.4%)     	processed genes: 20382 (70.2%)     	processed genes: 20739 (71.4%)     	processed genes: 20964 (72.2%)     	processed genes: 21180 (72.9%)     	processed genes: 21389 (73.7%)     	processed genes: 21657 (74.6%)     	processed genes: 21890 (75.4%)     	processed genes: 22141 (76.2%)     	processed genes: 22360 (77%)     	processed genes: 22671 (78.1%)     	processed genes: 22899 (78.9%)     	processed genes: 23251 (80.1%)     	processed genes: 23517 (81%)     	processed genes: 23749 (81.8%)     	processed genes: 24134 (83.1%)     	processed genes: 24532 (84.5%)     	processed genes: 24645 (84.9%)     	processed genes: 24934 (85.9%)     	processed genes: 25184 (86.7%)     	processed genes: 25465 (87.7%)     	processed genes: 25776 (88.8%)     	processed genes: 26053 (89.7%)     	processed genes: 26283 (90.5%)     	processed genes: 26541 (91.4%)     	processed genes: 26848 (92.5%)     	processed genes: 27096 (93.3%)     	processed genes: 27379 (94.3%)     	processed genes: 27407 (94.4%)     	processed genes: 27734 (95.5%)     	processed genes: 28042 (96.6%)     	processed genes: 28326 (97.5%)     	processed genes: 28670 (98.7%)     	processed genes: 28918 (99.6%)                                                                                                                        	writing gene analysis results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/compulsive/mean_ratio_compulsive.genes.out
-	writing intermediate output to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/compulsive/mean_ratio_compulsive.genes.raw
-
-
-End time is 22:17:12, Thursday 16 Apr 2026 (elapsed: 00:03:00)
-Running gene set analysis set for mid resolution
-Welcome to MAGMA v1.10 (linux/s)
-Using flags:
-	--gene-results /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/compulsive/compulsive.genes.raw
-	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/gene_sets/mid.tsv gene-col=gene_id set-col=set_id
-	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/compulsive/mean_ratio/mid
-
-Start time is 22:17:12, Thursday 16 Apr 2026
-
-Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/compulsive/compulsive.genes.raw... 
-	29038 genes read from file
-Loading gene-set annotation...
-Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/gene_sets/mid.tsv... 
-	detected 4 variables in file
-	using variable: gene_id (gene ID)
-	using variable: set_id (set ID)
-	17 gene-set definitions read from file
-	found 17 gene sets containing genes defined in genotype data (containing a total of 1788 unique genes)
-Preparing variables for analysis...
-	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
-	truncating covariate values more than 5 standard deviations from the mean
-	total variables available for analysis: 17 gene sets
-
-Parsing model specifications...
-Inverting gene-gene correlation matrix...
-	processing block 1 of 29	processing block 2 of 29	processing block 3 of 29	processing block 4 of 29	processing block 5 of 29	processing block 6 of 29	processing block 7 of 29	processing block 8 of 29	processing block 9 of 29	processing block 10 of 29	processing block 11 of 29	processing block 12 of 29	processing block 13 of 29	processing block 14 of 29	processing block 15 of 29	processing block 16 of 29	processing block 17 of 29	processing block 18 of 29	processing block 19 of 29	processing block 20 of 29	processing block 21 of 29	processing block 22 of 29	processing block 23 of 29	processing block 24 of 29	processing block 25 of 29	processing block 26 of 29	processing block 27 of 29	processing block 28 of 29	processing block 29 of 29                                                                                                                   Performing regression analysis...
-	testing direction: one-sided, positive (sets), two-sided (covar)
-	conditioning on internal variables:
-		gene size, log(gene size)
-		gene density, log(gene density)
-		inverse mac, log(inverse mac)
-	analysing individual variables
-
-	analysing single-variable models (number of models: 17)
-                                                                                                                   	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/compulsive/mean_ratio/mid.gsa.out
-
-End time is 22:17:45, Thursday 16 Apr 2026 (elapsed: 00:00:33)
-Running gene set analysis set for fine resolution
-Welcome to MAGMA v1.10 (linux/s)
-Using flags:
-	--gene-results /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/compulsive/compulsive.genes.raw
-	--set-annot /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/gene_sets/fine.tsv gene-col=gene_id set-col=set_id
-	--out /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/compulsive/mean_ratio/fine
-
-Start time is 22:17:45, Thursday 16 Apr 2026
-
-Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/compulsive/compulsive.genes.raw... 
-	29038 genes read from file
-Loading gene-set annotation...
-Reading file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/gene_sets/fine.tsv... 
-	detected 4 variables in file
-	using variable: gene_id (gene ID)
-	using variable: set_id (set ID)
-	36 gene-set definitions read from file
-	found 36 gene sets containing genes defined in genotype data (containing a total of 2308 unique genes)
-Preparing variables for analysis...
-	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
-	WARNING: discarding gene set 'C.09.LHb.4' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/gene_sets/fine.tsv, variance is too low (set contains only one gene used in analysis)
-	WARNING: discarding gene set 'C.25.Excit.Thal' from file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/gene_sets/fine.tsv, variance is too low (set contains only one gene used in analysis)
-	truncating covariate values more than 5 standard deviations from the mean
-	total variables available for analysis: 34 gene sets
-
-Parsing model specifications...
-Inverting gene-gene correlation matrix...
-	processing block 1 of 29	processing block 2 of 29	processing block 3 of 29	processing block 4 of 29	processing block 5 of 29	processing block 6 of 29	processing block 7 of 29	processing block 8 of 29	processing block 9 of 29	processing block 10 of 29	processing block 11 of 29	processing block 12 of 29	processing block 13 of 29	processing block 14 of 29	processing block 15 of 29	processing block 16 of 29	processing block 17 of 29	processing block 18 of 29	processing block 19 of 29	processing block 20 of 29	processing block 21 of 29	processing block 22 of 29	processing block 23 of 29	processing block 24 of 29	processing block 25 of 29	processing block 26 of 29	processing block 27 of 29	processing block 28 of 29	processing block 29 of 29                                                                                                                   Performing regression analysis...
-	testing direction: one-sided, positive (sets), two-sided (covar)
-	conditioning on internal variables:
-		gene size, log(gene size)
-		gene density, log(gene density)
-		inverse mac, log(inverse mac)
-	analysing individual variables
-
-	analysing single-variable models (number of models: 34)
-                                                                                                                   	writing results to file /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/compulsive/mean_ratio/fine.gsa.out
-
-End time is 22:18:18, Thursday 16 Apr 2026 (elapsed: 00:00:33)
-**** Job ends ****
-Thu Apr 16 10:18:18 PM EDT 2026

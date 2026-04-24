@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=100G
-#SBATCH --job-name=04_prep_sce
+#SBATCH --mem=3G
+#SBATCH --job-name=03_GWAS_map
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../../processed-data/10_MAGMA/RNA/logs/04_prep_sce.txt
-#SBATCH -e ../../../processed-data/10_MAGMA/RNA/logs/04_prep_sce.txt
+#SBATCH -o ../../../processed-data/10_MAGMA/RNA/logs/03_GWAS_map.txt
+#SBATCH -e ../../../processed-data/10_MAGMA/RNA/logs/03_GWAS_map.txt
 
 set -e
 
@@ -22,7 +22,7 @@ echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 module load conda_R/4.5
 module list
 
-Rscript 04_prep_sce.R
+Rscript 03_GWAS_map.R
 
 echo "**** Job ends ****"
 date

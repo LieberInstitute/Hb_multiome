@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=10G
-#SBATCH --job-name=03_heatmap
+#SBATCH --job-name=05_heatmap
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../../processed-data/10_MAGMA/RNA/logs/03_heatmap.txt
-#SBATCH -e ../../../processed-data/10_MAGMA/RNA/logs/03_heatmap.txt
+#SBATCH -o ../../../processed-data/10_MAGMA/RNA/logs/05_heatmap.txt
+#SBATCH -e ../../../processed-data/10_MAGMA/RNA/logs/05_heatmap.txt
 
 set -e
 
@@ -22,7 +22,7 @@ echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 module load conda_R/4.5
 module list
 
-Rscript 03_heatmap.R
+Rscript 05_heatmap.R
 
 echo "**** Job ends ****"
 date
