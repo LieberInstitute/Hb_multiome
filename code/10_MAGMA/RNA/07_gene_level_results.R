@@ -3,55 +3,35 @@ library(here)
 library(rtracklayer)
 library(sessioninfo)
 
-cell_type_groups = c('broad', 'mid', 'fine')
-gwas_groups = list(
-    substance = c(
-        'SUD2020', 'AUD', 'CUD', 'ext_cannabis', 'lifetime_cannabis', 'OUD',
-        'SUD2', 'SUD3'
-    ),
-    non_substance = c(
-        'MDD', 'panic', 'SCZ', 'compulsive', 'internalizing', 'neurodev',
-        'p_factor', 'SCZ_BPD'
-    )
+gwas_name_path = here('processed-data', '10_MAGMA', 'RNA', 'gwas_info.csv')
+gwas_map = read_csv(gwas_name_path, show_col_types = FALSE) |>
+    select(nickname, manuscript_name)
+these_gwas_names = ifelse(
+    gwas_map$nickname == 'MDD2019', 'MDD', gwas_map$nickname
 )
+
+cell_type_groups = c('broad', 'mid', 'fine')
 gene_set_paths = here(
     "processed-data", "10_MAGMA", "RNA",
     'gene_sets', sprintf('%s.tsv', cell_type_groups)
 )
 gene_stat_paths = here(
     "processed-data", "10_MAGMA", "RNA",
-    unlist(gwas_groups), sprintf('mean_ratio_%s.genes.out', unlist(gwas_groups))
+    these_gwas_names, sprintf('mean_ratio_%s.genes.out', these_gwas_names)
 )
 set_stat_paths = here(
     'processed-data', '10_MAGMA', 'RNA',
     '%s', 'mean_ratio', '%s.gsa.out'
 )
-out_path = here(
-    'processed-data', '10_MAGMA', 'RNA',
-    'top_genes.csv'
+out_path = here('processed-data', '10_MAGMA', 'RNA', 'top_genes.csv')
+out_low_genes_path = here(
+    'processed-data', '10_MAGMA', 'RNA', 'low_gene_sets.csv'
 )
-reference_gtf = '/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-gex-GRCh38-2024-A/genes/genes.gtf.gz'
+reference_gtf = '/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0/genes/genes.gtf.gz'
 names(gene_set_paths) = cell_type_groups
-names(gene_stat_paths) = unlist(gwas_groups)
+names(gene_stat_paths) = these_gwas_names
 sig_cutoff = 0.05
-gwas_renaming = c(
-    'MDD' = 'MDD',
-    'panic' = 'Panic Disorder',
-    'compulsive' = 'Compuls. Dis.',
-    'SCZ' = 'SCZ',
-    'SCZ_BPD' = 'SCZ/BPD',
-    'AUD' = 'AUD',
-    'CUD' = 'CUD',
-    'ext_cannabis' = 'Ext. Cannabis',
-    'lifetime_cannabis' = 'Life. Cannabis',
-    'SUD2020' = 'OUD 1',
-    'OUD' = 'OUD 2',
-    'SUD2' = 'SUD 1',
-    'SUD3' = 'SUD 2',
-    'internalizing' = 'Intern. Disorders',
-    'neurodev' = 'Neurodev.',
-    'p_factor' = 'P Factor'
-)
+min_genes_per_set = 10
 
 #   MAGMA set-level outputs have a variable amount of header lines. Auto-detect
 #   the header length and read in dynamically
@@ -106,15 +86,18 @@ for (gwas in names(gene_stat_paths)) {
 }
 
 gene_df = gene_df |>
-    filter(!is.na(p), p < sig_cutoff, set_is_sig) |>
-    mutate(gwas = gwas_renaming[gwas])
+    filter(!is.na(p)) |>
+    mutate(gwas = ifelse(gwas == 'MDD', 'MDD2019', gwas)) |>
+    left_join(gwas_map, by = c('gwas' = 'nickname'))
 
-#   Do we have enough genes for meaningful testing?
+#   Do we have enough genes for meaningful testing? Export sets with too few
+#   genes, so we can note them in the heatmaps
 gene_df |>
     group_by(cell_type, gwas, cell_type_res) |>
-    summarize(n = n()) |>
-    arrange(cell_type_res, cell_type) |>
-    print(n = Inf)
+    filter(n() < min_genes_per_set) |>
+    ungroup() |>
+    distinct(cell_type_res, cell_type, manuscript_name) |>
+    write_csv(out_low_genes_path)
 
 #   Read in the GTF to get gene symbols
 gtf = import(reference_gtf)
@@ -126,9 +109,16 @@ gtf = gtf[gtf$type == 'gene'] |>
 #   Export final gene sets, only including genes where the set
 #   as a whole was significant
 gene_df |>
+    filter(p < sig_cutoff, set_is_sig) |>
+    #   Require sets to have a minimum number of genes (to accurately determine
+    #   set-level significance)
+    group_by(cell_type, gwas, cell_type_res) |>
+    filter(n() >= min_genes_per_set) |>
+    ungroup() |>
     arrange(cell_type_res, gwas, cell_type, p) |>
     left_join(gtf, by = 'gene_id') |>
-    select(cell_type_res, gwas, cell_type, gene_id, gene_name, p) |>
+    select(cell_type_res, manuscript_name, cell_type, gene_id, gene_name, p) |>
+    dplyr::rename(gwas = manuscript_name) |>
     write_csv(out_path)
 
 session_info()
