@@ -1,0 +1,329 @@
+**** Job starts ****
+Tue Mar  3 01:16:12 AM EST 2026
+**** JHPCE info ****
+User: cliu3
+Job id: 29339955
+Job name: 07_gene_level_results
+Node name: compute-169
+Task id: 
+Loading conda_R/4.4
+
+Currently Loaded Modules:
+  1) JHPCE_ROCKY9_DEFAULT_ENV   3) conda/3-24.3.0
+  2) JHPCE_tools/3.0            4) conda_R/4.4
+
+ 
+
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.4     ✔ tidyr     1.3.1
+✔ purrr     1.0.4     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+here() starts at /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome
+Loading required package: GenomicRanges
+Loading required package: stats4
+Loading required package: BiocGenerics
+
+Attaching package: ‘BiocGenerics’
+
+The following objects are masked from ‘package:lubridate’:
+
+    intersect, setdiff, union
+
+The following objects are masked from ‘package:dplyr’:
+
+    combine, intersect, setdiff, union
+
+The following objects are masked from ‘package:stats’:
+
+    IQR, mad, sd, var, xtabs
+
+The following objects are masked from ‘package:base’:
+
+    anyDuplicated, aperm, append, as.data.frame, basename, cbind,
+    colnames, dirname, do.call, duplicated, eval, evalq, Filter, Find,
+    get, grep, grepl, intersect, is.unsorted, lapply, Map, mapply,
+    match, mget, order, paste, pmax, pmax.int, pmin, pmin.int,
+    Position, rank, rbind, Reduce, rownames, sapply, saveRDS, setdiff,
+    table, tapply, union, unique, unsplit, which.max, which.min
+
+Loading required package: S4Vectors
+
+Attaching package: ‘S4Vectors’
+
+The following objects are masked from ‘package:lubridate’:
+
+    second, second<-
+
+The following objects are masked from ‘package:dplyr’:
+
+    first, rename
+
+The following object is masked from ‘package:tidyr’:
+
+    expand
+
+The following object is masked from ‘package:utils’:
+
+    findMatches
+
+The following objects are masked from ‘package:base’:
+
+    expand.grid, I, unname
+
+Loading required package: IRanges
+
+Attaching package: ‘IRanges’
+
+The following object is masked from ‘package:lubridate’:
+
+    %within%
+
+The following objects are masked from ‘package:dplyr’:
+
+    collapse, desc, slice
+
+The following object is masked from ‘package:purrr’:
+
+    reduce
+
+Loading required package: GenomeInfoDb
+Warning: 2 parsing failures.
+  row col expected actual                                                                                                                                               file
+35401 CHR a double      X '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/lifetime_cannabis/mean_ratio_lifetime_cannabis.genes.out'
+35402 CHR a double      X '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/10_MAGMA/RNA/lifetime_cannabis/mean_ratio_lifetime_cannabis.genes.out'
+
+Dropping 54% of genes for SUD2020 GWAS missing MAGMA stats
+Dropping 53% of genes for AUD GWAS missing MAGMA stats
+Dropping 53% of genes for CUD GWAS missing MAGMA stats
+Dropping 54% of genes for ext_cannabis GWAS missing MAGMA stats
+Dropping 53% of genes for lifetime_cannabis GWAS missing MAGMA stats
+Dropping 54% of genes for OUD GWAS missing MAGMA stats
+Dropping 54% of genes for SUD2 GWAS missing MAGMA stats
+Dropping 55% of genes for SUD3 GWAS missing MAGMA stats
+Dropping 53% of genes for MDD GWAS missing MAGMA stats
+Dropping 53% of genes for panic GWAS missing MAGMA stats
+Dropping 53% of genes for SCZ GWAS missing MAGMA stats
+Dropping 55% of genes for compulsive GWAS missing MAGMA stats
+Dropping 55% of genes for internalizing GWAS missing MAGMA stats
+Dropping 55% of genes for neurodev GWAS missing MAGMA stats
+Dropping 55% of genes for p_factor GWAS missing MAGMA stats
+Dropping 55% of genes for SCZ_BPD GWAS missing MAGMA stats
+`summarise()` has grouped output by 'cell_type', 'gwas'. You can override using
+the `.groups` argument.
+# A tibble: 109 × 4
+# Groups:   cell_type, gwas [76]
+    cell_type  gwas              cell_type_res     n
+    <chr>      <chr>             <chr>         <int>
+  1 Excit.Thal Ext. Cannabis     broad            98
+  2 Excit.Thal Intern. Disorders broad            64
+  3 Excit.Thal Life. Cannabis    broad            23
+  4 Excit.Thal P Factor          broad            76
+  5 Hb         Ext. Cannabis     broad           115
+  6 Hb         Intern. Disorders broad            74
+  7 Hb         MDD               broad            57
+  8 Hb         Neurodev.         broad            32
+  9 Hb         P Factor          broad            83
+ 10 Hb         SCZ               broad            86
+ 11 Hb         SCZ/BPD           broad            75
+ 12 Inhib.Thal Compuls. Dis.     broad            46
+ 13 Inhib.Thal Ext. Cannabis     broad           106
+ 14 Inhib.Thal Life. Cannabis    broad            27
+ 15 Inhib.Thal MDD               broad            54
+ 16 Inhib.Thal Neurodev.         broad            22
+ 17 Inhib.Thal SCZ/BPD           broad            76
+ 18 OPC        AUD               broad            12
+ 19 OPC        Ext. Cannabis     broad            53
+ 20 OPC        Intern. Disorders broad            41
+ 21 OPC        MDD               broad            22
+ 22 OPC        P Factor          broad            42
+ 23 OPC        SCZ               broad            40
+ 24 OPC        SUD 1             broad            19
+ 25 OPC        SUD 2             broad            27
+ 26 Oligo      P Factor          broad            73
+ 27 Oligo      SCZ               broad            71
+ 28 Oligo      SCZ/BPD           broad            60
+ 29 Endo       MDD               fine             19
+ 30 Excit.Thal Intern. Disorders fine             35
+ 31 Excit.Thal Life. Cannabis    fine             13
+ 32 Excit.Thal P Factor          fine             43
+ 33 Inhib.Thal Compuls. Dis.     fine             43
+ 34 Inhib.Thal Ext. Cannabis     fine            100
+ 35 Inhib.Thal MDD               fine             49
+ 36 Inhib.Thal SCZ/BPD           fine             76
+ 37 LHb.1.3    SUD 2             fine             23
+ 38 LHb.1.3.4  Ext. Cannabis     fine             50
+ 39 LHb.1.3.4  Life. Cannabis    fine             15
+ 40 LHb.1.3.4  MDD               fine             27
+ 41 LHb.1.3.4  OUD 2             fine             10
+ 42 LHb.1.3.4  SUD 1             fine             22
+ 43 LHb.2.7    SCZ/BPD           fine             15
+ 44 LHb.2.7    SUD 1             fine              8
+ 45 LHb.7      SUD 2             fine             20
+ 46 MHb.1      CUD               fine              4
+ 47 MHb.1      Ext. Cannabis     fine             27
+ 48 MHb.1      MDD               fine             16
+ 49 MHb.1      Neurodev.         fine             10
+ 50 MHb.1      SCZ               fine             22
+ 51 MHb.1      SCZ/BPD           fine             19
+ 52 MHb.1      SUD 2             fine             13
+ 53 MHb.1.2    Compuls. Dis.     fine              3
+ 54 MHb.2      Compuls. Dis.     fine             17
+ 55 MHb.2      Ext. Cannabis     fine             51
+ 56 MHb.2      Intern. Disorders fine             34
+ 57 MHb.2      Life. Cannabis    fine             15
+ 58 MHb.2      MDD               fine             25
+ 59 MHb.2      P Factor          fine             38
+ 60 MHb.2      SCZ               fine             38
+ 61 MHb.2      SUD 2             fine             18
+ 62 MHb.3      CUD               fine             12
+ 63 MHb.3      Neurodev.         fine             12
+ 64 MHb.3      P Factor          fine             31
+ 65 MHb.3      SCZ               fine             29
+ 66 MHb.3      SUD 1             fine             17
+ 67 OPC        Ext. Cannabis     fine             32
+ 68 OPC        Intern. Disorders fine             26
+ 69 Oligo      P Factor          fine             77
+ 70 Oligo      SCZ               fine             72
+ 71 Oligo      SCZ/BPD           fine             61
+ 72 Thal       CUD               fine             18
+ 73 Thal       Panic Disorder    fine             15
+ 74 Astrocyte  Panic Disorder    mid               6
+ 75 Excit.Thal AUD               mid              20
+ 76 Excit.Thal Ext. Cannabis     mid              92
+ 77 Excit.Thal Intern. Disorders mid              66
+ 78 Excit.Thal Life. Cannabis    mid              23
+ 79 Excit.Thal P Factor          mid              81
+ 80 Inhib.Thal Compuls. Dis.     mid              47
+ 81 Inhib.Thal Ext. Cannabis     mid             105
+ 82 Inhib.Thal Life. Cannabis    mid              31
+ 83 Inhib.Thal MDD               mid              56
+ 84 Inhib.Thal Neurodev.         mid              21
+ 85 Inhib.Thal SCZ/BPD           mid              81
+ 86 LHb        Ext. Cannabis     mid              95
+ 87 LHb        MDD               mid              42
+ 88 LHb        Neurodev.         mid              21
+ 89 LHb        OUD 2             mid              20
+ 90 LHb        SUD 2             mid              39
+ 91 MHb        Ext. Cannabis     mid             103
+ 92 MHb        Intern. Disorders mid              64
+ 93 MHb        MDD               mid              57
+ 94 MHb        P Factor          mid              76
+ 95 MHb        SCZ               mid              86
+ 96 MHb        SCZ/BPD           mid              74
+ 97 MHb        SUD 1             mid              41
+ 98 MHb        SUD 2             mid              36
+ 99 OPC        AUD               mid              11
+100 OPC        Ext. Cannabis     mid              50
+101 OPC        Intern. Disorders mid              38
+102 OPC        MDD               mid              20
+103 OPC        P Factor          mid              39
+104 OPC        SCZ               mid              36
+105 OPC        SUD 1             mid              18
+106 OPC        SUD 2             mid              26
+107 Oligo      P Factor          mid              73
+108 Oligo      SCZ               mid              71
+109 Oligo      SCZ/BPD           mid              60
+─ Session info ───────────────────────────────────────────────────────────────
+ setting  value
+ version  R version 4.4.0 Patched (2024-05-22 r86590)
+ os       Rocky Linux 9.4 (Blue Onyx)
+ system   x86_64, linux-gnu
+ ui       X11
+ language (EN)
+ collate  en_US.UTF-8
+ ctype    en_US.UTF-8
+ tz       US/Eastern
+ date     2026-03-03
+ pandoc   3.1.13 @ /jhpce/shared/community/core/conda_R/4.4/bin/pandoc
+ quarto   NA
+
+─ Packages ───────────────────────────────────────────────────────────────────
+ package              * version   date (UTC) lib source
+ abind                  1.4-8     2024-09-12 [1] CRAN (R 4.4.0)
+ Biobase                2.66.0    2024-10-29 [1] Bioconductor 3.20 (R 4.4.0)
+ BiocGenerics         * 0.52.0    2024-10-29 [1] Bioconductor 3.20 (R 4.4.0)
+ BiocIO                 1.16.0    2024-10-29 [1] Bioconductor 3.20 (R 4.4.0)
+ BiocParallel           1.40.0    2024-10-29 [1] Bioconductor 3.20 (R 4.4.0)
+ Biostrings             2.74.1    2024-12-16 [1] Bioconductor 3.20 (R 4.4.0)
+ bit                    4.5.0.1   2024-12-03 [1] CRAN (R 4.4.0)
+ bit64                  4.6.0-1   2025-01-16 [1] CRAN (R 4.4.0)
+ bitops                 1.0-9     2024-10-03 [1] CRAN (R 4.4.0)
+ cli                    3.6.4     2025-02-13 [1] CRAN (R 4.4.0)
+ codetools              0.2-20    2024-03-31 [3] CRAN (R 4.4.0)
+ colorspace             2.1-1     2024-07-26 [2] CRAN (R 4.4.0)
+ crayon                 1.5.3     2024-06-20 [2] CRAN (R 4.4.0)
+ curl                   6.2.0     2025-01-23 [1] CRAN (R 4.4.0)
+ DelayedArray           0.32.0    2024-10-29 [1] Bioconductor 3.20 (R 4.4.0)
+ dplyr                * 1.1.4     2023-11-17 [2] CRAN (R 4.4.0)
+ forcats              * 1.0.0     2023-01-29 [2] CRAN (R 4.4.0)
+ generics               0.1.3     2022-07-05 [2] CRAN (R 4.4.0)
+ GenomeInfoDb         * 1.42.3    2025-01-27 [1] Bioconductor 3.20 (R 4.4.0)
+ GenomeInfoDbData       1.2.13    2025-02-12 [1] Bioconductor
+ GenomicAlignments      1.42.0    2024-10-29 [1] Bioconductor 3.20 (R 4.4.0)
+ GenomicRanges        * 1.58.0    2024-10-29 [1] Bioconductor 3.20 (R 4.4.0)
+ ggplot2              * 3.5.1     2024-04-23 [2] CRAN (R 4.4.0)
+ glue                   1.8.0     2024-09-30 [1] CRAN (R 4.4.0)
+ gtable                 0.3.6     2024-10-25 [1] CRAN (R 4.4.0)
+ here                 * 1.0.1     2020-12-13 [2] CRAN (R 4.4.0)
+ hms                    1.1.3     2023-03-21 [2] CRAN (R 4.4.0)
+ httr                   1.4.7     2023-08-15 [2] CRAN (R 4.4.0)
+ IRanges              * 2.40.1    2024-12-05 [1] Bioconductor 3.20 (R 4.4.0)
+ jsonlite               1.8.9     2024-09-20 [1] CRAN (R 4.4.0)
+ lattice                0.22-6    2024-03-20 [3] CRAN (R 4.4.0)
+ lifecycle              1.0.4     2023-11-07 [2] CRAN (R 4.4.0)
+ lubridate            * 1.9.4     2024-12-08 [1] CRAN (R 4.4.0)
+ magrittr               2.0.3     2022-03-30 [2] CRAN (R 4.4.0)
+ Matrix                 1.7-2     2025-01-23 [1] CRAN (R 4.4.0)
+ MatrixGenerics         1.18.1    2025-01-09 [1] Bioconductor 3.20 (R 4.4.0)
+ matrixStats            1.5.0     2025-01-07 [1] CRAN (R 4.4.0)
+ munsell                0.5.1     2024-04-01 [2] CRAN (R 4.4.0)
+ pillar                 1.10.1    2025-01-07 [1] CRAN (R 4.4.0)
+ pkgconfig              2.0.3     2019-09-22 [2] CRAN (R 4.4.0)
+ purrr                * 1.0.4     2025-02-05 [1] CRAN (R 4.4.0)
+ R6                     2.5.1     2021-08-19 [2] CRAN (R 4.4.0)
+ RCurl                  1.98-1.16 2024-07-11 [2] CRAN (R 4.4.0)
+ readr                * 2.1.5     2024-01-10 [2] CRAN (R 4.4.0)
+ restfulr               0.0.15    2022-06-16 [2] CRAN (R 4.4.0)
+ rjson                  0.2.23    2024-09-16 [1] CRAN (R 4.4.0)
+ rlang                  1.1.5     2025-01-17 [1] CRAN (R 4.4.0)
+ rprojroot              2.0.4     2023-11-05 [2] CRAN (R 4.4.0)
+ Rsamtools              2.22.0    2024-10-29 [1] Bioconductor 3.20 (R 4.4.0)
+ rtracklayer          * 1.66.0    2024-10-29 [1] Bioconductor 3.20 (R 4.4.0)
+ S4Arrays               1.6.0     2024-10-29 [1] Bioconductor 3.20 (R 4.4.0)
+ S4Vectors            * 0.44.0    2024-10-29 [1] Bioconductor 3.20 (R 4.4.0)
+ scales                 1.3.0     2023-11-28 [2] CRAN (R 4.4.0)
+ sessioninfo          * 1.2.3     2025-02-05 [1] CRAN (R 4.4.0)
+ SparseArray            1.6.1     2025-01-19 [1] Bioconductor 3.20 (R 4.4.0)
+ stringi                1.8.7     2025-03-27 [1] CRAN (R 4.4.0)
+ stringr              * 1.5.1     2023-11-14 [2] CRAN (R 4.4.0)
+ SummarizedExperiment   1.36.0    2024-10-29 [1] Bioconductor 3.20 (R 4.4.0)
+ tibble               * 3.2.1     2023-03-20 [2] CRAN (R 4.4.0)
+ tidyr                * 1.3.1     2024-01-24 [2] CRAN (R 4.4.0)
+ tidyselect             1.2.1     2024-03-11 [2] CRAN (R 4.4.0)
+ tidyverse            * 2.0.0     2023-02-22 [2] CRAN (R 4.4.0)
+ timechange             0.3.0     2024-01-18 [2] CRAN (R 4.4.0)
+ tzdb                   0.5.0     2025-03-15 [1] CRAN (R 4.4.0)
+ UCSC.utils             1.2.0     2024-10-29 [1] Bioconductor 3.20 (R 4.4.0)
+ utf8                   1.2.4     2023-10-22 [2] CRAN (R 4.4.0)
+ vctrs                  0.6.5     2023-12-01 [2] CRAN (R 4.4.0)
+ vroom                  1.6.5     2023-12-05 [2] CRAN (R 4.4.0)
+ withr                  3.0.2     2024-10-28 [1] CRAN (R 4.4.0)
+ XML                    3.99-0.18 2025-01-01 [1] CRAN (R 4.4.0)
+ XVector                0.46.0    2024-10-29 [1] Bioconductor 3.20 (R 4.4.0)
+ yaml                   2.3.10    2024-07-26 [2] CRAN (R 4.4.0)
+ zlibbioc               1.52.0    2024-10-29 [1] Bioconductor 3.20 (R 4.4.0)
+
+ [1] /users/cliu3/R/4.4
+ [2] /jhpce/shared/community/core/conda_R/4.4/R/lib64/R/site-library
+ [3] /jhpce/shared/community/core/conda_R/4.4/R/lib64/R/library
+ * ── Packages attached to the search path.
+
+──────────────────────────────────────────────────────────────────────────────
+**** Job ends ****
+Tue Mar  3 01:17:01 AM EST 2026

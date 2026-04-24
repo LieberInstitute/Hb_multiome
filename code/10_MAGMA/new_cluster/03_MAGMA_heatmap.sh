@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=30G
-#SBATCH --job-name=05_mean_ratio
+#SBATCH --mem=10G
+#SBATCH --job-name=03_MAGMA_heatmap
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../../processed-data/10_MAGMA/RNA/logs/05_mean_ratio.txt
-#SBATCH -e ../../../processed-data/10_MAGMA/RNA/logs/05_mean_ratio.txt
+#SBATCH -o ../../../processed-data/10_MAGMA/logs/03_MAGMA_heatmap.txt
+#SBATCH -e ../../../processed-data/10_MAGMA/logs/03_MAGMA_heatmap.txt
 
 set -e
 
@@ -19,10 +19,13 @@ echo "Job name: ${SLURM_JOB_NAME}"
 echo "Node name: ${HOSTNAME}"
 echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 
-module load conda_R/4.4
+## Load the R module
+module load conda_R/4.5
+
+## List current modules for reproducibility
 module list
 
-Rscript 05_mean_ratio.R
+Rscript 03_MAGMA_heatmap.R
 
 echo "**** Job ends ****"
 date

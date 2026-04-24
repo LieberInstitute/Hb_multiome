@@ -5,14 +5,18 @@ library(tidyverse)
 library("SingleCellExperiment")
 library("Seurat")
 library(rtracklayer)
+library(qs2)
 
 #Seurat object for multiome
 
-RNAassey = here("processed-data", "05_Clustering_ARCr", "17_wnn_clustering_final_ct", "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds")
-rds<-readRDS(RNAassey)
+# RNAassey = here("processed-data", "05_Clustering_ARCr", "17_wnn_clustering_final_ct", "seurat.norm_counts_CRr_WNN_rnaHarm_atacHarm_k30_C.leiden_lsi_r2_renamed_visium_HD.rds")
+# rds<-readRDS(RNAassey)
 
-# change to SingleCellExperiment
-sce <- as.SingleCellExperiment(rds, assay = "RNA")
+# # change to SingleCellExperiment
+# sce <- as.SingleCellExperiment(rds, assay = "RNA")
+
+# *********************************************
+sce <- qs_read('/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome/processed-data/05_03_annotation_adjustments/06_refined_annotations/refined_annotation_multiomeHab_SCE.qs2')
 
 # registration wrapper
 
@@ -45,15 +49,15 @@ gtf = gtf[gtf$type == "gene"]
 
 rowData(sce)$gene_id <- gtf$gene_id[match(rowData(sce)$gene_name, gtf$gene_name)]
 
-colData(sce)$new_cluster <- sub("^C\\.\\d+\\.", "", colData(sce)$ident)
-table(colData(sce)$new_cluster)
+table(colData(sce)$refined_mid_cluster)
+table(colData(sce)$refined_cluster_ann)
 
 keep <- !is.na(rowData(sce)$gene_id) & rowData(sce)$gene_id != ""
 sce <- sce[keep, ]
 
 model_results_broad = registration_wrapper(
     sce,
-    var_registration = 'merged_cluster',
+    var_registration = 'refined_mid_cluster',
     var_sample_id = 'orig.ident',
     gene_ensembl = 'gene_id',
     gene_name = 'gene_name',
@@ -62,7 +66,7 @@ model_results_broad = registration_wrapper(
 
 model_results_fine = registration_wrapper(
     sce,
-    var_registration = 'new_cluster',
+    var_registration = 'refined_cluster_ann',
     var_sample_id = 'orig.ident',
     gene_ensembl = 'gene_id',
     gene_name = 'gene_name',
