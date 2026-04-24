@@ -25,10 +25,7 @@ export_set = function(sce, cell_type_col, file_tag) {
         ) |>
         filter(MeanRatio > mean_ratio_threshold) |>
         dplyr::rename(
-            set_id = cellType.target,
-            gene_id = gene_name,
-            gene_name = gene,
-            mean_ratio = MeanRatio
+            set_id = cellType.target, gene_id = gene, mean_ratio = MeanRatio
         ) |>
         group_by(set_id) |>
         arrange(desc(mean_ratio)) |>

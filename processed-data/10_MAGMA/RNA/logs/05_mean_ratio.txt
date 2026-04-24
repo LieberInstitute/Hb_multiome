@@ -1,10 +1,10 @@
 **** Job starts ****
-Fri Apr 24 03:33:27 PM EDT 2026
+Fri Apr 24 03:54:08 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 31075955
+Job id: 31077002
 Job name: 05_mean_ratio
-Node name: compute-177
+Node name: compute-175
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -341,4 +341,4 @@ Marker counts for broad resolution:
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Fri Apr 24 03:36:10 PM EDT 2026
+Fri Apr 24 03:56:44 PM EDT 2026
