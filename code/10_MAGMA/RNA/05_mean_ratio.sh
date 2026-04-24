@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=30G
+#SBATCH --mem=80G
 #SBATCH --job-name=05_mean_ratio
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
@@ -19,7 +19,7 @@ echo "Job name: ${SLURM_JOB_NAME}"
 echo "Node name: ${HOSTNAME}"
 echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 
-module load conda_R/4.4
+module load conda_R/4.5
 module list
 
 Rscript 05_mean_ratio.R
