@@ -7,6 +7,7 @@
 #SBATCH -o ../../../processed-data/10_MAGMA/RNA/logs/05_mean_ratio_MAGMA_%a.txt
 #SBATCH -e ../../../processed-data/10_MAGMA/RNA/logs/05_mean_ratio_MAGMA_%a.txt
 #SBATCH --array=1-16%16
+#SBATCH --reservation=neagles-2wk
 
 #   Run all 3 steps in the MAGMA pipeline for every GWAS. Critically,
 #   all relevant inputs/ reference files use hg19 and European ancestry.
@@ -83,7 +84,7 @@ magma \
 
 #   Gene set analysis step
 
-for i in mid fine; do
+for i in broad mid fine; do
     echo "Running gene set analysis set for $i resolution"
 
     gene_set_path=${repo_dir}/processed-data/10_MAGMA/RNA/gene_sets/$i.tsv
