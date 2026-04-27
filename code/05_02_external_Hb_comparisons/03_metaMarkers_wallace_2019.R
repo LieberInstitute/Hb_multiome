@@ -343,9 +343,14 @@ all_donor_seurat$meta_clust_celltype_annot = unname(meta_annot_vec[all_donor_seu
 table(all_donor_seurat$meta_clust_celltype_annot, all_donor_seurat$meta_cluster)
 
 #Save the metadata as a data.frame to add to the seurat data object later
+#And the reduced dimensions
 full_seurat_metadata = all_donor_seurat@meta.data
 saveRDS(full_seurat_metadata, paste0(new_data_path, '/wallace_mouse_metaclust_celltype_annot_metadata.rds'))
 
+# 1) Extract embedding from Seurat
+umap_mat <- Embeddings(all_donor_seurat, reduction = "umap")
+# 2) Save for later
+saveRDS(umap_mat, file = paste0(new_data_path, "/wallace_mouse_umap_embeddings.rds"))
 
 
 #and a final umap with the annotated metaclusters

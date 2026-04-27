@@ -298,10 +298,39 @@ meta_annot_vec  = setNames(names(meta_annot_vec), meta_annot_vec)
 hashikawa_sce$meta_clust_celltype_annot = unname(meta_annot_vec[hashikawa_sce$celltype])
 table(hashikawa_sce$meta_clust_celltype_annot)
 
+
+#Full dataset umap
+#Switch the full dataset to Seurat for the bubble plots
+hashikawa_seurat = as.Seurat(hashikawa_sce, counts = "counts", data = "cpm")
+
+#HVGs
+hashikawa_seurat <- FindVariableFeatures(hashikawa_seurat, selection.method = "vst", nfeatures = 2000)
+
+#Scale data
+all.genes <- rownames(hashikawa_seurat)
+hashikawa_seurat <- ScaleData(hashikawa_seurat, features = all.genes)
+
+#PCA
+hashikawa_seurat  <- RunPCA(hashikawa_seurat , features = VariableFeatures(object = hashikawa_seurat ))
+DimPlot(hashikawa_seurat, reduction = "pca") + NoLegend()
+
+#UMAP
+hashikawa_seurat  <- RunUMAP(hashikawa_seurat , dims = 1:20)
+DimPlot(hashikawa_seurat, reduction = "umap", group.by = 'meta_clust_celltype_annot')
+DimPlot(hashikawa_seurat, reduction = "umap", group.by = 'stim')
+
+
+
+
 #Save the metadata as a data.frame to add to the seurat data object later
 full_hashikawa_metadata = colData(hashikawa_sce)
 saveRDS(full_hashikawa_metadata, paste0(new_data_path, '/hashikawa_mouse_metaclust_celltype_annot_metadata.rds'))
 
+#And save the current umap
+# 1) Extract embedding from Seurat
+umap_mat <- Embeddings(hashikawa_seurat, reduction = "umap")
+# 2) Save for later
+saveRDS(umap_mat, file = paste0(new_data_path, "/hashikawa_mouse_umap_embeddings.rds"))
 
 
 
