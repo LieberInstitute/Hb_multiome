@@ -29,68 +29,17 @@ colnames(colData(multiome_sce))
 
 #SingleCellExperiment::altExp(multiome_sce, "ATAC") <- NULL
 
-
+#bubble plots
 source(here('code','05_02_external_Hb_comparisons', 'bubble_plot_functions.R'))
 
+#colors
+source(here('code','05_03_annotation_adjustments','celltype_colors.R'))
 
-#Colors
-my_colors <- c(
-    LHb = "#1f78b4",
-    MHb = "#ad1d8c",
-    Oligo = "#384a08",
-    Astrocyte = "#532222", 
-    OPC = "#829454",
-    Microglia = "#141b02",
-    Endo = "#d95f02",
-    Inhib_Thal = "#9a9fe7",
-    Excit_Thal = "#42467b",
-    Thal = "#4d55b7",
-    Ependymal = "#f5a105ff"
-)
 
-my_colors_class <- c(
-    LHb = "#1f78b4",
-    MHb = "#ad1d8c",
-    `Non-neurons` = "#532222", 
-    Thalamus = "#4d55b7"
-    
-)
 
-## assign color gradients to mid resolution clusters based on Broad cell-types
-
-# extract LHb and MHb clusters
-cluster_levels <- c(unique(multiome_sce$mid_cluster))
-cluster_levels
-LHb_clusters <- grep("LHb", cluster_levels, value = TRUE)
-MHb_clusters <- grep("MHb", cluster_levels, value = TRUE)
-
-# Create tonal gradients for LHb and MHb
-LHb_colors <- colorspace::sequential_hcl(length(LHb_clusters), h = 210, c = 80, l = c(30, 80))
-MHb_colors <- colorspace::sequential_hcl(length(MHb_clusters), h = 320, c = 80, l = c(30, 80))
-
-# Build full cluster color map
-my_colors_mid <- setNames(rep("#bdbdbd", length(cluster_levels)), cluster_levels)
-my_colors_mid[LHb_clusters] <- LHb_colors
-my_colors_mid[MHb_clusters] <- MHb_colors
-
-# assign base color for other types from your existing palette
-for (category in c("Oligo", "Astrocyte", "OPC", "Microglia", "Endo", "Inhib.Thal", "Excit.Thal", "Thal")) {
-    matched <- grep(category, cluster_levels, value = TRUE)
-    my_colors_mid[matched] <- my_colors[[gsub("\\.", "_", category)]]
-}
-
-my_colors_mid["Inhib_LHb_4.1"] <- "#8B0000"  # Dark red
-my_colors_mid["Inhib_LHb_4.2"] <- "#DC143C"  # Crimson red
-#Adjust color for MHb3, too light
-my_colors_mid["MHb.3"] <- "#56204eff" 
-my_colors_mid["Inhib.Thal"] <- "#9a9fe7"
-my_colors_mid["Ependymal"] <- "#f5a105ff"
-
-names(my_colors_mid)
 
 #First are the fine to mid cluster adjustments that should have been done before any cross-species
 #This is the C.21.Astrocyte being called ependymal and the C.11.MHb.1.2 being called MHb2 based on cholinergic markers
-
 #Show those targeted bubble plots first
 
 
@@ -140,12 +89,19 @@ multiome_sce$mid_cluster_adj[multiome_sce$cluster_ann == 'C.11.MHb.1.2'] = 'MHb.
 
 #General umaps with the annotations before any cross-species comparisons
 
+celltype_order = c('MHb.1','MHb.1.2','MHb.2', 'MHb.3',
+'LHb.2.7','LHb.1','LHb.1.3','LHb.1.3.4','LHb.4',
+'Inhib.Thal','Excit.Thal',
+'Ependymal','Astrocyte','Microglia','Endo','Oligo','OPC')
+
+multiome_sce$mid_cluster_adj <- factor(multiome_sce$mid_cluster_adj, levels = celltype_order)
+
 plt1 <- plotReducedDim(multiome_sce, 
                 dimred = "wnn.umap",
                 colour_by = "mid_cluster_adj", 
               point_size = .5) +
   scale_color_manual(values = my_colors_mid) +
-  guides(colour = guide_legend(override.aes = list(size = 3))) +
+  guides(colour = guide_legend(override.aes = list(size = 3), reverse = TRUE)) +
   labs(
     title = "WNN (RNA+ATAC) UMAP",
     x = "UMAP 1",
@@ -167,7 +123,7 @@ plt2 <- plotReducedDim(multiome_sce,
                 colour_by = "mid_cluster_adj", 
               point_size = .5) +
   scale_color_manual(values = my_colors_mid) +
-  guides(colour = guide_legend(override.aes = list(size = 3))) +
+  guides(colour = guide_legend(override.aes = list(size = 3), reverse = TRUE)) +
   labs(
     title = "RNA UMAP",
     x = "UMAP 1",
@@ -189,7 +145,7 @@ plt3 <- plotReducedDim(multiome_sce,
                 colour_by = "mid_cluster_adj", 
               point_size = .5) +
   scale_color_manual(values = my_colors_mid) +
-  guides(colour = guide_legend(override.aes = list(size = 3))) +
+  guides(colour = guide_legend(override.aes = list(size = 3), reverse = TRUE)) +
   labs(
     title = "ATAC UMAP",
     x = "UMAP 1",
@@ -206,6 +162,51 @@ plt3 <- plotReducedDim(multiome_sce,
 
 plt3
 
+#And then the rna UMAP with the final annotations
+
+plt4 <- plotReducedDim(multiome_sce, 
+                dimred = "umap.integrated",
+                colour_by = "refined_mid_cluster", 
+              point_size = .5) +
+  scale_color_manual(values = my_colors_mid) +
+  guides(colour = guide_legend(override.aes = list(size = 3), reverse = TRUE)) +
+  labs(
+    title = "RNA UMAP",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Cell type"
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
+# Build centroid table for labels
+emb <- as.data.frame(reducedDim(multiome_sce, "umap.integrated"))
+colnames(emb)[1:2] <- c("UMAP1", "UMAP2")
+emb$cluster <- multiome_sce$refined_mid_cluster
+
+centers <- emb |>
+  summarize(
+    UMAP1 = median(UMAP1),
+    UMAP2 = median(UMAP2),
+    .by = cluster
+  )
+
+# Add labels
+plt4 = plt4 +
+  ggrepel::geom_text_repel(
+    data = centers,
+    aes(x = UMAP1, y = UMAP2, label = cluster),
+    inherit.aes = FALSE,
+    size = 3
+  )
+
+
+plt4
+
 
 ggsave(plt1, filename = 'wnn_umap_starting_mid_cluster.pdf', path = plot_path, device = 'pdf', 
 height = 6, width = 6)
@@ -213,7 +214,8 @@ ggsave(plt2, filename = 'RNA_umap_starting_mid_cluster.pdf', path = plot_path, d
 height = 6, width = 6)
 ggsave(plt3, filename = 'ATAC_umap_starting_mid_cluster.pdf', path = plot_path, device = 'pdf', 
 height = 6, width = 6)
-
+ggsave(plt4, filename = 'RNA_umap_final_mid_cluster.pdf', path = plot_path, device = 'pdf', 
+height = 6, width = 6)
 
 #And pull together the broader marker bubble plot, here we want the habenula vs thalamus vs non-neuronal markers
 
@@ -237,8 +239,6 @@ p_bubble = get_bubble_plot_sce(multiome_sce,
 p_bubble[[1]]
 p_bubble[[2]] 
 
-c('OLIG2', 'PDGFRA','MOG','S100B','CLDN5', 'PECAM1', 'P2RY12','CX3CR1',
-'SLC1A2', 'GFAP', 'FOXJ1', 'PIFO','GAP43','SNAP25', 'SLC17A6','SLC17A7','GAD1','GAD2','SLC32A1', 'GPR151','POU4F1')
 
 ggsave(p_bubble[[1]], filename = paste0(plot_path, '/all_celltypes_and_markers_meanExp.pdf'), device = 'pdf', 
 width = 10, height = 6)
@@ -299,6 +299,16 @@ hashikawa_data_path = here('processed-data','05_02_external_Hb_comparisons','04_
 path_to_orthologs = here('processed-data', '05_02_external_Hb_comparisons', 'human_mouse_zebrafish_orthologs.txt.gz')
 
 
+hu_mu_zf_ortholog_df = data.table::fread(path_to_orthologs)
+table(hu_mu_zf_ortholog_df$`Mouse homology type`)
+
+#Get the 1to1 orthologs for the mouse
+hu_mu_zf_ortholog_df <- hu_mu_zf_ortholog_df %>%
+  filter(
+    `Mouse homology type` == 'ortholog_one2one'
+  ) %>%
+  filter(!duplicated(`Gene name`))
+dim(hu_mu_zf_ortholog_df)
 
 #Yalcinbas data
 #Loads as an object labeled 'sce'
@@ -331,21 +341,44 @@ assay(hashikawa_sce_sub, "cpm") = MetaMarkers::convert_to_cpm(assay(hashikawa_sc
 current_mouse_metadata = readRDS(paste0(wallace_03_data_path, '/wallace_mouse_metaclust_celltype_annot_metadata.rds'))
 colData(all_mouse_sce) = S4Vectors::DataFrame(current_mouse_metadata)
 
+#Load embedding
+umap_mat <- readRDS(paste0(wallace_03_data_path,"/wallace_mouse_umap_embeddings.rds"))
+#Reorder to SCE cell order, then attach
+umap_mat <- umap_mat[colnames(all_mouse_sce), , drop = FALSE]
+reducedDim(all_mouse_sce, "umap") <- umap_mat
 
 
-#Only has the updated annotations for the neurons
-neuron_hashikawa_metadata = readRDS(paste0(hashikawa_data_path, '/hashikawa_mouse_neuron_metaclust_celltype_annot_metadata.rds'))
+# Add the hashikawa metadata
+hashikawa_metadata = readRDS(paste0(hashikawa_data_path, '/hashikawa_mouse_metaclust_celltype_annot_metadata.rds'))
+neuronal_subset_metadata = readRDS(paste0(hashikawa_data_path, '/hashikawa_mouse_neuron_metaclust_celltype_annot_metadata.rds'))
+colData(hashikawa_sce_sub) = S4Vectors::DataFrame(hashikawa_metadata)
+
+#Pass in the neuronal subset annotations
+index = match(rownames(neuronal_subset_metadata), colnames(hashikawa_sce_sub) )
+hashikawa_sce_sub$meta_clust_celltype_annot[index] = neuronal_subset_metadata$meta_clust_celltype_annot
+
+#Give a generic neuron label for the cells that were not included in the neuronal subset
+table(hashikawa_sce_sub$meta_clust_celltype_annot)
+index = hashikawa_sce_sub$meta_clust_celltype_annot %in% c('LHb_1.1','LHb_1.2','LHb_1.3','MHb.1','MHb.2','MHb.3')
+hashikawa_sce_sub$meta_clust_celltype_annot[index] = 'Neuron'
+
+#Load embedding
+umap_mat <- readRDS(paste0(hashikawa_data_path,"/hashikawa_mouse_umap_embeddings.rds"))
+#Reorder to SCE cell order, then attach
+umap_mat <- umap_mat[colnames(hashikawa_sce_sub), , drop = FALSE]
+reducedDim(hashikawa_sce_sub, "umap") <- umap_mat
+
 
 #Filter out any cells that are listed as neurons in the full dataset but not present in the annotated neuron subset I have
-cell_subset = colnames(hashikawa_sce_sub)[hashikawa_sce_sub$celltype %in% c('Neuron1','Neuron2','Neuron3','Neuron4','Neuron5','Neuron6','Neuron7', 'Neuron8')]
-cells_exclude = cell_subset[!cell_subset %in% rownames(neuron_hashikawa_metadata)]
+#cell_subset = colnames(hashikawa_sce_sub)[hashikawa_sce_sub$celltype %in% c('Neuron1','Neuron2','Neuron3','Neuron4','Neuron5','Neuron6','Neuron7', 'Neuron8')]
+#cells_exclude = cell_subset[!cell_subset %in% rownames(neuron_hashikawa_metadata)]
 
-hashikawa_sce_sub = hashikawa_sce_sub[, !colnames(hashikawa_sce_sub) %in% cells_exclude]
+#hashikawa_sce_sub = hashikawa_sce_sub[, !colnames(hashikawa_sce_sub) %in% cells_exclude]
 
 #Pass on the neuron annotations
-hashikawa_sce_sub$meta_clust_celltype_annot = hashikawa_sce_sub$celltype
-index = match(rownames(neuron_hashikawa_metadata) , colnames(hashikawa_sce_sub))
-hashikawa_sce_sub$meta_clust_celltype_annot[index] = neuron_hashikawa_metadata$meta_clust_celltype_annot
+#hashikawa_sce_sub$meta_clust_celltype_annot = hashikawa_sce_sub$celltype
+#index = match(rownames(neuron_hashikawa_metadata) , colnames(hashikawa_sce_sub))
+#hashikawa_sce_sub$meta_clust_celltype_annot[index] = neuron_hashikawa_metadata$meta_clust_celltype_annot
 
 
 #Match annotation name
@@ -354,44 +387,6 @@ all_mouse_sce$final_Annotations = all_mouse_sce$meta_clust_celltype_annot
 hashikawa_sce_sub$final_Annotations = hashikawa_sce_sub$meta_clust_celltype_annot
 
 
-#Will need to add umaps for the mouse datasets, keep standard, match what I did with the zebrafish
-
-#Wallace dataset
-# HVGs
-dec <- scran::modelGeneVar(all_mouse_sce, assay.type = 'cpm')
-hvg <- scran::getTopHVGs(dec, n = 2000)
-
-# PCA (on HVGs)
-all_mouse_sce <- runPCA(all_mouse_sce, subset_row = hvg, ncomponents = 30, assay.type = 'cpm')
-
-# UMAP (from PCA)
-all_mouse_sce <- runUMAP(all_mouse_sce, dimred = "PCA", n_dimred = 20)
-all_mouse_sce
-
-#Hashikawa dataset
-# HVGs
-dec <- scran::modelGeneVar(hashikawa_sce_sub, assay.type = 'cpm')
-hvg <- scran::getTopHVGs(dec, n = 2000)
-
-# PCA (on HVGs)
-hashikawa_sce_sub <- runPCA(hashikawa_sce_sub, subset_row = hvg, ncomponents = 30, assay.type = 'cpm')
-
-# UMAP (from PCA)
-hashikawa_sce_sub <- runUMAP(hashikawa_sce_sub, dimred = "PCA", n_dimred = 20)
-hashikawa_sce_sub
-
-
-#
-# Adjust annotations for coherent colors/labels across the datasets. Just plot Lateral and Medial, and then numbers for each dataset specific number of clusters
-#
-
-my_colors_class <- c(
-    LHb = "#1f78b4",
-    MHb = "#ad1d8c",
-    `Non-neurons` = "#532222", 
-    Thalamus = "#4d55b7"
-    
-)
 
 library(colorspace)
 
@@ -430,7 +425,7 @@ yalcinbas_med_fine_colors <- setNames(make_cluster_shades(broad_medial_color, le
 
 yalcinbas_palette_vec <- c(broad_nonN_color, 'outliers' = 'grey50', 
 yalcinbas_lat_fine_colors, yalcinbas_med_fine_colors,
-'Thalamus' = "#a253ebff")
+'Thalamus' = "#670289ff")
 
 #wallace palette
 wallace_lat_fine <- c("LHb_1", "LHb_2")
@@ -441,8 +436,9 @@ wallace_med_fine_colors <- setNames(make_cluster_shades(broad_medial_color, leng
 
 wallace_palette_vec <- c(broad_nonN_color, 'outliers' = 'grey50', wallace_lat_fine_colors, wallace_med_fine_colors)
 
+
 #hashikawa palette
-hashikawa_lat_fine <- c("LHb_1_1", "LHb_1_2", 'LHb_1_3', 'LHb_1_4', 'LHb_1_5', 'LHb_2')
+hashikawa_lat_fine <- c("LHb_1_1", "LHb_1_2", 'LHb_1_3', 'LHb_1_4', 'LHb_1_5', 'LHb_2', 'Neuron')
 hashikawa_med_fine <- c('MHb_cholinergic_1','MHb_cholinergic_2','MHb_cholinergic_3', 'MHb_cholinergic_4','MHb_subP', 'MHb_subP_cholinergic')
 
 hashikawa_lat_fine_colors <- setNames(make_cluster_shades(broad_lateral_color, length(hashikawa_lat_fine)), hashikawa_lat_fine)
@@ -470,7 +466,7 @@ hashikawa_sce_sub$plot_annot[hashikawa_sce_sub$final_Annotations %in% c('Astrocy
 
 
 umap_wallace <- plotReducedDim(all_mouse_sce, 
-                dimred = "UMAP",
+                dimred = "umap",
                 colour_by = "plot_annot", 
               point_size = .5) +
   scale_color_manual(values = wallace_palette_vec) +
@@ -493,7 +489,7 @@ umap_wallace
 
 
 umap_hashikawa <- plotReducedDim(hashikawa_sce_sub, 
-                dimred = "UMAP",
+                dimred = "umap",
                 colour_by = "plot_annot", 
               point_size = .5) +
   scale_color_manual(values = hashikawa_palette_vec) +
@@ -594,17 +590,21 @@ celltype_order = c('LHb.4','LHb.1.3.4','LHb.2.7','MHb.2','MHb.1.2','MHb.1')
 cell_index = all_mouse_sce$grouped_annot %in% celltype_order
 
 p_bubble = get_bubble_plot_sce(all_mouse_sce[ , cell_index], 
-  top_markers = c('Tac1','Tac2', 
+  top_markers = c('Tac1','Tac2',
+  'Sstr2','C1ql1',
   'Chat','Slc5a7', 'Slc18a3',
-  'Oprm1',
-  'Htr2c','Pcdh10',
-  'Gap43','Chrm3',
+  'Oprm1', 'Pcdh10', 'Htr2c',
+  'Col25a1',
+  'Grik4', 
+  'Gap43','Rph3a','Chrm3', 
   'Gad1','Gad2','Slc32a1',
   'Gpr151','Pou4f1'),
  sample_name = "Wallace Mouse", group_col = "grouped_annot", group_order = celltype_order)
 
 #p_bubble[[1]]
 wallace_bubble = p_bubble[[2]] 
+wallace_bubble
+
 
 #Hashikawa data
 hashikawa_sce_sub$grouped_annot = hashikawa_sce_sub$final_Annotations
@@ -619,17 +619,20 @@ celltype_order = c('LHb.4','LHb.1.3.4','LHb.2.7','MHb.2','MHb.1.2','MHb.1')
 cell_index = hashikawa_sce_sub$grouped_annot %in% celltype_order
 
 p_bubble = get_bubble_plot_sce(hashikawa_sce_sub[ , cell_index], 
-  top_markers = c('Tac1','Tac2', 
+  top_markers = c('Tac1','Tac2',
+  'Sstr2','C1ql1',
   'Chat','Slc5a7', 'Slc18a3',
-  'Oprm1',
-  'Htr2c', 'Pcdh10',
-  'Gap43','Chrm3',
+  'Oprm1', 'Pcdh10', 'Htr2c',
+  'Col25a1',
+  'Grik4', 
+  'Gap43','Rph3a','Chrm3', 
   'Gad1','Gad2','Slc32a1',
   'Gpr151','Pou4f1'),
  sample_name = "Hashikawa Mouse", group_col = "grouped_annot", group_order = celltype_order)
 
 #p_bubble[[1]]
 hashikawa_bubble = p_bubble[[2]] 
+hashikawa_bubble 
 
 
 #Pandey data
@@ -639,11 +642,11 @@ celltype_order = c('inhibitory_gap43','ventral_immediate_early','ventral','dorso
  'dorsomedial_right_cholinergic','dorsomedial_neuron','dorsolateral_left_subP_BDNF')
 
 p_bubble = get_bubble_plot_sce(zeb_sce[ , cell_index], 
-  top_markers = c('TAC1', 'TAC3', 
-  'SLC5A7',
-  'OPRM1',
-  'HTR2C','PCDH10',
-  'GAP43','CHRM3',
+  top_markers = c('TAC1','TAC3',
+  'SLC5A7', 'SLC18A3',
+  'OPRM1','PCDH10','HTR2C',  
+  'GRIK4', 
+  'GAP43','CHRM3', 
   'GAD1','GAD2','SLC32A1',
   'GPR151','POU4F1'),
  sample_name = "Pandey Zebrafish", group_col = "final_Annotations", group_order = celltype_order)
@@ -651,6 +654,7 @@ p_bubble = get_bubble_plot_sce(zeb_sce[ , cell_index],
 #p_bubble[[1]]
 pandey_bubble = p_bubble[[2]] 
 
+pandey_bubble
 
 
 #Yalcinbas data
@@ -666,19 +670,22 @@ celltype_order = c('LHb.4','LHb.1.3.4','LHb.2.7','MHb.2','MHb.1.2','MHb.1')
 cell_index = yalcinbas_sce$grouped_annot %in% celltype_order
 
 p_bubble = get_bubble_plot_sce(yalcinbas_sce[ , cell_index], 
-  top_markers = c('TAC1','TAC3', 
+  top_markers = c('TAC1','TAC3',
+  'SSTR2','C1QL1',
   'CHAT','SLC5A7', 'SLC18A3',
-  'OPRM1',
-  'HTR2C', 'PCDH10',
-  'GAP43','CHRM3',
+  'OPRM1','PCDH10','HTR2C', 
+  'COL25A1', 
+  'GRIK4', 
+  'GAP43','RPH3A','CHRM3', 
   'GAD1','GAD2','SLC32A1',
   'GPR151','POU4F1'),
  sample_name = "Yalcinbas Human", group_col = "grouped_annot", group_order = celltype_order)
 
 #p_bubble[[1]]
 yalcinbas_bubble = p_bubble[[2]] 
+yalcinbas_bubble
 
-multiome_sce$final_Annotations = multiome_sce$mid_cluster_adj
+multiome_sce$final_Annotations = as.character(multiome_sce$mid_cluster_adj)
 multiome_sce$final_Annotations[ multiome_sce$refined_mid_cluster == 'Inhib_LHb_4.1'] = 'Inhib_LHb_4.1'
 multiome_sce$final_Annotations[ multiome_sce$refined_mid_cluster == 'Inhib_LHb_4.2'] = 'Inhib_LHb_4.2'
 
@@ -689,18 +696,20 @@ celltype_order = c('Inhib_LHb_4.2', 'Inhib_LHb_4.1','LHb.4','LHb.1.3.4','LHb.1.3
 cell_index = multiome_sce$grouped_annot %in% celltype_order
 
 p_bubble = get_bubble_plot_sce(multiome_sce[ , cell_index], 
-  top_markers = c('TAC1','TAC3', 
+  top_markers = c('TAC1','TAC3',
+  'SSTR2','C1QL1',
   'CHAT','SLC5A7', 'SLC18A3',
-  'OPRM1',
-  'HTR2C','PCDH10',
-  'GAP43','CHRM3',
+  'OPRM1','PCDH10','HTR2C', 
+  'COL25A1', 
+  'GRIK4', 
+  'GAP43','RPH3A','CHRM3', 
   'GAD1','GAD2','SLC32A1',
   'GPR151','POU4F1'),
  sample_name = "Multiome Human", group_col = "grouped_annot", group_order = celltype_order)
 
 #p_bubble[[1]]
 multiome_bubble = p_bubble[[2]] 
-
+multiome_bubble 
 
 
 wallace_bubble
