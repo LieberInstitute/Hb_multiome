@@ -102,8 +102,8 @@ get_bubble_plot_sce = function(sce_object, top_markers, sample_name, group_col =
   p2 = ggplot(summary_data, aes(x = gene, y = group_var, size = pct_expressing, color = mean_expression_zscore)) +
     geom_point() +
     scale_color_gradient2(low = "blue", mid = 'white', high = "red", midpoint = 0,
-    limits = c(-2, 2),
-    oob = scales::squish,
+    #limits = c(-2, 2),
+    #oob = scales::squish,
     name = "Mean Exp. z-score") +
     scale_size_continuous(range = c(2, 8)) +
     theme_minimal() + ggtitle(sample_name) +
