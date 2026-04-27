@@ -25,6 +25,8 @@ if (!dir.exists(plot_path)) dir.create(plot_path)
 
 #Source the bubble plot functions
 source(here('code','05_02_external_Hb_comparisons', 'bubble_plot_functions.R'))
+#Celltype colors
+source(here('code','05_03_annotation_adjustments','celltype_colors.R'))
 
 
 multiome_path = here('processed-data', '05_01_drop_doublets','01_drop_doublets_and_reDimReduce')
@@ -34,18 +36,6 @@ multiome_sce = qs_read(paste0(multiome_path, '/reprocessed_doubletRemoved_multio
 assay(multiome_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(multiome_sce, 'counts'))
 
 
-
-
-#Set up color scale
-color_palette_1 = c('Astrocyte' = 'grey','Endo' = 'firebrick','Microglia' = 'darkred',
-'Oligo' = 'darkgoldenrod','OPC' = 'cornsilk3')
-
-color_palette_2 = c('Inhib.Thal' = 'dodgerblue','Excit.Thal' = 'indianred2','Thal' = 'lightsteelblue')
-
-color_palette_3 = MetBrewer::met.brewer("Redon", n = 10)
-names(color_palette_3) = c('LHb.1','LHb.1.3','LHb.1.3.4','LHb.2.7','LHb.4','LHb.7','MHb.1','MHb.1.2','MHb.2','MHb.3')
-
-color_palette = c(color_palette_1, color_palette_2, color_palette_3)
 
 
 #Marker plot looking at markers for the basic expected types in the habenula
@@ -286,7 +276,7 @@ multiome_seurat_integrated <- RunUMAP(multiome_seurat_integrated, dims = 1:20)
 
 
 int_author_midclust_plot = DimPlot(multiome_seurat_integrated, reduction = "umap", group.by = "mid_cluster", pt.size = 1) + 
-  scale_color_manual(values = color_palette)
+  scale_color_manual(values = my_colors_mid['LHb.4'])
 int_donor_plot = DimPlot(multiome_seurat_integrated, reduction = "umap", group.by = "orig.ident", pt.size = 1)
 
 int_author_midclust_plot 
@@ -294,19 +284,19 @@ int_donor_plot
 
 DefaultAssay(multiome_seurat_integrated) <- "RNA"
 gad2_p = FeaturePlot(multiome_seurat_integrated, features = "GAD2", reduction = "umap", pt.size = 1, slot = 'data') +
-  scale_color_gradient(low = "white", high = "red")
+  scale_color_gradient(low = "white", high = "red", name = 'CPM')
 gad1_p = FeaturePlot(multiome_seurat_integrated, features = "GAD1", reduction = "umap", pt.size = 1, slot = 'data') +
-  scale_color_gradient(low = "white", high = "red")
+  scale_color_gradient(low = "white", high = "red",name = 'CPM')
 pvalb_p = FeaturePlot(multiome_seurat_integrated, features = "PVALB", reduction = "umap", pt.size = 1, slot = 'data') +
-  scale_color_gradient(low = "white", high = "red")
+  scale_color_gradient(low = "white", high = "red", name = 'CPM')
 vgat_p = FeaturePlot(multiome_seurat_integrated, features = "SLC32A1", reduction = "umap", pt.size = 1, slot = 'data') +
-  scale_color_gradient(low = "white", high = "red")
+  scale_color_gradient(low = "white", high = "red", name = 'CPM')
 vglut3_p = FeaturePlot(multiome_seurat_integrated, features = "SLC17A8", reduction = "umap", pt.size = 1, slot = 'data') +
-  scale_color_gradient(low = "white", high = "red")
+  scale_color_gradient(low = "white", high = "red", name = 'CPM')
 vglut2_p = FeaturePlot(multiome_seurat_integrated, features = "SLC17A6", reduction = "umap", pt.size = 1, slot = 'data') +
-  scale_color_gradient(low = "white", high = "red")
+  scale_color_gradient(low = "white", high = "red", name = 'CPM')
 vglut1_p = FeaturePlot(multiome_seurat_integrated, features = "SLC17A7", reduction = "umap", pt.size = 1, slot = 'data') +
-  scale_color_gradient(low = "white", high = "red")
+  scale_color_gradient(low = "white", high = "red", name = 'CPM')
 
 #Look at the co-expression of specific genes
 # Get expression data
@@ -329,15 +319,15 @@ gad2_vglut2_p = ggplot(umap_data, aes(x = umap_1, y = umap_2, color = coexpressi
   labs(title = "GAD2 and SLC17A6 Co-expression")
 
 
-umap_data$coexpression <- ifelse(umap_data$GAD2 > 0 & umap_data$SLC17A8 > 0, "Both",
-                                  ifelse(umap_data$GAD2 > 0, "GAD2 only",
-                                         ifelse(umap_data$SLC17A8 > 0, "SLC17A8 only", "Neither")))
+umap_data$coexpression <- ifelse(umap_data$SLC32A1 > 0 & umap_data$SLC17A6 > 0, "Both",
+                                  ifelse(umap_data$SLC32A1 > 0, "SLC32A1 only",
+                                         ifelse(umap_data$SLC17A6 > 0, "SLC17A6 only", "Neither")))
 
-gad2_vglut3_p = ggplot(umap_data, aes(x = umap_1, y = umap_2, color = coexpression)) +
+vgat_vglut2_p = ggplot(umap_data, aes(x = umap_1, y = umap_2, color = coexpression)) +
   geom_point(size = 1) +
-  scale_color_manual(values = c("Both" = "purple", "GAD2 only" = "red", "SLC17A8 only" = "blue", "Neither" = "lightgrey")) +
+  scale_color_manual(values = c("Both" = "purple", "SLC32A1 only" = "red", "SLC17A6 only" = "blue", "Neither" = "lightgrey")) +
   theme_bw() +
-  labs(title = "GAD2 and SLC17A8 Co-expression")
+  labs(title = "SLC32A1 and SLC17A6 Co-expression")
 
 umap_data$coexpression <- ifelse(umap_data$GAD2 > 0 & umap_data$PVALB > 0, "Both",
                                   ifelse(umap_data$GAD2 > 0, "GAD2 only",
@@ -358,7 +348,7 @@ vglut2_p
 
 gad2_pvalb_p
 gad2_vglut2_p
-gad2_vglut3_p
+vgat_vglut2_p
 
 ggsave(plot = int_author_midclust_plot , path = plot_path, filename = 'LHb4_LHb7_integrated_midcluster_annot_umpa.pdf',
 device = 'pdf', height = 5, width = 6, useDingbats = FALSE )
@@ -395,6 +385,10 @@ ggsave( plot = vglut3_p, path = plot_path, filename = "LHb4_LHb7_integrated_SLC1
 )
 
 ggsave( plot = gad2_vglut2_p, path = plot_path, filename = "LHb4_LHb7_integrated_GAD2_SLC17A6_feature_umap.pdf",
+  device = "pdf", height = 5, width = 6, useDingbats = FALSE
+)
+
+ggsave( plot = vgat_vglut2_p, path = plot_path, filename = "LHb4_LHb7_integrated_SLC32A1_SLC17A6_feature_umap.pdf",
   device = "pdf", height = 5, width = 6, useDingbats = FALSE
 )
 
@@ -528,23 +522,15 @@ labels = multiome_sce$refined_mid_cluster
 broad_labels = multiome_sce$merged_cluster
 broad_labels[labels == 'Putative_Inhib_LHb_4.1'] = 'Putative_Inhib_LHb_4.1'
 broad_labels[labels == 'Putative_Inhib_LHb_4.2'] = 'Putative_Inhib_LHb_4.2'
+broad_labels[labels %in% c('Astrocyte','Endo','Microglia','Oligo','OPC')] = 'Non-neurons'
+
 table(broad_labels)
+table( multiome_sce$refined_mid_cluster)
 
-broad_palette <- c(
-  "LHb" = "#1b9e77",
-  "MHb" = "#d95f02",
-  "Excit_Thal" = "#7570b3",
-  "Inhib_Thal" = "#7570b3",
-  "Astrocyte" = "#66a61e",
-  "Oligo" = "#a6761d",
-  "OPC" = "#a6761d",
-  "Microglia" = "#666666",
-  "Endo" = "#b41f38ff",
-  'Thal' = '#7570b3',
-  'Putative_Inhib_LHb_4.1' = "#2fe8ebec",
-  'Putative_Inhib_LHb_4.2' = "#2fe8ebec"
-)
 
+grouped_colors = c('LHb' = '#1f78b4', 'MHb' = '#ad1d8c',
+'Inhib_Thal' = '#9a9fe7', 'Excit_Thal' = '#4d55b7', 'Non-neurons' = '#532222',
+ 'Putative_Inhib_LHb_4.1' = "#8B0000", 'Putative_Inhib_LHb_4.2' = "#DC143C")
 
 marker_df = data.frame(avg_inhib_thal_expr = avg_inhib_thal_expr, avg_excite_thal_expr = avg_excite_thal_expr, 
   avg_MHb_hab_expr = avg_MHb_hab_expr, avg_LHb_hab_expr = avg_LHb_hab_expr, 
@@ -552,17 +538,17 @@ marker_df = data.frame(avg_inhib_thal_expr = avg_inhib_thal_expr, avg_excite_tha
 
 #Inhibitory thalamus marker expression
 cluster_order <- marker_df |>
-  summarize(med = median(avg_inhib_thal_expr, na.rm = TRUE), .by = cluster) |>
+  summarize(med = median(avg_inhib_thal_expr, na.rm = TRUE), .by = broad_labels) |>
   arrange(med) |>
-  pull(cluster)
+  pull(broad_labels)
 
 marker_df <- marker_df |>
-  mutate(cluster = factor(cluster, levels = cluster_order))
+  mutate(broad_labels = factor(broad_labels, levels = cluster_order))
 
-p_avg_inh_thal = ggplot(marker_df, aes(x = cluster, y = avg_inhib_thal_expr, fill = broad_labels)) +
+p_avg_inh_thal = ggplot(marker_df, aes(x = broad_labels, y = avg_inhib_thal_expr, fill = broad_labels)) +
   geom_violin(scale = 'width') +
   theme_bw() +
-  scale_fill_manual(values = broad_palette) +
+  scale_fill_manual(values = grouped_colors) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
   xlab("Cluster") +
   ylab("Average expression of top 25 inhibitory thalamus markers") +
@@ -570,17 +556,17 @@ p_avg_inh_thal = ggplot(marker_df, aes(x = cluster, y = avg_inhib_thal_expr, fil
 
 #Excitatory thalamus marker expression
 cluster_order <- marker_df |>
-  summarize(med = median(avg_excite_thal_expr, na.rm = TRUE), .by = cluster) |>
+  summarize(med = median(avg_excite_thal_expr, na.rm = TRUE), .by = broad_labels) |>
   arrange(med) |>
-  pull(cluster)
+  pull(broad_labels)
 
 marker_df <- marker_df |>
-  mutate(cluster = factor(cluster, levels = cluster_order))
+  mutate(broad_labels = factor(broad_labels, levels = cluster_order))
 
-p_avg_excite_thal = ggplot(marker_df, aes(x = cluster, y = avg_excite_thal_expr, fill = broad_labels)) +
+p_avg_excite_thal = ggplot(marker_df, aes(x = broad_labels, y = avg_excite_thal_expr, fill = broad_labels)) +
   geom_violin(scale = 'width') +
   theme_bw() +
-  scale_fill_manual(values = broad_palette) +
+  scale_fill_manual(values = grouped_colors) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
   xlab("Cluster") +
   ylab("Average expression of top 25 excitatory thalamus markers") +
@@ -588,17 +574,17 @@ p_avg_excite_thal = ggplot(marker_df, aes(x = cluster, y = avg_excite_thal_expr,
 
 #Medial Hab markers
 cluster_order <- marker_df |>
-  summarize(med = median(avg_MHb_hab_expr, na.rm = TRUE), .by = cluster) |>
+  summarize(med = median(avg_MHb_hab_expr, na.rm = TRUE), .by = broad_labels) |>
   arrange(med) |>
-  pull(cluster)
+  pull(broad_labels)
 
 marker_df <- marker_df |>
-  mutate(cluster = factor(cluster, levels = cluster_order))
+  mutate(broad_labels = factor(broad_labels, levels = cluster_order))
 
-p_avg_MHb =ggplot(marker_df, aes(x = cluster, y = avg_MHb_hab_expr, fill = broad_labels)) +
+p_avg_MHb =ggplot(marker_df, aes(x = broad_labels, y = avg_MHb_hab_expr, fill = broad_labels)) +
   geom_violin(scale = 'width') +
   theme_bw() +
-  scale_fill_manual(values = broad_palette) +
+  scale_fill_manual(values = grouped_colors) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
   xlab("Cluster") +
   ylab("Average expression of top 25 Medial Habenula markers") +
@@ -607,17 +593,17 @@ p_avg_MHb =ggplot(marker_df, aes(x = cluster, y = avg_MHb_hab_expr, fill = broad
 
 #Lateral Hab markers
 cluster_order <- marker_df |>
-  summarize(med = median(avg_LHb_hab_expr, na.rm = TRUE), .by = cluster) |>
+  summarize(med = median(avg_LHb_hab_expr, na.rm = TRUE), .by = broad_labels) |>
   arrange(med) |>
-  pull(cluster)
+  pull(broad_labels)
 
 marker_df <- marker_df |>
-  mutate(cluster = factor(cluster, levels = cluster_order))
+  mutate(broad_labels = factor(broad_labels, levels = cluster_order))
 
-p_avg_LHb = ggplot(marker_df, aes(x = cluster, y = avg_LHb_hab_expr, fill = broad_labels)) +
+p_avg_LHb = ggplot(marker_df, aes(x = broad_labels, y = avg_LHb_hab_expr, fill = broad_labels)) +
   geom_violin(scale = 'width') +
   theme_bw() +
-  scale_fill_manual(values = broad_palette) +
+  scale_fill_manual(values = grouped_colors) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
   xlab("Cluster") +
   ylab("Average expression of top 25 Lateral Habenula markers") +
