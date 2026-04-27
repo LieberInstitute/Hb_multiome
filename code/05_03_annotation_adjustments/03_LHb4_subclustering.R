@@ -167,47 +167,7 @@ multiome_seurat_integrated[[]]
 #Adapting code from code/05_Clustering_ARCr/22_add_mid_level_clustering.R
 #https://github.com/LieberInstitute/Hb_multiome/blob/ba13de14c5616b0488eaaab1800199209f89a882/code/05_Clustering_ARCr/22_add_mid_level_clustering.R#L115-L191
 
-## =============================================================================
-## Picked up Hex-color codes similar across cell-type
-
-my_colors <- c(
-    LHb = "#1f78b4",
-    MHb = "#ad1d8c",
-    Oligo = "#384a08",
-    Astrocyte = "#532222", 
-    OPC = "#829454",
-    Microglia = "#141b02",
-    Endo = "#d95f02",
-    Inhib_Thal = "#9a9fe7",
-    Excit_Thal = "#42467b",
-    Thal = "#4d55b7"
-)
-
-## assign color gradients to mid resolution clusters based on Broad cell-types
-
-# extract LHb and MHb clusters
-cluster_levels <- levels(midSeurat)
-cluster_levels
-LHb_clusters <- grep("LHb", cluster_levels, value = TRUE)
-MHb_clusters <- grep("MHb", cluster_levels, value = TRUE)
-
-# Create tonal gradients for LHb and MHb
-LHb_colors <- colorspace::sequential_hcl(length(LHb_clusters), h = 210, c = 80, l = c(30, 80))
-MHb_colors <- colorspace::sequential_hcl(length(MHb_clusters), h = 320, c = 80, l = c(30, 80))
-
-# Build full cluster color map
-my_colors_mid <- setNames(rep("#bdbdbd", length(cluster_levels)), cluster_levels)
-my_colors_mid[LHb_clusters] <- LHb_colors
-my_colors_mid[MHb_clusters] <- MHb_colors
-
-# assign base color for other types from your existing palette
-for (category in c("Oligo", "Astrocyte", "OPC", "Microglia", "Endo", "Inhib.Thal", "Excit.Thal", "Thal")) {
-    matched <- grep(category, cluster_levels, value = TRUE)
-    my_colors_mid[matched] <- my_colors[[gsub("\\.", "_", category)]]
-}
-
-## =============================================================================
-
+source(here('code','05_03_annotation_adjustments','celltype_colors.R'))
 
 #Verify original UMAP
 plt1 <- DimPlot(midSeurat, 
