@@ -1,10 +1,10 @@
 **** Job starts ****
-Wed Apr  8 12:07:26 PM EDT 2026
+Mon Apr 27 10:08:09 AM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30687135
+Job id: 31230505
 Job name: 01_chromVAR
-Node name: compute-096
+Node name: compute-099
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -196,9 +196,9 @@ There were 50 or more warnings (use warnings() to see the first 50)
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-04-08
- pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/ (via rmarkdown)
- quarto   1.8.27 @ /users/neagles/.positron-server/bin/f3aae65e0a1a11d39226cd884520f49301daef82/quarto/bin/quarto
+ date     2026-04-27
+ pandoc   3.8.3 @ /users/neagles/.positron-server/bin/5dfc92424b4381ca7139f3f0a122a65abc2a9383/quarto/bin/tools/x86_64/ (via rmarkdown)
+ quarto   1.9.37 @ /users/neagles/.positron-server/bin/5dfc92424b4381ca7139f3f0a122a65abc2a9383/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package                     * version   date (UTC) lib source
@@ -410,4 +410,4 @@ There were 50 or more warnings (use warnings() to see the first 50)
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Apr  8 02:14:42 PM EDT 2026
+Mon Apr 27 11:30:10 AM EDT 2026
