@@ -19,9 +19,9 @@ library(TRIPOD)
 library(sessioninfo)
 
 cell_types = c(
-    "Astrocyte", "Endo", "Excit.Thal", "Inhib_LHb_4.1", "Inhib_LHb_4.2",
-    "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1", "MHb.1.2",
-    "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC", "all"
+    "Astrocyte", "Endo", "Ependymal", "Excit.Thal", "Inhib_LHb_4.1",
+    "Inhib_LHb_4.2", "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1",
+    "MHb.1.2", "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC", "all"
 )
 this_cell_type = cell_types[as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID"))]
 
@@ -108,14 +108,14 @@ best_res = cluster_df |>
 if (length(best_res) == 0) {
     warning("Failed to find a resolution with the recommended criteria. Relaxing a bit...")
     best_res = cluster_df |>
-        dplyr::filter(num_below / num_clusters <= 0.1) |>
-        arrange(desc(num_clusters)) |>
+        dplyr::filter(num_clusters >= 40) |>
+        arrange(num_clusters) |>
         slice_head(n = 1) |>
         pull(resolution)
 }
 
-if (cluster_df$num_clusters[cluster_df$resolution == best_res] < 40) {
-    warning("Had to pick a resolution with less than 40 clusters")
+if (length(best_res) == 0) {
+    stop("Failed to find a resolution with at least 40 metacells")
 }
 
 message(
