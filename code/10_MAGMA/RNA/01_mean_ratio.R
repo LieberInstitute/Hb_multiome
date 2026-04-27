@@ -25,7 +25,8 @@ export_set = function(sce, cell_type_col, file_tag) {
         ) |>
         filter(MeanRatio > mean_ratio_threshold) |>
         dplyr::rename(
-            set_id = cellType.target, gene_id = gene, mean_ratio = MeanRatio
+            set_id = cellType.target, gene_id = gene_ensembl,
+            mean_ratio = MeanRatio
         ) |>
         group_by(set_id) |>
         arrange(desc(mean_ratio)) |>
@@ -43,7 +44,7 @@ export_set = function(sce, cell_type_col, file_tag) {
 sce = qs_read(sce_path)
 
 # add gene_id and gene_name to rowData
-rowData(sce)$gene_name = rownames(rowData(sce))
+rowData(sce)$gene_name = rownames(sce)
 
 gtf = import(reference_gtf)
 gtf = gtf[gtf$type == "gene"]
