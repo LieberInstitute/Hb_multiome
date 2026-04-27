@@ -1,10 +1,10 @@
 **** Job starts ****
-Mon Apr 13 10:07:48 AM EDT 2026
+Mon Apr 27 12:31:12 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30772079
+Job id: 31232057
 Job name: 02_tripod_preprocess
-Node name: compute-175
+Node name: compute-178
 Task id: 1
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -211,17 +211,17 @@ Selected resolution = 8. Here's the whole metric table:
 # A tibble: 11 × 3
    resolution num_clusters num_below
         <dbl>        <int>     <int>
- 1        0.5            9         0
- 2        1             15         0
- 3        2             21         0
- 4        3             28         1
- 5        4             31         2
- 6        6             33         2
- 7        8             40         3
- 8       12             64         9
- 9       16             92        36
-10       24            138        73
-11       32            181       123
+ 1        0.5            7         0
+ 2        1              9         0
+ 3        2             14         0
+ 4        3             16         1
+ 5        4             18         2
+ 6        6             34         9
+ 7        8             51        27
+ 8       12             64        35
+ 9       16             87        59
+10       24            146       130
+11       32            157       148
 Warning: No layers found matching search pattern provided
 Warning: No layers found matching search pattern provided
 Warning: Assay RNA changing from Assay5 to Assay
@@ -237,9 +237,9 @@ Layer 'scale.data' is empty
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-04-13
- pandoc   3.8.3 @ /users/neagles/.positron-server/bin/ae29de6747f9f15cc38783410ec9a46a5b428393/quarto/bin/tools/x86_64/ (via rmarkdown)
- quarto   1.9.36 @ /users/neagles/.positron-server/bin/ae29de6747f9f15cc38783410ec9a46a5b428393/quarto/bin/quarto
+ date     2026-04-27
+ pandoc   3.8.3 @ /users/neagles/.positron-server/bin/5dfc92424b4381ca7139f3f0a122a65abc2a9383/quarto/bin/tools/x86_64/ (via rmarkdown)
+ quarto   1.9.37 @ /users/neagles/.positron-server/bin/5dfc92424b4381ca7139f3f0a122a65abc2a9383/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package                     * version   date (UTC) lib source
@@ -454,4 +454,4 @@ Layer 'scale.data' is empty
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Mon Apr 13 10:11:17 AM EDT 2026
+Mon Apr 27 12:34:55 PM EDT 2026
