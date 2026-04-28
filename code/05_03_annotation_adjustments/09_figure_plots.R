@@ -216,6 +216,15 @@ ggsave(plt3, filename = 'ATAC_umap_starting_mid_cluster.pdf', path = plot_path, 
 height = 6, width = 6)
 ggsave(plt4, filename = 'RNA_umap_final_mid_cluster.pdf', path = plot_path, device = 'pdf', 
 height = 6, width = 6)
+#pngs
+ggsave(plt1, filename = 'wnn_umap_starting_mid_cluster.png', path = plot_path, device = 'png', 
+height = 6, width = 6)
+ggsave(plt2, filename = 'RNA_umap_starting_mid_cluster.png', path = plot_path, device = 'png', 
+height = 6, width = 6)
+ggsave(plt3, filename = 'ATAC_umap_starting_mid_cluster.png', path = plot_path, device = 'png', 
+height = 6, width = 6)
+ggsave(plt4, filename = 'RNA_umap_final_mid_cluster.png', path = plot_path, device = 'png', 
+height = 6, width = 6)
 
 #And pull together the broader marker bubble plot, here we want the habenula vs thalamus vs non-neuronal markers
 
