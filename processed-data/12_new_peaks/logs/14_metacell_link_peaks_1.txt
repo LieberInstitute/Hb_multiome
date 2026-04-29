@@ -1,10 +1,10 @@
 **** Job starts ****
-Fri Apr 10 08:46:42 AM EDT 2026
+Tue Apr 21 02:36:45 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30744163
+Job id: 30937985
 Job name: 14_metacell_link_peaks
-Node name: compute-175
+Node name: compute-176
 Task id: 1
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -80,46 +80,48 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 66.
+✔ Number of reports ready for upload: 109.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
 ✔ Overwriting dplyr methods with duckplyr methods.
 ℹ Turn off with `duckplyr::methods_restore()`.
-2026-04-10 08:46:51.206356 | Loading Seurat object
-2026-04-10 08:47:08.67014 | Filtering features
-Filtering ATAC assay to 336923 of 353441 (95.3%) features (present in at least 9 metacells)
+Error reading duckplyr, fallback configuration, deleting file.
+Caused by error in `if (any(ind)) ...`:
+! missing value where TRUE/FALSE needed2026-04-21 14:36:53.643968 | Loading Seurat object
+2026-04-21 14:37:11.953607 | Filtering features
+Filtering ATAC assay to 284082 of 354425 (80.2%) features (present in at least 6 metacells)
 Warning message:
 Different cells and/or features from existing assay ATAC 
-Filtering RNA assay to 21391 of 36601 (58.4%) features (present in at least 9 metacells)
+Filtering RNA assay to 15567 of 15840 (98.3%) features (present in at least 6 metacells)
 Warning: Different features in new layer data than already exists for counts
 Warning: Different features in new layer data than already exists for data
 Warning message:
 Different cells and/or features from existing assay RNA 
-2026-04-10 08:47:11.08939 | Running LinkPeaks
-Found gene coordinates for 15517 genes
-Testing 20957 genes and 310484 peaks
+2026-04-21 14:37:13.208929 | Running LinkPeaks
+Found gene coordinates for 12990 genes
+Testing 15422 genes and 243123 peaks
 There were 32 warnings (use warnings() to see them)
-2026-04-14 22:57:30.244211 | Exporting to parquet
+2026-04-24 21:19:45.985556 | Exporting to parquet
 # A duckplyr data frame: 12 variables
-   seqnames  start     end  width strand   score gene      peak   zscore  pvalue
-   <chr>     <int>   <int>  <int> <chr>    <dbl> <chr>     <chr>   <dbl>   <dbl>
- 1 chr1     629250  825138 195889 *      0.161   LINC01128 chr1-…  1.21  1.14e-1
- 2 chr1     629250  827522 198273 *      0.268   LINC00115 chr1-…  3.25  5.73e-4
- 3 chr1     629250  876903 247654 *      0.250   FAM41C    chr1-…  1.78  3.77e-2
- 4 chr1     629250  923928 294679 *      0.0503  SAMD11    chr1-… -0.654 2.57e-1
- 5 chr1     629250  959309 330060 *      0.155   NOC2L     chr1-…  0.535 2.96e-1
- 6 chr1     629250  960587 331338 *      0.00406 KLHL17    chr1-… -0.998 1.59e-1
- 7 chr1     629250 1000172 370923 *      0.174   HES4      chr1-…  1.01  1.56e-1
- 8 chr1     629250 1001138 371889 *      0.623   ISG15     chr1-…  5.77  4.05e-9
- 9 chr1     629250 1020123 390874 *      0.368   AGRN      chr1-…  3.34  4.15e-4
-10 chr1     629250 1116361 487112 *      0.0854  C1orf159  chr1-…  0.737 2.31e-1
+   seqnames  start     end  width strand  score gene      peak     zscore pvalue
+   <chr>     <int>   <int>  <int> <chr>   <dbl> <chr>     <chr>     <dbl>  <dbl>
+ 1 chr1     629251  825138 195888 *      0.102  LINC01128 chr1-6…  0.0959 0.462 
+ 2 chr1     629251  876903 247653 *      0.161  FAM41C    chr1-6…  0.838  0.201 
+ 3 chr1     629251  923928 294678 *      0.218  SAMD11    chr1-6…  1.72   0.0423
+ 4 chr1     629251  959309 330059 *      0.0709 NOC2L     chr1-6… -0.220  0.413 
+ 5 chr1     629251  960587 331337 *      0.0611 KLHL17    chr1-6… -0.0257 0.490 
+ 6 chr1     629251 1000172 370922 *      0.154  HES4      chr1-6…  0.550  0.291 
+ 7 chr1     629251 1001138 371888 *      0.147  ISG15     chr1-6…  0.573  0.283 
+ 8 chr1     629251 1020123 390873 *      0.126  AGRN      chr1-6…  0.183  0.427 
+ 9 chr1     629251 1116361 487111 *      0.0595 C1orf159  chr1-6…  0.0115 0.495 
+10 chr1     629921  825138 195218 *      0.291  LINC01128 chr1-6…  1.85   0.0319
 # ℹ more rows
 # ℹ 2 more variables: cell_type <chr>, FDR <dbl>
 Memory usage:
-            used   (Mb) gc trigger   (Mb)   max used   (Mb)
-Ncells   8264552  441.4   21451648 1145.7   21451648 1145.7
-Vcells 138627812 1057.7  438190689 3343.2 1069468412 8159.4
+            used  (Mb) gc trigger   (Mb)   max used   (Mb)
+Ncells   8258244 441.1   18823052 1005.3   18823052 1005.3
+Vcells 112207246 856.1  347424896 2650.7 1058337098 8074.5
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -130,9 +132,9 @@ Vcells 138627812 1057.7  438190689 3343.2 1069468412 8159.4
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-04-14
+ date     2026-04-24
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.8.27 @ /users/neagles/.positron-server/bin/f3aae65e0a1a11d39226cd884520f49301daef82/quarto/bin/quarto
+ quarto   1.9.37 @ /users/neagles/.positron-server/bin/5dfc92424b4381ca7139f3f0a122a65abc2a9383/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package           * version date (UTC) lib source
@@ -282,4 +284,4 @@ Vcells 138627812 1057.7  438190689 3343.2 1069468412 8159.4
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Tue Apr 14 10:57:34 PM EDT 2026
+Fri Apr 24 09:19:50 PM EDT 2026

@@ -6,7 +6,7 @@
 #SBATCH -t 10-0:00:00
 #SBATCH -o ../../processed-data/12_new_peaks/logs/14_metacell_link_peaks_%a.txt
 #SBATCH -e ../../processed-data/12_new_peaks/logs/14_metacell_link_peaks_%a.txt
-#SBATCH --array=1-16%16
+#SBATCH --array=1-17%17
 
 set -e
 
