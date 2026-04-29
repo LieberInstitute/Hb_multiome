@@ -1,10 +1,10 @@
 **** Job starts ****
-Fri Apr  3 12:46:38 PM EDT 2026
+Wed Apr 29 02:48:23 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 30564661
+Job id: 31344700
 Job name: 04_threshold_tuning
-Node name: compute-099
+Node name: compute-175
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -32,7 +32,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 41.
+✔ Number of reports ready for upload: 145.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -52,9 +52,9 @@ be uploaded.
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-04-03
+ date     2026-04-29
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.8.27 @ /users/neagles/.positron-server/bin/f3aae65e0a1a11d39226cd884520f49301daef82/quarto/bin/quarto
+ quarto   1.9.37 @ /users/neagles/.positron-server/bin/5dfc92424b4381ca7139f3f0a122a65abc2a9383/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package      * version date (UTC) lib source
@@ -114,4 +114,4 @@ be uploaded.
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Fri Apr  3 01:07:18 PM EDT 2026
+Wed Apr 29 02:52:28 PM EDT 2026
