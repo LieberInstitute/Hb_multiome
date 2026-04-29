@@ -102,10 +102,14 @@ count_df = bind_rows(count_df_list) |>
     ) |>
     ungroup()
 
-p = count_df |>
+sample_df = count_df |>
+    distinct(cell_type, peak, gene) |>
     group_by(cell_type) |>
     slice_sample(n = num_links_scatter) |>
-    ungroup() |>
+    ungroup()
+
+p = count_df |>
+    inner_join(sample_df, by = c("cell_type", "peak", "gene")) |>
     ggplot(aes(x = peak_value, y = gene_value, color = donor)) +
         scale_color_manual(values = donor_colors) +
         geom_point(size = 0.5) +
@@ -119,51 +123,72 @@ pdf(
 print(p)
 dev.off()
 
-p = count_df |>
-    group_by(cell_type, donor) |>
-    #   Since we Z-scored across donors, a donor's typical distance from the
-    #   origin can be an indirect measure of its contribution to the correlation
-    summarize(
-        contribution_score = mean(peak_value ** 2 + gene_value ** 2)
+#   For each peak-gene-cell_type, compute full-donor correlation, then
+#   leave-one-out (LOO) correlations. The donor-bias score is the drop in
+#   correlation when that donor is excluded.
+donors = unique(count_df$donor)
+
+loo_df = count_df |>
+    group_by(cell_type, peak, gene) |>
+    mutate(full_cor = cor(peak_value, gene_value)) |>
+    ungroup() |>
+    #   For each row, compute correlation leaving out that donor
+    group_by(cell_type, peak, gene) |>
+    mutate(
+        loo_cor = map_dbl(donor, function(d) {
+            sub = cur_data() |> filter(donor != d)
+            if (nrow(sub) < 3) return(NA_real_)
+            cor(sub$peak_value, sub$gene_value)
+        }),
+        donor_bias = full_cor - loo_cor
     ) |>
-    ggplot(aes(x = donor, y = contribution_score, fill = donor)) +
+    ungroup()
+
+bias_summary_df = loo_df |>
+    group_by(cell_type, donor) |>
+    summarize(
+        mean_donor_bias = mean(donor_bias, na.rm = TRUE), .groups = "drop"
+    )
+
+p_bias_bar = bias_summary_df |>
+    ggplot(aes(x = donor, y = mean_donor_bias, fill = donor)) +
         geom_bar(stat = "identity") +
         facet_wrap(~cell_type) +
         scale_fill_manual(values = donor_colors) +
         theme_bw(base_size = 15) +
-        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
-pdf(
-    file.path(plot_dir, sprintf("%s_contribution_score_barplots.pdf", dataset))
-)
-print(p)
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+        labs(x = "Donor", y = "Mean LOO Donor Bias")
+pdf(file.path(plot_dir, sprintf("%s_loo_bias_barplots.pdf", dataset)))
+print(p_bias_bar)
 dev.off()
 
-p = count_df |>
-    group_by(cell_type, donor) |>
-    summarize(
-        contribution_score = mean(peak_value ** 2 + gene_value ** 2)
-    ) |>
-    ggplot(aes(x = donor, y = contribution_score, color = donor)) +
+p_bias_box = bias_summary_df |>
+    ggplot(aes(x = donor, y = mean_donor_bias, color = donor)) +
         geom_boxplot() +
         scale_color_manual(values = donor_colors) +
         theme_bw(base_size = 20) +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-        labs(x = "Donor", y = "Contribution Score") +
+        labs(x = "Donor", y = "Mean LOO Donor Bias") +
         guides(color = "none")
-pdf(file.path(plot_dir, sprintf("%s_contribution_score_boxplots.pdf", dataset)))
-print(p)
+pdf(file.path(plot_dir, sprintf("%s_loo_bias_boxplots.pdf", dataset)))
+print(p_bias_box)
 dev.off()
 
-#   Compute a metric measuring the lopsidedness of donor contributions to
-#   peak-gene correlations (higher is worse)
-overall_score = count_df |>
-    group_by(cell_type, donor) |>
+#   Average (across all peak-gene pairs) of the largest absolute LOO bias
+#   seen for any single donor. Interpretable as: "the most impactful donor
+#   typically shifts the correlation by this much."
+max_loo_score = loo_df |>
+    group_by(cell_type, peak, gene) |>
     summarize(
-        contribution_score = mean(peak_value ** 2 + gene_value ** 2)
+        max_abs_bias = max(abs(donor_bias), na.rm = TRUE), .groups = "drop"
     ) |>
-    pull(contribution_score) |>
-    var()
-message(sprintf("Overall donor-specificity score: %.2f", overall_score))
+    pull(max_abs_bias) |>
+    mean(na.rm = TRUE)
+message(
+    sprintf(
+        "Mean max-donor LOO bias (typical influence of most impactful donor): %.3f",
+        max_loo_score
+    )
+)
 
 session_info()
-    
