@@ -1,5 +1,5 @@
 #   Using previously preprocessed objects, fit TRIPOD models and write
-#   significant trios as a CSV for each type of test TRIPOD allows. Largely
+#   significant trios as a parquet for each type of test TRIPOD allows. Largely
 #   following the vignette:
 #   https://htmlpreview.github.io/?https://github.com/yuchaojiang/TRIPOD/blob/main/vignettes/TRIPOD_pbmc.html
 
@@ -19,9 +19,9 @@ library(dendextend)
 library(duckplyr)
 
 cell_types = c(
-    "Astrocyte", "Endo", "Excit.Thal", "Inhib_LHb_4.1", "Inhib_LHb_4.2",
-    "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1", "MHb.1.2",
-    "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC", "all"
+    "Astrocyte", "Endo", "Ependymal", "Excit.Thal", "Inhib_LHb_4.1",
+    "Inhib_LHb_4.2", "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1",
+    "MHb.1.2", "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC", "all"
 )
 this_cell_type = cell_types[as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID"))]
 
@@ -112,7 +112,7 @@ for (condition_type in c("Xt", "Yj")) {
 }
 
 #   Write the main results
-result_list |>
+temp = result_list |>
     bind_rows() |>
     compute_parquet(
         file.path(out_dir, sprintf("trios_%s.parquet", this_cell_type))

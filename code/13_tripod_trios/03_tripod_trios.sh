@@ -2,11 +2,12 @@
 #SBATCH -p katun
 #SBATCH --mem=150G
 #SBATCH --job-name=03_tripod_trios
-#SBATCH -c 4
-#SBATCH -t 10-0:00:00
+#SBATCH -c 8
+#SBATCH -t 20-0:00:00
 #SBATCH -o ../../processed-data/13_tripod_trios/logs/03_tripod_trios_%a.txt
 #SBATCH -e ../../processed-data/13_tripod_trios/logs/03_tripod_trios_%a.txt
-#SBATCH --array=1,3,6,7,9,10%6
+#SBATCH --array=18
+#SBATCH --reservation=neagles-2wk
 
 set -e
 
