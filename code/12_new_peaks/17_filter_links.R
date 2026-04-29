@@ -22,9 +22,9 @@ if (dataset == "pb") {
 }
 
 cell_types = c(
-    "Astrocyte", "Endo", "Excit.Thal", "Inhib_LHb_4.1", "Inhib_LHb_4.2",
-    "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1", "MHb.1.2",
-    "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC"
+    "Astrocyte", "Endo", "Ependymal", "Excit.Thal", "Inhib_LHb_4.1",
+    "Inhib_LHb_4.2", "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1",
+    "MHb.1.2", "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC"
 )
 peak_path = here(
     'processed-data', '11_link_prep', '01_call_peaks',
@@ -49,7 +49,17 @@ fallback_config(info = FALSE)
 dir.create(dirname(full_out_path), showWarnings = FALSE)
 
 peak_df = read_csv_duckdb(peak_path, prudence = "lavish") |>
-    mutate(peak = paste(seqnames, start, end, sep = "-")) |>
+    #   Half to be careful about formatting here because I encountered a rare
+    #   case where one peak end value, 200000, was converted to 2e+05 in the
+    #   default paste call (before using formatC later), leading to failed joins
+    mutate(
+        peak = paste(
+            seqnames,
+            formatC(start, format = "d"),
+            formatC(end, format = "d"),
+            sep = "-"
+        )
+    ) |>
     select(peak, peak_called_in) |>
     collect()
 
