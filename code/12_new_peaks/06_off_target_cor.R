@@ -8,12 +8,13 @@ library(sessioninfo)
 library(duckplyr)
 
 cell_types = c(
-    'Astrocyte', 'Endo', 'Excit.Thal', 'Inhib.Thal', 'LHb.1', 'LHb.1.3',
-    'LHb.1.3.4', 'LHb.2.7', 'LHb.4', 'LHb.7', 'MHb.1', 'MHb.1.2', 'MHb.2',
-    'MHb.3', 'Microglia', 'Oligo', 'OPC', 'Thal'
+    "Astrocyte", "Endo", "Ependymal", "Excit.Thal", "Inhib_LHb_4.1",
+    "Inhib_LHb_4.2", "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1",
+    "MHb.1.2", "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC"
 )
 link_path = here(
-    'processed-data', '12_new_peaks', '01_link_peaks', 'all_data.parquet'
+    'processed-data', '12_new_peaks', '17_filter_links',
+    'metacell_all_data.parquet'
 )
 plot_dir = here("plots", "12_new_peaks", "06_off_target_cor")
 fdr_cutoffs = c(0.01, 0.05, 0.1, 0.2, 1)
