@@ -8,8 +8,8 @@ library(ComplexHeatmap)
 library(circlize)
 
 seur_path = here(
-    "processed-data", "05_Clustering_ARCr", "24_smaller_seurat",
-    "general_purpose_seur.qs2"
+    'processed-data', '05_03_annotation_adjustments', '06_refined_annotations',
+    'refined_annotation_multiomeHab_Seurat.qs2'
 )
 marker_path = here(
     "processed-data", "10_MAGMA", "RNA", "gene_sets", "fine.tsv"
@@ -29,7 +29,7 @@ seur = qs_read(seur_path)
 p = DimPlot(
         seur,
         reduction = "wnn.umap",
-        group.by = "mid_cluster",
+        group.by = "refined_mid_cluster",
         label = TRUE,
         label.size = 7,
         repel = TRUE
@@ -46,7 +46,7 @@ dev.off()
 
 #   Grab mid-resolution Hb markers (mean ratio)
 marker_df = read_tsv(marker_path, show_col_types = FALSE) |>
-    filter(grepl('^[ML]Hb', set_id)) |>
+    filter(grepl('[ML]Hb', set_id)) |>
     group_by(set_id) |>
     slice_max(order_by = mean_ratio, n = markers_per_cell_type) |>
     ungroup() |>
@@ -60,7 +60,7 @@ for (i in seq_len(nrow(marker_df))) {
     marker_df_list[[i]] = tibble(
         gene_name = marker_df$gene_name[i],
         marker_cell_type = marker_df$set_id[i],
-        measured_cell_type = seur@meta.data$mid_cluster,
+        measured_cell_type = seur@meta.data$refined_mid_cluster,
         value = unname(seur[['RNA']]$data[marker_df$gene_name[i], ])
     )
 }

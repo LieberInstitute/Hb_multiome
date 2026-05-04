@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=10G
+#SBATCH --mem=40G
 #SBATCH --job-name=25_manuscript_plots
 #SBATCH -c 1
 #SBATCH -t 1-00:00:00
