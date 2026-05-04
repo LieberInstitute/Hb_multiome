@@ -7,7 +7,8 @@ library(here)
 library(duckplyr)
 
 link_path = here(
-    'processed-data', '12_new_peaks', '01_link_peaks', 'filtered_data.parquet'
+    'processed-data', '12_new_peaks', '17_filter_links',
+    'metacell_filtered_data.parquet'
 )
 plot_dir = here("plots", "12_new_peaks", "16_shared_unique")
 
@@ -26,7 +27,10 @@ cell_type_colors = c(
     "MHb.1" = "#FF00FF",
     "MHb.1.2" = "#c76a6a",
     "MHb.2" = "#FAA0A0",
-    "MHb.3" = "#fa246a"
+    "MHb.3" = "#fa246a",
+    Inhib_LHb_4.1 = "#23008b",
+    Inhib_LHb_4.2 = "#3333fa",
+    Ependymal = "#f5a105ff"
 )
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
