@@ -3,66 +3,54 @@ library(here)
 library(viridis)
 library(sessioninfo)
 
-multiome_path = here('processed-data', '10_MAGMA', 'RNA', 'heatmap_results.csv')
+multiome_path = here('processed-data', '10_MAGMA', 'RNA', 'heatmap_data.csv')
 extra_hd_path = '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Habenula_Visium/processed-data/09_HD_cell_level/no_secondary/MAGMA/extracellular/heatmap_data.csv'
 cell_hd_path = '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Habenula_Visium/processed-data/09_HD_cell_level/no_secondary/MAGMA/heatmap_data.csv'
+ficture_cell_hd_path = '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Habenula_Visium/processed-data/10_HD_bin_level/new_samples2/ficture_harmony/MAGMA/heatmap_data.csv'
+ficture_extra_hd_path = '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Habenula_Visium/processed-data/10_HD_bin_level/no_secondary/cell_environment/MAGMA/heatmap_data.csv'
 plot_dir = here('plots', '10_MAGMA', 'RNA')
-cell_type_groups = c('broad', 'mid', 'fine')
-
-gwas_groups = list(
-    substance = c(
-        'SUD2020', 'AUD', 'CUD', 'ext_cannabis', 'lifetime_cannabis', 'OUD',
-        'SUD2', 'SUD3'
+cell_type_order = list(
+    fine = c(
+        'MHb.1', 'MHb.1.2', 'MHb.2', 'MHb.3', 'Excit_LHb', 'LHb.1.3.4',
+        'LHb.2.7', 'LHb.4', 'Inhib_LHb_4.1', 'Inhib_LHb_4.2',
+        'Excit.Thal/Inhib_LHb_4.2', 'Excit.Thal', 'Inhib.Thal', 'Astrocyte',
+        'Endo', 'Endo/microglia', 'Microglia', 'Oligo', 'OPC', 'Ependymal',
+        'Subependymal', paste0('X', 0:9)
     ),
-    non_substance = c(
-        'MDD', 'panic', 'SCZ', 'compulsive', 'internalizing', 'neurodev',
-        'p_factor', 'SCZ_BPD'
+    mid = c(
+        'MHb', 'LHb', 'Excit.Thal/Inhib_LHb_4.2', 'Excit.Thal', 'Inhib.Thal',
+        'Astrocyte', 'Endo', 'Endo/microglia', 'Microglia', 'Oligo', 'OPC',
+        'Ependymal', 'Subependymal'
+    ),
+    broad = c(
+        'Hb', 'Excit.Thal/Inhib_LHb_4.2', 'Excit.Thal', 'Inhib.Thal',
+        'Astrocyte', 'Endo', 'Endo/microglia', 'Microglia', 'Oligo', 'OPC',
+        'Ependymal', 'Subependymal'
     )
 )
-#   The 5 factors + general P factor from the paper:
-#   https://doi.org/10.1038/s41586-025-09820-3
-gwas_factors = c(
-    'compulsive' = 'F1: compulsive',
-    'SCZ_BPD' = 'F2: SCZ/BPD',
-    'neurodev' = 'F3: neurodev',
-    'internalizing' = 'F4: intern.',
-    'SUD3' = 'F5: SUD',
-    'p_factor' = 'P Factor'
-)
-gwas_renaming = c(
-    'MDD' = 'MDD',
-    'panic' = 'Panic Disorder',
-    'compulsive' = 'Compuls. Dis.',
-    'SCZ' = 'SCZ',
-    'SCZ_BPD' = 'SCZ/BPD',
-    'AUD' = 'AUD',
-    'CUD' = 'CUD',
-    'ext_cannabis' = 'Ext. Cannabis',
-    'lifetime_cannabis' = 'Life. Cannabis',
-    'SUD2020' = 'OUD 1',
-    'OUD' = 'OUD 2',
-    'SUD2' = 'SUD 1',
-    'SUD3' = 'SUD 2',
-    'internalizing' = 'Intern. Disorders',
-    'neurodev' = 'Neurodev.',
-    'p_factor' = 'P Factor'
+gwas_order = c(
+    'MDD_Howard', 'internalizing_F4_Grotzinger', 'compulsive_F1_Grotzinger',
+    'externalizing_Linnér', 'neurodev_F3_Grotzinger', 'p_factor_Grotzinger',
+    'SCZ_Trubetskoy', 'SCZ/BPD_F2_Grotzinger', 'panic_Forster', 'AUD_Zhou',
+    'CUD_Johnson', 'CUD_Pasman', 'SUD_Hotoum', 'SUD_Polimanti',
+    'SUD_F5_Grotzinger', 'OUD_Deak'
 )
 
 ################################################################################
 #   Functions
 ################################################################################
 
-p_val_heatmap = function(results_df, gwas_groups, f_name) {
+p_val_heatmap = function(results_df, f_name) {
     p = ggplot(
             results_df,
             aes(
-                x = cell_type, y = dataset, fill = neg_log_p, label = p_label
+                x = cell_type, y = gwas_group, fill = neg_log_p, label = p_label
             )
         ) +
         geom_tile() +
         geom_text(size = 6) +
         scale_fill_viridis_c() +
-        facet_wrap(~gwas_group, nrow = 1) +
+        facet_grid(gwas_category ~ dataset, scales = "free", space = "free") +
         theme_bw(base_size = 20) +
         theme(
             axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
@@ -70,32 +58,7 @@ p_val_heatmap = function(results_df, gwas_groups, f_name) {
         ) +
         labs(x = "Cell Type", y = "GWAS Trait", fill = "-log10(p)")
     pdf(
-        file.path(plot_dir, f_name),
-        width = 3 + 0.3 * length(gwas_groups) * length(unique(results_df$cell_type)),
-        height = 5
-    )
-    print(p)
-    dev.off()
-}
-
-p_val_heatmap2 = function(results_df, gwas_groups, f_name) {
-    p = ggplot(
-            results_df,
-            aes(
-                x = gwas_group, y = cell_type, fill = neg_log_p, label = p_label
-            )
-        ) +
-        geom_tile() +
-        geom_text(size = 6) +
-        scale_fill_viridis_c() +
-        facet_wrap(~dataset, ncol = 3, scales = "free_y") +
-        theme_bw(base_size = 20) +
-        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-        labs(x = "GWAS Trait", y = "Cell Type", fill = "-log10(p)")
-    pdf(
-        file.path(plot_dir, f_name),
-        width = 3 + 2 * length(gwas_groups),
-        height = 6
+        file.path(plot_dir, f_name), width = 20, height = 8
     )
     print(p)
     dev.off()
@@ -106,54 +69,40 @@ p_val_heatmap2 = function(results_df, gwas_groups, f_name) {
 ################################################################################
 
 multiome_df = read_csv(multiome_path, show_col_types = FALSE) |>
-    mutate(dataset = "multiome")
+    mutate(dataset = "Multiome (RNA)")
 extra_hd_df = read_csv(extra_hd_path, show_col_types = FALSE) |>
-    mutate(dataset = "extra_HD")
+    mutate(dataset = "Extra HD")
 cell_hd_df = read_csv(cell_hd_path, show_col_types = FALSE) |>
-    mutate(dataset = "cell_HD")
-results_df = bind_rows(multiome_df, extra_hd_df, cell_hd_df)
-
-#   P-value heatmaps split by substance-use-related traits vs. others
-for (gwas_set in names(gwas_groups)) {
-    for (cell_type_group in cell_type_groups) {
-        p_val_heatmap(
-            results_df = results_df |>
-                filter(
-                    gwas_group %in% gwas_renaming[gwas_groups[[gwas_set]]],
-                    cell_type_group == !!cell_type_group
-                ),
-            gwas_groups = gwas_renaming[gwas_groups[[gwas_set]]],
-            f_name = sprintf(
-                "cross_dataset_%s_%s.pdf", gwas_set, cell_type_group
-            )
+    mutate(dataset = "Cellular HD")
+ficture_extra_hd_df = read_csv(ficture_extra_hd_path, show_col_types = FALSE) |>
+    mutate(dataset = "Ficture Extra HD", cell_type_group = "fine")
+ficture_cell_hd_df = read_csv(ficture_cell_hd_path, show_col_types = FALSE) |>
+    mutate(dataset = "Ficture Cellular HD", cell_type_group = "fine")
+results_df = bind_rows(
+        multiome_df, extra_hd_df, cell_hd_df, ficture_extra_hd_df,
+        ficture_cell_hd_df
+    ) |>
+    filter(cell_type != 'LHb.4/Inhib_LHb_4.2') |>
+    mutate(
+        gwas_category = case_when(
+            grepl('^[ACOS]UD', gwas_group) ~ 'Substance Use',
+            gwas_group == 'p_factor_Grotzinger' ~ 'P-Factor',
+            TRUE ~ 'Psychiatric'
         )
-    }
-}
-
-for (cell_type_group in cell_type_groups) {
-    #   P-value heatmap for the 5 factors + P factor
-    p_val_heatmap(
-        results_df = results_df |>
-            filter(!is.na(gwas_factor), cell_type_group == !!cell_type_group) |>
-            mutate(gwas_group = gwas_factor),
-        gwas_groups = gwas_factors,
-        f_name = sprintf("cross_dataset_5_factors_%s.pdf", cell_type_group)
     )
 
-    #   Custom plot for an RPPR
-    p_val_heatmap2(
-        results_df = results_df |>
-            filter(
-                gwas_group %in% c('OUD 2', 'SUD 1', 'MDD'),
-                cell_type_group == !!cell_type_group
-            ) |>
-            mutate(
-                gwas_group = as.character(gwas_group) |>
-                    recode('OUD 2' = 'OUD', 'SUD 1' = 'SUD')
-            ),
-        gwas_groups = c('OUD', 'SUD', 'MDD'),
-        f_name = sprintf("heatmap_RPPR_%s.pdf", cell_type_group)
-    )
+stopifnot(setequal(results_df$gwas_group, gwas_order))
+for (this_res in names(cell_type_order)) {
+    this_results_df = results_df |>
+        filter(cell_type_group == this_res) |>
+        mutate(
+            cell_type = factor(cell_type, levels = cell_type_order[[this_res]]),
+            gwas_group = factor(gwas_group, levels = gwas_order)
+        )
+  
+    stopifnot(setequal(this_results_df$cell_type, cell_type_order[[this_res]]))
+  
+    p_val_heatmap(this_results_df, sprintf("heatmap_%s.pdf", this_res))
 }
 
 session_info()
