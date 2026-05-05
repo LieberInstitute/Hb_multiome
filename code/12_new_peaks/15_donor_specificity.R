@@ -101,7 +101,6 @@ count_df = bind_rows(count_df_list) |>
         gene_value = (gene_value - mean(gene_value)) / sd(gene_value)
     ) |>
     ungroup() |>
-    left_join(link_df, by = c("peak", "gene", "cell_type")) |>
     group_by(cell_type, peak, gene) |>
     mutate(full_cor = cor(peak_value, gene_value)) |>
     #   For each peak-gene-cell_type, compute full-donor correlation, then
@@ -133,8 +132,15 @@ count_df = bind_rows(count_df_list) |>
     ) |>
     ungroup()
 
+summary_df = count_df |>
+    group_by(peak, gene, cell_type) |>
+    summarize(donor_score = max(donor_score)) |>
+    ungroup() |>
+    left_join(link_df, by = c("peak", "gene", "cell_type"))
+
 #   Check the distribution of donor scores
-p = count_df |>
+p = summary_df |>
+    filter(donor_score != 1) |>
     ggplot(aes(x = donor_score)) +
     geom_histogram(
         bins = 60, fill = "steelblue", color = "white", linewidth = 0.2
@@ -153,21 +159,21 @@ dev.off()
 message(
     sprintf(
         "Dropping %.1f%% of links with donor_score >= 1",
-        mean(count_df$donor_score >= 1) * 100
+        mean(summary_df$donor_score >= 1) * 100
     )
 )
 
 #   Export the filtered set of links, dropping donor-biased ones
-count_df |>
+summary_df |>
     filter(donor_score < 1) |>
     select(all_of(colnames(link_df))) |>
-    distinct(peak, gene, cell_type, .keep_all = TRUE) |>
     group_by(peak, gene) |>
     mutate(is_shared = n() > 1) |>
     ungroup() |>
     compute_parquet(out_path)
 
 sample_df = count_df |>
+    left_join(link_df, by = c("peak", "gene", "cell_type")) |>
     filter(score > 0) |>
     distinct(cell_type, peak, gene) |>
     group_by(cell_type) |>

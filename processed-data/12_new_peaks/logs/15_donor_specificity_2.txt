@@ -1,10 +1,10 @@
 **** Job starts ****
-Tue May  5 01:23:42 PM EDT 2026
+Tue May  5 01:43:32 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 31722158
+Job id: 31730382
 Job name: 15_donor_specificity
-Node name: compute-175
+Node name: compute-100
 Task id: 2
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -42,7 +42,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 177.
+✔ Number of reports ready for upload: 179.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -56,22 +56,24 @@ The following object is masked from ‘package:lubridate’:
     stamp
 
 qs2 0.1.7
+`summarise()` has grouped output by 'peak', 'gene'. You can override using the
+`.groups` argument.
 null device 
           1 
-Dropping 15.2% of links with donor_score >= 1
+Dropping 59.8% of links with donor_score >= 1
 # A duckplyr data frame: 7 variables
    peak                     gene  cell_type score      FDR peak_called is_shared
    <chr>                    <chr> <chr>     <dbl>    <dbl> <lgl>       <lgl>    
- 1 chr1-629147-629354       ISG15 Ependymal 0.740 4.07e- 3 TRUE        TRUE     
- 2 chr1-632193-632405       ISG15 Ependymal 0.719 1.43e- 5 TRUE        TRUE     
- 3 chr1-629147-629354       ISG15 Excit.Th… 0.357 1.33e- 9 FALSE       TRUE     
- 4 chr1-629810-630032       ISG15 Excit.Th… 0.305 2.99e- 7 FALSE       TRUE     
- 5 chr1-632193-632405       ISG15 Excit.Th… 0.338 2.68e-10 FALSE       TRUE     
- 6 chr1-633694-634122       HES4  Excit.Th… 0.444 8.12e-28 FALSE       TRUE     
- 7 chr1-633694-634122       ISG15 Excit.Th… 0.389 1.00e- 9 FALSE       TRUE     
- 8 chr1-115753994-115754220 CASQ2 Excit.Th… 0.317 9.88e- 2 FALSE       FALSE    
- 9 chr1-160400094-160401559 VANG… Excit.Th… 0.341 1.88e- 5 TRUE        FALSE    
-10 chr1-233904451-233906121 SLC3… Excit.Th… 0.363 7.20e- 2 TRUE        FALSE    
+ 1 chr1-629810-630032       ISG15 Excit.Th… 0.305 2.99e- 7 FALSE       FALSE    
+ 2 chr1-633694-634122       HES4  Excit.Th… 0.444 8.12e-28 FALSE       FALSE    
+ 3 chr1-633694-634122       ISG15 Excit.Th… 0.389 1.00e- 9 FALSE       TRUE     
+ 4 chr1-115753994-115754220 CASQ2 Excit.Th… 0.317 9.88e- 2 FALSE       FALSE    
+ 5 chr3-161827917-161828128 SPTS… Excit.Th… 0.345 6.47e- 2 TRUE        FALSE    
+ 6 chr4-80265628-80266034   PRDM8 Excit.Th… 0.345 8.72e- 2 FALSE       FALSE    
+ 7 chr17-9644629-9646214    USP43 Excit.Th… 0.472 5.02e- 2 TRUE        FALSE    
+ 8 chr17-14300518-14302148  HS3S… Excit.Th… 0.439 5.27e- 2 TRUE        FALSE    
+ 9 chr17-22524319-22524528  MTRN… Excit.Th… 0.555 8.68e- 8 FALSE       TRUE     
+10 chr18-57434754-57435743  ONEC… Excit.Th… 0.460 7.17e- 3 TRUE        FALSE    
 # ℹ more rows
 null device 
           1 
@@ -244,4 +246,4 @@ Mean max-donor LOO bias (typical influence of most impactful donor): 0.339
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Tue May  5 01:24:20 PM EDT 2026
+Tue May  5 01:44:16 PM EDT 2026
