@@ -7,8 +7,8 @@ library(here)
 library(duckplyr)
 
 link_path = here(
-    'processed-data', '12_new_peaks', '17_filter_links',
-    'metacell_filtered_data.parquet'
+    'processed-data', '12_new_peaks', '15_donor_specificity',
+    'metacell_filtered_unbiased.parquet'
 )
 plot_dir = here("plots", "12_new_peaks", "16_shared_unique")
 
