@@ -31,18 +31,22 @@ link_path = here(
     'processed-data', '12_new_peaks', '17_filter_links',
     sprintf('%s_filtered_data.parquet', dataset)
 )
+out_path = here(
+    'processed-data', '12_new_peaks', '15_donor_specificity',
+    sprintf('%s_filtered_unbiased.parquet', dataset)
+)
 plot_dir = here("plots", "12_new_peaks", "15_donor_specificity")
 atac_assay = "ATAC"
 rna_assay = "RNA"
 num_expected_donors = 10
 num_links_scatter = 20
-num_links_test = 100
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
 fallback_config(info = FALSE)
 
 dir.create(plot_dir, showWarnings = FALSE)
+dir.create(dirname(out_path), showWarnings = FALSE)
 set.seed(0)
 
 seur = qs_read(seur_path)
@@ -54,12 +58,7 @@ names(donor_colors) = unique(seur@meta.data$donor)
 link_colors = unname(palette36.colors(num_links_scatter))
 
 link_df = read_parquet_duckdb(link_path) |>
-    #   Cell-type specific, positively correlated links only
-    filter(!is_shared, score > 0) |>
-    collect() |>
-    group_by(cell_type) |>
-    slice_sample(n = num_links_test) |>
-    ungroup()
+    collect()
 
 stopifnot(all(link_df$peak %in% rownames(seur[[atac_assay]])))
 stopifnot(all(link_df$gene %in% rownames(seur[[rna_assay]])))
@@ -91,6 +90,7 @@ for (this_cell_type in unique(link_df$cell_type)) {
         )
     }
 }
+
 count_df = bind_rows(count_df_list) |>
     filter(!is.na(peak_value), !is.na(gene_value)) |>
     group_by(peak, gene, cell_type) |>
@@ -100,9 +100,75 @@ count_df = bind_rows(count_df_list) |>
         peak_value = (peak_value - mean(peak_value)) / sd(peak_value),
         gene_value = (gene_value - mean(gene_value)) / sd(gene_value)
     ) |>
+    ungroup() |>
+    left_join(link_df, by = c("peak", "gene", "cell_type")) |>
+    group_by(cell_type, peak, gene) |>
+    mutate(full_cor = cor(peak_value, gene_value)) |>
+    #   For each peak-gene-cell_type, compute full-donor correlation, then
+    #   leave-one-out (LOO) correlations. The donor-bias score is the drop in
+    #   correlation when that donor is excluded.
+    group_by(cell_type, peak, gene) |>
+    mutate(full_cor = cor(peak_value, gene_value)) |>
+    ungroup() |>
+    #   For each row, compute correlation leaving out that donor
+    group_by(cell_type, peak, gene) |>
+    mutate(
+        loo_cor = {
+            x = peak_value
+            y = gene_value
+            n = length(x)
+            vapply(seq_len(n), function(i) {
+                if (n - 1 < 3) return(NA_real_)
+                cor(x[-i], y[-i])
+            }, numeric(1))
+        },
+        donor_bias = full_cor - loo_cor,
+        #   The ratio of magnitudes between the larger and smaller correlations.
+        #   The idea is we'll drop things with a value in this metric >= 1
+        donor_score = case_when(
+            full_cor * loo_cor <= 0 ~ 1,
+            abs(full_cor) > abs(loo_cor) ~ full_cor / loo_cor - 1,
+            TRUE ~ loo_cor / full_cor - 1
+        )
+    ) |>
     ungroup()
 
+#   Check the distribution of donor scores
+p = count_df |>
+    ggplot(aes(x = donor_score)) +
+    geom_histogram(
+        bins = 60, fill = "steelblue", color = "white", linewidth = 0.2
+    ) +
+    scale_x_log10() +
+    geom_vline(xintercept = 1, linetype = "dashed", color = "red") +
+    labs(x = "Donor Score (log10)", y = "Count") +
+    theme_bw(base_size = 15)
+pdf(
+    file.path(plot_dir, sprintf("%s_donor_score_histogram.pdf", dataset)),
+    height = 5
+)
+print(p)
+dev.off()
+
+message(
+    sprintf(
+        "Dropping %.1f%% of links with donor_score >= 1",
+        mean(count_df$donor_score >= 1) * 100
+    )
+)
+
+#   Export the filtered set of links, dropping donor-biased ones
+count_df |>
+    filter(donor_score < 1) |>
+    select(all_of(colnames(link_df))) |>
+    distinct(peak, gene, cell_type, .keep_all = TRUE) |>
+    group_by(peak, gene) |>
+    mutate(is_shared = n() > 1) |>
+    ungroup() |>
+    compute_parquet(out_path)
+
 sample_df = count_df |>
+    filter(score > 0) |>
     distinct(cell_type, peak, gene) |>
     group_by(cell_type) |>
     slice_sample(n = num_links_scatter) |>
@@ -123,28 +189,7 @@ pdf(
 print(p)
 dev.off()
 
-#   For each peak-gene-cell_type, compute full-donor correlation, then
-#   leave-one-out (LOO) correlations. The donor-bias score is the drop in
-#   correlation when that donor is excluded.
-donors = unique(count_df$donor)
-
-loo_df = count_df |>
-    group_by(cell_type, peak, gene) |>
-    mutate(full_cor = cor(peak_value, gene_value)) |>
-    ungroup() |>
-    #   For each row, compute correlation leaving out that donor
-    group_by(cell_type, peak, gene) |>
-    mutate(
-        loo_cor = map_dbl(donor, function(d) {
-            sub = cur_data() |> filter(donor != d)
-            if (nrow(sub) < 3) return(NA_real_)
-            cor(sub$peak_value, sub$gene_value)
-        }),
-        donor_bias = full_cor - loo_cor
-    ) |>
-    ungroup()
-
-bias_summary_df = loo_df |>
+bias_summary_df = count_df |>
     group_by(cell_type, donor) |>
     summarize(
         mean_donor_bias = mean(donor_bias, na.rm = TRUE), .groups = "drop"
@@ -177,7 +222,7 @@ dev.off()
 #   Average (across all peak-gene pairs) of the largest absolute LOO bias
 #   seen for any single donor. Interpretable as: "the most impactful donor
 #   typically shifts the correlation by this much."
-max_loo_score = loo_df |>
+max_loo_score = count_df |>
     group_by(cell_type, peak, gene) |>
     summarize(
         max_abs_bias = max(abs(donor_bias), na.rm = TRUE), .groups = "drop"

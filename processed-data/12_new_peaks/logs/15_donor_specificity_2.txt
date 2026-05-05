@@ -1,10 +1,10 @@
 **** Job starts ****
-Wed Apr 29 01:37:23 PM EDT 2026
+Tue May  5 01:23:42 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 31343665
+Job id: 31722158
 Job name: 15_donor_specificity
-Node name: compute-177
+Node name: compute-175
 Task id: 2
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -42,7 +42,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 144.
+✔ Number of reports ready for upload: 177.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -58,19 +58,28 @@ The following object is masked from ‘package:lubridate’:
 qs2 0.1.7
 null device 
           1 
-Warning message:
-There was 1 warning in `mutate()`.
-ℹ In argument: `loo_cor = map_dbl(...)`.
-ℹ In group 1: `cell_type = "Astrocyte"`, `peak = "chr2-75424893-75425099"`,
-  `gene = "TACR1"`.
-Caused by warning:
-! `cur_data()` was deprecated in dplyr 1.1.0.
-ℹ Please use `pick()` instead. 
+Dropping 15.2% of links with donor_score >= 1
+# A duckplyr data frame: 7 variables
+   peak                     gene  cell_type score      FDR peak_called is_shared
+   <chr>                    <chr> <chr>     <dbl>    <dbl> <lgl>       <lgl>    
+ 1 chr1-629147-629354       ISG15 Ependymal 0.740 4.07e- 3 TRUE        TRUE     
+ 2 chr1-632193-632405       ISG15 Ependymal 0.719 1.43e- 5 TRUE        TRUE     
+ 3 chr1-629147-629354       ISG15 Excit.Th… 0.357 1.33e- 9 FALSE       TRUE     
+ 4 chr1-629810-630032       ISG15 Excit.Th… 0.305 2.99e- 7 FALSE       TRUE     
+ 5 chr1-632193-632405       ISG15 Excit.Th… 0.338 2.68e-10 FALSE       TRUE     
+ 6 chr1-633694-634122       HES4  Excit.Th… 0.444 8.12e-28 FALSE       TRUE     
+ 7 chr1-633694-634122       ISG15 Excit.Th… 0.389 1.00e- 9 FALSE       TRUE     
+ 8 chr1-115753994-115754220 CASQ2 Excit.Th… 0.317 9.88e- 2 FALSE       FALSE    
+ 9 chr1-160400094-160401559 VANG… Excit.Th… 0.341 1.88e- 5 TRUE        FALSE    
+10 chr1-233904451-233906121 SLC3… Excit.Th… 0.363 7.20e- 2 TRUE        FALSE    
+# ℹ more rows
 null device 
           1 
 null device 
           1 
-Mean max-donor LOO bias (typical influence of most impactful donor): 0.326
+null device 
+          1 
+Mean max-donor LOO bias (typical influence of most impactful donor): 0.339
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -81,7 +90,7 @@ Mean max-donor LOO bias (typical influence of most impactful donor): 0.326
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-04-29
+ date     2026-05-05
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.9.37 @ /users/neagles/.positron-server/bin/5dfc92424b4381ca7139f3f0a122a65abc2a9383/quarto/bin/quarto
 
@@ -219,6 +228,7 @@ Mean max-donor LOO bias (typical influence of most impactful donor): 0.326
  timechange         0.3.0   2024-01-18 [2] CRAN (R 4.5.0)
  tzdb               0.5.0   2025-03-15 [2] CRAN (R 4.5.0)
  UCSC.utils         1.4.0   2025-04-15 [2] Bioconductor 3.21 (R 4.5.0)
+ utf8               1.2.6   2025-06-08 [1] CRAN (R 4.5.0)
  uwot               0.2.3   2025-02-24 [1] CRAN (R 4.5.0)
  vctrs              0.6.5   2023-12-01 [1] CRAN (R 4.5.0)
  viridisLite        0.4.2   2023-05-02 [1] CRAN (R 4.5.0)
@@ -234,4 +244,4 @@ Mean max-donor LOO bias (typical influence of most impactful donor): 0.326
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Apr 29 01:38:41 PM EDT 2026
+Tue May  5 01:24:20 PM EDT 2026
