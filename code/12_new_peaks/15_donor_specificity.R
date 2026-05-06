@@ -125,7 +125,7 @@ count_df = bind_rows(count_df_list) |>
         #   The ratio of magnitudes between the larger and smaller correlations.
         #   The idea is we'll drop things with a value in this metric >= 1
         donor_score = case_when(
-            full_cor * loo_cor <= 0 ~ 1,
+            (full_cor * loo_cor <= 0) | is.na(loo_cor) ~ 1,
             abs(full_cor) > abs(loo_cor) ~ full_cor / loo_cor - 1,
             TRUE ~ loo_cor / full_cor - 1
         )
