@@ -82,7 +82,7 @@ result_df = bind_rows(result_df_list) |>
     #   correlation or FDR
     compute_parquet(full_out_path) |>
     #   Correlation threshold only
-    filter(score > abs(cor_thres)) |>
+    filter(abs(score) > cor_thres) |>
     #   Is the link measured in multiple cell types?
     group_by(peak, gene) |>
     mutate(is_shared = length(unique(cell_type)) > 1) |>
