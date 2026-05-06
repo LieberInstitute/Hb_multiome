@@ -13,12 +13,8 @@ trio_paths = here(
     "processed-data", "13_tripod_trios", "03_tripod_trios", "trios_%s.parquet"
 )
 link_filtered_path = here(
-    "processed-data", "12_new_peaks", "17_filter_links",
-    "metacell_filtered_data.parquet"
-)
-link_all_path = here(
-    "processed-data", "12_new_peaks", "17_filter_links",
-    "metacell_all_data.parquet"
+    'processed-data', '12_new_peaks', '15_donor_specificity',
+    'metacell_filtered_unbiased.parquet'
 )
 link_cell_type_path = here(
     "processed-data", "12_new_peaks", "14_metacell_link_peaks", "%s.parquet"
@@ -35,11 +31,9 @@ plot_path = here(
 )
 cell_type1 = "MHb.2"
 cell_type2 = "LHb.2.7"
-cor_thres = 0.3
 FDR_thres_trio = 0.05
-FDR_thres_link = 1.1
 
-num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", 1))
+num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
 fallback_config(info = FALSE)
 
@@ -49,13 +43,9 @@ dir.create(dirname(plot_path), showWarnings = FALSE, recursive = TRUE)
 #   Import and filter trios, overlapping with existing links
 ################################################################################
 
-#   For now, manually get top links from the full set
-link_filtered_df = read_parquet_duckdb(link_all_path, prudence = 'lavish') |>
-    filter(score > abs(cor_thres), FDR < FDR_thres_link) |>
-    #   Is the link measured in multiple cell types?
-    group_by(peak, gene) |>
-    mutate(is_shared = length(unique(cell_type)) > 1) |>
-    ungroup() |>
+link_filtered_df = read_parquet_duckdb(
+        link_filtered_path, prudence = 'lavish'
+    ) |>
     filter(score > 0) |>
     collect()
 
@@ -166,7 +156,7 @@ motif_track = tibble(start = start(motif_gr), end = end(motif_gr)) |>
         scale_x_continuous(
             limits = c(start(real_window), end(real_window))#,
             # expand = c(0, 0)
-        )
+        ) +
         theme_void()
 
 ################################################################################
