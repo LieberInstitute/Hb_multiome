@@ -33,6 +33,8 @@ cell_type_colors = c(
     Ependymal = "#f5a105ff"
 )
 
+cell_types = names(cell_type_colors)[names(cell_type_colors) != "shared"]
+
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
 fallback_config(info = FALSE)
@@ -46,11 +48,14 @@ link_df = link_df |>
     mutate(
         cell_type = factor(
             cell_type,
-            levels = link_df |>
-                group_by(cell_type) |>
-                summarise(n_links = n()) |>
-                arrange(desc(n_links)) |>
-                pull(cell_type)
+            levels = c(
+                link_df |>
+                    group_by(cell_type) |>
+                    summarise(n_links = n()) |>
+                    arrange(desc(n_links)) |>
+                    pull(cell_type),
+                setdiff(cell_types, as.character(unique(link_df$cell_type)))
+            )
         ),
         link_type = factor(
             ifelse(is_shared, "shared", as.character(cell_type)),
@@ -61,6 +66,7 @@ link_df = link_df |>
 p = ggplot(link_df, aes(x = cell_type, fill = link_type)) +
         geom_bar() +
         scale_fill_manual(values = cell_type_colors) +
+        scale_x_discrete(drop = FALSE) +
         theme_bw(base_size = 20) +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
         guides(fill = "none") +

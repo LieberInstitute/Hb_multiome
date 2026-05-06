@@ -1,8 +1,8 @@
 **** Job starts ****
-Wed May  6 10:45:39 AM EDT 2026
+Wed May  6 01:27:46 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 31755477
+Job id: 31765318
 Job name: 15_donor_specificity
 Node name: compute-176
 Task id: 2
@@ -42,7 +42,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 192.
+✔ Number of reports ready for upload: 198.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -59,7 +59,7 @@ qs2 0.1.7
 Warning message:
 There was 1 warning in `mutate()`.
 ℹ In argument: `loo_cor = { ... }`.
-ℹ In group 143960: `cell_type = "MHb.1.2"`, `peak = "chr22-25769161-25769512"`,
+ℹ In group 180792: `cell_type = "MHb.1.2"`, `peak = "chr22-25769161-25769512"`,
   `gene = "MYO18B"`.
 Caused by warning in `cor()`:
 ! the standard deviation is zero 
@@ -67,20 +67,20 @@ Caused by warning in `cor()`:
 `.groups` argument.
 null device 
           1 
-Dropping 63.7% of links with donor_score >= 1
+Dropping 63.9% of links with donor_score >= 1
 # A duckplyr data frame: 7 variables
-   peak                 gene   cell_type score   FDR peak_called is_shared
-   <chr>                <chr>  <chr>     <dbl> <dbl> <lgl>       <lgl>    
- 1 chr1-629810-630032   SAMD11 Astrocyte 0.341 0.466 TRUE        FALSE    
- 2 chr1-629810-630032   AGRN   Astrocyte 0.407 0.475 TRUE        FALSE    
- 3 chr1-630184-630399   HES4   Astrocyte 0.310 0.478 FALSE       TRUE     
- 4 chr1-633694-634122   SAMD11 Astrocyte 0.366 0.464 TRUE        FALSE    
- 5 chr1-633694-634122   AGRN   Astrocyte 0.428 0.467 TRUE        TRUE     
- 6 chr1-842601-843063   PUSL1  Astrocyte 0.404 0.470 FALSE       FALSE    
- 7 chr1-843951-844845   HES4   Astrocyte 0.318 0.478 FALSE       FALSE    
- 8 chr1-1001676-1002099 NOC2L  Astrocyte 0.354 0.475 TRUE        FALSE    
- 9 chr1-1398813-1400262 NOC2L  Astrocyte 0.312 0.478 TRUE        FALSE    
-10 chr1-1144369-1144899 KLHL17 Astrocyte 0.478 0.464 FALSE       FALSE    
+   peak                 gene     cell_type  score   FDR peak_called is_shared
+   <chr>                <chr>    <chr>      <dbl> <dbl> <lgl>       <lgl>    
+ 1 chr1-629810-630032   SAMD11   Astrocyte  0.341 0.466 TRUE        FALSE    
+ 2 chr1-629810-630032   AGRN     Astrocyte  0.407 0.475 TRUE        FALSE    
+ 3 chr1-630184-630399   HES4     Astrocyte  0.310 0.478 FALSE       TRUE     
+ 4 chr1-633694-634122   SAMD11   Astrocyte  0.366 0.464 TRUE        FALSE    
+ 5 chr1-633694-634122   AGRN     Astrocyte  0.428 0.467 TRUE        TRUE     
+ 6 chr1-842601-843063   PUSL1    Astrocyte  0.404 0.470 FALSE       FALSE    
+ 7 chr1-843951-844845   HES4     Astrocyte  0.318 0.478 FALSE       FALSE    
+ 8 chr1-923695-924097   AURKAIP1 Astrocyte -0.306 0.478 TRUE        FALSE    
+ 9 chr1-1001676-1002099 NOC2L    Astrocyte  0.354 0.475 TRUE        FALSE    
+10 chr1-1398813-1400262 NOC2L    Astrocyte  0.312 0.478 TRUE        FALSE    
 # ℹ more rows
 null device 
           1 
@@ -253,4 +253,4 @@ Mean max-donor LOO bias (typical influence of most impactful donor): 0.316
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed May  6 10:49:07 AM EDT 2026
+Wed May  6 01:30:43 PM EDT 2026
