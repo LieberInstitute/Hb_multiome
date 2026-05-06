@@ -39,7 +39,6 @@ filtered_out_path = here(
     sprintf('%s_filtered_data.parquet', dataset)
 )
 cor_thres = 0.3
-FDR_thres = 0.1
 
 set.seed(0)
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
@@ -82,8 +81,8 @@ result_df = bind_rows(result_df_list) |>
     #   A combined version of the existing individual files, not filtered by
     #   correlation or FDR
     compute_parquet(full_out_path) |>
-    #   Significance + correlation threshold
-    filter(score > abs(cor_thres), FDR < FDR_thres) |>
+    #   Correlation threshold only
+    filter(score > abs(cor_thres)) |>
     #   Is the link measured in multiple cell types?
     group_by(peak, gene) |>
     mutate(is_shared = length(unique(cell_type)) > 1) |>
