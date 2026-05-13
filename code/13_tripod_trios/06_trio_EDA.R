@@ -3,6 +3,8 @@ library(tidyverse)
 library(here)
 library(duckplyr)
 library(TRIPOD)
+library(qs2)
+library(cowplot)
 
 source(here("code", "05_03_annotation_adjustments", "celltype_colors.R"))
 
@@ -18,7 +20,11 @@ link_path = here(
     'processed-data', '12_new_peaks', '15_donor_specificity',
     'metacell_filtered_unbiased.parquet'
 )
+model_paths = here(
+    "processed-data", "13_tripod_trios", "03_tripod_trios", "fit_models_%s.qs2"
+)
 plot_dir = here("plots", "13_tripod_trios", "06_trio_EDA")
+num_examples = 5
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
@@ -173,5 +179,41 @@ plot_facet_by_celltype(
     y_lab   = "Number of significant trios",
     plot_path = file.path(plot_dir, "trio_counts_by_celltype.pdf")
 )
+
+xy_mat_list = lapply(
+    unique(trio_df$cell_type),
+    function(this_cell_type) {
+        model_paths |>
+            sprintf(this_cell_type) |>
+            qs_read()
+    }
+)
+names(xy_mat_list) = unique(trio_df$cell_type)
+
+for (this_test_level in 1:2) {
+    plot_list = list()
+    for (this_cell_type in names(xy_mat_list)) {
+        sub_df = trio_df |>
+            filter(
+                cell_type == this_cell_type,
+                stringency_level == this_test_level
+            ) |>
+            slice_sample(n = num_examples)
+
+        for (i in seq_len(num_examples)) {
+            plot_list[[length(plot_list) + 1]] = plotGenePeakTFScatter(
+                xymats = xy_mat_list[[this_cell_type]][[sub_df$gene[i]]],
+                peak.name = sub_df$peak[i], TF.name = sub_df$TF[i],
+                to.plot = "TRIPOD", match.by = "Yj",
+                level = this_test_level, cap.at.quantile = 0
+            ) + labs(title = sprintf("Example %d", i)) #+
+            #   theme_bw(base_size = 15)
+        }
+    }
+
+    pdf(file.path(plot_dir, sprintf("trio_scatter_level_%d.pdf", this_test_level)))
+    print(plot_grid(plotlist = plot_list, ncol = length(xy_mat_list)))
+    dev.off()
+}
 
 session_info()
