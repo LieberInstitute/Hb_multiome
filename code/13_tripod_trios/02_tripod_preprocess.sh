@@ -6,8 +6,7 @@
 #SBATCH -t 10-0:00:00
 #SBATCH -o ../../processed-data/13_tripod_trios/logs/02_tripod_preprocess_%a.txt
 #SBATCH -e ../../processed-data/13_tripod_trios/logs/02_tripod_preprocess_%a.txt
-#SBATCH --array=18
-#SBATCH --reservation=neagles-2wk
+#SBATCH --array=19-21%3
 
 set -e
 

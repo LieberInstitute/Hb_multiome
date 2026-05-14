@@ -21,7 +21,8 @@ library(sessioninfo)
 cell_types = c(
     "Astrocyte", "Endo", "Ependymal", "Excit.Thal", "Inhib_LHb_4.1",
     "Inhib_LHb_4.2", "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1",
-    "MHb.1.2", "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC", "all"
+    "MHb.1.2", "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC", "all",
+    "MHb", "LHb", "Inhib_LHb"
 )
 this_cell_type = cell_types[as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID"))]
 
@@ -37,21 +38,30 @@ min_num_cells = 200
 set.seed(0)
 dir.create(dirname(out_path), showWarnings = FALSE)
 
+message(sprintf("Processing cell type %s", this_cell_type))
+
 seur = qs_read(seur_path)
 
-if (this_cell_type != "all") {
+#   Subset to the right cell type
+if (this_cell_type == "MHb") {
+    seur = subset(seur, grepl("^MHb", refined_mid_cluster))
+} else if (this_cell_type == "LHb") {
+    seur = subset(seur, grepl("^LHb", refined_mid_cluster))
+} else if (this_cell_type == "Inhib_LHb") {
+    seur = subset(seur, grepl("^Inhib_LHb", refined_mid_cluster))
+} else if (this_cell_type != "all") {
     seur = subset(seur, refined_mid_cluster == this_cell_type)
+}
 
-    #   For several reasons, TRIPOD doesn't work well with very small numbers
-    #   of cells. We just won't run it on such cell types
-    if (ncol(seur) < min_num_cells) {
-        stop(
-            sprintf(
-                "Only %d cells for cell type %s, which is less than the minimum of %d",
-                ncol(seur), this_cell_type, min_num_cells
-            )
+#   For several reasons, TRIPOD doesn't work well with very small numbers
+#   of cells. We just won't run it on such cell types
+if (ncol(seur) < min_num_cells) {
+    stop(
+        sprintf(
+            "Only %d cells for cell type %s, which is less than the minimum of %d",
+            ncol(seur), this_cell_type, min_num_cells
         )
-    }
+    )
 }
 
 #   Remove unexpressed genes and peaks
