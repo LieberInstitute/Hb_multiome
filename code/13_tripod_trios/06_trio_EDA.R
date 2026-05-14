@@ -23,14 +23,19 @@ link_path = here(
 model_paths = here(
     "processed-data", "13_tripod_trios", "03_tripod_trios", "fit_models_%s.qs2"
 )
+out_path = here(
+    "processed-data", "13_tripod_trios", "06_trio_EDA", "trio_summary.csv"
+)
 plot_dir = here("plots", "13_tripod_trios", "06_trio_EDA")
 num_examples = 5
+num_trios_export = 50
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
 fallback_config(info = FALSE)
 
 dir.create(plot_dir, showWarnings = FALSE)
+dir.create(dirname(out_path), showWarnings = FALSE)
 
 ################################################################################
 #   Functions
@@ -128,6 +133,30 @@ trio_df = bind_rows(trio_df_list) |>
 link_df = read_parquet_duckdb(link_path, prudence = 'stingy') |>
     select(peak, gene, cell_type) |>
     collect()
+
+#-------------------------------------------------------------------------------
+#   Export easy-to-view CSV of top trios for each cell type and test level
+#-------------------------------------------------------------------------------
+
+overlap_df = inner_join(
+        trio_df |>
+            filter(stringency_level == 1),
+        trio_df |>
+            filter(stringency_level == 2) |>
+            select(peak, gene, TF, cell_type),
+        by = c("peak", "gene", "TF", "cell_type")
+    ) |>
+  mutate(stringency_level = "Intersection")
+
+rbind(trio_df, overlap_df) |>
+    dplyr::rename(p_adj = adj, TRIPOD_test_level = stringency_level) |>
+    select(cell_type, TRIPOD_test_level, peak, gene, TF, p_adj) |>
+    group_by(cell_type, TRIPOD_test_level) |>
+    arrange(p_adj) |>
+    slice_head(n = num_trios_export) |>
+    ungroup() |>
+    arrange(TRIPOD_test_level, cell_type, p_adj) |>
+    write_csv(out_path)
 
 #-------------------------------------------------------------------------------
 #   Trio-link overlap
