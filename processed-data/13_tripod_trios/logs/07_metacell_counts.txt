@@ -1,10 +1,10 @@
 **** Job starts ****
-Fri May 15 11:03:39 AM EDT 2026
+Wed May 20 02:09:24 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 31904572
+Job id: 32037391
 Job name: 07_metacell_counts
-Node name: compute-178
+Node name: compute-177
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -66,6 +66,12 @@ the `.groups` argument.
 the `.groups` argument.
 `summarise()` has grouped output by 'seurat_clusters'. You can override using
 the `.groups` argument.
+`summarise()` has grouped output by 'seurat_clusters'. You can override using
+the `.groups` argument.
+`summarise()` has grouped output by 'seurat_clusters'. You can override using
+the `.groups` argument.
+`summarise()` has grouped output by 'seurat_clusters'. You can override using
+the `.groups` argument.
 null device 
           1 
 null device 
@@ -82,9 +88,9 @@ null device
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-05-15
+ date     2026-05-20
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.9.37 @ /users/neagles/.positron-server/bin/80db96acd1bc6f7e7ff5ba4cbc509af8d40af1dd/quarto/bin/quarto
+ quarto   1.9.37 @ /users/neagles/.positron-server/bin/1b5dfba9314510340cb08f2fedccc5ffba822beb/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package          * version date (UTC) lib source
@@ -151,6 +157,7 @@ null device
  mime               0.13    2025-03-17 [1] CRAN (R 4.5.0)
  miniUI             0.1.2   2025-04-17 [2] CRAN (R 4.5.0)
  nlme               3.1-168 2025-03-31 [3] CRAN (R 4.5.0)
+ otel               0.2.0   2025-08-29 [1] CRAN (R 4.5.0)
  parallelly         1.44.0  2025-05-07 [2] CRAN (R 4.5.0)
  patchwork          1.3.0   2024-09-16 [2] CRAN (R 4.5.0)
  pbapply            1.7-2   2023-06-27 [2] CRAN (R 4.5.0)
@@ -161,7 +168,7 @@ null device
  png                0.1-8   2022-11-29 [1] CRAN (R 4.5.0)
  polyclip           1.10-7  2024-07-23 [1] CRAN (R 4.5.0)
  progressr          0.15.1  2024-11-22 [1] CRAN (R 4.5.0)
- promises           1.3.3   2025-05-29 [1] CRAN (R 4.5.0)
+ promises           1.5.0   2025-11-01 [1] CRAN (R 4.5.0)
  purrr            * 1.1.0   2025-07-10 [1] CRAN (R 4.5.0)
  qs2              * 0.1.7   2026-01-20 [1] CRAN (R 4.5.0)
  R6                 2.6.1   2025-02-15 [1] CRAN (R 4.5.0)
@@ -226,4 +233,4 @@ null device
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Fri May 15 11:04:54 AM EDT 2026
+Wed May 20 02:14:08 PM EDT 2026
