@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=10G
+#SBATCH --mem=60G
 #SBATCH --job-name=06_trio_EDA
 #SBATCH -c 1
 #SBATCH -t 1-00:00:00

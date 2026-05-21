@@ -7,17 +7,21 @@ library(qs2)
 library(cowplot)
 
 source(here("code", "05_03_annotation_adjustments", "celltype_colors.R"))
+my_colors_mid[['MHb']] = "#ad1d8c"
+my_colors_mid[['LHb']] = "#1f78b4"
+my_colors_mid[['Inhib_LHb']] = "#c70404"
 
 cell_types = c(
     "Astrocyte", "Endo", "Ependymal", "Excit.Thal", "Inhib_LHb_4.1",
     "Inhib_LHb_4.2", "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1",
-    "MHb.1.2", "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC"
+    "MHb.1.2", "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC",
+    "MHb", "LHb", "Inhib_LHb"
 )
 trio_paths = here(
     "processed-data", "13_tripod_trios", "03_tripod_trios", "trios_%s.parquet"
 )
 link_path = here(
-    'processed-data', '12_new_peaks', '15_donor_specificity',
+    'processed-data', '12_new_peaks', '05_donor_specificity',
     'metacell_filtered_unbiased.parquet'
 )
 model_paths = here(
