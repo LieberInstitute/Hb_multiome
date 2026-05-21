@@ -15,7 +15,6 @@
 
 #LHb.4 - Maps to the conserved GABA/Glut Lateral Hab population
 #LHb2.7 - Maps to the potentially mammal specific Lateral Hab cluster
-#LHb.7 - Very small cluster mostly dominated by one donor, so probably need to drop
 
 
 #From the ongoing discussions, some ideas on more evidence for merging or dropping clusters, 
@@ -64,8 +63,8 @@ inhib_barcodes_2 = rownames(inhib_meta)[inhib_meta$refined_mid_cluster == 'Putat
 
 # Add annotations
 multiome_sce$refined_mid_cluster = multiome_sce$mid_cluster
-multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_4.1'
-multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_4.2'
+multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Inhib_LHb_4.1'
+multiome_sce$refined_mid_cluster[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Inhib_LHb_4.2'
 
 table(multiome_sce$refined_mid_cluster, multiome_sce$mid_cluster)
 
@@ -74,8 +73,24 @@ table(multiome_sce$refined_mid_cluster, multiome_sce$orig.ident)
 
 #Fine resolution annotations
 multiome_sce$refined_cluster_ann = as.character(multiome_sce$cluster_ann)
-multiome_sce$refined_cluster_ann[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Putative_Inhib_LHb_4.1'
-multiome_sce$refined_cluster_ann[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Putative_Inhib_LHb_4.2'
+multiome_sce$refined_cluster_ann[rownames(colData(multiome_sce)) %in% inhib_barcodes_1] = 'Inhib_LHb_4.1'
+multiome_sce$refined_cluster_ann[rownames(colData(multiome_sce)) %in% inhib_barcodes_2] = 'Inhib_LHb_4.2'
+
+
+#Now change the C.11.MHb.1.2 cluster to MHb.2
+multiome_sce$refined_mid_cluster[multiome_sce$cluster_ann == 'C.11.MHb.1.2'] = 'MHb.2'
+
+multiome_sce$refined_cluster_ann[multiome_sce$cluster_ann == 'C.11.MHb.1.2'] = 'C.11.MHb.2'
+
+
+#And update the C.21.Astrocyte to Ependymal
+#Fine cluster first
+multiome_sce$refined_cluster_ann[multiome_sce$cluster_ann == 'C.21.Astrocyte'] = 'C.21.Ependymal'
+
+#And match at the mid resolution
+multiome_sce$refined_mid_cluster[multiome_sce$cluster_ann == 'C.21.Astrocyte'] = 'Ependymal'
+
+
 table(multiome_sce$refined_cluster_ann )
 
 
@@ -104,8 +119,9 @@ pseudobulk_sce <- SingleCellExperiment(
 )
 
 #Colors for plotting
-color_palette = MetBrewer::met.brewer("Nizami", n = length(pseudobulk_sce$cell_type))
-names(color_palette) = pseudobulk_sce$cell_type
+here()
+source(here('code', '05_03_annotation_adjustments', 'celltype_colors.R'))
+color_palette = my_colors_mid
 
 
 #CPM the pseudobulk counts
@@ -150,7 +166,8 @@ p_pca_all_multiome = ggplot(pca_data, aes(x = PC1, y = PC2, color = cell_type, l
 p_pca_all_multiome
 
 #And now just look at the neurons
-pseudobulk_neurons_sce = pseudobulk_sce[, grepl('^MHb|^LHb|^Putative', pseudobulk_sce$cell_type)]
+
+pseudobulk_neurons_sce = pseudobulk_sce[, !pseudobulk_sce$cell_type %in% c('Astrocyte','Endo','Ependymal','Excit.Thal','Inhib.Thal','Microglia','Oligo', 'OPC')]
 
 dec_neurons <- modelGeneVar(pseudobulk_neurons_sce)
 hvg_neurons <- getTopHVGs(dec_neurons, n = 2000)
@@ -177,7 +194,7 @@ p_pca_neuron_multiome = ggplot(pca_data_neurons, aes(x = PC1, y = PC2, color = c
   theme_bw() +
   labs(x = paste0("PC1 (", pc1_var_neurons, "%)"),
        y = paste0("PC2 (", pc2_var_neurons, "%)"),
-       title = "Pseudobulk PCA of neuronal Multiome Clusters")
+       title = "Pseudobulk PCA of Habenula Multiome Clusters")
 
 p_pca_neuron_multiome 
 
