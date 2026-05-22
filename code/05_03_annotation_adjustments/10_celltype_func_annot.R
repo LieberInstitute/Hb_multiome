@@ -35,7 +35,7 @@ if (!dir.exists(plot_path)) dir.create(plot_path)
 
 
 message('prepping go terms...')
-
+#GOSOURCEDATE: 2025-02-06
 #First set up the GO annotations, adapting from the MetaNeighbor code https://github.com/gillislab/MetaNeighbor-Protocol/blob/ae5f25eae996881518b1f2c6e72110ff8c1a1cfd/data/make_go_sets.R
 full_go_name = function(go_id) {
     go_term = GOTERM[[go_id]]
