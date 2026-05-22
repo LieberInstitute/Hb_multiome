@@ -23,6 +23,8 @@ num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
 fallback_config(info = FALSE)
 
+dir.create(dirname(out_path), showWarnings = FALSE)
+
 # Read trios at FDR < 0.05 (main set) and FDR < 0.2 (background for uniqueness)
 trio_df_list = list()
 background_df_list = list()
