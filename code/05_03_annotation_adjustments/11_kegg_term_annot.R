@@ -26,6 +26,12 @@ assay(multiome_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(multiome_sce, 'co
 altExps(multiome_sce) <- NULL
 gc()
 
+
+#Filter for just the habenula cell-types
+hab_celltypes = c('Inhib_LHb_4.1','Inhib_LHb_4.2','LHb.4','LHb.2.7','LHb.1.3.4','MHb.1','MHb.1.2','MHb.2','MHb.3')
+multiome_sce = multiome_sce[ ,multiome_sce$refined_mid_cluster %in% hab_celltypes]
+
+
 data_path = here('processed-data','05_03_annotation_adjustments', '11_kegg_term_annot')
 
 if (!dir.exists(data_path)) dir.create(data_path)
