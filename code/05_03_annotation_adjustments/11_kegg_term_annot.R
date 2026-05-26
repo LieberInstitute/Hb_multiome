@@ -29,7 +29,10 @@ gc()
 
 #Filter for just the habenula cell-types
 hab_celltypes = c('Inhib_LHb_4.1','Inhib_LHb_4.2','LHb.4','LHb.2.7','LHb.1.3.4','MHb.1','MHb.1.2','MHb.2','MHb.3')
-multiome_sce = multiome_sce[ ,multiome_sce$refined_mid_cluster %in% hab_celltypes]
+multiome_hab_sce = multiome_sce[ ,multiome_sce$refined_mid_cluster %in% hab_celltypes]
+
+#And filter for the non-neurons
+multiome_nonHab_sce = multiome_sce[ ,!multiome_sce$refined_mid_cluster %in% hab_celltypes]
 
 
 data_path = here('processed-data','05_03_annotation_adjustments', '11_kegg_term_annot')
@@ -71,16 +74,28 @@ length(kegg_sets)
 # 216 gene sets to test
 
 
-#Run MetaNeighbor on the GO gene sets
+#Run MetaNeighbor on the KEGG gene sets
 
 message('Starting MetaNeighbor functional annotation...')
-aurocs = MetaNeighbor(dat = multiome_sce,
-  experiment_labels = multiome_sce$orig.ident,
-  celltype_labels = multiome_sce$refined_mid_cluster,
+aurocs = MetaNeighbor(dat = multiome_hab_sce,
+  experiment_labels = multiome_hab_sce$orig.ident,
+  celltype_labels = multiome_hab_sce$refined_mid_cluster,
   genesets = kegg_sets, 
   fast_version = TRUE, bplot = FALSE, batch_size = 50)
 
 write.table(aurocs, here(data_path, 'multiomeHab_KEGG_functional_aurocs.txt'))
+
+
+message('Starting MetaNeighbor functional annotation on the non-Hab neurons...')
+aurocs = MetaNeighbor(dat = multiome_nonHab_sce,
+  experiment_labels = multiome_nonHab_sce$orig.ident,
+  celltype_labels = multiome_nonHab_sce$refined_mid_cluster,
+  genesets = kegg_sets, 
+  fast_version = TRUE, bplot = FALSE, batch_size = 50)
+
+write.table(aurocs, here(data_path, 'multiomeNonHab_KEGG_functional_aurocs.txt'))
+
+
 
 print("Reproducibility information:")
 options(width = 120)
