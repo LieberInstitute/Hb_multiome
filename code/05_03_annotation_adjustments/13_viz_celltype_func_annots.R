@@ -36,7 +36,7 @@ kegg_aurocs = read.table(here(kegg_path, 'multiomeHab_KEGG_functional_aurocs.txt
 kegg_sets = readRDS(file.path(kegg_path, "kegg_human.rds"))
 go_sets = readRDS(file.path(go_path, "go_human.rds"))
 
-plot_path = here('plots','05_03_annotation_adjustments', '12_viz_celltype_func_annots')
+plot_path = here('plots','05_03_annotation_adjustments', '13_viz_celltype_func_annots')
 if (!dir.exists(plot_path)) dir.create(plot_path)
 
 
