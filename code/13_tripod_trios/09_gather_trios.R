@@ -60,25 +60,36 @@ set.seed(0)
 ################################################################################
 
 annotate_trios = function(df, bg_pg_list) {
+    # bg_pg_list is a named list: names are "cell_type|stringency_level",
+    # values are unique peak|gene strings for that cell type + stringency
     df |>
-        mutate(pg = paste(peak, gene, sep = "|")) |>
+        mutate(
+            pg    = paste(peak, gene, sep = "|"),
+            pg_tf = paste(peak, gene, TF, sep = "|"),
+            bg_key = paste(cell_type, stringency_level, sep = "|")
+        ) |>
         group_by(cell_type) |>
         mutate(
-            is_unique = !(
-                pg %in% unlist(
-                    bg_pg_list[names(bg_pg_list) != cell_type[1]]
-                )
-            ),
-            pg_tf = paste(peak, gene, TF, sep = "|"),
             is_intersect = pg_tf %in% pg_tf[stringency_level == 1] &
                 pg_tf %in% pg_tf[stringency_level == 2]
+        ) |>
+        group_by(cell_type, stringency_level) |>
+        mutate(
+            # Unique: peak-gene not seen in any other cell type at the same
+            # stringency level
+            is_unique = !pg %in% unlist(
+                bg_pg_list[
+                    startsWith(names(bg_pg_list), paste0(cell_type[1], "|")) &
+                    names(bg_pg_list) != bg_key[1]
+                ]
+            )
         ) |>
         group_by(peak, gene, cell_type, stringency_level) |>
         arrange(adj) |>
         mutate(is_top_TF = row_number() == 1) |>
         ungroup() |>
         arrange(cell_type, stringency_level, adj) |>
-        select(-pg, -pg_tf)
+        select(-pg, -pg_tf, -bg_key)
 }
 
 make_scatter_data = function(trios_to_plot) {
@@ -232,7 +243,14 @@ background_df_sparse = background_df |> filter(n_nonzero >= min_nonzero)
 # Uniqueness: peak-gene pair at FDR < 0.05 (sparsity-filtered) whose peak-gene
 # is not present in any other cell type among sparsity-filtered FDR < 0.2 trios
 background_pg_sparse = lapply(
-    split(background_df_sparse, background_df_sparse$cell_type),
+    split(
+        background_df_sparse,
+        paste(
+            background_df_sparse$cell_type,
+            background_df_sparse$stringency_level,
+            sep = "|"
+        )
+    ),
     \(df) unique(paste(df$peak, df$gene, sep = "|"))
 )
 
@@ -253,7 +271,12 @@ trio_df_sparse |>
 
 # Annotate the pre-sparsity trio_df for plotting too (uses non-sparse background)
 background_pg_all = lapply(
-    split(background_df, background_df$cell_type),
+    split(
+        background_df,
+        paste(
+            background_df$cell_type, background_df$stringency_level, sep = "|"
+        )
+    ),
     \(df) unique(paste(df$peak, df$gene, sep = "|"))
 )
 trio_df = annotate_trios(trio_df, background_pg_all)
