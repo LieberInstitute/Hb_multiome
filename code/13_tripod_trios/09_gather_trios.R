@@ -7,12 +7,24 @@ library(Signac)
 library(duckplyr)
 library(cowplot)
 
-cell_types = c(
-    "Astrocyte", "Endo", "Ependymal", "Excit.Thal", "Inhib_LHb_4.1",
-    "Inhib_LHb_4.2", "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1",
-    "MHb.1.2", "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC",
-    "MHb", "LHb", "Inhib_LHb"
-)
+cell_type_res = c('broad', 'fine')[
+    as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID"))
+]
+
+if (cell_type_res == 'broad') {
+    cell_types = c(
+        "Astrocyte", "Endo", "Ependymal", "Excit.Thal", "Inhib.Thal",
+        "Microglia", "Oligo", "OPC", "MHb", "LHb", "Inhib_LHb"
+    )
+    cell_types_keep = c("MHb", "LHb", "Inhib_LHb")
+} else {
+    cell_types = c(
+        "Astrocyte", "Endo", "Ependymal", "Excit.Thal", "Inhib_LHb_4.1",
+        "Inhib_LHb_4.2", "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1",
+        "MHb.1.2", "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC"
+    )
+    cell_types_keep = cell_types
+}
 trio_paths = here(
     "processed-data", "13_tripod_trios", "03_tripod_trios", "trios_%s.parquet"
 )
@@ -22,9 +34,13 @@ prep_path = here(
 )
 out_path = here(
     "processed-data", "13_tripod_trios", "09_gather_trios",
-    "filtered_trios.parquet"
+    sprintf("filtered_trios_%s.parquet", cell_type_res)
 )
-plot_dir = here("plots", "13_tripod_trios", "09_gather_trios")
+scatter_data_path = here(
+    "processed-data", "13_tripod_trios", "09_gather_trios",
+    sprintf("scatter_plot_data_%s.rds", cell_type_res)
+)
+plot_dir = here("plots", "13_tripod_trios", "09_gather_trios", cell_type_res)
 fdr_thres = 0.05
 background_fdr_thres = 0.2
 min_nonzero = 10
@@ -37,7 +53,7 @@ fallback_config(info = FALSE)
 dir.create(dirname(out_path), showWarnings = FALSE)
 dir.create(plot_dir, showWarnings = FALSE, recursive = TRUE)
 
-set.seed(8421)
+set.seed(0)
 
 ################################################################################
 #   Functions
@@ -192,6 +208,7 @@ sparsity_df = bind_rows(sparsity_list)
 
 # Join sparsity counts back onto both data frames
 trio_df = trio_df |>
+    filter(cell_type %in% cell_types_keep) |>
     left_join(sparsity_df, by = c("cell_type", "peak", "gene"))
 background_df = background_df |>
     left_join(sparsity_df, by = c("cell_type", "peak", "gene"))
@@ -200,6 +217,15 @@ background_df = background_df |>
 #   3. Apply sparsity filter & redefine uniqueness
 #-------------------------------------------------------------------------------
 
+message(
+    sprintf(
+        "Dropping %d of %d trios (%0.2f%%) with < %d nonzero metacells",
+        sum(trio_df$n_nonzero < min_nonzero),
+        nrow(trio_df),
+        100 * mean(trio_df$n_nonzero < min_nonzero),
+        min_nonzero
+    )
+)
 trio_df_sparse = trio_df |> filter(n_nonzero >= min_nonzero)
 background_df_sparse = background_df |> filter(n_nonzero >= min_nonzero)
 
@@ -232,6 +258,7 @@ background_pg_all = lapply(
 )
 trio_df = annotate_trios(trio_df, background_pg_all)
 
+scatter_data = list()
 for (sl in c(1, 2)) {
     # Before sparsity filtering
     pre_trios = trio_df |>
@@ -240,6 +267,7 @@ for (sl in c(1, 2)) {
         slice_sample(n = num_examples) |>
         ungroup()
     pre_plot_df = make_scatter_data(pre_trios)
+    scatter_data[[sprintf("stringency%d_pre_sparsity", sl)]] = pre_plot_df
     make_scatter_pdf(
         pre_plot_df,
         file.path(
@@ -255,6 +283,7 @@ for (sl in c(1, 2)) {
         slice_sample(n = num_examples) |>
         ungroup()
     post_plot_df = make_scatter_data(post_trios)
+    scatter_data[[sprintf("stringency%d_post_sparsity", sl)]] = post_plot_df
     make_scatter_pdf(
         post_plot_df,
         file.path(
@@ -264,4 +293,7 @@ for (sl in c(1, 2)) {
     )
 }
 
+saveRDS(scatter_data, scatter_data_path)
+
 session_info()
+  
