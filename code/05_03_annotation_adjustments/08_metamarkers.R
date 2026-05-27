@@ -99,8 +99,8 @@ export_meta_markers(multiome_mid_metaMarkers,
 
 multiome_mid_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_refined_mid_meta_markers.csv.gz'))
 
-multiome_mid_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
-
+multiome_mid_metaMarkers %>% group_by(cell_type) %>% slice_min(rank, n = 25) %>% View()
+multiome_mid_metaMarkers %>% filter( gene == 'TCF7L2')
 
 
 multiome_refined_noInhib_mid_markers = list(
