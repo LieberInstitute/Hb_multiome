@@ -218,14 +218,16 @@ head(go_aurocs_df[order(go_aurocs_df$average, decreasing = TRUE),], 20) %>% View
 head(go_aurocs_df[order(go_aurocs_df$average, decreasing = FALSE),], 20) %>% View()
 
 small_go_sets = go_aurocs_df[go_aurocs_df$n_genes <= 30,]
-head(small_go_sets[order(small_go_sets$average, decreasing = TRUE),], 20)
+head(small_go_sets[order(small_go_sets$MHb.1, decreasing = TRUE),], 20) %>% View()
 
-set_of_interest = "GO:0016917|GABA receptor activity|MF"
+set_of_interest = "GO:0099509|regulation of presynaptic cytosolic calcium ion concentration|BP"
 plotDotPlot(dat = multiome_sce,
 experiment_labels = multiome_sce$orig.ident,
 celltype_labels = multiome_sce$refined_mid_cluster,
 gene_set = go_sets[[set_of_interest]]) + ggtitle(set_of_interest)
 
+
+names(go_sets)[grepl('regulation of pre' , names(go_sets))]
 
 
 #Highlight the high scores of the top terms
@@ -311,7 +313,7 @@ small_go_sets = go_nonHab_aurocs_df[go_nonHab_aurocs_df$n_genes <= 30,]
 head(small_go_sets[order(small_go_sets$average, decreasing = TRUE),], 20) 
 
 
-set_of_interest = 'GO:1904862|inhibitory synapse assembly|BP'
+set_of_interest = 'GO:0015464|acetylcholine receptor activity|MF'
 plotDotPlot(dat = multiome_nonHab_sce,
 experiment_labels = multiome_nonHab_sce$orig.ident,
 celltype_labels = multiome_nonHab_sce$refined_mid_cluster,
@@ -323,8 +325,68 @@ table(rownames(go_nonHab_aurocs_df) == rownames(go_aurocs_df))
 
 go_aurocs_df$nonHab_average = go_nonHab_aurocs_df$average
 
-ggplot(go_aurocs_df, aes(x = average, y = nonHab_average, color = point_color)) +
+ggplot(go_aurocs_df, aes(x = average, y = nonHab_average)) +
   geom_point() + theme_bw() + xlab('Habenula AUROC') + ylab('non-Habenula AUROC') + 
   geom_abline( intercept = 0, slope = 1, color = 'red') +
   ggtitle('GO gene set performance in Hab vs. non-Hab neurons')
 
+
+#And difference in scores between neurons and non-neurons
+
+go_aurocs_df$diff = go_aurocs_df$average - go_aurocs_df$nonHab_average
+go_aurocs_df$zscore_diff = scale(go_aurocs_df$diff)
+plot(scale(go_aurocs_df$zscore_diff), go_aurocs_df$average )
+
+
+set_1 = go_aurocs_df %>% filter(n_genes <= 30 & average > .7 & zscore_diff >= 2) %>% pull(go_term)
+
+set_2 = go_aurocs_df %>% filter(n_genes <= 30 & nonHab_average > .7 & zscore_diff <= -2) %>% pull(go_term)
+
+
+terms_of_interest = c(set_1, set_2)
+
+plot_df = go_aurocs_df %>% filter(go_term %in% terms_of_interest) %>% arrange(desc(diff))
+ggplot()
+
+# Create color mapping for y-axis labels
+label_colors <- ifelse(plot_df$zscore_diff > 0, "#c00906ff", "#2f05b8ff")
+names(label_colors) <- plot_df$go_term
+
+ggplot(plot_df, aes(x = zscore_diff, y = reorder(go_term, zscore_diff), fill = zscore_diff)) +
+  geom_col() +
+  scale_fill_gradient2(
+    low = "blue",
+    mid = "white",
+    high = "red",
+    midpoint = 0,
+    name = "Z-score difference"
+  ) +
+  labs(
+    x = "Z-score difference (Hab - non-Hab)",
+    y = "GO term",
+    title = "GO term performance difference: Habenula vs. non-Habenula"
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.y = element_text(size = 8, color = label_colors[reorder(plot_df$go_term, plot_df$zscore_diff)]),
+    panel.grid.major.y = element_blank()
+  )
+
+
+for(i in 1:length(set_1)){
+  set_of_interest = set_1[i]
+  p = plotDotPlot(dat = multiome_sce,
+  experiment_labels = multiome_sce$orig.ident,
+  celltype_labels = multiome_sce$refined_mid_cluster,
+  gene_set = go_sets[[set_of_interest]]) + ggtitle(set_of_interest)
+  print(p)
+}
+
+for(i in 21:40){
+  set_of_interest = set_2[i]
+p = plotDotPlot(dat = multiome_nonHab_sce,
+experiment_labels = multiome_nonHab_sce$orig.ident,
+celltype_labels = multiome_nonHab_sce$refined_mid_cluster,
+gene_set = go_sets[[set_of_interest]]) + ggtitle(set_of_interest)
+  print(p)
+}
