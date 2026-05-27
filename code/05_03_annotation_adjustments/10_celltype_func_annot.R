@@ -83,9 +83,9 @@ length(go_sets)
 #Run MetaNeighbor on the GO gene sets
 
 message('Starting MetaNeighbor functional annotation...')
-aurocs = MetaNeighbor(dat = multiome_sce,
-  experiment_labels = multiome_sce$orig.ident,
-  celltype_labels = multiome_sce$refined_mid_cluster,
+aurocs = MetaNeighbor(dat = multiome_hab_sce,
+  experiment_labels = multiome_hab_sce$orig.ident,
+  celltype_labels = multiome_hab_sce$refined_mid_cluster,
   genesets = go_sets, 
   fast_version = TRUE, bplot = FALSE, batch_size = 50)
 
