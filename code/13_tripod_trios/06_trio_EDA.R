@@ -6,29 +6,44 @@ library(TRIPOD)
 library(qs2)
 library(cowplot)
 
-source(here("code", "05_03_annotation_adjustments", "celltype_colors.R"))
-my_colors_mid[['MHb']] = "#ad1d8c"
-my_colors_mid[['LHb']] = "#1f78b4"
-my_colors_mid[['Inhib_LHb']] = "#c70404"
+cell_type_res = c('broad', 'fine')[
+    as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID"))
+]
 
-cell_types = c(
-    "Astrocyte", "Endo", "Ependymal", "Excit.Thal", "Inhib_LHb_4.1",
-    "Inhib_LHb_4.2", "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1",
-    "MHb.1.2", "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC",
-    "MHb", "LHb", "Inhib_LHb"
-)
-trio_paths = here(
-    "processed-data", "13_tripod_trios", "03_tripod_trios", "trios_%s.parquet"
-)
-link_path = here(
-    'processed-data', '12_new_peaks', '05_donor_specificity',
-    'metacell_filtered_unbiased.parquet'
+if (cell_type_res == 'broad') {
+    cell_types = c(
+        "Astrocyte", "Endo", "Ependymal", "Excit.Thal", "Inhib.Thal",
+        "Microglia", "Oligo", "OPC", "MHb", "LHb", "Inhib_LHb"
+    )
+
+    my_colors_mid = c(
+        shared = "gray",
+        MHb = "#ad1d8c",
+        LHb = "#1f78b4",
+        Inhib_LHb = "#c70404"
+    )
+} else {
+    cell_types = c(
+        "Astrocyte", "Endo", "Ependymal", "Excit.Thal", "Inhib_LHb_4.1",
+        "Inhib_LHb_4.2", "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1",
+        "MHb.1.2", "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC"
+    )
+
+    source(here("code", "05_03_annotation_adjustments", "celltype_colors.R"))
+    my_colors_mid[['shared']] = "gray"
+    my_colors_mid = my_colors_mid[c('shared', cell_types)]
+}
+
+trio_path = here(
+    "processed-data", "13_tripod_trios", "09_gather_trios",
+    sprintf("filtered_trios_%s.parquet", cell_type_res)
 )
 model_paths = here(
     "processed-data", "13_tripod_trios", "03_tripod_trios", "fit_models_%s.qs2"
 )
 out_path = here(
-    "processed-data", "13_tripod_trios", "06_trio_EDA", "trio_summary.csv"
+    "processed-data", "13_tripod_trios", "06_trio_EDA",
+    sprintf("trio_summary_%s.csv", cell_type_res)
 )
 plot_dir = here("plots", "13_tripod_trios", "06_trio_EDA")
 num_examples = 5
@@ -45,32 +60,16 @@ dir.create(dirname(out_path), showWarnings = FALSE)
 #   Functions
 ################################################################################
 
-plot_facet_by_set = function(set_1, set_2, y_lab, plot_path) {
-    intersect_set = inner_join(
-        set_1, set_2, by = setdiff(names(set_1), "category")
-    )
-  
-    p = bind_rows(
-            set_1,
-            set_2,
-            intersect_set |> mutate(category = "Intersection")
-        ) |>
-        count(cell_type, category) |>
-        mutate(
-            cell_type = factor(cell_type, levels = cell_types),
-            category = factor(category, levels = c(
-                unique(set_1$category), unique(set_2$category), "Intersection"
-            ))
-        ) |>
-        ggplot(aes(x = cell_type, y = n, fill = cell_type)) +
-            geom_col() +
-            scale_y_continuous(labels = scales::comma) +
-            scale_fill_manual(values = my_colors_mid) +
-            facet_wrap(~category, nrow = 3, scales = "free_y") +
-            labs(x = NULL, y = y_lab) +
-            guides(fill = "none") +
-            theme_bw(base_size = 15) +
-            theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+plot_facet_by_set = function(intersect_set, plot_path) {
+    p = ggplot(intersect_set, aes(x = cell_type, fill = shared_type)) +
+        geom_bar() +
+        scale_y_continuous(labels = scales::comma) +
+        scale_fill_manual(values = my_colors_mid) +
+        facet_wrap(~category, nrow = 3, scales = "free_y") +
+        labs(x = NULL, y = "Number of significant trios") +
+        guides(fill = "none") +
+        theme_bw(base_size = 15) +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
     pdf(plot_path)
     print(p)
     dev.off()
@@ -78,29 +77,16 @@ plot_facet_by_set = function(set_1, set_2, y_lab, plot_path) {
     invisible(NULL)
 }
 
-plot_facet_by_celltype = function(set_1, set_2, y_lab, plot_path) {
-    intersect_set = inner_join(
-        set_1, set_2, by = setdiff(names(set_1), "category")
-    )
-  
-    p = bind_rows(
-            set_1,
-            set_2,
-            intersect_set |> mutate(category = "Intersection")
-        ) |>
-        count(cell_type, category) |>
-        mutate(category = factor(category, levels = c(
-            unique(set_1$category), unique(set_2$category), "Intersection"
-        ))) |>
-        ggplot(aes(x = category, y = n, fill = cell_type)) +
-            geom_col() +
-            facet_wrap(~cell_type, scales = "fixed") +
-            scale_y_continuous(labels = scales::comma, transform = "log10") +
-            scale_fill_manual(values = my_colors_mid) +
-            labs(x = NULL, y = y_lab) +
-            guides(fill = "none") +
-            theme_bw(base_size = 15) +
-            theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+plot_facet_by_celltype = function(intersect_set, plot_path) {
+    p = ggplot(intersect_set, aes(x = category, fill = shared_type)) +
+        geom_bar() +
+        facet_wrap(~cell_type, scales = "free_y") +
+        scale_y_continuous(labels = scales::comma) +
+        scale_fill_manual(values = my_colors_mid) +
+        labs(x = NULL, y = "Number of significant trios") +
+        guides(fill = "none") +
+        theme_bw(base_size = 15) +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 
     pdf(plot_path)
     print(p)
@@ -113,30 +99,15 @@ plot_facet_by_celltype = function(set_1, set_2, y_lab, plot_path) {
 #   Main
 ################################################################################
 
-trio_df_list = list()
-for (cell_type in cell_types) {
-    this_path = sprintf(trio_paths, cell_type)
-    if (file.exists(this_path)) {
-        trio_df_list[[cell_type]] = read_parquet_duckdb(
-                this_path, prudence = 'lavish'
-            ) |>
-            filter(condition_on == 'Yj', adj < 0.05) |>
-            select(peak, gene, TF, coef, adj, stringency_level) |>
-            mutate(cell_type = cell_type)
-    } else {
-        message(
-            sprintf(
-                "Trios were not found for cell type %s; skipping", cell_type
-            )
-        )
-    }
-}
-trio_df = bind_rows(trio_df_list) |>
-    collect()
-
-link_df = read_parquet_duckdb(link_path, prudence = 'stingy') |>
-    select(peak, gene, cell_type) |>
-    collect()
+trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
+    collect() |>
+    mutate(
+        shared_type = factor(
+            ifelse(is_unique, cell_type, "shared"),
+            levels = names(my_colors_mid)
+        ),
+        cell_type = factor(cell_type, levels = cell_types)
+    )
 
 #-------------------------------------------------------------------------------
 #   Export easy-to-view CSV of top trios for each cell type and test level
@@ -144,15 +115,20 @@ link_df = read_parquet_duckdb(link_path, prudence = 'stingy') |>
 
 overlap_df = inner_join(
         trio_df |>
-            filter(stringency_level == 1),
+            filter(stringency_level == 1) |>
+            select(peak, gene, TF, cell_type, adj, stringency_level),
         trio_df |>
             filter(stringency_level == 2) |>
             select(peak, gene, TF, cell_type),
         by = c("peak", "gene", "TF", "cell_type")
     ) |>
-  mutate(stringency_level = "Intersection")
+    mutate(stringency_level = "Intersection")
 
-rbind(trio_df, overlap_df) |>
+rbind(
+        trio_df |>
+            select(peak, gene, TF, cell_type, adj, stringency_level),
+        overlap_df
+    ) |>
     dplyr::rename(p_adj = adj, TRIPOD_test_level = stringency_level) |>
     select(cell_type, TRIPOD_test_level, peak, gene, TF, p_adj) |>
     group_by(cell_type, TRIPOD_test_level) |>
@@ -163,53 +139,39 @@ rbind(trio_df, overlap_df) |>
     write_csv(out_path)
 
 #-------------------------------------------------------------------------------
-#   Trio-link overlap
-#-------------------------------------------------------------------------------
-
-trio_set = trio_df |>
-    filter(stringency_level == 1) |>
-    distinct(peak, gene, cell_type) |>
-    mutate(category = "Trios")
-
-link_set = link_df |>
-    distinct(peak, gene, cell_type) |>
-    mutate(category = "Linked peaks")
-
-plot_facet_by_set(
-    trio_set, link_set,
-    y_lab   = "Number of peak-gene pairs",
-    plot_path = file.path(plot_dir, "trio_link_overlap_by_set.pdf")
-)
-
-plot_facet_by_celltype(
-    trio_set, link_set,
-    y_lab   = "Number of peak-gene pairs",
-    plot_path = file.path(plot_dir, "trio_link_overlap_by_celltype.pdf")
-)
-
-#-------------------------------------------------------------------------------
-#   Trio-stringency overlap
+#   Level 1 and level 2 overlap
 #-------------------------------------------------------------------------------
 
 level1_set = trio_df |>
     filter(stringency_level == 1) |>
-    distinct(peak, gene, TF, cell_type) |>
+    select(peak, gene, TF, cell_type, shared_type) |>
     mutate(category = "Level 1")
 
 level2_set = trio_df |>
     filter(stringency_level == 2) |>
-    distinct(peak, gene, TF, cell_type) |>
+    select(peak, gene, TF, cell_type, shared_type) |>
     mutate(category = "Level 2")
 
+intersect_set = inner_join(
+        level1_set |> select(-category),
+        level2_set |> select(-c(category, shared_type)),
+        by = c("peak", "gene", "TF", "cell_type")
+    ) |>
+    mutate(category = "Intersection")
+  
+all_data = bind_rows(level1_set, level2_set, intersect_set) |>
+    mutate(
+        category = factor(
+            category, levels = c("Level 1", "Level 2", "Intersection")
+        )
+    )
+
 plot_facet_by_set(
-    level1_set, level2_set,
-    y_lab   = "Number of significant trios",
-    plot_path = file.path(plot_dir, "trio_counts_by_set.pdf")
+    all_data, plot_path = file.path(plot_dir, "trio_counts_by_set.pdf")
 )
 
 plot_facet_by_celltype(
-    level1_set, level2_set,
-    y_lab   = "Number of significant trios",
+    all_data,
     plot_path = file.path(plot_dir, "trio_counts_by_celltype.pdf")
 )
 
