@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=40G
+#SBATCH --mem=30G
 #SBATCH --job-name=09_gather_trios
 #SBATCH -c 1
 #SBATCH -t 1-00:00:00
