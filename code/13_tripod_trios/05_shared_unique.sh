@@ -4,8 +4,9 @@
 #SBATCH --job-name=05_shared_unique
 #SBATCH -c 1
 #SBATCH -t 1-0:00:00
-#SBATCH -o ../../processed-data/13_tripod_trios/logs/05_shared_unique.txt
-#SBATCH -e ../../processed-data/13_tripod_trios/logs/05_shared_unique.txt
+#SBATCH -o ../../processed-data/13_tripod_trios/logs/05_shared_unique_%a.txt
+#SBATCH -e ../../processed-data/13_tripod_trios/logs/05_shared_unique_%a.txt
+#SBATCH --array=1-2%2
 
 set -e
 
