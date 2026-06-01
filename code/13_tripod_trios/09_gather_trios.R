@@ -79,7 +79,7 @@ annotate_trios = function(df, bg_pg_list) {
             # stringency level
             is_unique = !pg %in% unlist(
                 bg_pg_list[
-                    startsWith(names(bg_pg_list), paste0(cell_type[1], "|")) &
+                    endsWith(names(bg_pg_list), paste0("|", stringency_level[1])) &
                     names(bg_pg_list) != bg_key[1]
                 ]
             )
