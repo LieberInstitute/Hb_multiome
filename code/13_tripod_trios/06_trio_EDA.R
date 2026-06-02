@@ -78,10 +78,10 @@ plot_facet_by_set = function(intersect_set, plot_path) {
 }
 
 plot_facet_by_celltype = function(intersect_set, plot_path) {
-    p = ggplot(intersect_set, aes(x = category, fill = shared_type)) +
+    p = ggplot(intersect_set, aes(x = category, fill = cell_type)) +
         geom_bar() +
-        facet_wrap(~cell_type, scales = "free_y") +
-        scale_y_continuous(labels = scales::comma) +
+        facet_wrap(~cell_type, scales = "fixed") +
+        scale_y_continuous(transform = "log10", labels = scales::comma) +
         scale_fill_manual(values = my_colors_mid) +
         labs(x = NULL, y = "Number of significant trios") +
         guides(fill = "none") +
@@ -113,22 +113,18 @@ trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
 #   Export easy-to-view CSV of top trios for each cell type and test level
 #-------------------------------------------------------------------------------
 
-overlap_df = inner_join(
-        trio_df |>
-            filter(stringency_level == 1) |>
-            select(peak, gene, TF, cell_type, adj, stringency_level),
-        trio_df |>
-            filter(stringency_level == 2) |>
-            select(peak, gene, TF, cell_type),
-        by = c("peak", "gene", "TF", "cell_type")
-    ) |>
+overlap_df = trio_df |>
+    filter(stringency_level == 1, is_intersect, is_unique) |>
+    group_by(cell_type, peak, gene, TF) |>
+    filter(n() == 2) |>
+    ungroup() |>
+    select(peak, gene, TF, cell_type, adj) |>
     mutate(stringency_level = "Intersection")
 
-rbind(
-        trio_df |>
-            select(peak, gene, TF, cell_type, adj, stringency_level),
-        overlap_df
-    ) |>
+trio_df |>
+    filter(is_unique, is_top_TF) |>
+    select(peak, gene, TF, cell_type, adj, stringency_level) |>
+    rbind(overlap_df) |>
     dplyr::rename(p_adj = adj, TRIPOD_test_level = stringency_level) |>
     select(cell_type, TRIPOD_test_level, peak, gene, TF, p_adj) |>
     group_by(cell_type, TRIPOD_test_level) |>
