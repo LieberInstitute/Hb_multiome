@@ -6,7 +6,6 @@ library(Seurat)
 library(Signac)
 library(duckplyr)
 library(cowplot)
-library(TRIPOD)
 
 prep_path = here(
     "processed-data", "13_tripod_trios", "02_tripod_preprocess",
@@ -15,9 +14,6 @@ prep_path = here(
 trio_path = here(
     "processed-data", "13_tripod_trios", "09_gather_trios",
     "filtered_trios_fine.parquet"
-)
-model_paths = here(
-    "processed-data", "13_tripod_trios", "03_tripod_trios", "fit_models_%s.qs2"
 )
 plot_dir = here("plots", "13_tripod_trios", "10_scatter_checks")
 cell_types = c("MHb.2", "LHb.2.7")
@@ -40,16 +36,6 @@ trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
 #-------------------------------------------------------------------------------
 #   Scatter plots: expression vs. accessibility, colored by TF expression
 #-------------------------------------------------------------------------------
-
-xy_mat_list = lapply(
-    unique(trio_df$cell_type),
-    function(this_cell_type) {
-        model_paths |>
-            sprintf(this_cell_type) |>
-            qs_read()
-    }
-)
-names(xy_mat_list) = unique(trio_df$cell_type)
 
 plot_list = list()
 for (ct in unique(trio_df$cell_type)) {
@@ -81,15 +67,6 @@ for (ct in unique(trio_df$cell_type)) {
                 ) +
                 theme_bw(base_size = 15) +
                 theme(legend.position = "none", plot.title = element_text(size = 10))
-      
-        # for (this_test_level in 1:2) {
-        #     plot_list[[length(plot_list) + 1]] = plotGenePeakTFScatter(
-        #         xymats = xy_mat_list[[ct]][[ct_trios$gene[i]]],
-        #         peak.name = ct_trios$peak[i], TF.name = ct_trios$TF[i],
-        #         to.plot = "TRIPOD", match.by = "Yj",
-        #         level = this_test_level, cap.at.quantile = 0
-        #     )
-        # }
     }
 }
 
