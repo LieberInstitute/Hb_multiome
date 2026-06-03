@@ -20,14 +20,14 @@ if (cell_type_res == 'broad') {
 } else {
     cell_types = c(
         'MHb.1', 'MHb.1.2', 'MHb.2', 'LHb.1.3.4', 'LHb.2.7', 'LHb.4',
-        'Excit.Thal', 'Inhib.Thal', 'Astrocyte', 'Microglia', 'Oligo',
-        'OPC', 'Ependymal'
+        "Inhib_LHb_4.1", "Inhib_LHb_4.2", 'Excit.Thal', 'Inhib.Thal',
+        'Astrocyte', 'Microglia', 'Oligo', 'OPC', 'Ependymal'
     )
 }
 
 seur_path = here(
-    'processed-data', '11_link_prep', '02_rebuild_atac_assay',
-    'cell_level_seur.qs2'
+    "processed-data", "13_tripod_trios", "02_tripod_preprocess",
+    "preprocessed_objects_%s.qs2"
 )
 trio_path = here(
     "processed-data", "13_tripod_trios", "09_gather_trios",
@@ -44,13 +44,10 @@ dir.create(plot_dir, showWarnings = FALSE)
 
 trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
     filter(is_unique) |>
-    select(cell_type, gene, TF) |>
+    dplyr::select(cell_type, gene, TF) |>
     collect()
 
 stopifnot(setequal(trio_df$cell_type, cell_types))
-
-#   Universe: all genes in the experiment
-universe_genes = rownames(qs_read(seur_path)[['RNA']])
 
 #   Run enrichGO per cell type
 ego_df_list = list()
@@ -64,6 +61,13 @@ for (this_cell_type in unique(trio_df$cell_type)) {
         cell_type = this_cell_type,
         num_genes = length(gene_set)
     )
+  
+    #   Universe: all genes in the experiment
+    universe_genes = rownames(
+        qs_read(sprintf(seur_path, this_cell_type))$seur[['RNA']]
+    )
+    stopifnot(all(this_trio_df$gene %in% universe_genes))
+    stopifnot(all(this_trio_df$TF %in% universe_genes))
 
     ego = enrichGO(
         gene          = gene_set,
