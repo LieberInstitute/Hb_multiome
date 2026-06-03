@@ -6,6 +6,7 @@ library(Seurat)
 library(Signac)
 library(duckplyr)
 library(cowplot)
+library(TRIPOD)
 
 prep_path = here(
     "processed-data", "13_tripod_trios", "02_tripod_preprocess",
@@ -13,9 +14,13 @@ prep_path = here(
 )
 trio_path = here(
     "processed-data", "13_tripod_trios", "09_gather_trios",
-    "filtered_trios.parquet"
+    "filtered_trios_fine.parquet"
+)
+model_paths = here(
+    "processed-data", "13_tripod_trios", "03_tripod_trios", "fit_models_%s.qs2"
 )
 plot_dir = here("plots", "13_tripod_trios", "10_scatter_checks")
+cell_types = c("MHb.2", "LHb.2.7")
 num_examples = 5
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
@@ -25,25 +30,31 @@ fallback_config(info = FALSE)
 dir.create(plot_dir, showWarnings = FALSE)
 
 trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
-    filter(stringency_level == 1, is_unique, is_top_TF) |>
-    select(-c(is_unique, stringency_level, is_top_TF)) |>
-    collect()
+    filter(cell_type %in% cell_types, is_intersect, is_unique, is_top_TF) |>
+    collect() |>
+    group_by(cell_type, peak, gene, TF) |>
+    filter(n() == 2) |>
+    ungroup() |>
+    distinct(cell_type, peak, gene, TF)
 
 #-------------------------------------------------------------------------------
 #   Scatter plots: expression vs. accessibility, colored by TF expression
 #-------------------------------------------------------------------------------
 
-set.seed(8421)
+xy_mat_list = lapply(
+    unique(trio_df$cell_type),
+    function(this_cell_type) {
+        model_paths |>
+            sprintf(this_cell_type) |>
+            qs_read()
+    }
+)
+names(xy_mat_list) = unique(trio_df$cell_type)
 
-sampled_trios = trio_df |>
-    group_by(cell_type) |>
-    slice_sample(n = num_examples) |>
-    ungroup()
-
-plot_data_list = list()
-for (ct in unique(sampled_trios$cell_type)) {
-    mats     = qs_read(sprintf(prep_path, ct))$metacell_seur
-    ct_trios = sampled_trios |> filter(cell_type == ct)
+plot_list = list()
+for (ct in unique(trio_df$cell_type)) {
+    mats = qs_read(sprintf(prep_path, ct))$metacell_seur
+    ct_trios = trio_df |> filter(cell_type == ct)
 
     for (i in seq_len(nrow(ct_trios))) {
         row    = ct_trios[i, ]
@@ -51,55 +62,40 @@ for (ct in unique(sampled_trios$cell_type)) {
         access = mats$peak[, row$peak, drop = TRUE]
         tf_expr = mats$rna[, row$TF, drop = TRUE]
 
-        plot_data_list[[length(plot_data_list) + 1]] = tibble(
-            cell_type = ct,
-            gene      = row$gene,
-            TF        = row$TF,
-            peak      = row$peak,
-            access    = access,
-            expr      = expr,
-            tf_expr   = tf_expr
-        )
-    }
-
-    rm(mats); gc()
-}
-
-plot_df = bind_rows(plot_data_list) |>
-    mutate(
-        trio_id     = paste(cell_type, gene, TF, peak, sep = "|"),
-        strip_label = sprintf("%s\n%s", gene, TF)
-    )
-
-plot_list = list()
-for (ct in unique(plot_df$cell_type)) {
-    ct_df = plot_df |>
-        filter(cell_type == ct) |>
-        mutate(tf_expr_log = log2(tf_expr + 1))
-
-    for (tid in unique(ct_df$trio_id)) {
-        trio_df = ct_df |> filter(trio_id == tid)
-
-        plot_list[[length(plot_list) + 1]] = ggplot(
-                trio_df,
-                aes(x = access, y = expr, color = tf_expr_log)
-            ) +
-            geom_point(size = 0.15) +
-            scale_color_viridis_c() +
-            labs(
-                title = sprintf("%s\n%s | %s", ct, trio_df$gene[1], trio_df$TF[1]),
-                x = "Access.", y = "Expr."
-            ) +
-            theme_bw(base_size = 5) +
-            theme(
-                plot.title = element_text(size = 2.5, lineheight = 1.1),
-                legend.position = "none"
-            )
+        plot_list[[length(plot_list) + 1]] = tibble(
+                cell_type   = ct,
+                gene        = row$gene,
+                TF          = row$TF,
+                access      = access,
+                expr        = expr,
+                tf_expr_log = log2(tf_expr + 1)
+            ) |>
+            ggplot(aes(x = access, y = expr, color = tf_expr_log)) +
+                geom_point() +
+                scale_color_viridis_c() +
+                labs(
+                    title = sprintf(
+                        "%s\n%s | %s", ct, trio_df$gene[i], trio_df$TF[i]
+                    ),
+                    x = "Access.", y = "Expr."
+                ) +
+                theme_bw(base_size = 15) +
+                theme(legend.position = "none", plot.title = element_text(size = 10))
+      
+        # for (this_test_level in 1:2) {
+        #     plot_list[[length(plot_list) + 1]] = plotGenePeakTFScatter(
+        #         xymats = xy_mat_list[[ct]][[ct_trios$gene[i]]],
+        #         peak.name = ct_trios$peak[i], TF.name = ct_trios$TF[i],
+        #         to.plot = "TRIPOD", match.by = "Yj",
+        #         level = this_test_level, cap.at.quantile = 0
+        #     )
+        # }
     }
 }
 
-pdf(file.path(plot_dir, "trio_scatter_examples.pdf"), width = 5, height = 20)
-plot_grid(plotlist = plot_list, ncol = num_examples)
+pdf(file.path(plot_dir, "top_trio_scatter.pdf"))
+plot_grid(plotlist = plot_list, ncol = 3)
 dev.off()
 
 session_info()
+  
