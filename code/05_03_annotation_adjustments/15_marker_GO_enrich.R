@@ -258,3 +258,63 @@ marker_heatmap = draw(marker_heatmap)
 pdf(here(plot_path, 'top_10_1vall_markers_heatmap.pdf'), width = 10, height = 4)
 draw(marker_heatmap)
 dev.off()
+
+
+
+top_10_MR_neurons = marker_stats_MeanRatio |> filter(MeanRatio.rank <= 10 & cellType.target %in% hab_celltypes) |> 
+  dplyr::select(cellType.target, gene) |> 
+  mutate(type = 'MeanRatio')
+colnames(top_10_MR_neurons) = c('cell_type', 'gene', 'type')
+
+dim(top_10_MR_neurons)
+
+top_10_MR_neurons = top_10_MR_neurons[!duplicated(top_10_MR_neurons$gene), ]
+
+gene_index = rownames(multiome_sce)  %in% top_10_MR_neurons$gene
+marker_exp = assay(multiome_sce, 'logcounts')[gene_index, ]
+
+
+cell_annot_matrix <- Matrix::sparse.model.matrix(~ 0 + refined_mid_cluster, data = colData(multiome_sce))
+colnames(cell_annot_matrix) <- gsub("refined_mid_cluster", "", colnames(cell_annot_matrix))
+
+cell_counts = colSums(cell_annot_matrix)
+pseudobulk_marker_exp = marker_exp %*% cell_annot_matrix
+
+table(colnames(pseudobulk_marker_exp) == names(cell_counts))
+
+avg_marker_exp <- sweep(pseudobulk_marker_exp, 2, cell_counts, "/")
+
+scaled_avg_marker_exp = t(scale(t(avg_marker_exp)))
+
+celltype_order = c('Inhib.Thal','Excit.Thal','Inhib_LHb_4.1','Inhib_LHb_4.2','LHb.4','LHb.1.3.4','LHb.2.7','MHb.1','MHb.1.2','MHb.2','MHb.3')
+col_order = match(celltype_order, colnames(scaled_avg_marker_exp))
+
+top_10_MR_neurons$cell_type = factor(top_10_MR_neurons$cell_type, levels = celltype_order)
+gene_order = c(top_10_MR_neurons[order(top_10_MR_neurons$cell_type), 'gene' ])
+row_order = match(gene_order$gene, rownames(scaled_avg_marker_exp))
+
+
+scaled_avg_marker_exp = scaled_avg_marker_exp[row_order, col_order]
+
+scaled_avg_marker_exp = t(scaled_avg_marker_exp) 
+
+
+index = match(colnames(scaled_avg_marker_exp), top_10_MR_neurons$gene)
+column_groups = top_10_MR_neurons$cell_type[index]
+
+col_func = auroc_cols <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(11,"RdYlBu"))(100))
+marker_heatmap = Heatmap(scaled_avg_marker_exp, name = 'Scaled average expression', show_row_names = TRUE, show_column_names = TRUE,
+        row_title = 'Cell types', column_title = 'Top 10 MeanRatio markers',
+        cluster_rows = FALSE, cluster_columns = FALSE, col = col_func,
+      height = unit(30, "mm"),
+      row_names_gp = gpar(fontsize = 5),      # Row text size
+      column_names_gp = gpar(fontsize = 5),
+    column_split = column_groups )
+
+marker_heatmap = draw(marker_heatmap)
+
+
+pdf(here(plot_path, 'top_10_MeanRatio_markers_heatmap.pdf'), width = 10, height = 4)
+draw(marker_heatmap)
+dev.off()
+
