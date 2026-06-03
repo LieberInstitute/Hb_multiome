@@ -1,3 +1,6 @@
+#   For the top trios of interest, plot accessibility by expression, colored by
+#   TF expression
+
 library(sessioninfo)
 library(tidyverse)
 library(here)
