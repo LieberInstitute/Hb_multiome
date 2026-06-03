@@ -1,11 +1,12 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=60G
+#SBATCH --mem=10G
 #SBATCH --job-name=06_trio_EDA
 #SBATCH -c 1
 #SBATCH -t 1-00:00:00
-#SBATCH -o ../../processed-data/13_tripod_trios/logs/06_trio_EDA.txt
-#SBATCH -e ../../processed-data/13_tripod_trios/logs/06_trio_EDA.txt
+#SBATCH -o ../../processed-data/13_tripod_trios/logs/06_trio_EDA_%a.txt
+#SBATCH -e ../../processed-data/13_tripod_trios/logs/06_trio_EDA_%a.txt
+#SBATCH --array=1-2%2
 
 set -e
 
