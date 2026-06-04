@@ -113,13 +113,13 @@ gtf = import(gtf_path) |>
     as_tibble() |>
     filter(type == "gene") |>
     dplyr::rename(gene = gene_name) |>
-    select(gene_id, gene)
+    dplyr::select(gene_id, gene)
     
 #   Will need gene sets (as ENSEMBL ID) for MAGMA
 gene_set_df = bind_rows(gene_set_df_list) |>
     left_join(gtf, by = "gene") |>
     dplyr::rename(set_id = cell_type) |>
-    select(set_id, gene_id)
+    dplyr::select(set_id, gene_id)
 
 message(
     sprintf("Dropping %d genes not in the GTF", sum(is.na(gene_set_df$gene_id)))
