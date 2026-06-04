@@ -35,6 +35,7 @@ trio_path = here(
 )
 plot_dir = here("plots", "13_tripod_trios", "11_GO")
 go_num_terms = 2
+max_genes = 200
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
@@ -44,7 +45,7 @@ dir.create(plot_dir, showWarnings = FALSE)
 
 trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
     filter(is_unique) |>
-    dplyr::select(cell_type, gene, TF) |>
+    dplyr::select(cell_type, gene, TF, adj, coef, stringency_level) |>
     collect()
 
 stopifnot(setequal(trio_df$cell_type, cell_types))
@@ -53,8 +54,22 @@ stopifnot(setequal(trio_df$cell_type, cell_types))
 ego_df_list = list()
 size_df_list = list()
 for (this_cell_type in unique(trio_df$cell_type)) {
-    this_trio_df = trio_df |>
-        filter(cell_type == this_cell_type)
+    gene_set = trio_df |>
+        filter(cell_type == this_cell_type) |>
+        pivot_longer(
+            cols = c(gene, TF), names_to = "gene_type", values_to = "gene"
+        ) |>
+        #   If genes are duplicated, prioritize significance first then
+        #   stringency level
+        group_by(gene) |>
+        arrange(adj, stringency_level) |>
+        slice_head(n = 1) |>
+        #   Then evenly sample genes and TFs among both stringency levels,
+        #   prioritizing significance then effect size
+        group_by(stringency_level, gene_type) |>
+        arrange(adj, desc(coef)) |>
+        slice_head(n = as.integer(max_genes / 4)) |>
+        pull(gene)
     gene_set = union(this_trio_df$gene, this_trio_df$TF)
 
     size_df_list[[this_cell_type]] = tibble(
@@ -62,7 +77,7 @@ for (this_cell_type in unique(trio_df$cell_type)) {
         num_genes = length(gene_set)
     )
   
-    #   Universe: all genes in the experiment
+    #   Universe: all genes expressed in the cell type
     universe_genes = rownames(
         qs_read(sprintf(seur_path, this_cell_type))$seur[['RNA']]
     )
@@ -111,7 +126,7 @@ term_order = plot_df |>
 
 p = plot_df |>
     mutate(
-        cell_type   = factor(cell_type, levels = ct_order),
+        cell_type   = factor(cell_type, levels = cell_types),
         Description = factor(Description, levels = term_order)
     ) |>
     ggplot(
