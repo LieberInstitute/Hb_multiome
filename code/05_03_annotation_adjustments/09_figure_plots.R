@@ -572,6 +572,128 @@ ggsave(umap_yalcinbas, filename = 'yalcinbas_grouped_small_umap.pdf', path = plo
 ggsave(umap_wallace, filename = 'wallace_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
 ggsave(umap_hashikawa, filename = 'hashikawa_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
 
+#Violin plot of OPRM1 expression across the clusters
+
+# Extract UMAP coordinates
+umap_coords <- reducedDim(all_mouse_sce, "umap")
+
+# Extract Oprm1 expression (normalized counts)
+oprm1_expr <- assay(all_mouse_sce, "cpm")["Oprm1", ]
+
+# Create dataframe with UMAP coordinates and Oprm1 expression
+oprm1_umap_df <- data.frame(
+  UMAP1 = umap_coords[, 1],
+  UMAP2 = umap_coords[, 2],
+  Oprm1 = oprm1_expr,
+  cell_id = colnames(all_mouse_sce)
+)
+
+# Z-scale the Oprm1 expression
+oprm1_umap_df$Oprm1_zscore <- scale(oprm1_umap_df$Oprm1)[, 1]
+oprm1_umap_df$alpha_vec = ifelse(oprm1_umap_df$Oprm1_zscore > 0, 1, 0.5)
+umap_oprm1_wallace = ggplot(oprm1_umap_df, aes(x = UMAP1, y = UMAP2, color = Oprm1_zscore, alpha = alpha_vec)) +
+  geom_point(size = 0.5) +
+  scale_color_gradientn(colors = c("grey", "#f48d8d", "#ff0000"), values = scales::rescale(c(0, 0.5, 1))) +
+  labs(title = "Wallace mouse", x = "UMAP 1", y = "UMAP 2", color = "Oprm1 z-score") +
+  guides(alpha = "none") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
+
+
+# Extract UMAP coordinates
+umap_coords <- reducedDim(hashikawa_sce_sub, "umap")
+oprm1_expr <- assay(hashikawa_sce_sub, "cpm")["Oprm1", ]
+oprm1_umap_df <- data.frame(
+  UMAP1 = umap_coords[, 1],
+  UMAP2 = umap_coords[, 2],
+  Oprm1 = oprm1_expr,
+  cell_id = colnames(hashikawa_sce_sub)
+)
+
+oprm1_umap_df$Oprm1_zscore <- scale(oprm1_umap_df$Oprm1)[, 1]
+oprm1_umap_df$alpha_vec = ifelse(oprm1_umap_df$Oprm1_zscore > 0, 1, 0.5)
+umap_oprm1_hashikawa = ggplot(oprm1_umap_df, aes(x = UMAP1, y = UMAP2, color = Oprm1_zscore, alpha = alpha_vec)) +
+  geom_point(size = 0.5) +
+  scale_color_gradientn(colors = c("grey", "#f48d8d", "#ff0000"), values = scales::rescale(c(0, 0.5, 1))) +
+  labs(title = "Hashikawa mouse", x = "UMAP 1", y = "UMAP 2", color = "Oprm1 z-score") +
+  guides(alpha = "none") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
+
+
+
+# Extract UMAP coordinates
+umap_coords <- reducedDim(zeb_sce, "UMAP")
+oprm1_expr <- assay(zeb_sce, "cpm")["OPRM1", ]
+oprm1_umap_df <- data.frame(
+  UMAP1 = umap_coords[, 1],
+  UMAP2 = umap_coords[, 2],
+  Oprm1 = oprm1_expr,
+  cell_id = colnames(zeb_sce)
+)
+
+oprm1_umap_df$Oprm1_zscore <- scale(oprm1_umap_df$Oprm1)[, 1]
+oprm1_umap_df$alpha_vec = ifelse(oprm1_umap_df$Oprm1_zscore > 0, 1, 0.5)
+umap_oprm1_zeb = ggplot(oprm1_umap_df, aes(x = UMAP1, y = UMAP2, color = Oprm1_zscore, alpha = alpha_vec)) +
+  geom_point(size = 0.5) +
+  scale_color_gradientn(colors = c("grey", "#f48d8d", "#ff0000"), values = scales::rescale(c(0, 0.5, 1))) +
+  labs(title = "Pendey Zebrafish", x = "UMAP 1", y = "UMAP 2", color = "Oprm1 z-score") +
+  guides(alpha = "none") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
+
+# Extract UMAP coordinates
+umap_coords <- reducedDim(yalcinbas_sce, "UMAP")
+oprm1_expr <- assay(yalcinbas_sce, "cpm")["OPRM1", ]
+oprm1_umap_df <- data.frame(
+  UMAP1 = umap_coords[, 1],
+  UMAP2 = umap_coords[, 2],
+  Oprm1 = oprm1_expr,
+  cell_id = colnames(yalcinbas_sce)
+)
+
+oprm1_umap_df$Oprm1_zscore <- scale(oprm1_umap_df$Oprm1)[, 1]
+oprm1_umap_df$alpha_vec = ifelse(oprm1_umap_df$Oprm1_zscore > 0, 1, 0.5)
+umap_oprm1_yalcinbas = ggplot(oprm1_umap_df, aes(x = UMAP1, y = UMAP2, color = Oprm1_zscore, alpha = alpha_vec)) +
+  geom_point(size = 0.5) +
+  scale_color_gradientn(colors = c("grey", "#f48d8d", "#ff0000"), values = scales::rescale(c(0, 0.5, 1))) +
+  labs(title = "Yalcinbas Human", x = "UMAP 1", y = "UMAP 2", color = "Oprm1 z-score") +
+  guides(alpha = "none") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
+
+
+ggsave(umap_oprm1_zeb, filename = 'oprm1_zebrafish_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(umap_oprm1_yalcinbas, filename = 'oprm1_yalcinbas_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(umap_oprm1_wallace, filename = 'oprm1_wallace_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(umap_oprm1_hashikawa, filename = 'oprm1_hashikawa_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+
+
+
 
 
 
