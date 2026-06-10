@@ -20,14 +20,6 @@ trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
     select(peak, gene, TF, cell_type, stringency_level) |>
     collect()
 
-top_trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
-    filter(cell_type %in% cell_types, is_intersect, is_unique, is_top_TF) |>
-    collect() |>
-    group_by(cell_type, peak, gene, TF) |>
-    filter(n() == 2) |>
-    ungroup() |>
-    distinct(cell_type, peak, gene, TF)
-
 #-------------------------------------------------------------------------------
 #   TF breadth: histogram of how many cell types each TF appears in
 #-------------------------------------------------------------------------------
@@ -43,6 +35,67 @@ p = trio_df |>
         labs(x = "Number of cell types", y = "Number of TFs") +
         theme_bw(base_size = 15)
 pdf(file.path(plot_dir, "TF_breadth_histogram.pdf"))
+print(p)
+dev.off()
+
+#-------------------------------------------------------------------------------
+#   TF set heatmaps (union across both stringency levels)
+#-------------------------------------------------------------------------------
+
+tf_sets = trio_df |>
+    distinct(cell_type, TF) |>
+    group_by(cell_type) |>
+    summarise(tfs = list(TF), .groups = "drop")
+
+ct_names = tf_sets$cell_type
+n_ct = length(ct_names)
+
+pair_stats = matrix(NA_real_, nrow = n_ct, ncol = n_ct,
+                    dimnames = list(ct_names, ct_names))
+jaccard_mat = pair_stats
+overlap_mat = pair_stats
+
+for (i in seq_len(n_ct)) {
+    for (j in seq_len(n_ct)) {
+        a = tf_sets$tfs[[i]]
+        b = tf_sets$tfs[[j]]
+        inter = length(intersect(a, b))
+        jaccard_mat[i, j] = inter / length(union(a, b))
+        overlap_mat[i, j] = inter / min(length(a), length(b))
+    }
+}
+
+heatmap_theme = theme_bw(base_size = 13) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+jaccard_range = range(jaccard_mat, na.rm = TRUE)
+overlap_range = range(overlap_mat, na.rm = TRUE)
+
+# Jaccard index
+p = as.data.frame(as.table(jaccard_mat)) |>
+    rename(cell_type_x = Var1, cell_type_y = Var2, value = Freq) |>
+    ggplot(aes(x = cell_type_x, y = cell_type_y, fill = value)) +
+    geom_tile() +
+    scale_fill_viridis_c(limits = jaccard_range) +
+    labs(x = NULL, y = NULL, fill = "Jaccard\nindex",
+         title = "TF set Jaccard index between cell types") +
+    heatmap_theme
+
+pdf(file.path(plot_dir, "Jaccard_TF_heatmap.pdf"), width = 9, height = 8)
+print(p)
+dev.off()
+
+# Intersection over smaller set
+p = as.data.frame(as.table(overlap_mat)) |>
+    rename(cell_type_x = Var1, cell_type_y = Var2, value = Freq) |>
+    ggplot(aes(x = cell_type_x, y = cell_type_y, fill = value)) +
+    geom_tile() +
+    scale_fill_viridis_c(limits = overlap_range) +
+    labs(x = NULL, y = NULL, fill = "Overlap\ncoefficient",
+         title = "TF overlap coefficient between cell types") +
+    heatmap_theme
+
+pdf(file.path(plot_dir, "Overlap_TF_heatmap.pdf"), width = 9, height = 8)
 print(p)
 dev.off()
 
@@ -80,7 +133,15 @@ for (lvl in 1:2) {
 #   Number of cell types each TF in top_trio_df appears in across all trios
 #-------------------------------------------------------------------------------
 
-message("Cell-type specificty of TFs from top trios:")
+top_trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
+    filter(cell_type %in% cell_types, is_intersect, is_unique, is_top_TF) |>
+    collect() |>
+    group_by(cell_type, peak, gene, TF) |>
+    filter(n() == 2) |>
+    ungroup() |>
+    distinct(cell_type, peak, gene, TF)
+
+message("Cell-type specificity of TFs from top trios:")
 trio_df |>
     filter(TF %in% top_trio_df$TF) |>
     distinct(TF, cell_type) |>

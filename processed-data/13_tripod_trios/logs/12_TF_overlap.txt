@@ -1,8 +1,8 @@
 **** Job starts ****
-Thu Jun  4 03:11:27 PM EDT 2026
+Wed Jun 10 12:50:59 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 32430767
+Job id: 32617229
 Job name: 12_TF_overlap
 Node name: compute-177
 Task id: 
@@ -32,7 +32,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 113.
+✔ Number of reports ready for upload: 1164.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -40,7 +40,11 @@ be uploaded.
 ℹ Turn off with `duckplyr::methods_restore()`.
 null device 
           1 
-Cell-type specificty of TFs from top trios:
+null device 
+          1 
+null device 
+          1 
+Cell-type specificity of TFs from top trios:
 # A tibble: 6 × 2
   TF     n_cell_types
   <chr>         <int>
@@ -60,7 +64,7 @@ Cell-type specificty of TFs from top trios:
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-06-04
+ date     2026-06-10
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.9.38 @ /users/neagles/.positron-server/bin/d5f94f072b1083b8237930739cb6525c6e12e1da/quarto/bin/quarto
 
@@ -109,6 +113,7 @@ Cell-type specificty of TFs from top trios:
  tzdb           0.5.0   2025-03-15 [2] CRAN (R 4.5.0)
  utf8           1.2.6   2025-06-08 [1] CRAN (R 4.5.0)
  vctrs          0.6.5   2023-12-01 [1] CRAN (R 4.5.0)
+ viridisLite    0.4.2   2023-05-02 [1] CRAN (R 4.5.0)
  withr          3.0.2   2024-10-28 [1] CRAN (R 4.5.0)
 
  [1] /users/neagles/R/4.5
@@ -118,4 +123,4 @@ Cell-type specificty of TFs from top trios:
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Thu Jun  4 03:11:34 PM EDT 2026
+Wed Jun 10 12:51:04 PM EDT 2026
