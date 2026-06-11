@@ -1,10 +1,10 @@
 **** Job starts ****
-Mon Jun  1 05:03:43 PM EDT 2026
+Thu Jun 11 01:09:28 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 32385865
+Job id: 32791677
 Job name: 09_gather_trios
-Node name: compute-168
+Node name: compute-100
 Task id: 1
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -42,7 +42,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 92.
+✔ Number of reports ready for upload: 1174.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -71,7 +71,7 @@ Dropping 8696 of 75807 trios (11.47%) with < 10 nonzero metacells
  9 chr1-3220028… TMEM… SREB… 0.850     0                1 Inhib_LHb FALSE       
 10 chr1-3177182… EIF3I ESRRB 0.955     0                1 Inhib_LHb FALSE       
 # ℹ more rows
-# ℹ 2 more variables: is_unique <lgl>, is_top_TF <lgl>
+# ℹ 2 more variables: is_unique_intersect <lgl>, is_top_TF <lgl>
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -82,9 +82,9 @@ Dropping 8696 of 75807 trios (11.47%) with < 10 nonzero metacells
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-06-01
+ date     2026-06-11
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.9.37 @ /users/neagles/.positron-server/bin/1b5dfba9314510340cb08f2fedccc5ffba822beb/quarto/bin/quarto
+ quarto   1.9.38 @ /users/neagles/.positron-server/bin/d5f94f072b1083b8237930739cb6525c6e12e1da/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package          * version date (UTC) lib source
@@ -234,4 +234,4 @@ Dropping 8696 of 75807 trios (11.47%) with < 10 nonzero metacells
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Mon Jun  1 05:15:41 PM EDT 2026
+Thu Jun 11 01:52:42 PM EDT 2026

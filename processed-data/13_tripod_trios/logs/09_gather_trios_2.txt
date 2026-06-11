@@ -1,10 +1,10 @@
 **** Job starts ****
-Mon Jun  1 05:03:43 PM EDT 2026
+Thu Jun 11 01:09:28 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 32385858
+Job id: 32791676
 Job name: 09_gather_trios
-Node name: compute-169
+Node name: compute-176
 Task id: 2
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -42,7 +42,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 92.
+✔ Number of reports ready for upload: 1174.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -61,10 +61,10 @@ Dropping 87435 of 296235 trios (29.52%) with < 10 nonzero metacells
 # A duckplyr data frame: 10 variables
    peak          gene  TF     coef   adj stringency_level cell_type is_intersect
    <chr>         <chr> <chr> <dbl> <dbl>            <dbl> <chr>     <lgl>       
- 1 chr18-711687… LAMA1 KLF6  0.936     0                1 Astrocyte FALSE       
- 2 chr22-502447… ARSA  ERF   0.927     0                1 Astrocyte FALSE       
- 3 chr11-118928… PHLD… EBF1  0.907     0                1 Astrocyte FALSE       
- 4 chr11-126317… FOXR… MZF1  0.918     0                1 Astrocyte FALSE       
+ 1 chr22-419462… SMDT1 ZNF1… 0.923     0                1 Astrocyte FALSE       
+ 2 chr21-332660… GART  SP1   0.907     0                1 Astrocyte FALSE       
+ 3 chr11-627610… AHNAK ETV1  0.862     0                1 Astrocyte FALSE       
+ 4 chr11-626784… STX5  KLF15 0.944     0                1 Astrocyte FALSE       
  5 chr1-2044939… MDM4  SP3   0.9       0                1 Astrocyte FALSE       
  6 chr1-2309777… GNPAT YY1   0.873     0                1 Astrocyte FALSE       
  7 chr1-2449695… EFCA… KLF9  0.906     0                1 Astrocyte FALSE       
@@ -72,7 +72,7 @@ Dropping 87435 of 296235 trios (29.52%) with < 10 nonzero metacells
  9 chr1-2355915… ID3   KLF13 0.881     0                1 Astrocyte FALSE       
 10 chr1-3239388… MARC… SP4   0.890     0                1 Astrocyte FALSE       
 # ℹ more rows
-# ℹ 2 more variables: is_unique <lgl>, is_top_TF <lgl>
+# ℹ 2 more variables: is_unique_intersect <lgl>, is_top_TF <lgl>
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -83,9 +83,9 @@ Dropping 87435 of 296235 trios (29.52%) with < 10 nonzero metacells
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-06-01
+ date     2026-06-11
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.9.37 @ /users/neagles/.positron-server/bin/1b5dfba9314510340cb08f2fedccc5ffba822beb/quarto/bin/quarto
+ quarto   1.9.38 @ /users/neagles/.positron-server/bin/d5f94f072b1083b8237930739cb6525c6e12e1da/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package          * version date (UTC) lib source
@@ -235,4 +235,4 @@ Dropping 87435 of 296235 trios (29.52%) with < 10 nonzero metacells
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Mon Jun  1 05:20:54 PM EDT 2026
+Thu Jun 11 01:30:27 PM EDT 2026

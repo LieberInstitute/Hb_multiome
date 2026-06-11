@@ -42,7 +42,7 @@ scatter_data_path = here(
 )
 plot_dir = here("plots", "13_tripod_trios", "09_gather_trios", cell_type_res)
 fdr_thres = 0.05
-background_fdr_thres = 0.2
+intersect_fdr_thres = 0.1
 min_nonzero = 10
 num_examples = 5
 
@@ -59,29 +59,20 @@ set.seed(0)
 #   Functions
 ################################################################################
 
-annotate_trios = function(df, bg_pg_list) {
-    # bg_pg_list is a named list: names are "cell_type|stringency_level",
-    # values are unique peak|gene strings for that cell type + stringency
+annotate_trios = function(df, bg_pgtf_list) {
+    # bg_pgtf_list is a named list: names are cell types, values are unique
+    # peak|gene|TF strings from sparsity-filtered FDR < intersect_fdr_thres trios
+    # is_unique_intersect: TRUE only for intersect trios whose peak-gene-TF is
+    # not present in any other cell type at either stringency level; FALSE
+    # for all non-intersect trios
     df |>
-        mutate(
-            pg    = paste(peak, gene, sep = "|"),
-            pg_tf = paste(peak, gene, TF, sep = "|"),
-            bg_key = paste(cell_type, stringency_level, sep = "|")
-        ) |>
+        mutate(pg_tf = paste(peak, gene, TF, sep = "|")) |>
         group_by(cell_type) |>
         mutate(
             is_intersect = pg_tf %in% pg_tf[stringency_level == 1] &
-                pg_tf %in% pg_tf[stringency_level == 2]
-        ) |>
-        group_by(cell_type, stringency_level) |>
-        mutate(
-            # Unique: peak-gene not seen in any other cell type at the same
-            # stringency level
-            is_unique = !pg %in% unlist(
-                bg_pg_list[
-                    endsWith(names(bg_pg_list), paste0("|", stringency_level[1])) &
-                    names(bg_pg_list) != bg_key[1]
-                ]
+                pg_tf %in% pg_tf[stringency_level == 2],
+            is_unique_intersect = is_intersect & !pg_tf %in% unlist(
+                bg_pgtf_list[names(bg_pgtf_list) != cell_type[1]]
             )
         ) |>
         group_by(peak, gene, cell_type, stringency_level) |>
@@ -89,7 +80,7 @@ annotate_trios = function(df, bg_pg_list) {
         mutate(is_top_TF = row_number() == 1) |>
         ungroup() |>
         arrange(cell_type, stringency_level, adj) |>
-        select(-pg, -pg_tf, -bg_key)
+        select(-pg_tf)
 }
 
 make_scatter_data = function(trios_to_plot) {
@@ -163,7 +154,7 @@ make_scatter_pdf = function(plot_df, pdf_path) {
 ################################################################################
 
 #-------------------------------------------------------------------------------
-#   1. Read trios at FDR < 0.05 and FDR < 0.2
+#   1. Read trios at FDR < 0.05 (main) and FDR < 0.1 (uniqueness background)
 #-------------------------------------------------------------------------------
 
 trio_df_list = list()
@@ -172,7 +163,7 @@ for (cell_type in cell_types) {
     this_path = sprintf(trio_paths, cell_type)
     if (file.exists(this_path)) {
         raw = read_parquet_duckdb(this_path, prudence = 'lavish') |>
-            filter(condition_on == 'Yj', adj < background_fdr_thres) |>
+            filter(condition_on == 'Yj', adj < intersect_fdr_thres) |>
             select(peak, gene, TF, coef, adj, stringency_level) |>
             mutate(cell_type = cell_type) |>
             collect()
@@ -195,8 +186,9 @@ background_df = bind_rows(background_df_list)
 #      where both expression > 0 and accessibility > 0
 #-------------------------------------------------------------------------------
 
-# Collect unique peak-gene pairs per cell type that need sparsity counts
-pg_needed = background_df |>
+# Collect unique peak-gene pairs from both sets; background has pairs not in
+# trio_df (FDR 0.05-0.1) that also need sparsity counts
+pg_needed = bind_rows(trio_df, background_df) |>
     distinct(cell_type, peak, gene)
 
 sparsity_list = list()
@@ -217,15 +209,16 @@ for (ct in unique(pg_needed$cell_type)) {
 
 sparsity_df = bind_rows(sparsity_list)
 
-# Join sparsity counts back onto both data frames
+# Join sparsity counts onto both data frames
 trio_df = trio_df |>
     filter(cell_type %in% cell_types_keep) |>
     left_join(sparsity_df, by = c("cell_type", "peak", "gene"))
 background_df = background_df |>
+    filter(cell_type %in% cell_types_keep) |>
     left_join(sparsity_df, by = c("cell_type", "peak", "gene"))
 
 #-------------------------------------------------------------------------------
-#   3. Apply sparsity filter & redefine uniqueness
+#   3. Apply sparsity filter & annotate
 #-------------------------------------------------------------------------------
 
 message(
@@ -240,21 +233,14 @@ message(
 trio_df_sparse = trio_df |> filter(n_nonzero >= min_nonzero)
 background_df_sparse = background_df |> filter(n_nonzero >= min_nonzero)
 
-# Uniqueness: peak-gene pair at FDR < 0.05 (sparsity-filtered) whose peak-gene
-# is not present in any other cell type among sparsity-filtered FDR < 0.2 trios
-background_pg_sparse = lapply(
-    split(
-        background_df_sparse,
-        paste(
-            background_df_sparse$cell_type,
-            background_df_sparse$stringency_level,
-            sep = "|"
-        )
-    ),
-    \(df) unique(paste(df$peak, df$gene, sep = "|"))
+# Build peak-gene-TF background at FDR < intersect_fdr_thres (sparsity-filtered),
+# either stringency level, one entry per cell type
+background_intersect_sparse = lapply(
+    split(background_df_sparse, background_df_sparse$cell_type),
+    \(df) unique(paste(df$peak, df$gene, df$TF, sep = "|"))
 )
 
-trio_df_sparse = annotate_trios(trio_df_sparse, background_pg_sparse)
+trio_df_sparse = annotate_trios(trio_df_sparse, background_intersect_sparse)
 
 #-------------------------------------------------------------------------------
 #   4. Export
@@ -265,27 +251,15 @@ trio_df_sparse |>
     compute_parquet(out_path)
 
 #-------------------------------------------------------------------------------
-#   5. Scatter plots: FDR < 0.05 before and after sparsity filtering,
-#      for each stringency level (4 PDFs)
+#   5. Scatter plots: random FDR < 0.05 trios before and after sparsity
+#      filtering, for each stringency level (4 PDFs)
 #-------------------------------------------------------------------------------
-
-# Annotate the pre-sparsity trio_df for plotting too (uses non-sparse background)
-background_pg_all = lapply(
-    split(
-        background_df,
-        paste(
-            background_df$cell_type, background_df$stringency_level, sep = "|"
-        )
-    ),
-    \(df) unique(paste(df$peak, df$gene, sep = "|"))
-)
-trio_df = annotate_trios(trio_df, background_pg_all)
 
 scatter_data = list()
 for (sl in c(1, 2)) {
     # Before sparsity filtering
     pre_trios = trio_df |>
-        filter(stringency_level == sl, is_unique, is_top_TF) |>
+        filter(stringency_level == sl) |>
         group_by(cell_type) |>
         slice_sample(n = num_examples) |>
         ungroup()
@@ -301,7 +275,7 @@ for (sl in c(1, 2)) {
 
     # After sparsity filtering
     post_trios = trio_df_sparse |>
-        filter(stringency_level == sl, is_unique, is_top_TF) |>
+        filter(stringency_level == sl) |>
         group_by(cell_type) |>
         slice_sample(n = num_examples) |>
         ungroup()
