@@ -103,7 +103,7 @@ trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
     collect() |>
     mutate(
         shared_type = factor(
-            ifelse(is_unique, cell_type, "shared"),
+            ifelse(is_unique_intersect | !is_intersect, cell_type, "shared"),
             levels = names(my_colors_mid)
         ),
         cell_type = factor(cell_type, levels = cell_types)
@@ -116,19 +116,20 @@ trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
 overlap_df = trio_df |>
     filter(stringency_level == 1, is_intersect) |>
     mutate(stringency_level = "Intersection") |>
-    select(peak, gene, TF, cell_type, adj, stringency_level)
+    select(peak, gene, TF, cell_type, adj, stringency_level, is_unique_intersect)
 
 trio_df |>
-    filter(is_unique, is_top_TF, !is_intersect) |>
-    select(peak, gene, TF, cell_type, adj, stringency_level) |>
+    select(peak, gene, TF, cell_type, adj, stringency_level, is_unique_intersect) |>
     rbind(overlap_df) |>
     dplyr::rename(p_adj = adj, TRIPOD_test_level = stringency_level) |>
-    select(cell_type, TRIPOD_test_level, peak, gene, TF, p_adj) |>
+    select(
+        cell_type, TRIPOD_test_level, peak, gene, TF, p_adj, is_unique_intersect
+    ) |>
     group_by(cell_type, TRIPOD_test_level) |>
     arrange(p_adj) |>
     slice_head(n = num_trios_export) |>
     ungroup() |>
-    arrange(TRIPOD_test_level, cell_type, p_adj) |>
+    arrange(TRIPOD_test_level, cell_type, is_unique_intersect, p_adj) |>
     write_csv(out_path)
 
 #-------------------------------------------------------------------------------

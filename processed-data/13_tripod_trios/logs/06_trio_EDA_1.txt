@@ -1,10 +1,10 @@
 **** Job starts ****
-Thu Jun 11 10:21:51 AM EDT 2026
+Thu Jun 11 02:12:12 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 32760370
+Job id: 32792019
 Job name: 06_trio_EDA
-Node name: compute-176
+Node name: compute-175
 Task id: 1
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -32,7 +32,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 1167.
+✔ Number of reports ready for upload: 1178.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -242,4 +242,4 @@ The following object is masked from ‘package:lubridate’:
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Thu Jun 11 10:22:01 AM EDT 2026
+Thu Jun 11 02:12:28 PM EDT 2026
