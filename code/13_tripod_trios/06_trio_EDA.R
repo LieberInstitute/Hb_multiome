@@ -114,15 +114,12 @@ trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
 #-------------------------------------------------------------------------------
 
 overlap_df = trio_df |>
-    filter(stringency_level == 1, is_intersect, is_unique) |>
-    group_by(cell_type, peak, gene, TF) |>
-    filter(n() == 2) |>
-    ungroup() |>
-    select(peak, gene, TF, cell_type, adj) |>
-    mutate(stringency_level = "Intersection")
+    filter(stringency_level == 1, is_intersect) |>
+    mutate(stringency_level = "Intersection") |>
+    select(peak, gene, TF, cell_type, adj, stringency_level)
 
 trio_df |>
-    filter(is_unique, is_top_TF) |>
+    filter(is_unique, is_top_TF, !is_intersect) |>
     select(peak, gene, TF, cell_type, adj, stringency_level) |>
     rbind(overlap_df) |>
     dplyr::rename(p_adj = adj, TRIPOD_test_level = stringency_level) |>
