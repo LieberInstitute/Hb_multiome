@@ -192,10 +192,10 @@ table(all_mouse_sce$final_Annotations)
 zeb_sce = zeb_sce[, !zeb_sce$final_Annotations %in% c('non_neuronal')]
 table(zeb_sce$final_Annotations)
 
-yalcinbas_sce = yalcinbas_sce[, !yalcinbas_sce$final_Annotations %in% c('Astrocyte', 'Endo','Microglia','Oligo', 'OPC', 'Excit.Thal','Inhib.Thal')]
+yalcinbas_sce = yalcinbas_sce[, !yalcinbas_sce$final_Annotations %in% c('Astrocyte', 'Endo','Microglia','Oligo', 'OPC')]
 table(yalcinbas_sce$final_Annotations)
 
-multiome_sce = multiome_sce[, !multiome_sce$final_Annotations %in% c('Astrocyte', 'Endo','Microglia','Oligo', 'OPC', 'Excit.Thal','Inhib.Thal', 'Thal', 'Ependymal')]
+multiome_sce = multiome_sce[, !multiome_sce$final_Annotations %in% c('Astrocyte', 'Endo','Microglia','Oligo', 'OPC', 'Ependymal')]
 table(multiome_sce$final_Annotations)
 
 rat_sce = rat_sce[ , rat_sce$neu_category == 'Neuronal']
@@ -313,3 +313,112 @@ saveRDS(MN_best_aurocs, file = paste0(new_data_path, '/cross_species_with_rat_MN
 
 
 
+############
+#And now just the habenula neurons
+#Filtering out the thalamus clusters from the human
+############
+
+
+yalcinbas_sce = yalcinbas_sce[, !yalcinbas_sce$final_Annotations %in% c( 'Excit.Thal','Inhib.Thal')]
+table(yalcinbas_sce$final_Annotations)
+
+multiome_sce = multiome_sce[, !multiome_sce$final_Annotations %in% c( 'Excit.Thal','Inhib.Thal', 'Thal')]
+table(multiome_sce$final_Annotations)
+
+
+#Get single SCE object
+all_donor_sce = mergeSCE(c(
+  list(`Wallace|Mouse` = all_mouse_sce), 
+  list(`Hashikawa|Mouse` = hashikawa_sce_sub),
+  list(`Kim|Rat` = rat_sce),
+  list(`Zebrafish` = zeb_sce),
+  list(`yalcinbas|Human` = yalcinbas_sce), 
+  list(`multiome|Human` = multiome_sce)
+)
+)
+
+table(all_donor_sce$study_id)
+table(all_donor_sce$species)
+table(all_donor_sce$final_Annotations)
+
+#Ignore the outlier cells
+all_donor_sce = all_donor_sce[, all_donor_sce$final_Annotations!= 'outliers']
+
+
+#Get highly variable genes, this time highly variable genes across the donor datasets, sticking with 2000
+global_hvgs = variableGenes(
+  dat = all_donor_sce,
+  min_recurrence = 2,
+  exp_labels = all_donor_sce$species
+)
+length(global_hvgs)
+keep_global_hvgs = global_hvgs[1:2000]
+
+MN_aurocs = MetaNeighborUS(
+  var_genes = keep_global_hvgs,
+  dat = all_donor_sce,
+  study_id = all_donor_sce$species,
+  cell_type = all_donor_sce$final_Annotations,
+  fast_version = TRUE
+)
+
+#Plot allby-all AUROC heatmap
+plotHeatmap(
+  MN_aurocs,
+  cex = .5
+)
+title("MetaNeighbor Human, Mouse, Rat, ZebF Habenula: 2000 HVGs")
+
+pdf(paste0(plot_path, '/AllvsAll_MN_human_mouse_rat_zeb_just_habenula.pdf'), width = 10, height = 8)
+plotHeatmap(
+  MN_aurocs,
+  cex = .5
+)
+title("MetaNeighbor Human, Mouse, Rat, ZebF Habenula: 2000 HVGs")
+
+dev.off()
+
+
+
+
+#And the best versus next approach
+
+MN_best_aurocs = MetaNeighborUS(
+  var_genes = keep_global_hvgs,
+  dat = all_donor_sce,
+  study_id = all_donor_sce$species,
+  cell_type = all_donor_sce$final_Annotations,
+  fast_version = TRUE,
+  one_vs_best = TRUE,
+  symmetric_output = FALSE
+)
+
+#Plot best_vs_next AUROC heatmap
+plotHeatmap(
+  MN_best_aurocs,
+  cex = .5
+)
+title("MetaNeighbor BvsNext Human, Mouse, Rat, ZebF Habenula: 2000 HVGs")
+
+
+
+cluster_graph = makeClusterGraph(MN_best_aurocs, low_threshold = .7)
+plotClusterGraph(cluster_graph, all_donor_sce$species, all_donor_sce$final_Annotations, size_factor = 3)
+
+cluster_graph = makeClusterGraph(MN_best_aurocs, low_threshold = .5)
+plotClusterGraph(cluster_graph, all_donor_sce$species, all_donor_sce$final_Annotations, size_factor = 3)
+
+pdf(paste0(plot_path, '/cluster_graph_high_MN_human_mouse_rat_zeb_just_habenula.pdf'), width = 10, height = 8)
+cluster_graph = makeClusterGraph(MN_best_aurocs, low_threshold = .7)
+plotClusterGraph(cluster_graph, all_donor_sce$species, all_donor_sce$final_Annotations, size_factor = 3)
+dev.off()
+
+pdf(paste0(plot_path, '/cluster_graph_low_MN_human_mouse_rat_zeb_just_habenula.pdf'), width = 10, height = 8)
+cluster_graph = makeClusterGraph(MN_best_aurocs, low_threshold = .5)
+plotClusterGraph(cluster_graph, all_donor_sce$species, all_donor_sce$final_Annotations, size_factor = 3)
+dev.off()
+
+#And save the cross-species auroc matrices
+saveRDS(MN_aurocs, file = paste0(new_data_path, '/cross_species_with_rat_MN_AllVsAll_just_habenula.rds'))
+
+saveRDS(MN_best_aurocs, file = paste0(new_data_path, '/cross_species_with_rat_MN_BestVsNext_just_habenula.rds'))
