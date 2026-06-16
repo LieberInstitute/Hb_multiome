@@ -70,7 +70,7 @@ head(small_kegg_sets[order(small_kegg_sets$average, decreasing = TRUE),], 20)
 large_kegg_sets = kegg_aurocs_df[kegg_aurocs_df$n_genes >= 50 & kegg_aurocs_df$n_genes <= 100,]
 head(large_kegg_sets[order(large_kegg_sets$average, decreasing = TRUE),], 20) 
 
-set_of_interest = 'Nicotine addiction'
+set_of_interest = 'Morphine addiction'
 plotDotPlot(dat = multiome_sce,
 experiment_labels = multiome_sce$orig.ident,
 celltype_labels = multiome_sce$refined_mid_cluster,
@@ -161,7 +161,7 @@ head(small_kegg_sets[order(small_kegg_sets$average, decreasing = TRUE),], 20)
 large_kegg_sets = kegg_nonHab_aurocs_df[kegg_nonHab_aurocs_df$n_genes >= 50 & kegg_nonHab_aurocs_df$n_genes <= 100,]
 head(large_kegg_sets[order(large_kegg_sets$average, decreasing = TRUE),], 20) 
 
-set_of_interest = 'Nicotine addiction'
+set_of_interest = 'Morphine addiction'
 plotDotPlot(dat = multiome_nonHab_sce,
 experiment_labels = multiome_nonHab_sce$orig.ident,
 celltype_labels = multiome_nonHab_sce$refined_mid_cluster,
