@@ -99,8 +99,11 @@ export_meta_markers(multiome_mid_metaMarkers,
 
 multiome_mid_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_refined_mid_meta_markers.csv.gz'))
 
+unique(multiome_mid_metaMarkers$gene[grepl('GLP', multiome_mid_metaMarkers$gene)])
+
 multiome_mid_metaMarkers %>% group_by(cell_type) %>% slice_min(rank, n = 25) %>% View()
-multiome_mid_metaMarkers %>% filter( gene == 'TCF7L2')
+multiome_mid_metaMarkers %>% filter( gene %in% c('GLP1R', 'GLP2R','ZGLP1')) %>% View()
+
 
 
 multiome_refined_noInhib_mid_markers = list(
