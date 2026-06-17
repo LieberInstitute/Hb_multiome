@@ -120,7 +120,9 @@ make_scatter_pdf = function(plot_df, pdf_path) {
         ct_df = plot_df |> filter(cell_type == ct)
 
         for (tid in unique(ct_df$trio_id)) {
-            trio_data = ct_df |> filter(trio_id == tid)
+            #   Peak-gene relationship in TRIPOD is only assessed at sufficient
+            #   TF expression levels
+            trio_data = ct_df |> filter(trio_id == tid, tf_expr > 0)
 
             plot_list[[length(plot_list) + 1]] = ggplot(
                     trio_data,

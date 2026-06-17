@@ -1,10 +1,10 @@
 **** Job starts ****
-Thu Jun 11 01:09:28 PM EDT 2026
+Wed Jun 17 03:49:28 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 32791676
+Job id: 32960631
 Job name: 09_gather_trios
-Node name: compute-176
+Node name: compute-168
 Task id: 2
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -42,7 +42,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 1174.
+✔ Number of reports ready for upload: 1208.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -83,7 +83,7 @@ Dropping 87435 of 296235 trios (29.52%) with < 10 nonzero metacells
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-06-11
+ date     2026-06-17
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.9.38 @ /users/neagles/.positron-server/bin/d5f94f072b1083b8237930739cb6525c6e12e1da/quarto/bin/quarto
 
@@ -235,4 +235,4 @@ Dropping 87435 of 296235 trios (29.52%) with < 10 nonzero metacells
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Thu Jun 11 01:30:27 PM EDT 2026
+Wed Jun 17 04:15:17 PM EDT 2026
