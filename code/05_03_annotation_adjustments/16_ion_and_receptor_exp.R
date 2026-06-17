@@ -73,7 +73,7 @@ acetylcholine_genes = rownames(multiome_sce)[grepl('CHRN|CHRM', rownames(multiom
 
 endocannabinoid_genes = unique(unlist(unname(go_sets[grepl('endocannabinoid',names(go_sets))])))
 
-opioid_genes = unique(unlist(unname(go_sets[grepl('opioid',names(go_sets))])))
+opioid_genes = c(unique(unlist(unname(go_sets[grepl('opioid',names(go_sets))]))))
 
 glp_genes = c('GLP1R', 'GLP2R','ZGLP1')
 
@@ -114,6 +114,10 @@ get_gene_exp_heatmap = function(sce, assay_type, gene_list, gene_list_name, exp_
   #Get scaled expression
   scaled_avg_marker_exp = t(scale(t(avg_marker_exp)))
 
+  #Get max-normalized expression
+  avg_marker_exp <- as.matrix(avg_marker_exp)
+  max_normalized_exp = sweep(avg_marker_exp, 1, matrixStats::rowMaxs(avg_marker_exp), "/")
+
   # Create row annotation with average expression across cell types as barplot
   gene_avg_exp = rowMeans(avg_marker_exp)
   
@@ -148,8 +152,8 @@ get_gene_exp_heatmap = function(sce, assay_type, gene_list, gene_list_name, exp_
     simple_anno_size = unit(4, "mm")
   )
 
-  col_func = rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(11,"RdYlBu"))(100))
-  zscore_heatmap = Heatmap(scaled_avg_marker_exp, name = 'Scaled average expression', 
+  col_func = grDevices::colorRampPalette(c("white", "#FFFFBF", "#FEE08B", "#FDAE61", "#F46D43", "#D73027", "#A50026"))(100)
+  zscore_heatmap = Heatmap(max_normalized_exp , name = 'Max norm. avg. exp.', 
   show_row_names = TRUE, show_column_names = TRUE,
   row_title = 'Cell types', column_title = gene_list_name,
   cluster_rows = TRUE, cluster_columns = TRUE, 
@@ -190,6 +194,10 @@ get_gene_exp_heatmap = function(sce, assay_type, gene_list, gene_list_name, exp_
 
   scaled_avg_marker_exp = t(scale(t(avg_marker_exp)))
 
+  #Get max-normalized expression
+  avg_marker_exp <- as.matrix(avg_marker_exp)
+  max_normalized_exp = sweep(avg_marker_exp, 1, matrixStats::rowMaxs(avg_marker_exp), "/")
+
   # Create row annotation with average expression across cell types as barplot
   gene_avg_exp = rowMeans(avg_marker_exp)
   
@@ -223,8 +231,8 @@ get_gene_exp_heatmap = function(sce, assay_type, gene_list, gene_list_name, exp_
     simple_anno_size = unit(4, "mm")
   )
 
-  col_func = rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(11,"RdYlBu"))(100))
-  fine_zscore_heatmap = Heatmap(scaled_avg_marker_exp, name = 'Scaled average expression', 
+  col_func = grDevices::colorRampPalette(c("white", "#FFFFBF", "#FEE08B", "#FDAE61", "#F46D43", "#D73027", "#A50026"))(100)
+  fine_zscore_heatmap = Heatmap(max_normalized_exp , name = 'Max norm. avg. exp.', 
   show_row_names = TRUE, show_column_names = TRUE,
   row_title = 'Cell types', column_title = gene_list_name,
   cluster_rows = TRUE, cluster_columns = TRUE, 
@@ -316,5 +324,94 @@ draw(opioid_heatmaps[[1]])
 dev.off()
 
 
+#And check out expression in the UMAP too
+
+plt2 <- scater::plotReducedDim(multiome_sce, 
+                dimred = "umap.integrated",
+                colour_by = "refined_mid_cluster", 
+              point_size = .5) +
+  scale_color_manual(values = my_colors_mid) +
+  guides(colour = guide_legend(override.aes = list(size = 3), reverse = TRUE)) +
+  labs(
+    title = "RNA UMAP",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Cell type"
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
+
+plt2
 
 
+
+plot_gene_on_umap <- function(sce, gene_name, reduction = "umap.integrated", assay_type = "logcounts") {
+  
+  # Check that gene exists
+  if (!gene_name %in% rownames(sce)) {
+    stop(paste0("Gene '", gene_name, "' not found in object"))
+  }
+  
+  # Extract UMAP coordinates
+  umap_coords <- reducedDim(sce, reduction)
+  
+  # Extract gene expression
+  expr <- assay(sce, assay_type)[gene_name, ]
+  
+  # Create dataframe
+  plot_df <- data.frame(
+    UMAP1 = umap_coords[, 1],
+    UMAP2 = umap_coords[, 2],
+    expression = expr
+  )
+  
+  # Create plot
+  p <- ggplot(plot_df, aes(x = UMAP1, y = UMAP2, color = expression)) +
+    geom_point(size = 1) +
+    scale_color_gradient(low = "white", high = "red", name = paste0(gene_name, "\nExpression")) +
+    labs(title = paste0(gene_name, " expression on UMAP (integrated)"),
+         x = "UMAP 1", y = "UMAP 2") +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      axis.title = element_text(size = 12),
+      aspect.ratio = 1
+    )
+  
+  return(p)
+}
+
+# Test with Oprm1
+plot_gene_on_umap(multiome_sce, "OPRM1")
+
+plot_gene_on_umap(multiome_sce, "CHRNA6")
+plot_gene_on_umap(multiome_sce, "CHRNB3")
+plot_gene_on_umap(multiome_sce, "CHRNA3")
+
+plot_gene_on_umap(multiome_sce, "CHRM2")
+plot_gene_on_umap(multiome_sce, "CHRM3")
+
+
+plot_gene_on_umap(multiome_sce, "MGLL")
+plot_gene_on_umap(multiome_sce, "FABP5")
+plot_gene_on_umap(multiome_sce, "CNR1")
+plot_gene_on_umap(multiome_sce, "CNR2")
+
+plot_gene_on_umap(multiome_sce, "GRM5")
+plot_gene_on_umap(multiome_sce, "PLCB1")
+
+
+plot_gene_on_umap(multiome_sce, "CACNA1C")
+plot_gene_on_umap(multiome_sce, "CACNA2D2")
+plot_gene_on_umap(multiome_sce, "CACNA1E")
+
+plot_gene_on_umap(multiome_sce, "CACNA1D")
+plot_gene_on_umap(multiome_sce, "CACNA2D3")
+plot_gene_on_umap(multiome_sce, "CACNA1B")
+plot_gene_on_umap(multiome_sce, "CACNA1A")
+plot_gene_on_umap(multiome_sce, "CACNA1A")
