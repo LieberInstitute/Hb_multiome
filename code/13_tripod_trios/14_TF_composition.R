@@ -50,8 +50,8 @@ p_composition <- trio_df |>
     ggplot(aes(x = cell_type, y = prop, fill = TF_grouped)) +
     geom_bar(stat = "identity") +
     scale_fill_manual(values = c(tf_colors, "Other" = "gray80")) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
     theme_bw(base_size = 18) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
     labs(x = "Cell Type", y = "Proportion of Trios", fill = "TF")
 
 pdf(file.path(plot_dir, "TF_composition_by_cell_type.pdf"))
