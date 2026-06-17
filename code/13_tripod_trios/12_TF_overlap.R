@@ -2,13 +2,14 @@ library(sessioninfo)
 library(tidyverse)
 library(here)
 library(duckplyr)
+library(ComplexHeatmap)
+library(circlize)
 
 trio_path = here(
     "processed-data", "13_tripod_trios", "09_gather_trios",
     "filtered_trios_fine.parquet"
 )
 plot_dir = here("plots", "13_tripod_trios", "12_TF_overlap")
-cell_types = c("MHb.2", "LHb.2.7")
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
@@ -17,7 +18,8 @@ fallback_config(info = FALSE)
 dir.create(plot_dir, showWarnings = FALSE)
 
 trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
-    select(peak, gene, TF, cell_type, stringency_level) |>
+    filter(is_intersect, stringency_level == 1) |>
+    select(TF, cell_type) |>
     collect()
 
 #-------------------------------------------------------------------------------
@@ -25,21 +27,20 @@ trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
 #-------------------------------------------------------------------------------
 
 p = trio_df |>
-    distinct(TF, cell_type, stringency_level) |>
-    count(TF, stringency_level, name = "n_cell_types") |>
+    distinct(TF, cell_type) |>
+    count(TF, name = "n_cell_types") |>
     ggplot(aes(x = n_cell_types)) +
         geom_histogram(binwidth = 1) +
-        facet_wrap(~stringency_level, nrow = 2, labeller = label_both) +
         scale_x_continuous(breaks = scales::pretty_breaks()) +
         scale_y_continuous(labels = scales::comma) +
         labs(x = "Number of cell types", y = "Number of TFs") +
         theme_bw(base_size = 15)
-pdf(file.path(plot_dir, "TF_breadth_histogram.pdf"))
+pdf(file.path(plot_dir, "TF_breadth_histogram.pdf"), width = 8, height = 6)
 print(p)
 dev.off()
 
 #-------------------------------------------------------------------------------
-#   TF set heatmaps (union across both stringency levels)
+#   TF set heatmaps
 #-------------------------------------------------------------------------------
 
 tf_sets = trio_df |>
@@ -65,88 +66,74 @@ for (i in seq_len(n_ct)) {
     }
 }
 
-heatmap_theme = theme_bw(base_size = 13) +
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
-
 jaccard_range = range(jaccard_mat, na.rm = TRUE)
 overlap_range = range(overlap_mat, na.rm = TRUE)
 
+jaccard_col = colorRamp2(
+    seq(jaccard_range[1], jaccard_range[2], length.out = 256),
+    viridisLite::viridis(256)
+)
+overlap_col = colorRamp2(
+    seq(overlap_range[1], overlap_range[2], length.out = 256),
+    viridisLite::viridis(256)
+)
+
 # Jaccard index
-p = as.data.frame(as.table(jaccard_mat)) |>
-    rename(cell_type_x = Var1, cell_type_y = Var2, value = Freq) |>
-    ggplot(aes(x = cell_type_x, y = cell_type_y, fill = value)) +
-    geom_tile() +
-    scale_fill_viridis_c(limits = jaccard_range) +
-    labs(x = NULL, y = NULL, fill = "Jaccard\nindex",
-         title = "TF set Jaccard index between cell types") +
-    heatmap_theme
+ht_jaccard = Heatmap(
+    jaccard_mat,
+    name            = "Jaccard\nindex",
+    col             = jaccard_col,
+    cluster_rows    = TRUE,
+    cluster_columns = TRUE,
+    column_title    = "TF set Jaccard index between cell types",
+    row_names_gp    = gpar(fontsize = 11),
+    column_names_gp = gpar(fontsize = 11),
+    column_names_rot = 90
+)
 
 pdf(file.path(plot_dir, "Jaccard_TF_heatmap.pdf"), width = 9, height = 8)
-print(p)
+draw(ht_jaccard)
 dev.off()
 
 # Intersection over smaller set
-p = as.data.frame(as.table(overlap_mat)) |>
-    rename(cell_type_x = Var1, cell_type_y = Var2, value = Freq) |>
-    ggplot(aes(x = cell_type_x, y = cell_type_y, fill = value)) +
-    geom_tile() +
-    scale_fill_viridis_c(limits = overlap_range) +
-    labs(x = NULL, y = NULL, fill = "Overlap\ncoefficient",
-         title = "TF overlap coefficient between cell types") +
-    heatmap_theme
+ht_overlap = Heatmap(
+    overlap_mat,
+    name            = "Overlap\ncoefficient",
+    col             = overlap_col,
+    cluster_rows    = TRUE,
+    cluster_columns = TRUE,
+    column_title    = "TF overlap coefficient between cell types",
+    row_names_gp    = gpar(fontsize = 11),
+    column_names_gp = gpar(fontsize = 11),
+    column_names_rot = 90
+)
 
 pdf(file.path(plot_dir, "Overlap_TF_heatmap.pdf"), width = 9, height = 8)
-print(p)
+draw(ht_overlap)
 dev.off()
 
 #-------------------------------------------------------------------------------
 #   Top 5 TFs per cell type by number of trios
 #-------------------------------------------------------------------------------
 
-for (lvl in 1:2) {
-    p = trio_df |>
-        filter(stringency_level == lvl) |>
-        count(cell_type, TF, name = "n_trios") |>
-        group_by(cell_type) |>
-        slice_max(n_trios, n = 5, with_ties = FALSE) |>
-        ungroup() |>
-        mutate(
-            TF = paste(cell_type, TF, sep = "___"),
-            TF = reorder(TF, n_trios)
-        ) |>
-        ggplot(aes(x = n_trios, y = TF)) +
-        geom_col() +
-        scale_y_discrete(labels = \(x) sub(".*___", "", x)) +
-        facet_wrap(~cell_type, scales = "free") +
-        labs(
-            x = "Number of trios", y = NULL,
-            title = sprintf("Top 5 TFs per cell type (stringency level %d)", lvl)
-        ) +
-        theme_bw(base_size = 13)
-
-    pdf(file.path(plot_dir, sprintf("Top_5_TFs_level_%d.pdf", lvl)))
-    print(p)
-    dev.off()
-}
-
-#-------------------------------------------------------------------------------
-#   Number of cell types each TF in top_trio_df appears in across all trios
-#-------------------------------------------------------------------------------
-
-top_trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
-    filter(cell_type %in% cell_types, is_intersect, is_unique, is_top_TF) |>
-    collect() |>
-    group_by(cell_type, peak, gene, TF) |>
-    filter(n() == 2) |>
+p = trio_df |>
+    count(cell_type, TF, name = "n_trios") |>
+    group_by(cell_type) |>
+    slice_max(n_trios, n = 5, with_ties = FALSE) |>
     ungroup() |>
-    distinct(cell_type, peak, gene, TF)
+    mutate(
+        TF = paste(cell_type, TF, sep = "___"),
+        TF = reorder(TF, n_trios)
+    ) |>
+    ggplot(aes(x = n_trios, y = TF)) +
+    geom_col() +
+    scale_y_discrete(labels = \(x) sub(".*___", "", x)) +
+    facet_wrap(~cell_type, scales = "free") +
+    labs(x = "Number of trios", y = NULL, title = "Top 5 TFs per cell type") +
+    theme_bw(base_size = 13)
 
-message("Cell-type specificity of TFs from top trios:")
-trio_df |>
-    filter(TF %in% top_trio_df$TF) |>
-    distinct(TF, cell_type) |>
-    count(TF, name = "n_cell_types") |>
-    arrange(desc(n_cell_types)) |>
-    print()
+pdf(file.path(plot_dir, "Top_5_TFs.pdf"))
+print(p)
+dev.off()
 
 session_info()
