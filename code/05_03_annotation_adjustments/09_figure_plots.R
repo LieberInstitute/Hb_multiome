@@ -339,11 +339,49 @@ all_mouse_sce = readRDS(paste0(mouse_data_path, '/all_donor_sce_with_denovo_clus
 #Hashikawa mouse data
 load(paste0(hashikawa_path, '/sce_mouse_habenula.Rdata'))
 hashikawa_sce_sub = sce_mouse_sub$all
+hashikawa_sce_neuron = sce_mouse_sub$neuron #This one has the annotated habenula clusters from the authors
 rm(sce_mouse_sub)
 #Gene symbols as the rownames
 rownames(hashikawa_sce_sub) = rowData(hashikawa_sce_sub)$Symbol
+rownames(hashikawa_sce_neuron) = rowData(hashikawa_sce_neuron)$Symbol
 #Add CPM
 assay(hashikawa_sce_sub, "cpm") = MetaMarkers::convert_to_cpm(assay(hashikawa_sce_sub, "counts"))
+assay(hashikawa_sce_neuron, "cpm") = MetaMarkers::convert_to_cpm(assay(hashikawa_sce_neuron, "counts"))
+
+############
+#Check out OPRM1 expression using the original author annotations
+############
+
+#Use the author_subHab_celltype for this dataset
+
+celltype_order = c('Not habenula', 'Mhb_Dorsal', 'Mhb_Superior', 'Mhb_Lateral', 'Mhb_Ventral 2/3',
+'Mhb_Ventrolateral','Lhb_Hox','Lhb_Lateral','Lhb_Marginal','Lhb_Oval/Medial')
+
+p_bubble = get_bubble_plot_sce(all_mouse_sce, 
+  top_markers = c(
+  'Lynx1','Chrm3','Gabra1','Pcdh10','Htr2c', #Lateral habenula markers
+  'Gpr151','Pou4f1','Tac2', #Habenula markers
+  'Chrnb4', 'Chat','Slc5a7','Slc18a3','Tac1', #medial habenula markers
+  'Oprm1', 'Cartpt', 'Glp1r', 'Glp2r'),
+ sample_name = "Wallace mouse Habenula", group_col = "author_subHab_celltype", group_order = celltype_order, exp_assay = 'cpm')
+p_bubble
+
+#Use the celltype metadata for this dataset
+hashikawa_sce_neuron$celltype
+
+
+celltype_order = c('MHb1','MHb5','MHb4','MHb2','MHb3','MHb6','LHb6','LHb5','LHb4','LHb3','LHb2','LHb1')
+
+p_bubble = get_bubble_plot_sce(hashikawa_sce_neuron, 
+  top_markers = c(
+  'Lynx1','Chrm3','Gabra1','Pcdh10','Htr2c', #Lateral habenula markers
+  'Gpr151','Pou4f1','Tac2', #Habenula markers
+  'Chrnb4', 'Chat','Slc5a7','Slc18a3','Tac1', #medial habenula markers
+  'Oprm1', 'Cartpt','Glp1r', 'Glp2r'),
+ sample_name = "Hashikawa mouse Habenula", group_col = "celltype", group_order = celltype_order, exp_assay = 'cpm')
+p_bubble
+
+table(grepl('Glp', rownames(hashikawa_sce_neuron)))
 
 
 # Add the mouse metadata for wallace

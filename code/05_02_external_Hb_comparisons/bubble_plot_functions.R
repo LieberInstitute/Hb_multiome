@@ -56,9 +56,9 @@ get_bubble_plot = function(seurat_object, top_markers, sample_name, group_col = 
 
 #Same function but for SCE objects
 
-get_bubble_plot_sce = function(sce_object, top_markers, sample_name, group_col = "meta_cluster", group_order = NULL){
+get_bubble_plot_sce = function(sce_object, top_markers, sample_name, group_col = "meta_cluster", group_order = NULL, exp_assay = 'cpm'){
   # Extract expression data and metadata
-  expr_data <- assay(sce_object, "cpm")[top_markers, ]
+  expr_data <- assay(sce_object, exp_assay)[top_markers, ]
   metadata <- colData(sce_object)
 
   # Convert to data frame for plotting
