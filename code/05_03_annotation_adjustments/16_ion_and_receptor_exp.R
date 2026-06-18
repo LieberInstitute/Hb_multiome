@@ -77,6 +77,10 @@ opioid_genes = c(unique(unlist(unname(go_sets[grepl('opioid',names(go_sets))])))
 
 glp_genes = c('GLP1R', 'GLP2R','ZGLP1')
 
+#And the GPR orphan receptors
+gpr_genes = rownames(multiome_sce)[grepl('GPR', rownames(multiome_sce)) & !grepl('GPRASP', rownames(multiome_sce)) & !grepl('GPRIN', rownames(multiome_sce))]
+
+
 table(multiome_sce$merged_cluster, multiome_sce$refined_cluster_ann)
 
 get_gene_exp_heatmap = function(sce, assay_type, gene_list, gene_list_name, exp_filt){
@@ -287,6 +291,10 @@ opioid_heatmaps = get_gene_exp_heatmap(multiome_sce, plot_assay, opioid_genes, '
 draw(opioid_heatmaps[[1]])
 draw(opioid_heatmaps[[2]])
 
+gpr_heatmaps = get_gene_exp_heatmap(multiome_sce, plot_assay, gpr_genes, 'GPR genes', exp_filt = expression_filter)
+draw(gpr_heatmaps[[1]])
+draw(gpr_heatmaps[[2]])
+
 #glp_heatmaps = get_gene_exp_heatmap(multiome_sce, plot_assay, glp_genes, 'GLP genes', exp_filt = expression_filter)
 #draw(glp_heatmaps[[1]])
 #draw(glp_heatmaps[[2]])
@@ -321,6 +329,10 @@ dev.off()
 
 pdf(file.path(plot_path, 'opioid_genes_heatmap.pdf'), width = 8, height = 4)
 draw(opioid_heatmaps[[1]])
+dev.off()
+
+pdf(file.path(plot_path, 'GPR_genes_heatmap.pdf'), width = 8, height = 4)
+draw(gpr_heatmaps[[1]])
 dev.off()
 
 
