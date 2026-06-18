@@ -119,12 +119,13 @@ make_scatter_pdf = function(plot_df, pdf_path) {
     for (ct in unique(plot_df$cell_type)) {
         ct_df = plot_df |> filter(cell_type == ct)
 
+        ct_plots = list()
         for (tid in unique(ct_df$trio_id)) {
             #   Peak-gene relationship in TRIPOD is only assessed at sufficient
             #   TF expression levels
             trio_data = ct_df |> filter(trio_id == tid, tf_expr > 0)
 
-            plot_list[[length(plot_list) + 1]] = ggplot(
+            ct_plots[[length(ct_plots) + 1]] = ggplot(
                     trio_data,
                     aes(x = access, y = expr, color = tf_expr_log)
                 ) +
@@ -143,6 +144,13 @@ make_scatter_pdf = function(plot_df, pdf_path) {
                     legend.position = "none"
                 )
         }
+
+        # Pad with blank panels so each cell type occupies a full row
+        while (length(ct_plots) < num_examples) {
+            ct_plots[[length(ct_plots) + 1]] = ggplot() + theme_void()
+        }
+
+        plot_list = c(plot_list, ct_plots)
     }
 
     n_cell_types = length(unique(plot_df$cell_type))
@@ -293,6 +301,24 @@ for (sl in c(1, 2)) {
 }
 
 saveRDS(scatter_data, scatter_data_path)
+
+#-------------------------------------------------------------------------------
+#   6. Scatter plots for final intersection trios
+#      (is_intersect == TRUE at stringency level 1, up to 5 per cell type)
+#-------------------------------------------------------------------------------
+
+intersect_trios = trio_df_sparse |>
+    filter(is_intersect, stringency_level == 1) |>
+    group_by(cell_type) |>
+    slice_sample(n = num_examples) |>
+    ungroup()
+
+intersect_plot_df = make_scatter_data(intersect_trios)
+
+make_scatter_pdf(
+    intersect_plot_df,
+    file.path(plot_dir, "scatter_intersect_trios.pdf")
+)
 
 session_info()
   

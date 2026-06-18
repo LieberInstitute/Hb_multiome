@@ -1,8 +1,8 @@
 **** Job starts ****
-Wed Jun 17 03:49:28 PM EDT 2026
+Wed Jun 17 04:31:08 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 32960631
+Job id: 32962568
 Job name: 09_gather_trios
 Node name: compute-168
 Task id: 2
@@ -42,7 +42,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 1208.
+✔ Number of reports ready for upload: 1210.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -73,6 +73,8 @@ Dropping 87435 of 296235 trios (29.52%) with < 10 nonzero metacells
 10 chr1-3239388… MARC… SP4   0.890     0                1 Astrocyte FALSE       
 # ℹ more rows
 # ℹ 2 more variables: is_unique_intersect <lgl>, is_top_TF <lgl>
+null device 
+          1 
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -235,4 +237,4 @@ Dropping 87435 of 296235 trios (29.52%) with < 10 nonzero metacells
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Jun 17 04:15:17 PM EDT 2026
+Wed Jun 17 04:56:06 PM EDT 2026
