@@ -8,6 +8,7 @@ library(Seurat)
 library(Signac)
 library(qs2)
 library(GenomicRanges)
+library(patchwork)
 
 trio_path = here(
     "processed-data", "13_tripod_trios", "09_gather_trios",
@@ -106,6 +107,24 @@ real_window = sprintf(
     StringToGRanges()
 
 ################################################################################
+#   Construct the base CoveragePlot and extract its x-axis limits
+################################################################################
+
+# Build the base CoveragePlot without built-in links first, so we can extract
+# the actual rendered x-axis range and use it for all custom tracks below.
+cp_no_links = CoveragePlot(
+    seur, region = this_gene, extend.upstream = extend_upstream,
+    extend.downstream = extend_downstream,
+    region.highlight = StringToGRanges(this_peak),
+    links = FALSE, features = this_gene
+)
+
+# Extract the actual x-axis range from the first panel of the CoveragePlot.
+# Using this for all custom tracks ensures they share the same coordinate space.
+cp_built = ggplot_build(cp_no_links$patches$plots[[1]])
+xlim = cp_built$layout$get_scales(1)$x$range$range
+
+################################################################################
 #   Add a motif track manually
 ################################################################################
 
@@ -128,64 +147,64 @@ motif_gr = granges(seur[['ATAC']])[rownames(seur[['ATAC']]) %in% motif_peaks, ]
 hits = findOverlaps(motif_gr, real_window)
 motif_gr = motif_gr[queryHits(hits)]
 
+# Use xlim (from the CoveragePlot) rather than real_window so this track
+# aligns with the other panels
 motif_track = tibble(start = start(motif_gr), end = end(motif_gr)) |>
     ggplot() +
         geom_rect(
             aes(xmin = start, xmax = end, ymin = 0, ymax = 1),
             fill = "forestgreen"
         ) +
-        scale_x_continuous(
-            limits = c(start(real_window), end(real_window))#,
-            # expand = c(0, 0)
-        ) +
+        coord_cartesian(xlim = xlim) +
         theme_void()
 
 ################################################################################
-#   Construct the final coverage plot
+#   Build the peak -> gene link track
 ################################################################################
 
-# Get the base CoveragePlot without built-in links
-cp_no_links = CoveragePlot(
-    seur, region = this_gene, extend.upstream = extend_upstream,
-    extend.downstream = extend_downstream,
-    region.highlight = StringToGRanges(this_peak),
-    links = FALSE, features = this_gene
-)
-
-# Get the actual x-axis range from CoveragePlot
-cp_built = ggplot_build(cp_no_links$patches$plots[[1]])
-xlim = cp_built$layout$get_scales(1)$x$range$range
-
-# Prepare a data frame of arcs for all links to the current gene in the window
-gene_tss = start(gene_coords)  # or end(gene_coords) depending on strand
+# Filter to only the specific peak-gene pair of interest (this_peak -> this_gene).
+gene_tss = start(gene_coords)
 links_to_gene = as.data.frame(link_gr) |>
-  filter(gene == this_gene) |>
-  mutate(
-    peak_mid = (start + end) / 2,
-    gene_tss = gene_tss,
-    y = 0, yend = 0
-  )
+    mutate(
+        peak_name = paste(seqnames, start, end, sep = "-"),
+        peak_mid = (start + end) / 2,
+        gene_tss = gene_tss,
+        y = 0, yend = 0
+    ) |>
+    filter(gene == this_gene, peak_name == this_peak)
 
-# Build the custom link track for all links
-link_track_aligned <- ggplot(links_to_gene, aes(x = peak_mid, xend = gene_tss, y = y, yend = yend)) +
+# Use coord_cartesian instead of scale_x_continuous(limits = ...) so the arc
+# of geom_curve is not clipped at the data level.
+link_track_aligned = ggplot(links_to_gene, aes(x = peak_mid, xend = gene_tss, y = y, yend = yend)) +
   geom_curve(
-    curvature = -0.4, ncp = 100,
+    curvature = 0.2, ncp = 100,
     arrow = arrow(length = unit(0.15, "cm"), type = "closed"),
     linewidth = 1, color = "steelblue"
   ) +
-  scale_x_continuous(limits = xlim) +
+  coord_cartesian(xlim = xlim, clip = "off") +
   theme_void()
 
+# Signac's CombineTracks internally places the expression violin to the right
+# of the coverage tracks with widths = c(10, length(features)). Since our
+# custom tracks are single panels, patchwork would stretch them to the full
+# combined width. Adding a plot_spacer() with the same 10:1 ratio ensures
+# the coverage portion aligns across all rows.
+# this_gene is the features argument passed to CoveragePlot
+cp_col_widths = c(10, length(this_gene))
+
+link_track_row = (link_track_aligned | plot_spacer()) +
+    plot_layout(widths = cp_col_widths)
+motif_track_row = (motif_track | plot_spacer()) +
+    plot_layout(widths = cp_col_widths)
+
 # Combine with CoveragePlot and motif track, aligning axes
-library(patchwork)
 p = (cp_no_links & theme(text = element_text(size = 14))) /
-    link_track_aligned /
-    motif_track +
+    link_track_row /
+    motif_track_row +
     plot_layout(heights = c(10, 1.5, 0.7), guides = "collect")
 
 pdf(plot_path)
 print(p)
 dev.off()
-
 
 session_info()
