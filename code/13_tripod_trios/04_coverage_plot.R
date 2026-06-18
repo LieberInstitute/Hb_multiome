@@ -107,11 +107,9 @@ real_window = sprintf(
     StringToGRanges()
 
 ################################################################################
-#   Construct the base CoveragePlot and extract its x-axis limits
+#   Construct the base CoveragePlot and derive its x-axis limits
 ################################################################################
 
-# Build the base CoveragePlot without built-in links first, so we can extract
-# the actual rendered x-axis range and use it for all custom tracks below.
 cp_no_links = CoveragePlot(
     seur, region = this_gene, extend.upstream = extend_upstream,
     extend.downstream = extend_downstream,
@@ -119,10 +117,14 @@ cp_no_links = CoveragePlot(
     links = FALSE, features = this_gene
 )
 
-# Extract the actual x-axis range from the first panel of the CoveragePlot.
-# Using this for all custom tracks ensures they share the same coordinate space.
-cp_built = ggplot_build(cp_no_links$patches$plots[[1]])
-xlim = cp_built$layout$get_scales(1)$x$range$range
+# Compute xlim to match exactly what Signac's FindRegion/Extend produces.
+# Extend() is strand-aware: for '+' genes, upstream shrinks start and
+# downstream grows end; for '-' genes the roles are swapped.
+on_plus = as.character(strand(gene_coords)) %in% c("+", "*")
+xlim = c(
+    start(gene_coords) - if (on_plus) extend_upstream  else extend_downstream,
+    end(gene_coords)   + if (on_plus) extend_downstream else extend_upstream
+)
 
 ################################################################################
 #   Add a motif track manually
@@ -168,20 +170,26 @@ links_to_gene = as.data.frame(link_gr) |>
     mutate(
         peak_name = paste(seqnames, start, end, sep = "-"),
         peak_mid = (start + end) / 2,
-        gene_tss = gene_tss,
-        y = 0, yend = 0
+        gene_tss = gene_tss
     ) |>
     filter(gene == this_gene, peak_name == this_peak)
 
-# Use coord_cartesian instead of scale_x_continuous(limits = ...) so the arc
-# of geom_curve is not clipped at the data level.
-link_track_aligned = ggplot(links_to_gene, aes(x = peak_mid, xend = gene_tss, y = y, yend = yend)) +
-  geom_curve(
-    curvature = 0.2, ncp = 100,
-    arrow = arrow(length = unit(0.15, "cm"), type = "closed"),
-    linewidth = 1, color = "steelblue"
+# Build the arc as a parametric path in data coordinates so its shape is
+# stable when the plot is resized. geom_curve computes arc height in display
+# units, so it physically shifts on resize. A manual sin() arc is defined
+# entirely in data coordinates and remains consistent.
+arc_df = tibble(
+    t = seq(0, 1, length.out = 200),
+    x = links_to_gene$peak_mid + (links_to_gene$gene_tss - links_to_gene$peak_mid) * t,
+    y = sin(pi * t)   # 0 -> peak of 1 -> 0
+)
+
+link_track_aligned = ggplot(arc_df, aes(x = x, y = y)) +
+  geom_path(
+    linewidth = 1, color = "steelblue",
+    arrow = arrow(length = unit(0.15, "cm"), type = "closed")
   ) +
-  coord_cartesian(xlim = xlim, clip = "off") +
+  coord_cartesian(xlim = xlim, ylim = c(0, 1), clip = "off") +
   theme_void()
 
 # Signac's CombineTracks internally places the expression violin to the right
