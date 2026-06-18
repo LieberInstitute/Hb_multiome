@@ -9,8 +9,9 @@ library(Signac)
 library(qs2)
 library(GenomicRanges)
 
-trio_paths = here(
-    "processed-data", "13_tripod_trios", "03_tripod_trios", "trios_%s.parquet"
+trio_path = here(
+    "processed-data", "13_tripod_trios", "09_gather_trios",
+    "filtered_trios_fine.parquet"
 )
 preprocessed_path = here(
     "processed-data", "13_tripod_trios", "02_tripod_preprocess",
@@ -24,7 +25,6 @@ plot_path = here(
 )
 cell_type1 = "MHb.2"
 cell_type2 = "LHb.2.7"
-FDR_thres_trio = 0.05
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
@@ -36,36 +36,14 @@ dir.create(dirname(plot_path), showWarnings = FALSE, recursive = TRUE)
 #   Import and filter trios, overlapping significant level 1 and 2 
 ################################################################################
 
-trio_df_list = list()
-link_df_list = list()
-for (cell_type in c(cell_type1, cell_type2)) {
-    link_df_list[[cell_type]] = read_parquet_duckdb(
-            sprintf(trio_paths, cell_type), prudence = 'lavish'
-        ) |>
-        filter(
-            condition_on == 'Yj', stringency_level == 1, adj < FDR_thres_trio
-        ) |>
-        dplyr::rename(adj_1 = adj) |>
-        mutate(cell_type = cell_type)
-    level_2 = read_parquet_duckdb(
-            sprintf(trio_paths, cell_type), prudence = 'lavish'
-        ) |>
-        filter(
-            condition_on == 'Yj', stringency_level == 2, adj < FDR_thres_trio
-        ) |>
-        dplyr::rename(adj_2 = adj) |>
-        select(peak, gene, TF, adj_2)
-    trio_df_list[[cell_type]] = inner_join(
-            link_df_list[[cell_type]] |> select(peak, gene, TF, adj_1, cell_type),
-            level_2,
-            by = c("peak", "gene", "TF")
-        )
-}
-trio_df = bind_rows(trio_df_list) |>
+trio_df = read_parquet_duckdb(trio_path, prudence = "stingy") |>
+    filter(is_intersect, stringency_level == 1, cell_type == cell_type1) |>
     collect()
-link_gr = link_df_list[[trio_df$cell_type[1]]] |>
+
+link_gr = read_parquet_duckdb(trio_path, prudence = "stingy") |>
+    filter(stringency_level == 1, cell_type == cell_type1) |>
     collect() |>
-    dplyr::rename(score = coef, pvalue = pval) |>
+    dplyr::rename(score = coef, pvalue = adj) |>
     separate(peak, into = c("seqnames", "start", "end"), sep = "-", convert = TRUE) |>
     mutate(width = end - start, strand = "*") |>
     select(seqnames, start, end, width, strand, score, gene, pvalue) |>
@@ -81,7 +59,12 @@ this_cell_type = trio_df$cell_type[1]
 ################################################################################
 
 seur = qs_read(seur_path)
-Idents(seur) = seur@meta.data$refined_mid_cluster
+Idents(seur) = case_when(
+    seur@meta.data$refined_mid_cluster == cell_type1 ~ cell_type1,
+    grepl('Hb', seur@meta.data$refined_mid_cluster) ~ 'Other habenula',
+    grepl('Thal', seur@meta.data$refined_mid_cluster) ~ 'Thalamus',
+    TRUE ~ 'Glia'
+)
 
 #   Really just checks we're importing the right data, as this certainly
 #   should be true
@@ -166,7 +149,7 @@ cp_no_links = CoveragePlot(
     seur, region = this_gene, extend.upstream = extend_upstream,
     extend.downstream = extend_downstream,
     region.highlight = StringToGRanges(this_peak),
-    links = FALSE
+    links = FALSE, features = this_gene
 )
 
 # Get the actual x-axis range from CoveragePlot
