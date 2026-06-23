@@ -304,9 +304,9 @@ original_metadata_hashikawa = colData(ortho_present_hashikawa_sce_sub)
 top_1vsAll_marker_df = marker_stats_1vAll %>% group_by(cellType.target) %>% filter(std.logFC.rank <= 50)
 top_1vsAll_marker_df
 
-top_1vsAll_marker_df = marker_stats_MeanRatio %>% group_by(cellType.target) %>% filter(MeanRatio.rank <= 50)
+#top_1vsAll_marker_df = marker_stats_MeanRatio %>% group_by(cellType.target) %>% filter(MeanRatio.rank <= 50)
 
-top_1vsAll_marker_df = marker_stats %>% group_by(cellType.target) %>% filter(MeanRatio.rank <= 50)
+#top_1vsAll_marker_df = marker_stats %>% group_by(cellType.target) %>% filter(MeanRatio.rank <= 50)
 
 
 dup_genes = top_1vsAll_marker_df$gene[which(duplicated(top_1vsAll_marker_df$gene))]
@@ -323,15 +323,17 @@ top_1vsAll_marker_df %>% group_by(cellType.target) %>% summarise(n = n())
 
 
 #Markers present in the Wallace data
-top_current_markers_all_mouse = top_1vsAll_marker_df %>% filter(cellType.target %in% c('MHb.1', 'MHb.1.2', 'MHb.2', 'MHb.3', 'LHb.1.3.4', 'LHb.2.7','LHb.4') ) %>%
-  select(gene, cellType.target) %>% filter(gene %in% rowData(ortho_present_mouse_sce)$human_gene_name)
+top_current_markers_all_mouse = top_1vsAll_marker_df %>% 
+  select(gene, cellType.target) %>% 
+  filter(gene %in% rowData(ortho_present_mouse_sce)$human_gene_name)
 
 colnames(top_current_markers_all_mouse) = c('gene', 'cell_type')
 top_current_markers_all_mouse$group = 'All'
 
 #Markers present in the Hashikawa dataset
-top_current_markers_hashikawa = top_1vsAll_marker_df %>% filter(cellType.target %in% c('MHb.1', 'MHb.1.2', 'MHb.2', 'MHb.3', 'LHb.1.3.4', 'LHb.2.7','LHb.4') ) %>%
-  select(gene, cellType.target) %>% filter(gene %in% rowData(ortho_present_hashikawa_sce_sub)$human_gene_name)
+top_current_markers_hashikawa = top_1vsAll_marker_df %>% 
+  select(gene, cellType.target) %>% 
+  filter(gene %in% rowData(ortho_present_hashikawa_sce_sub)$human_gene_name)
 
 colnames(top_current_markers_hashikawa) = c('gene', 'cell_type')
 top_current_markers_hashikawa$group = 'All'
@@ -341,8 +343,6 @@ top_current_markers_hashikawa$group = 'All'
 #Marker enrichment Wallace
 ct_scores = score_cells(log1p(cpm(ortho_present_mouse_sce)), top_current_markers_all_mouse)
 ct_enrichment = compute_marker_enrichment(ct_scores)
-
-scale(t(ct_enrichment))
 
 # Add in the enrichments to the metadata
 
@@ -358,106 +358,291 @@ colData(ortho_present_hashikawa_sce_sub) = cbind(original_metadata_hashikawa,sca
 
 
 
-plotReducedDim(
+p1 = plotReducedDim(
   ortho_present_mouse_sce,
-  dimred = "TSNE.PCA", colour_by = "grouped_annot"
+  dimred = "UMAP.PCA", colour_by = "grouped_annot"
+)
+p2 = plotReducedDim(
+  ortho_present_mouse_sce,
+  dimred = "UMAP.PCA", colour_by = "batch_variable"
 )
 
-plotReducedDim(
+p3 = plotReducedDim(
   ortho_present_mouse_sce,
-  dimred = "TSNE.PCA", colour_by = "All|MHb.1"
-) + scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
-                          limits = c(NA, 4), oob = scales::squish) +
-  ggtitle('Human MHb.1 markers in Wallace')
+  dimred = "UMAP.PCA", colour_by = "All|MHb.1"
+) + scale_color_gradient2(low = "blue", mid = "#dfdfdf", high = "red", midpoint = 0,
+                          limits = c(NA, 5), oob = scales::squish) +
+  labs(
+    title = "Wallace: Human MHb.1 markers",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Scale marker enrich."
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
 
-plotReducedDim(
+p4 = plotReducedDim(
   ortho_present_mouse_sce,
-  dimred = "TSNE.PCA", colour_by = "All|MHb.1.2"
-) + scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
-                          limits = c(NA, 4), oob = scales::squish) +
-  ggtitle('Human MHb.1.2 markers in Wallace')
+  dimred = "UMAP.PCA", colour_by = "All|MHb.1.2"
+) + scale_color_gradient2(low = "blue", mid = "#dfdfdf", high = "red", midpoint = 0,
+                          limits = c(NA, 5), oob = scales::squish) +
+  labs(
+    title = "Wallace: Human MHb.1.2 markers",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Scale marker enrich."
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
 
-plotReducedDim(
+p5 = plotReducedDim(
   ortho_present_mouse_sce,
-  dimred = "TSNE.PCA", colour_by = "All|MHb.2"
-) + scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
-                          limits = c(NA, 4), oob = scales::squish) +
-  ggtitle('Human MHb.2 markers in Wallace')
+  dimred = "UMAP.PCA", colour_by = "All|MHb.2"
+) + scale_color_gradient2(low = "blue", mid = "#dfdfdf", high = "red", midpoint = 0,
+                          limits = c(NA, 5), oob = scales::squish) +
+  labs(
+    title = "Wallace: Human MHb.2 markers",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Scale marker enrich."
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
 
-plotReducedDim(
+p6 = plotReducedDim(
   ortho_present_mouse_sce,
-  dimred = "TSNE.PCA", colour_by = "All|LHb.1.3.4"
-) + scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
-                          limits = c(NA, 4), oob = scales::squish) +
-  ggtitle('Human LHb.1.3.4 markers in Wallace')
+  dimred = "UMAP.PCA", colour_by = "All|LHb.2.7"
+) + scale_color_gradient2(low = "blue", mid = "#dfdfdf", high = "red", midpoint = 0,
+                          limits = c(NA, 5), oob = scales::squish) +
+  labs(
+    title = "Wallace: Human LHb.2.7 markers",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Scale marker enrich."
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
 
-plotReducedDim(
+p7 = plotReducedDim(
   ortho_present_mouse_sce,
-  dimred = "TSNE.PCA", colour_by = "All|LHb.2.7"
-) + scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
-                          limits = c(NA, 4), oob = scales::squish) +
-  ggtitle('Human LHb.2.7 markers in Wallace')
+  dimred = "UMAP.PCA", colour_by = "All|LHb.1.3.4"
+) + scale_color_gradient2(low = "blue", mid = "#dfdfdf", high = "red", midpoint = 0,
+                          limits = c(NA, 5), oob = scales::squish) +
+  labs(
+    title = "Wallace: Human LHb.1.3.4 markers",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Scale marker enrich."
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
 
-plotReducedDim(
+p8 = plotReducedDim(
   ortho_present_mouse_sce,
-  dimred = "TSNE.PCA", colour_by = "All|LHb.4"
-) + scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
-                          limits = c(NA, 4), oob = scales::squish) +
-  ggtitle('Human LHb.4 markers in Wallace')
+  dimred = "UMAP.PCA", colour_by = "All|LHb.4"
+) + scale_color_gradient2(low = "blue", mid = "#dfdfdf", high = "red", midpoint = 0,
+                          limits = c(NA, 5), oob = scales::squish) +
+  labs(
+    title = "Wallace: Human LHb.4 markers",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Scale marker enrich."
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
 
+p1
+p2
+p3
+p4
+p5
+p6
+p7
+p8
 
-
-
-
+ggsave(p1, filename = 'wallace_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(p2, filename = 'wallace_batch_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(p3, filename = 'wallace_human_MHb1_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(p4, filename = 'wallace_human_MHb1_2_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(p5, filename = 'wallace_human_MHb2_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(p6, filename = 'wallace_human_LHb2_7_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(p7, filename = 'wallace_human_LHb1_3_4_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(p8, filename = 'wallace_human_LHb4_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
 
 #Hashikawa
-plotReducedDim(
+p1 = plotReducedDim(
   ortho_present_hashikawa_sce_sub,
-  dimred = "TSNE.PCA", colour_by = "grouped_annot"
+  dimred = "UMAP.PCA", colour_by = "grouped_annot"
 )
 
-plotReducedDim(
+p2 = plotReducedDim(
   ortho_present_hashikawa_sce_sub,
-  dimred = "TSNE.PCA", colour_by = "All|MHb.1"
-) + scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
-                          limits = c(NA, 4), oob = scales::squish) +
-  ggtitle('Human MHb.1 markers in Hashikawa')
+  dimred = "UMAP.PCA", colour_by = "batch_variable"
+)
 
-plotReducedDim(
+
+p3 = plotReducedDim(
   ortho_present_hashikawa_sce_sub,
-  dimred = "TSNE.PCA", colour_by = "All|MHb.1.2"
-) + scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
-                          limits = c(NA, 4), oob = scales::squish) +
-  ggtitle('Human MHb.1.2 markers in Hashikawa')
+  dimred = "UMAP.PCA", colour_by = "All|MHb.1"
+) + scale_color_gradient2(low = "blue", mid = "#dfdfdf", high = "red", midpoint = 0,
+                          limits = c(NA, 5), oob = scales::squish) +
+  labs(
+    title = "Hashikawa: Human MHb.1 markers",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Scale marker enrich."
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
 
-plotReducedDim(
+p4 = plotReducedDim(
   ortho_present_hashikawa_sce_sub,
-  dimred = "TSNE.PCA", colour_by = "All|MHb.2"
-) + scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
-                          limits = c(NA, 4), oob = scales::squish) +
-  ggtitle('Human MHb.2 markers in Hashikawa')
+  dimred = "UMAP.PCA", colour_by = "All|MHb.1.2"
+) + scale_color_gradient2(low = "blue", mid = "#dfdfdf", high = "red", midpoint = 0,
+                          limits = c(NA, 5), oob = scales::squish) +
+  labs(
+    title = "Hashikawa: Human MHb.1.2 markers",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Scale marker enrich."
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
 
-plotReducedDim(
+p5 = plotReducedDim(
   ortho_present_hashikawa_sce_sub,
-  dimred = "TSNE.PCA", colour_by = "All|LHb.1.3.4"
-) + scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
-                          limits = c(NA, 4), oob = scales::squish) +
-  ggtitle('Human LHb.1.3.4 markers in Hashikawa')
+  dimred = "UMAP.PCA", colour_by = "All|MHb.2"
+) + scale_color_gradient2(low = "blue", mid = "#dfdfdf", high = "red", midpoint = 0,
+                          limits = c(NA, 5), oob = scales::squish) +
+  labs(
+    title = "Hashikawa: Human MHb.2 markers",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Scale marker enrich."
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
 
-plotReducedDim(
+p6 = plotReducedDim(
   ortho_present_hashikawa_sce_sub,
-  dimred = "TSNE.PCA", colour_by = "All|LHb.2.7"
-) + scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
-                          limits = c(NA, 4), oob = scales::squish) +
-  ggtitle('Human LHb.2.7 markers in Hashikawa')
+  dimred = "UMAP.PCA", colour_by = "All|LHb.2.7"
+) + scale_color_gradient2(low = "blue", mid = "#dfdfdf", high = "red", midpoint = 0,
+                          limits = c(NA, 5), oob = scales::squish) +
+  labs(
+    title = "Hashikawa: Human LHb.2.7 markers",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Scale marker enrich."
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
 
-plotReducedDim(
+p7 = plotReducedDim(
   ortho_present_hashikawa_sce_sub,
-  dimred = "TSNE.PCA", colour_by = "All|LHb.4"
-) + scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
-                          limits = c(NA, 4), oob = scales::squish) +
-  ggtitle('Human LHb.4 markers in Hashikawa')
+  dimred = "UMAP.PCA", colour_by = "All|LHb.1.3.4"
+) + scale_color_gradient2(low = "blue", mid = "#dfdfdf", high = "red", midpoint = 0,
+                          limits = c(NA, 5), oob = scales::squish) +
+  labs(
+    title = "Hashikawa: Human LHb.1.3.4 markers",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Scale marker enrich."
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
 
+p8 = plotReducedDim(
+  ortho_present_hashikawa_sce_sub,
+  dimred = "UMAP.PCA", colour_by = "All|LHb.4"
+) + scale_color_gradient2(low = "blue", mid = "#dfdfdf", high = "red", midpoint = 0,
+                          limits = c(NA, 5), oob = scales::squish) +
+  labs(
+    title = "Hashikawa: Human LHb.4 markers",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Scale marker enrich."
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
+
+
+p1
+p2
+p3
+p4
+p5
+p6
+p7
+p8
+
+ggsave(p1, filename = 'hashikawa_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(p2, filename = 'hashikawa_batch_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(p3, filename = 'hashikawa_human_MHb1_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(p4, filename = 'hashikawa_human_MHb1_2_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(p5, filename = 'hashikawa_human_MHb2_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(p6, filename = 'hashikawa_human_LHb2_7_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(p7, filename = 'hashikawa_human_LHb1_3_4_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(p8, filename = 'hashikawa_human_LHb4_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
 
 
 
