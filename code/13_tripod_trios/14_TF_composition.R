@@ -38,6 +38,9 @@ palette_20 <- c(
 )
 tf_colors <- setNames(palette_20, top20_tfs)
 
+ct_totals <- trio_df |>
+    count(cell_type, name = "total")
+
 p_composition <- trio_df |>
     mutate(
         TF_grouped = if_else(TF %in% top20_tfs, TF, "Other"),
@@ -49,12 +52,19 @@ p_composition <- trio_df |>
     ungroup() |>
     ggplot(aes(x = cell_type, y = prop, fill = TF_grouped)) +
     geom_bar(stat = "identity") +
+    geom_text(
+        data = ct_totals,
+        aes(x = cell_type, y = 1.02, label = total),
+        inherit.aes = FALSE,
+        size = 5, hjust = 0.5, vjust = 0
+    ) +
     scale_fill_manual(values = c(tf_colors, "Other" = "gray80")) +
+    scale_y_continuous(expand = expansion(mult = c(NA, 0.05))) +
     theme_bw(base_size = 18) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
     labs(x = "Cell Type", y = "Proportion of Trios", fill = "TF")
 
-pdf(file.path(plot_dir, "TF_composition_by_cell_type.pdf"))
+pdf(file.path(plot_dir, "TF_composition_by_cell_type.pdf"), width = 10, height = 7)
 print(p_composition)
 dev.off()
 
