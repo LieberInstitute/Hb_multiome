@@ -351,11 +351,12 @@ make_cor_heatmap <- function(trio_sub, row_idx, filename) {
         show_row_dend      = FALSE,
         show_row_names     = FALSE,
         row_title_gp       = gpar(fontsize = 7, fontface = "bold"),
+        row_title_rot      = 0,
         row_gap            = unit(1, "mm"),
         cluster_columns    = FALSE,
         show_column_names  = TRUE,
         column_names_gp    = gpar(fontsize = 7),
-        column_names_rot   = 45,
+        column_names_rot   = 90,
         left_annotation  = rowAnnotation(
             `Source CT` = rsc,
             col = list(`Source CT` = ct_colors[ct_sub_order]),
