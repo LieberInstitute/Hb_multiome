@@ -283,55 +283,92 @@ dev.off()
 #   Each cell shows the correlation between a trio's peak accessibility and gene
 #   expression across metacells of a given CT, using CT-Z-scored values.
 #   Grey cells indicate zero-variance features in non-source CTs (NA).
-#   Rows follow the same ordering as approach 2.
+#   Rows grouped by source CT and clustered within each group on all 3 features.
+#   Called twice: once for all trios, once restricted to habenula neuron trios.
 #-------------------------------------------------------------------------------
 
-cor_mat <- matrix(NA_real_, nrow = nrow(trio_df), ncol = length(cell_type_order),
-                  dimnames = list(row_labels, cell_type_order))
+# trio_sub: subset of trio_df; row_idx: corresponding row indices into feature matrices
+make_cor_heatmap <- function(trio_sub, row_idx, filename) {
+    source_ct_sub <- trio_sub$cell_type
+    ct_sub_order  <- cell_type_order[cell_type_order %in% unique(source_ct_sub)]
 
-for (ct in cell_type_order) {
-    idx <- ct_col_ranges[[ct]]
-    for (i in seq_len(nrow(trio_df))) {
-        cor_mat[i, ct] <- suppressWarnings(cor(gene_mat_z2[i, idx], peak_mat_z2[i, idx]))
+    # Row ordering: group by source CT, cluster within each group on all 3 features
+    row_ord <- integer(0); row_grp <- character(0)
+    for (ct in ct_sub_order) {
+        ti  <- which(source_ct_sub == ct)
+        idx <- ct_col_ranges[[ct]]
+        sm  <- cbind(gene_mat_z2[row_idx[ti], idx, drop = FALSE],
+                     peak_mat_z2[row_idx[ti], idx, drop = FALSE],
+                     tf_mat_z2[row_idx[ti],   idx, drop = FALSE])
+        o   <- if (length(ti) == 1) 1L else hclust(dist(sm), method = "complete")$order
+        row_ord <- c(row_ord, ti[o])
+        row_grp <- c(row_grp, rep(ct, length(ti)))
     }
+
+    rl  <- paste0(trio_sub$gene[row_ord], " / ", trio_sub$TF[row_ord])
+    rsc <- source_ct_sub[row_ord]
+
+    # Correlation matrix: rows in row_ord order, columns = all cell types
+    # Restricted to metacells with nonzero raw TF expression (>= 3 required, else NA)
+    cm <- matrix(NA_real_, nrow = nrow(trio_sub), ncol = length(cell_type_order),
+                 dimnames = list(rl, cell_type_order))
+    for (ct in cell_type_order) {
+        idx <- ct_col_ranges[[ct]]
+        for (i in seq_len(nrow(trio_sub))) {
+            nz <- which(tf_mat[row_idx[row_ord[i]], idx] > 0)
+            if (length(nz) < 3) next
+            cm[i, ct] <- suppressWarnings(cor(
+                gene_mat_z2[row_idx[row_ord[i]], idx[nz]],
+                peak_mat_z2[row_idx[row_ord[i]], idx[nz]]
+            ))
+        }
+    }
+
+    hm <- Heatmap(
+        cm,
+        name   = "Peak-gene\ncorr.",
+        col    = circlize::colorRamp2(c(-1, 0, 1), c("blue", "white", "red")),
+        na_col = "grey85",
+        cluster_rows       = FALSE,
+        cluster_row_slices = FALSE,
+        row_split          = factor(row_grp, levels = ct_sub_order),
+        show_row_dend      = FALSE,
+        show_row_names     = FALSE,
+        row_title_gp       = gpar(fontsize = 7, fontface = "bold"),
+        row_gap            = unit(1, "mm"),
+        cluster_columns    = FALSE,
+        show_column_names  = TRUE,
+        column_names_gp    = gpar(fontsize = 7),
+        column_names_rot   = 45,
+        left_annotation  = rowAnnotation(
+            `Source CT` = rsc,
+            col = list(`Source CT` = ct_colors[ct_sub_order]),
+            show_legend = FALSE,
+            annotation_name_gp = gpar(fontsize = 8),
+            simple_anno_size   = unit(0.4, "cm")
+        ),
+        right_annotation = rowAnnotation(
+            label = anno_text(rl, gp = gpar(fontsize = 5.5), just = "left")
+        ),
+        width          = unit(8, "cm"),
+        height         = unit(nrow(trio_sub) * 0.13, "cm"),
+        use_raster     = TRUE,
+        raster_quality = 2,
+        heatmap_legend_param = list(title = "Peak-gene\ncorr.", at = c(-1, 0, 1), direction = "vertical")
+    )
+
+    pdf(file.path(plot_dir, filename), width = 10, height = 14)
+    draw(hm, heatmap_legend_side = "right", annotation_legend_side = "right",
+         padding = unit(c(4, 4, 4, 4), "mm"))
+    dev.off()
+    invisible(NULL)
 }
 
-hm_cor <- Heatmap(
-    cor_mat[row_order, ],
-    name   = "Peak-gene\ncorr.",
-    col    = circlize::colorRamp2(c(-1, 0, 1), c("blue", "white", "red")),
-    na_col = "grey85",
-    cluster_rows       = FALSE,
-    cluster_row_slices = FALSE,
-    row_split          = factor(row_group_labels, levels = cell_type_order),
-    show_row_dend      = FALSE,
-    show_row_names     = FALSE,
-    row_title_gp       = gpar(fontsize = 7, fontface = "bold"),
-    row_gap            = unit(1, "mm"),
-    cluster_columns    = FALSE,
-    show_column_names  = TRUE,
-    column_names_gp    = gpar(fontsize = 7),
-    column_names_rot   = 45,
-    left_annotation  = rowAnnotation(
-        `Source CT` = row_source_ct,
-        col = list(`Source CT` = ct_colors),
-        show_legend = FALSE,
-        annotation_name_gp = gpar(fontsize = 8),
-        simple_anno_size   = unit(0.4, "cm")
-    ),
-    right_annotation = rowAnnotation(
-        label = anno_text(row_labels, gp = gpar(fontsize = 5.5), just = "left")
-    ),
-    width          = unit(8, "cm"),
-    height         = unit(20, "cm"),
-    use_raster     = TRUE,
-    raster_quality = 2,
-    heatmap_legend_param = list(title = "Peak-gene\ncorr.", at = c(-1, 0, 1), direction = "vertical")
-)
+# All cell types
+make_cor_heatmap(trio_df, seq_len(nrow(trio_df)), "peak_gene_correlation_heatmap.pdf")
 
-pdf(file.path(plot_dir, "peak_gene_correlation_heatmap.pdf"), width = 10, height = 14)
-draw(hm_cor, heatmap_legend_side = "right", annotation_legend_side = "right",
-     padding = unit(c(4, 4, 4, 4), "mm"))
-dev.off()
+# Habenula neurons only (LHb and MHb cell types)
+hb_idx <- which(grepl("Hb", trio_df$cell_type))
+make_cor_heatmap(trio_df[hb_idx, ], hb_idx, "peak_gene_correlation_heatmap_Hb.pdf")
 
 session_info()
