@@ -285,12 +285,25 @@ dev.off()
 #   Grey cells indicate zero-variance features in non-source CTs (NA).
 #   Rows grouped by source CT and clustered within each group on all 3 features.
 #   Called twice: once for all trios, once restricted to habenula neuron trios.
+#   TF identity encoded as a row color annotation (top 20 TFs by count; rest gray).
 #-------------------------------------------------------------------------------
 
+# TF color palette: computed once from all trios so colors are consistent across
+# both the full and Hb-subset versions of the heatmap
+palette_20 <- c(
+    "#E6194B", "#3CB44B", "#4363D8", "#F58231", "#911EB4",
+    "#42D4F4", "#F032E6", "#BFEF45", "#FABED4", "#469990",
+    "#DCBEFF", "#9A6324", "#FFFAC8", "#800000", "#AAFFC3",
+    "#808000", "#FFD8B1", "#000075", "#A9A9A9", "#000000"
+)
 # trio_sub: subset of trio_df; row_idx: corresponding row indices into feature matrices
 make_cor_heatmap <- function(trio_sub, row_idx, filename) {
     source_ct_sub <- trio_sub$cell_type
     ct_sub_order  <- cell_type_order[cell_type_order %in% unique(source_ct_sub)]
+
+    # Top 20 TFs and color palette computed from this specific subset
+    top20_tfs <- trio_sub |> count(TF, sort = TRUE) |> slice_head(n = 20) |> pull(TF)
+    tf_colors  <- c(setNames(palette_20, top20_tfs), "Other" = "gray80")
 
     # Row ordering: group by source CT, cluster within each group on all 3 features
     row_ord <- integer(0); row_grp <- character(0)
@@ -305,14 +318,17 @@ make_cor_heatmap <- function(trio_sub, row_idx, filename) {
         row_grp <- c(row_grp, rep(ct, length(ti)))
     }
 
-    rl  <- paste0(trio_sub$gene[row_ord], " / ", trio_sub$TF[row_ord])
-    rsc <- source_ct_sub[row_ord]
+    rsc    <- source_ct_sub[row_ord]
+    tf_sub <- factor(
+        ifelse(trio_sub$TF[row_ord] %in% top20_tfs, trio_sub$TF[row_ord], "Other"),
+        levels = c(top20_tfs, "Other")
+    )
 
     # Correlation matrix: rows in row_ord order, columns = all cell types
     # Restricted to metacells with nonzero raw TF expression (>= 3 required, else NA)
-    cm <- matrix(NA_real_, nrow = nrow(trio_sub), ncol = length(cell_type_order),
-                 dimnames = list(rl, cell_type_order))
-    for (ct in cell_type_order) {
+    cm <- matrix(NA_real_, nrow = nrow(trio_sub), ncol = length(ct_sub_order),
+                 dimnames = list(NULL, ct_sub_order))
+    for (ct in ct_sub_order) {
         idx <- ct_col_ranges[[ct]]
         for (i in seq_len(nrow(trio_sub))) {
             nz <- which(tf_mat[row_idx[row_ord[i]], idx] > 0)
@@ -348,7 +364,10 @@ make_cor_heatmap <- function(trio_sub, row_idx, filename) {
             simple_anno_size   = unit(0.4, "cm")
         ),
         right_annotation = rowAnnotation(
-            label = anno_text(rl, gp = gpar(fontsize = 5.5), just = "left")
+            TF  = tf_sub,
+            col = list(TF = tf_colors),
+            annotation_name_gp = gpar(fontsize = 8),
+            simple_anno_size   = unit(0.4, "cm")
         ),
         width          = unit(8, "cm"),
         height         = unit(nrow(trio_sub) * 0.13, "cm"),
