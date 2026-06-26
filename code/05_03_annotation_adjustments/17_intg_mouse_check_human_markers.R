@@ -101,7 +101,6 @@ hashikawa_sce_sub$meta_clust_celltype_annot[index] = 'Neuron'
 #And the annotations reflecting the cross-species mapping
 all_mouse_sce$grouped_annot = all_mouse_sce$meta_clust_celltype_annot
 all_mouse_sce$grouped_annot[all_mouse_sce$meta_clust_celltype_annot %in% c('MHb_subP')] = 'MHb.1'
-all_mouse_sce$grouped_annot[all_mouse_sce$meta_clust_celltype_annot %in% c('MHb_subP_cholinergic')] = 'MHb.1.2'
 all_mouse_sce$grouped_annot[all_mouse_sce$meta_clust_celltype_annot %in% c('MHb_cholinergic')] = 'MHb.2'
 all_mouse_sce$grouped_annot[all_mouse_sce$meta_clust_celltype_annot %in% c('LHb_2')] = 'LHb.2.7'
 all_mouse_sce$grouped_annot[all_mouse_sce$meta_clust_celltype_annot %in% c('LHb_1')] = 'LHb.4'
@@ -110,7 +109,6 @@ all_mouse_sce$grouped_annot[all_mouse_sce$meta_clust_celltype_annot %in% c('Astr
 
 hashikawa_sce_sub$grouped_annot = hashikawa_sce_sub$meta_clust_celltype_annot
 hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$meta_clust_celltype_annot %in% c('MHb_subP')] = 'MHb.1'
-hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$meta_clust_celltype_annot %in% c('MHb_subP_cholinergic')] = 'MHb.1.2'
 hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$meta_clust_celltype_annot %in% c(paste0('MHb_cholinergic_', 1:4))] = 'MHb.2'
 hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$meta_clust_celltype_annot %in% c('LHb_2', 'LHb_1_5')] = 'LHb.2.7'
 hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$meta_clust_celltype_annot %in% c('LHb_1_2', 'LHb_1_4')] = 'LHb.1.3.4'
@@ -156,10 +154,12 @@ all_mouse_sce <- runPCA(all_mouse_sce,
     name = "PCA"
 )
 
+set.seed(123)
 message("Running TSNE - ", Sys.time())
 all_mouse_sce <- runTSNE(all_mouse_sce, dimred = "PCA", name = "TSNE.PCA")
 colnames(reducedDim(all_mouse_sce, "TSNE.PCA")) <- c("TSNE1", "TSNE2")
 
+set.seed(123)
 message("Running UMAP - ", Sys.time())
 all_mouse_sce <- runUMAP(all_mouse_sce, dimred = "PCA", name = "UMAP.PCA")
 colnames(reducedDim(all_mouse_sce, "UMAP.PCA")) <- c("UMAP1", "UMAP2")
@@ -178,10 +178,12 @@ hashikawa_sce_sub <- runPCA(hashikawa_sce_sub,
     name = "PCA"
 )
 
+set.seed(123)
 message("Running TSNE - ", Sys.time())
 hashikawa_sce_sub <- runTSNE(hashikawa_sce_sub, dimred = "PCA", name = "TSNE.PCA")
 colnames(reducedDim(hashikawa_sce_sub, "TSNE.PCA")) <- c("TSNE1", "TSNE2")
 
+set.seed(123)
 message("Running UMAP - ", Sys.time())
 hashikawa_sce_sub <- runUMAP(hashikawa_sce_sub, dimred = "PCA", name = "UMAP.PCA")
 colnames(reducedDim(hashikawa_sce_sub, "UMAP.PCA")) <- c("UMAP1", "UMAP2")
@@ -396,7 +398,7 @@ return(p)
 p1 = plotReducedDim(
   ortho_present_mouse_sce,
   dimred = "UMAP.PCA", colour_by = "grouped_annot", point_size = .1, point_alpha = 1) + 
-  scale_color_manual(values = my_colors_mid) + coord_fixed()
+  scale_color_manual(values = c(my_colors_mid, 'MHb_subP_cholinergic' = "#f67104")) + coord_fixed()
 
 ggsave(p1, filename = 'wallace_grouped_small_umap.pdf', 
 path = plot_path, device = 'pdf', height = 3, width = 3)
@@ -441,7 +443,7 @@ path = plot_path, device = 'pdf', height = 3, width = 3)
 p1 = plotReducedDim(
   ortho_present_hashikawa_sce_sub,
   dimred = "UMAP.PCA", colour_by = "grouped_annot", point_size = .1, point_alpha = 1) + 
-  scale_color_manual(values = my_colors_mid) + coord_fixed()
+  scale_color_manual(values = c(my_colors_mid, 'MHb_subP_cholinergic' = "#f67104")) + coord_fixed()
 
 ggsave(p1, filename = 'hashikawa_grouped_small_umap.pdf', 
 path = plot_path, device = 'pdf', height = 3, width = 3)
