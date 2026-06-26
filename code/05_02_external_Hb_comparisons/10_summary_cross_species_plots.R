@@ -22,6 +22,8 @@ cross_species_bestVsnext_aurocs = readRDS(file = paste0(auroc_data_path, '/cross
 
 cross_species_bestVsnext_aurocs[1:5, 1:5]
 
+cross_species_allVsAll_aurocs = readRDS(file = paste0(auroc_data_path, '/cross_species_MN_AllVsAll_neurons.rds'))
+cross_species_allVsAll_aurocs[1:5, 1:5]
 
 #merged SCE object
 all_donor_sce = readRDS( file = paste0(auroc_data_path, '/cross_species_merged_sce_neurons.rds'))
@@ -123,4 +125,42 @@ graphics::legend(
 dev.off()
 
 
+
+#And replot the all by all heatmap, adding a species annotation to the heatmap
+#Will likely need to grab the MetaNeighbor code and manually adjust
+
+
+#double check this is the matrix as expected
+plotHeatmap(
+  cross_species_allVsAll_aurocs,
+  cex = .5
+)
+title("MetaNeighbor Human, Mouse, ZebF Habenula: 2000 HVGs")
+
+#Adapting Original MetaNeighbor code from https://github.com/gillislab/MetaNeighbor/blob/a0aad62868621241caef857350318ff674d94704/R/visualization.R
+orderCellTypes <- function(M, na_value = 0) {
+    M <- (M + t(M))/2
+    M[is.na(M)] <- na_value
+    result <- stats::hclust(stats::as.dist(1-M), method = "average")
+    return(result)
+}
+
+plotHeatmap <- function(aurocs, cex = 1, margins = c(8, 8), ...) {
+    auroc_cols <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(11,"RdYlBu"))(100))
+    breaks <- seq(0, 1, length=101)
+    ordering <- stats::as.dendrogram(orderCellTypes(aurocs))
+    
+    arg_list <- list(
+        x = aurocs, margins = margins,
+        key = TRUE, keysize = 1, key.xlab="AUROC", key.title="",
+        offsetRow=0.1, offsetCol=0.1,
+        trace = "none", density.info = "none",
+        Rowv = ordering, Colv = ordering, 
+        col = auroc_cols, breaks = breaks, na.color = grDevices::gray(0.95),
+        cexRow = cex, cexCol = cex
+    )
+    additional_args <- list(...)
+    arg_list[names(additional_args)] <- additional_args
+    do.call(gplots::heatmap.2, arg_list)
+}
 
