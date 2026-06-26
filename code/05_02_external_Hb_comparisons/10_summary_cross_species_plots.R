@@ -137,6 +137,8 @@ plotHeatmap(
 )
 title("MetaNeighbor Human, Mouse, ZebF Habenula: 2000 HVGs")
 
+
+
 #Adapting Original MetaNeighbor code from https://github.com/gillislab/MetaNeighbor/blob/a0aad62868621241caef857350318ff674d94704/R/visualization.R
 orderCellTypes <- function(M, na_value = 0) {
     M <- (M + t(M))/2
@@ -145,22 +147,42 @@ orderCellTypes <- function(M, na_value = 0) {
     return(result)
 }
 
-plotHeatmap <- function(aurocs, cex = 1, margins = c(8, 8), ...) {
-    auroc_cols <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(11,"RdYlBu"))(100))
-    breaks <- seq(0, 1, length=101)
-    ordering <- stats::as.dendrogram(orderCellTypes(aurocs))
-    
-    arg_list <- list(
-        x = aurocs, margins = margins,
-        key = TRUE, keysize = 1, key.xlab="AUROC", key.title="",
-        offsetRow=0.1, offsetCol=0.1,
-        trace = "none", density.info = "none",
-        Rowv = ordering, Colv = ordering, 
-        col = auroc_cols, breaks = breaks, na.color = grDevices::gray(0.95),
-        cexRow = cex, cexCol = cex
-    )
-    additional_args <- list(...)
-    arg_list[names(additional_args)] <- additional_args
-    do.call(gplots::heatmap.2, arg_list)
-}
+# Extract species from rownames (text before the '|'), keeping only species name
+species_labels <- sub("\\|.*", "", rownames(cross_species_allVsAll_aurocs))
+species_labels <- gsub("Wallace\\.|Hashikawa\\.|yalcinbas\\.|multiome\\.", "", species_labels)
 
+species_colors <- c(
+  "Mouse"     = "#a72a2a",
+  "Zebrafish" = "#2a2d7c",
+  "Human"     = "#8151a1"
+)
+
+species_row_anno <- ComplexHeatmap::HeatmapAnnotation(
+  Species = species_labels,
+  col = list(Species = species_colors),
+  which = "row",
+  annotation_name_gp = grid::gpar(fontsize = 8),
+  simple_anno_size = grid::unit(4, "mm")
+)
+
+annot_heatmap = ComplexHeatmap::Heatmap(cross_species_allVsAll_aurocs,
+  name = "AUROC",
+  col = rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(11,"RdYlBu"))(100)),
+  na_col = "gray90",
+  cluster_rows = orderCellTypes(cross_species_allVsAll_aurocs),
+  cluster_columns = orderCellTypes(cross_species_allVsAll_aurocs),
+  show_row_names = TRUE,
+  show_column_names = TRUE,
+  row_names_gp = grid::gpar(fontsize = 8),
+  column_names_gp = grid::gpar(fontsize = 8),
+  right_annotation = species_row_anno,
+  row_dend_width = grid::unit(15, "mm"),
+  column_dend_height = grid::unit(15, "mm")
+)
+
+annot_heatmap = ComplexHeatmap::draw(annot_heatmap)
+
+
+pdf(paste0(plot_path, '/AllvsAll_MN_human_mouse_zeb_neurons.pdf'), width = 10, height = 8)
+ComplexHeatmap::draw(annot_heatmap)
+dev.off()
