@@ -81,6 +81,19 @@ glp_genes = c('GLP1R', 'GLP2R','ZGLP1')
 gpr_genes = rownames(multiome_sce)[grepl('GPR', rownames(multiome_sce)) & !grepl('GPRASP', rownames(multiome_sce)) & !grepl('GPRIN', rownames(multiome_sce))]
 
 
+#And add in the GABA and Glut receptors from the gene set enrichment analysis
+gaba_genes = c("ATF4", "CACNB4", "GABBR1", "GABRA1", "GABRA2", "GABRA3", "GABRA4", "GABRA5", "GABRA6", "GABRB1", "GABRB2", "GABRB3",
+               "GABRD", "GABRE", "GABRG1", "GABRG2", "GABRG3", "GABRR1", "GABRR2", "GNAI2", "HTR1A", "PLCL1", "SLC12A2", "GABBR2",
+               "PLCL2", "PHF24", "GPR156", "PIANP", "GABRR3", "SHISA7", "CBLN1", "FGF13", "PLXNB1", "WNT5A", "CLSTN3", "SEMA4D",
+               "SRGAP2", "LGI2", "NLGN2", "CLSTN2", "SEMA4A", "CBLN4", "MDGA1", "NPAS4", "LHFPL4", "HAPLN4", "SRGAP2C", "GABRP",
+               "GRID1", "GABRQ", "DTNB", "GAD1", "GAD2", "GLRA1", "NLGN4Y", "SYT11", "NLGN3", "NLGN4X", "IGSF9", "IGSF21",
+               "SLC32A1", "CEP112", "IQSEC3")
+
+
+glut_genes = c("GRIA1", "GRIA2", "GRIA3", "GRIA4", "GRID1", "GRID2", "GRIK1", "GRIK2", "GRIK3", "GRIK4", "GRIK5", "GRIN1", "GRIN2A",
+               "GRIN2B", "GRIN2C", "GRIN2D", "GRM1", "GRM2", "GRM3", "GRM4", "GRM5", "GRM6", "GRM7", "GRM8", "GRIN3A", "GRIN3B")
+
+
 table(multiome_sce$merged_cluster, multiome_sce$refined_cluster_ann)
 
 get_gene_exp_heatmap = function(sce, assay_type, gene_list, gene_list_name, exp_filt){
@@ -107,8 +120,8 @@ get_gene_exp_heatmap = function(sce, assay_type, gene_list, gene_list_name, exp_
   #Filter genes on expression level
   if (!missing(exp_filt)) {
 
-    num_passing = sum(rowMeans(avg_marker_exp) >= exp_filt)
-    avg_marker_exp = avg_marker_exp[rowMeans(avg_marker_exp) >= exp_filt, ]
+    num_passing = sum(matrixStats::rowMaxs(as.matrix(avg_marker_exp)) >= exp_filt)
+    avg_marker_exp = avg_marker_exp[matrixStats::rowMaxs(as.matrix(avg_marker_exp)) >= exp_filt, ]
   
     if (num_passing == 0) {
       stop("No genes passed the expression filter.")
@@ -124,7 +137,7 @@ get_gene_exp_heatmap = function(sce, assay_type, gene_list, gene_list_name, exp_
 
   # Create row annotation with average expression across cell types as barplot
   gene_avg_exp = rowMeans(avg_marker_exp)
-  
+
   row_anno = HeatmapAnnotation(
     avg_exp = anno_barplot(gene_avg_exp, baseline = 0, 
                            gp = gpar(col = NA, fill = "#A50026"),
@@ -188,8 +201,8 @@ get_gene_exp_heatmap = function(sce, assay_type, gene_list, gene_list_name, exp_
   #Filter genes on expression level
   if (!missing(exp_filt)) {
 
-    num_passing = sum(rowMeans(avg_marker_exp) >= exp_filt)
-    avg_marker_exp = avg_marker_exp[rowMeans(avg_marker_exp) >= exp_filt, ]
+    num_passing = sum(matrixStats::rowMaxs(as.matrix(avg_marker_exp)) >= exp_filt)
+    avg_marker_exp = avg_marker_exp[matrixStats::rowMaxs(as.matrix(avg_marker_exp)) >= exp_filt, ]
   
     if (num_passing == 0) {
       return(zscore_heatmap)  # Return the previous heatmap if no genes pass the filter
@@ -299,6 +312,13 @@ draw(gpr_heatmaps[[2]])
 #draw(glp_heatmaps[[1]])
 #draw(glp_heatmaps[[2]])
 
+glut_heatmaps = get_gene_exp_heatmap(multiome_sce, plot_assay, glut_genes, 'Glutamate genes', exp_filt = expression_filter)
+draw(glut_heatmaps[[1]])
+draw(glut_heatmaps[[2]])
+
+gaba_heatmaps = get_gene_exp_heatmap(multiome_sce, plot_assay, gaba_genes, 'GABA genes', exp_filt = expression_filter)
+draw(gaba_heatmaps[[1]])
+draw(gaba_heatmaps[[2]])
 
 
 #Save plots
@@ -334,6 +354,16 @@ dev.off()
 pdf(file.path(plot_path, 'GPR_genes_heatmap.pdf'), width = 8, height = 4)
 draw(gpr_heatmaps[[1]])
 dev.off()
+
+pdf(file.path(plot_path, 'glutamate_genes_heatmap.pdf'), width = 8, height = 4)
+draw(glut_heatmaps[[1]])
+dev.off()
+
+
+pdf(file.path(plot_path, 'GABA_genes_heatmap.pdf'), width = 8, height = 4)
+draw(gaba_heatmaps[[1]])
+dev.off()
+
 
 
 #And check out expression in the UMAP too
@@ -404,6 +434,8 @@ plot_gene_on_umap(multiome_sce, "OPRM1")
 plot_gene_on_umap(multiome_sce, "CHRNA6")
 plot_gene_on_umap(multiome_sce, "CHRNB3")
 plot_gene_on_umap(multiome_sce, "CHRNA3")
+plot_gene_on_umap(multiome_sce, "CHRNA5")
+plot_gene_on_umap(multiome_sce, "CHRNB4")
 
 plot_gene_on_umap(multiome_sce, "CHRM2")
 plot_gene_on_umap(multiome_sce, "CHRM3")
