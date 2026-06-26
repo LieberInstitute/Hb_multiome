@@ -197,6 +197,29 @@ for(i in 1:length(sig_go_terms)){
 
 }
 
+#Inhibitory terms
+#"GO:0007214|gamma-aminobutyric acid signaling pathway|BP" 
+#"GO:1904862|inhibitory synapse assembly|BP"              
+#"GO:0016917|GABA receptor activity|MF"                    
+#"GO:0060077|inhibitory synapse|CC" 
+
+unique(unlist(go_sets[sig_go_terms[grepl('GABA', sig_go_terms) | grepl('inhibitory', sig_go_terms) | grepl('gamma',sig_go_terms)]]))
+#[1] "ATF4"    "CACNB4"  "GABBR1"  "GABRA1"  "GABRA2"  "GABRA3"  "GABRA4"  "GABRA5"  "GABRA6"  "GABRB1"  "GABRB2"  "GABRB3" 
+#[13] "GABRD"   "GABRE"   "GABRG1"  "GABRG2"  "GABRG3"  "GABRR1"  "GABRR2"  "GNAI2"   "HTR1A"   "PLCL1"   "SLC12A2" "GABBR2" 
+#[25] "PLCL2"   "PHF24"   "GPR156"  "PIANP"   "GABRR3"  "SHISA7"  "CBLN1"   "FGF13"   "PLXNB1"  "WNT5A"   "CLSTN3"  "SEMA4D" 
+#[37] "SRGAP2"  "LGI2"    "NLGN2"   "CLSTN2"  "SEMA4A"  "CBLN4"   "MDGA1"   "NPAS4"   "LHFPL4"  "HAPLN4"  "SRGAP2C" "GABRP"  
+#[49] "GRID1"   "GABRQ"   "DTNB"    "GAD1"    "GAD2"    "GLRA1"   "NLGN4Y"  "SYT11"   "NLGN3"   "NLGN4X"  "IGSF9"   "IGSF21" 
+#[61] "SLC32A1" "CEP112"  "IQSEC3"
+
+
+#Excitatory terms
+#"GO:0008066|glutamate receptor activity|MF"       
+#"GO:0004970|glutamate-gated receptor activity|MF"
+unique(unlist(go_sets[sig_go_terms[grepl('glutamate', sig_go_terms)]]))
+#[1] "GRIA1"  "GRIA2"  "GRIA3"  "GRIA4"  "GRID1"  "GRID2"  "GRIK1"  "GRIK2"  "GRIK3"  "GRIK4"  "GRIK5"  "GRIN1"  "GRIN2A"
+#[14] "GRIN2B" "GRIN2C" "GRIN2D" "GRM1"   "GRM2"   "GRM3"   "GRM4"   "GRM5"   "GRM6"   "GRM7"   "GRM8"   "GRIN3A" "GRIN3B"
+
+
 
 #And get heatmaps of expression for the top 10 1vall markers for all cell-types
 
