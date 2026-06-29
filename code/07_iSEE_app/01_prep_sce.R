@@ -6,6 +6,8 @@ library(here)
 library(qs2)
 library(SingleCellExperiment)
 library(rtracklayer)
+library(lobstr)
+library(scuttle)
 
 seur_in_path = here(
     'processed-data', '11_link_prep', '02_rebuild_atac_assay',
@@ -29,6 +31,9 @@ dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 ################################################################################
 
 seur = qs_read(seur_in_path)
+
+message("Original Seurat object size: ")
+print(obj_size(seur))
 
 #   We have a huge number of ambiguously named dimensional reductions, and some
 #   are on outdated data. Keep only harmonized reductions. Among these, keep the
@@ -80,14 +85,25 @@ keep_genes <- rownames(seur[['RNA']])[
 ]
 seur[["RNA"]] <- subset(seur[["RNA"]], features = keep_genes)
 
-saveRDS(seur, file = file.path(out_dir, "seur_multiome_habenula_atlas.rds"))
-
 ################################################################################
-#   Clean up rowData() and issues with gene names
+#   Convert to individual SingleCellExperiments for each assay (for iSEE)
 ################################################################################
 
 sce = as.SingleCellExperiment(seur, assay = 'RNA')
 reducedDimNames(sce) = tolower(reducedDimNames(sce))
+sce$ident = NULL
+
+sce_atac = as.SingleCellExperiment(seur, assay = 'ATAC')
+reducedDimNames(sce_atac) = tolower(reducedDimNames(sce_atac))
+sce_atac$ident = NULL
+
+assays(sce) = list(logcounts = assays(sce)$logcounts)
+assays(sce_atac) = list(logcounts = assays(sce_atac)$logcounts)
+gc()
+
+################################################################################
+#   Clean up rowData() and issues with gene names
+################################################################################
 
 #   For the iSEE app, we want ENSEMBL IDs, gene symbols, and additional
 #   metadata from the GTF. If we naively join with the GTF by gene symbol, 9
@@ -143,14 +159,41 @@ for (row_idx in seq_along(original_rownames)) {
 
 #   Join full GTF metadata by gene_id (unique), avoiding the non-unique gene_name
 rowData(sce) <- tibble(
-        gene_name_orig = original_rownames,
-        gene_name      = resolved_symbols,
-        gene_id        = resolved_ensembl_ids
+        gene_id = resolved_ensembl_ids, gene_name = resolved_symbols,
     ) |>
     left_join(
         gtf |> distinct(gene_id, .keep_all = TRUE) |> select(-gene_name),
         by = "gene_id"
     ) |>
+    select(where(~!all(is.na(.x)))) |>
     DataFrame()
 
-rownames(sce) <- resolved_ensembl_ids
+rownames(sce) = uniquifyFeatureNames(
+    rowData(sce)$gene_id, rowData(sce)$gene_name
+)
+
+#   Probably also makes sense to use this as the rownames for the Seurat object
+#   as well (and rowData)
+stopifnot(identical(original_rownames, rownames(seur[['RNA']])))
+rownames(seur[['RNA']]) = rownames(sce)
+seur[['RNA']]@meta.data = rowData(sce) |> as.data.frame()
+
+################################################################################
+#   Save objects
+################################################################################
+
+message("Final Seurat object size: ")
+print(obj_size(seur))
+
+message("iSEE object sizes (RNA then ATAC):")
+print(obj_size(sce))
+print(obj_size(sce_atac))
+
+#   ExperimentHub
+saveRDS(seur, file = file.path(out_dir, "seur_multiome_habenula_atlas.rds"))
+
+#   iSEE
+qs_save(sce, file = file.path(out_dir, "sce_RNA_iSEE.qs2"))
+qs_save(sce_atac, file = file.path(out_dir, "sce_ATAC_iSEE.qs2"))
+
+session_info()
