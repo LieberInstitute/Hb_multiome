@@ -80,6 +80,12 @@ glp_genes = c('GLP1R', 'GLP2R','ZGLP1')
 #And the GPR orphan receptors
 gpr_genes = rownames(multiome_sce)[grepl('GPR', rownames(multiome_sce)) & !grepl('GPRASP', rownames(multiome_sce)) & !grepl('GPRIN', rownames(multiome_sce))]
 
+#And the associated channels with the non-canonical inhibition of habenula neurons
+#Supposedly, high levels of SLC12A1 and SLC12A2 (Na-K-Cl cotransporters) and a lack of expression of SLC12A5 (KCC2, K and Cl pump out of cells)
+# Leads to a high level of intracellular Cl- and thus GABA-A receptor activation leads to depolarization instead of hyperpolarization
+#In combo, calcium activated chloride channels are the main driver of inactivation of habenula neurons
+#In mice, the primary CaCC is TMEM16A in the habenula, also ANO1, ANO2 is TMEM16B
+non_canon_inhib_genes = c('SLC12A1', 'SLC12A2', 'SLC12A5', 'ANO1', 'ANO2')
 
 #And add in the GABA and Glut receptors from the gene set enrichment analysis
 gaba_genes = c("ATF4", "CACNB4", "GABBR1", "GABRA1", "GABRA2", "GABRA3", "GABRA4", "GABRA5", "GABRA6", "GABRB1", "GABRB2", "GABRB3",
@@ -320,6 +326,13 @@ gaba_heatmaps = get_gene_exp_heatmap(multiome_sce, plot_assay, gaba_genes, 'GABA
 draw(gaba_heatmaps[[1]])
 draw(gaba_heatmaps[[2]])
 
+#Adjust the minimum expression filter for this one
+non_canon_inhib_heatmaps = get_gene_exp_heatmap(multiome_sce, plot_assay, non_canon_inhib_genes, 
+  'Non-canonical inhibitory genes', 
+exp_filt = 0)
+draw(non_canon_inhib_heatmaps[[1]])
+draw(non_canon_inhib_heatmaps[[2]])
+
 
 #Save plots
 
@@ -364,6 +377,9 @@ pdf(file.path(plot_path, 'GABA_genes_heatmap.pdf'), width = 8, height = 4)
 draw(gaba_heatmaps[[1]])
 dev.off()
 
+pdf(file.path(plot_path, 'non_canonical_inhibitory_genes_heatmap.pdf'), width = 8, height = 4)
+draw(non_canon_inhib_heatmaps[[1]])
+dev.off()
 
 
 #And check out expression in the UMAP too
@@ -459,3 +475,10 @@ plot_gene_on_umap(multiome_sce, "CACNA2D3")
 plot_gene_on_umap(multiome_sce, "CACNA1B")
 plot_gene_on_umap(multiome_sce, "CACNA1A")
 plot_gene_on_umap(multiome_sce, "CACNA1A")
+
+
+plot_gene_on_umap(multiome_sce, "SLC12A1")
+plot_gene_on_umap(multiome_sce, "SLC12A2")
+plot_gene_on_umap(multiome_sce, "SLC12A5")
+plot_gene_on_umap(multiome_sce, "ANO1")
+plot_gene_on_umap(multiome_sce, "ANO2")
