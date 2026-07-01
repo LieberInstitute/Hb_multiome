@@ -1,10 +1,10 @@
 **** Job starts ****
-Thu Jun 11 02:12:12 PM EDT 2026
+Wed Jul  1 10:46:26 AM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 32792018
+Job id: 33797777
 Job name: 06_trio_EDA
-Node name: compute-175
+Node name: compute-169
 Task id: 2
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -32,7 +32,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 1178.
+✔ Number of reports ready for upload: 1221.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -50,6 +50,8 @@ The following object is masked from ‘package:lubridate’:
 
     stamp
 
+null device 
+          1 
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -60,9 +62,9 @@ The following object is masked from ‘package:lubridate’:
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-06-11
- pandoc   3.8.3 @ /users/neagles/.positron-server/bin/d5f94f072b1083b8237930739cb6525c6e12e1da/quarto/bin/tools/x86_64/ (via rmarkdown)
- quarto   1.9.38 @ /users/neagles/.positron-server/bin/d5f94f072b1083b8237930739cb6525c6e12e1da/quarto/bin/quarto
+ date     2026-07-01
+ pandoc   3.8.3 @ /users/neagles/.positron-server/bin/63f0568b148d4d18b7a3194286686d6fb970bed3/quarto/bin/tools/x86_64/ (via rmarkdown)
+ quarto   1.9.38 @ /users/neagles/.positron-server/bin/63f0568b148d4d18b7a3194286686d6fb970bed3/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package          * version date (UTC) lib source
@@ -151,6 +153,7 @@ The following object is masked from ‘package:lubridate’:
  Matrix             1.7-3   2025-03-11 [3] CRAN (R 4.5.0)
  matrixStats        1.5.0   2025-01-07 [1] CRAN (R 4.5.0)
  memoise            2.0.1   2021-11-26 [1] CRAN (R 4.5.0)
+ MetBrewer          0.2.0   2022-03-21 [1] CRAN (R 4.5.0)
  mime               0.13    2025-03-17 [1] CRAN (R 4.5.0)
  miniUI             0.1.2   2025-04-17 [2] CRAN (R 4.5.0)
  nbpMatching        1.5.6   2024-09-25 [1] CRAN (R 4.5.0)
@@ -242,4 +245,4 @@ The following object is masked from ‘package:lubridate’:
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Thu Jun 11 02:12:31 PM EDT 2026
+Wed Jul  1 10:46:40 AM EDT 2026

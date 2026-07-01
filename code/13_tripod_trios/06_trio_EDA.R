@@ -169,4 +169,18 @@ plot_facet_by_celltype(
     plot_path = file.path(plot_dir, "trio_counts_by_celltype.pdf")
 )
 
+p = trio_df |>
+    filter(is_intersect, stringency_level == 1, grepl('Hb', cell_type)) |>
+    ggplot(aes(x = cell_type, fill = cell_type)) +
+        geom_bar() +
+        scale_y_continuous(labels = scales::comma) +
+        scale_fill_manual(values = my_colors_mid) +
+        labs(x = "Cell Type", y = "Significant trios") +
+        guides(fill = "none") +
+        theme_bw(base_size = 20) +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+pdf(file.path(plot_dir, "main_figure_subset.pdf"), height = 5)
+print(p)
+dev.off()
+
 session_info()
