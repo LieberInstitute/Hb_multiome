@@ -59,6 +59,7 @@ go_sets[grepl('histamine',names(go_sets))]
 
 potassium_genes = rownames(multiome_sce)[grepl('KCN', rownames(multiome_sce))]
 
+#These are particularly interesting because they determine a tonic firing pattern at rest, these are cation channels that are always open. 
 hcn_genes = rownames(multiome_sce)[grepl('HCN', rownames(multiome_sce))]
 
 sodium_genes = rownames(multiome_sce)[grepl('SCN', rownames(multiome_sce)) & !grepl('FSCN', rownames(multiome_sce)) & !grepl('OBSCN', rownames(multiome_sce))]
@@ -274,9 +275,9 @@ get_gene_exp_heatmap = function(sce, assay_type, gene_list, gene_list_name, exp_
 
 plot_assay = 'logcounts'
 expression_filter = log10(1.5)
-#hcn_heatmaps = get_gene_exp_heatmap(multiome_sce, plot_assay, hcn_genes, 'HCN genes', exp_filt = log10(2))
-#draw(hcn_heatmaps[[1]])
-#draw(hcn_heatmaps[[2]])
+hcn_heatmaps = get_gene_exp_heatmap(multiome_sce, plot_assay, hcn_genes, 'HCN genes', exp_filt = expression_filter)
+draw(hcn_heatmaps[[1]])
+draw(hcn_heatmaps[[2]])
 
 calcium_heatmaps = get_gene_exp_heatmap(multiome_sce, plot_assay, calcium_genes, 'Calcium genes', exp_filt = expression_filter)
 draw(calcium_heatmaps[[1]])
@@ -335,6 +336,10 @@ draw(non_canon_inhib_heatmaps[[2]])
 
 
 #Save plots
+
+pdf(file.path(plot_path, 'HCN_genes_heatmap.pdf'), width = 8, height = 4)
+draw(hcn_heatmaps[[1]])
+dev.off()
 
 pdf(file.path(plot_path, 'calcium_genes_heatmap.pdf'), width = 8, height = 4)
 draw(calcium_heatmaps[[1]])
@@ -476,9 +481,23 @@ plot_gene_on_umap(multiome_sce, "CACNA1B")
 plot_gene_on_umap(multiome_sce, "CACNA1A")
 plot_gene_on_umap(multiome_sce, "CACNA1A")
 
-
+#Non-canonical inhibitory associated genes
 plot_gene_on_umap(multiome_sce, "SLC12A1")
 plot_gene_on_umap(multiome_sce, "SLC12A2")
 plot_gene_on_umap(multiome_sce, "SLC12A5")
 plot_gene_on_umap(multiome_sce, "ANO1")
 plot_gene_on_umap(multiome_sce, "ANO2")
+
+#Some mouse evidence that PVALB+ GABA+ neurons are the locally projecting inhibitory neurons in the lateral habenula
+plot_gene_on_umap(multiome_sce, "PVALB")
+plot_gene_on_umap(multiome_sce, "SLC32A1")
+plot_gene_on_umap(multiome_sce, "SST")
+
+plot_gene_on_umap(multiome_sce, "HCN1")
+plot_gene_on_umap(multiome_sce, "HCN2")
+plot_gene_on_umap(multiome_sce, "HCN3")
+
+
+#Is it worth doing a quick comparison of expression patterns of these particular genes between human and mouse habenula neurons?
+
+
