@@ -55,6 +55,13 @@ this_peak = trio_df$peak[1]
 this_TF = trio_df$TF[1]
 this_cell_type = trio_df$cell_type[1]
 
+message(
+    sprintf(
+        "Plotting trio %s; %s; %s for cell type %s",
+        this_gene, this_peak, this_TF, this_cell_type
+    )
+)
+
 ################################################################################
 #   Import Seurat object and attach links for the relevant cell type
 ################################################################################
@@ -140,6 +147,8 @@ input_objs = qs_read(sprintf(preprocessed_path, this_cell_type))
 motif_tf_map = input_objs$tripod_seur$motifxTF
 stopifnot(this_TF %in% motif_tf_map[, 'TF'])
 this_motif = motif_tf_map[motif_tf_map[, 'TF'] == this_TF, 'motif']
+
+message(sprintf("Motif for TF %s is %s", this_TF, this_motif))
 
 motif_present = input_objs$tripod_seur$peakxmotif[, this_motif, drop = TRUE]
 motif_peaks = names(motif_present)[motif_present]
