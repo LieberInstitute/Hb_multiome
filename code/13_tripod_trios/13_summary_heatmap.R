@@ -301,8 +301,22 @@ make_cor_heatmap <- function(trio_sub, row_idx, filename) {
     source_ct_sub <- trio_sub$cell_type
     ct_sub_order  <- cell_type_order[cell_type_order %in% unique(source_ct_sub)]
 
-    # Top 20 TFs and color palette computed from this specific subset
-    top20_tfs <- trio_sub |> count(TF, sort = TRUE) |> slice_head(n = 20) |> pull(TF)
+    # Top 20 TFs and color palette computed from this specific subset. This sort
+    # of bizarre logic prioritizes TFs that appear in many trios, but also
+    # encourages (but doesn't guarantee) having at least one trio for each cell
+    # type
+    top20_tfs <- trio_sub |>
+        group_by(TF) |>
+        mutate(n = n()) |>
+        ungroup() |>
+        arrange(desc(n)) |>
+        group_by(cell_type) |>
+        mutate(row_num = row_number()) |>
+        ungroup() |>
+        arrange(row_num, cell_type) |>
+        distinct(TF) |>
+        slice_head(n = 20) |>
+        pull(TF)
     tf_colors  <- c(setNames(palette_20, top20_tfs), "Other" = "gray80")
 
     # Row ordering: group by source CT, cluster within each group on all 3 features
