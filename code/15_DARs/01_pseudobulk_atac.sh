@@ -4,8 +4,9 @@
 #SBATCH --job-name=01_pseudobulk_atac
 #SBATCH -c 1
 #SBATCH -t 1-00:00:00
-#SBATCH -o ../../processed-data/15_DARs/logs/01_pseudobulk_atac.txt
-#SBATCH -e ../../processed-data/15_DARs/logs/01_pseudobulk_atac.txt
+#SBATCH -o ../../processed-data/15_DARs/logs/01_pseudobulk_atac_%a.txt
+#SBATCH -e ../../processed-data/15_DARs/logs/01_pseudobulk_atac_%a.txt
+#SBATCH --array=1-3%3
 
 set -e
 
