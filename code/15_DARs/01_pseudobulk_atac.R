@@ -44,14 +44,22 @@ seur@meta.data$fine_class = seur$mid_cluster
 #   Helper to make the DAR array job work cleanly. Note slurmjobs::job_loop()
 #   doesn't support loops where different elements have different lengths in
 #   the other variable (number of cell types depends on resolution)
-rbind(
-        tibble(resolution = "broad", cell_type = unique(seur$broad_class)),
-        tibble(resolution = "mid", cell_type = unique(seur$mid_class)),
-        tibble(resolution = "fine", cell_type = unique(seur$fine_class))
-    ) |>
-    arrange(resolution, cell_type) |>
-    mutate(task_id = row_number()) |>
-    write_csv(task_map_out_path)
+if (resolution == 'fine') {
+    rbind(
+            tibble(resolution = "broad", cell_type = unique(seur$broad_class)),
+            tibble(resolution = "mid", cell_type = unique(seur$mid_class)),
+            tibble(resolution = "fine", cell_type = unique(seur$fine_class))
+        ) |>
+        arrange(resolution, cell_type) |>
+        #   Since we're using the same underlying data across resolutions,
+        #   there's no need to run the identical non-neuronal cell types 3
+        #   times. We'll just do it for fine
+        filter(
+            str_detect(cell_type, 'Hb|^Neuron|Thal') | (resolution == 'fine')
+        ) |>
+        mutate(task_id = row_number()) |>
+        write_csv(task_map_out_path)
+}
 
 #   Pseudobulk and rebuild
 atac_mat = AggregateExpression(

@@ -1,10 +1,10 @@
 **** Job starts ****
-Wed Jul  1 01:56:05 PM EDT 2026
+Wed Jul  1 03:15:51 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 33799984
+Job id: 33801559
 Job name: 01_pseudobulk_atac
-Node name: compute-178
+Node name: compute-169
 Task id: 3
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -285,4 +285,4 @@ See help("Deprecated")
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Jul  1 01:57:31 PM EDT 2026
+Wed Jul  1 03:16:59 PM EDT 2026
