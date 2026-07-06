@@ -1,12 +1,13 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=10G
+#SBATCH --mem=8G
 #SBATCH --job-name=02_calculate_DARs
 #SBATCH -c 1
-#SBATCH -t 1-00:00:00
-#SBATCH -o ../../processed-data/15_DARs/logs/02_calculate_DARs.txt
-#SBATCH -e ../../processed-data/15_DARs/logs/02_calculate_DARs.txt
-#SBATCH --mail-type=ALL
+#SBATCH -t 10-00:00:00
+#SBATCH -o ../../processed-data/15_DARs/logs/02_calculate_DARs_%a.txt
+#SBATCH -e ../../processed-data/15_DARs/logs/02_calculate_DARs_%a.txt
+#SBATCH --array=8-10%3
+#SBATCH --exclude=compute-094
 
 set -e
 
