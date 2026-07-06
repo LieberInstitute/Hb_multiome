@@ -16,6 +16,7 @@ colors_path = here(
 )
 p_adj_cutoff = 0.05
 log_fc_cutoff = log2(1.5)
+max_dars = 1000
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
@@ -32,19 +33,26 @@ cell_type_colors[['Neuron']] = '#532222'
 #   Functions
 ################################################################################
 
-my_barplot = function(dar_df, cell_types, resolution) {
+my_barplot = function(dar_df, cell_types, resolution, lab_title) {
     p = dar_df |>
         group_by(cell_type) |>
-        summarise(num_DARs = n()) |>
+        summarise(num_DARs = n(), .groups = 'drop') |>
+        right_join(
+            tibble(cell_type = cell_types),
+            by = 'cell_type'
+        ) |>
+        mutate(num_DARs = replace_na(num_DARs, 0)) |>
+        mutate(cell_type = factor(cell_type, levels = cell_types)) |>
         ggplot(aes(x = cell_type, y = num_DARs, fill = cell_type)) +
             geom_bar(stat = 'identity') +
             scale_fill_manual(values = cell_type_colors[cell_types]) +
+            scale_y_log10() +
             theme_bw() +
             theme(
                 axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
             ) +
             guides(fill = 'none') +
-            labs(x = "Cell type", y = "Number of DARs")
+            labs(x = "Cell type", y = "Number of DARs (log10)", title = lab_title)
     
     return(p)
 }
@@ -57,7 +65,9 @@ plot_and_process = function(dar_df, task_map_df, this_resolution) {
     this_dar_df = dar_df |>
         filter(resolution == this_resolution)
 
-    p_before = my_barplot(this_dar_df, these_cell_types, this_resolution)
+    p_before = my_barplot(
+        this_dar_df, these_cell_types, this_resolution, lab_title = "Before"
+    )
 
     this_dar_df = this_dar_df |>
         filter(avg_log2FC > log_fc_cutoff) |>
@@ -65,16 +75,22 @@ plot_and_process = function(dar_df, task_map_df, this_resolution) {
         filter(n() == 1) |>
         ungroup()
 
-    p_after = my_barplot(this_dar_df, these_cell_types, this_resolution)
+    p_after = my_barplot(
+        this_dar_df, these_cell_types, this_resolution, lab_title = "After"
+    )
     
     pdf(file.path(plot_dir, sprintf("DAR_barplot_%s.pdf", this_resolution)))
     print(plot_grid(p_before, p_after, ncol = 1))
     dev.off()
 
-    write_csv(
-        this_dar_df,
-        file.path(out_dir, sprintf("DARs_%s.csv.gz", this_resolution))
-    )
+    this_dar_df |>
+        group_by(cell_type) |>
+        arrange(desc(avg_log2FC)) |>
+        slice_head(n = max_dars) |>
+        ungroup() |>
+        write_csv(
+            file.path(out_dir, sprintf("DARs_%s.csv.gz", this_resolution))
+        )
 }
 
 ################################################################################
