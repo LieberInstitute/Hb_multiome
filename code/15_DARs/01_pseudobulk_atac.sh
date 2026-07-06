@@ -7,6 +7,7 @@
 #SBATCH -o ../../processed-data/15_DARs/logs/01_pseudobulk_atac_%a.txt
 #SBATCH -e ../../processed-data/15_DARs/logs/01_pseudobulk_atac_%a.txt
 #SBATCH --array=1-3%3
+#SBATCH --exclude=compute-094
 
 set -e
 

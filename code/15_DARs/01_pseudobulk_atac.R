@@ -31,15 +31,17 @@ seur = qs_read(seur_in_path)
 #   is required; assigning like 'seur$' causes unexpected NAs and in some cases,
 #   failure to even assign values
 seur@meta.data$broad_class = ifelse(
-    grepl('^[ML]Hb|Thal', seur$mid_cluster), 'Neuron', seur$mid_cluster
+    grepl('[ML]Hb|Thal', seur$refined_mid_cluster),
+    'Neuron',
+    seur$refined_mid_cluster
 )
 seur@meta.data$mid_class = case_when(
-    grepl('^MHb', seur$mid_cluster) ~ 'MHb',
-    grepl('^LHb', seur$mid_cluster) ~ 'LHb',
-    grepl('Thal', seur$mid_cluster) ~ 'Thalamus',
-    TRUE ~ seur$mid_cluster
+    grepl('^MHb', seur$refined_mid_cluster) ~ 'MHb',
+    grepl('LHb', seur$refined_mid_cluster) ~ 'LHb',
+    grepl('Thal', seur$refined_mid_cluster) ~ 'Thalamus',
+    TRUE ~ seur$refined_mid_cluster
 )
-seur@meta.data$fine_class = seur$mid_cluster
+seur@meta.data$fine_class = seur$refined_mid_cluster
 
 #   Helper to make the DAR array job work cleanly. Note slurmjobs::job_loop()
 #   doesn't support loops where different elements have different lengths in
