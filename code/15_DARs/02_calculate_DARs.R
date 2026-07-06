@@ -36,6 +36,12 @@ dir.create(dirname(out_path), showWarnings = FALSE)
 
 seur_pb = qs_read(seur_path)
 
+#   Fix cell types
+seur_pb@meta.data$orig.ident = str_replace_all(
+    seur_pb@meta.data$orig.ident, "-", "_"
+)
+Idents(seur_pb) = seur_pb$orig.ident
+
 #   Using Cynthia's 1-vs-all approach with logistic regression on raw counts,
 #   and conservative initial filtering of results
 temp = FindMarkers(
