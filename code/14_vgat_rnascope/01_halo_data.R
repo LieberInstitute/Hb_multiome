@@ -107,7 +107,7 @@ for(i in 1:length(csv_files)){
 
   p2 = ggplot(current_data, aes(x = x_centroid, y = y_centroid, color = pou4f1_pos)) +
     geom_point(size = 0.5, alpha = 0.6) +
-    scale_color_manual(values = c("FALSE" = "grey80", "TRUE" = "#a80fe9"),
+    scale_color_manual(values = c("FALSE" = "#e0dede", "TRUE" = "#a80fe9"),
                       labels = c("Non-POU4F1", "POU4F1 (copies >= 10)")) +
     annotate("rect",
             xmin = hb_x_range[1], xmax = hb_x_range[2],
@@ -216,11 +216,11 @@ for(i in 1:length(csv_files)){
   print(p4)
 
 
-  ggsave(plot = p1, path = plot_path, filename = sprintf("%s_combined_annotation.pdf", sample_name), 
-  width = 8, height = 8, device = 'pdf')
+  ggsave(plot = p1, path = plot_path, filename = sprintf("%s_combined_annotation.png", sample_name), 
+  width = 8, height = 8, device = 'png')
 
-  ggsave(plot = p2, path = plot_path, filename = sprintf("%s_habenula_box.pdf", sample_name), 
-  width = 8, height = 8, device = 'pdf')
+  ggsave(plot = p2, path = plot_path, filename = sprintf("%s_habenula_box.png", sample_name), 
+  width = 8, height = 8, device = 'png')
 
   ggsave(plot = p3, path = plot_path, filename = sprintf("%s_moving_window_averages.pdf", sample_name), 
   width = 6, height = 4, device = 'pdf')
