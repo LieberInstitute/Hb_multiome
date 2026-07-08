@@ -24,8 +24,10 @@ seur_path = here(
 plot_path = here(
     "plots", "13_tripod_trios", "04_coverage_plot", "coverage_plot.pdf"
 )
-cell_type1 = "MHb.2"
-cell_type2 = "LHb.2.7"
+this_gene = 'VSTM5'
+this_peak = 'chr11-94220620-94221806'
+this_TF = 'ZNF384'
+this_cell_type = 'LHb.2.7'
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
@@ -34,30 +36,17 @@ fallback_config(info = FALSE)
 dir.create(dirname(plot_path), showWarnings = FALSE, recursive = TRUE)
 
 ################################################################################
-#   Import and filter trios, overlapping significant level 1 and 2 
+#   Import level-1 trios in the select cell type
 ################################################################################
 
-trio_df = read_parquet_duckdb(trio_path, prudence = "stingy") |>
-    filter(is_intersect, stringency_level == 1, cell_type == cell_type1) |>
-    collect()
-
 link_gr = read_parquet_duckdb(trio_path, prudence = "stingy") |>
-    filter(stringency_level == 1, cell_type == cell_type1) |>
+    filter(stringency_level == 1, cell_type == this_cell_type) |>
     collect() |>
     dplyr::rename(score = coef, pvalue = adj) |>
     separate(peak, into = c("seqnames", "start", "end"), sep = "-", convert = TRUE) |>
     mutate(width = end - start, strand = "*") |>
     select(seqnames, start, end, width, strand, score, gene, pvalue) |>
     makeGRangesFromDataFrame(keep.extra.columns = TRUE)
-
-# this_gene = trio_df$gene[1]
-# this_peak = trio_df$peak[1]
-# this_TF = trio_df$TF[1]
-# this_cell_type = trio_df$cell_type[1]
-this_gene = 'UGT8'
-this_peak = 'chr4-114658193-114658527'
-this_TF = 'ZNF136'
-this_cell_type = 'Oligo'
 
 message(
     sprintf(
@@ -71,23 +60,16 @@ message(
 ################################################################################
 
 seur = qs_read(seur_path)
-# Idents(seur) = case_when(
-#     seur@meta.data$refined_mid_cluster == cell_type1 ~ cell_type1,
-#     grepl('Hb', seur@meta.data$refined_mid_cluster) ~ 'Other habenula',
-#     grepl('Thal', seur@meta.data$refined_mid_cluster) ~ 'Thalamus',
-#     TRUE ~ 'Glia'
-# )
 Idents(seur) = case_when(
     seur@meta.data$refined_mid_cluster == this_cell_type ~ this_cell_type,
-    grepl('Hb', seur@meta.data$refined_mid_cluster) ~ 'Habenula',
+    grepl('Hb', seur@meta.data$refined_mid_cluster) ~ 'Other Habenula',
     grepl('Thal', seur@meta.data$refined_mid_cluster) ~ 'Thalamus',
-    TRUE ~ 'Other Glia'
+    TRUE ~ 'Glia'
 )
 
 #   Really just checks we're importing the right data, as this certainly
 #   should be true
-stopifnot(all(trio_df$peak %in% rownames(seur[['ATAC']])))
-stopifnot(all(trio_df$gene %in% rownames(seur[['RNA']])))
+stopifnot(all(link_gr$gene %in% rownames(seur[['RNA']])))
 
 #   Import links for the cell type of interest
 Links(seur[['ATAC']]) = link_gr
@@ -204,12 +186,12 @@ arc_df = tibble(
 )
 
 link_track_aligned = ggplot(arc_df, aes(x = x, y = y)) +
-  geom_path(
-    linewidth = 1, color = "steelblue",
-    arrow = arrow(length = unit(0.15, "cm"), type = "closed")
-  ) +
-  coord_cartesian(xlim = xlim, ylim = c(0, 1), clip = "off") +
-  theme_void()
+    geom_path(
+        linewidth = 1, color = "steelblue",
+        arrow = arrow(length = unit(0.15, "cm"), type = "closed")
+    ) +
+    coord_cartesian(xlim = xlim, ylim = c(0, 1), clip = "off") +
+    theme_void()
 
 # Signac's CombineTracks internally places the expression violin to the right
 # of the coverage tracks with widths = c(10, length(features)). Since our
