@@ -4,9 +4,8 @@
 #SBATCH --job-name=01_halo_data
 #SBATCH -c 6
 #SBATCH -t 3-00:00:00
-#SBATCH -o ../../processed-data/14_vgat_rnascope/01_halo_data/logs/01_halo_data_%a.txt
-#SBATCH -e ../../processed-data/14_vgat_rnascope/01_halo_data/logs/01_halo_data_%a.txt
-#SBATCH --array=1-5%5
+#SBATCH -o ../../processed-data/14_vgat_rnascope/01_halo_data/logs/01_halo_data.txt
+#SBATCH -e ../../processed-data/14_vgat_rnascope/01_halo_data/logs/01_halo_data.txt
 
 set -e
 
@@ -18,7 +17,6 @@ echo "User: ${USER}"
 echo "Job id: ${SLURM_JOB_ID}"
 echo "Job name: ${SLURM_JOB_NAME}"
 echo "Node name: ${HOSTNAME}"
-echo "Task id: ${SLURM_ARRAY_TASK_ID}"
 
 ## Load the R module
 module load conda_R/4.5
