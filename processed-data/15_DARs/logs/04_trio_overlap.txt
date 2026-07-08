@@ -1,10 +1,10 @@
 **** Job starts ****
-Wed Jul  8 01:37:11 PM EDT 2026
+Wed Jul  8 03:44:54 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 33980432
+Job id: 33984370
 Job name: 04_trio_overlap
-Node name: compute-176
+Node name: compute-177
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -32,20 +32,12 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 1229.
+✔ Number of reports ready for upload: 1232.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
 ✔ Overwriting dplyr methods with duckplyr methods.
 ℹ Turn off with `duckplyr::methods_restore()`.
-Intersection trios with DA peak:
-# A tibble: 4 × 8
-  peak                  gene  TF    cell_type  coef     adj dar_p_adj dar_log_fc
-  <chr>                 <chr> <chr> <chr>     <dbl>   <dbl>     <dbl>      <dbl>
-1 chr9-114504302-11450… AKNA  ZNF5… Excit.Th… 0.632 4.59e-2  0.0285         1.51
-2 chr9-114504302-11450… WHRN  GLIS1 Excit.Th… 0.621 2.47e-2  0.0285         1.51
-3 chr9-114504302-11450… WHRN  ZNF5… Excit.Th… 0.816 4.89e-4  0.0285         1.51
-4 chr4-114658193-11465… UGT8  ZNF1… Oligo     0.853 0        0.000574       1.72
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -105,7 +97,6 @@ Intersection trios with DA peak:
  tidyverse    * 2.0.0   2023-02-22 [2] CRAN (R 4.5.0)
  timechange     0.3.0   2024-01-18 [2] CRAN (R 4.5.0)
  tzdb           0.5.0   2025-03-15 [2] CRAN (R 4.5.0)
- utf8           1.2.6   2025-06-08 [1] CRAN (R 4.5.0)
  vctrs          0.6.5   2023-12-01 [1] CRAN (R 4.5.0)
  vroom          1.6.5   2023-12-05 [2] CRAN (R 4.5.0)
  withr          3.0.2   2024-10-28 [1] CRAN (R 4.5.0)
@@ -117,4 +108,4 @@ Intersection trios with DA peak:
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Jul  8 01:38:18 PM EDT 2026
+Wed Jul  8 03:45:14 PM EDT 2026

@@ -1,0 +1,2 @@
+peak,gene,TF,trio_cell_type,dar_cell_type,trio_coef,trio_p_adj,dar_p_adj,dar_log_fc
+chr11-94220620-94221806,VSTM5,ZNF384,LHb.2.7,LHb,0.8163054695562436,0.04500136502740637,0.04746050073494859,3.271391910305142
