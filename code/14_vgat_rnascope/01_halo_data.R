@@ -3,6 +3,7 @@
 
 library(ggplot2)
 library(here)
+library(dplyr)
 
 
 plot_path = here('plots','14_vgat_rnascope', '01_halo_data')
@@ -17,8 +18,9 @@ all_files = list.files(halo_path)
 csv_files = all_files[grepl('.csv',all_files)]
 
 
-# Loop through all samples, collecting threshold sweep data
+# Loop through all samples, collecting data for summary plots
 threshold_list <- list()
+proportion_list <- list()
 
 for (sample_id in seq_along(csv_files)) {
 
@@ -31,9 +33,9 @@ for (sample_id in seq_along(csv_files)) {
   current_data[, y_centroid := (YMin + YMax) / 2]
 
 
-  # Classify habenula (POU4F1 >= 10) and VGAT+ (SLC32A1 >= 1)
-  current_data[, pou4f1_pos := `POU4F1_690 (Opal 690) Copies` >= 10]
-  current_data[, vgat_pos := `SLC32A1_570 (Opal 570) Copies` >= 1]
+  # Classify habenula (POU4F1 >= 5) and VGAT+ (SLC32A1 >= 5)
+  current_data[, pou4f1_pos := `POU4F1_690 (Opal 690) Copies` >= 5]
+  current_data[, vgat_pos := `SLC32A1_570 (Opal 570) Copies` >= 5]
 
   # Combined annotation
   current_data[, annotation := factor(
@@ -105,10 +107,9 @@ for (sample_id in seq_along(csv_files)) {
   first_window_ymin <- window_starts[1]
   first_window_ymax <- window_starts[1] + window_height
 
-  p2 = ggplot(current_data, aes(x = x_centroid, y = y_centroid, color = pou4f1_pos)) +
+  p2 = ggplot(current_data, aes(x = x_centroid, y = y_centroid, color = annotation)) +
     geom_point(size = 0.5, alpha = 0.6) +
-    scale_color_manual(values = c("FALSE" = "#e0dede", "TRUE" = "#a80fe9"),
-                      labels = c("Non-POU4F1", "POU4F1 (copies >= 10)")) +
+    scale_color_manual(values = annotation_colors) +
     annotate("rect",
             xmin = hb_x_range[1], xmax = hb_x_range[2],
             ymin = hb_y_range[1], ymax = hb_y_range[2],
@@ -125,6 +126,7 @@ for (sample_id in seq_along(csv_files)) {
     scale_y_reverse() +
     labs(title = paste0("Habenula bounding box (5%-95% quantiles) - ", sample_name),
         x = "X position", y = "Y position", color = NULL) +
+    guides(color = guide_legend(override.aes = list(size = 4, alpha = 1))) +
     theme_minimal() +
     theme(
       aspect.ratio = 1,
@@ -249,8 +251,9 @@ for (sample_id in seq_along(csv_files)) {
   ggsave(plot = p5, path = plot_path, filename = sprintf("%s_vgat_threshold_sweep.pdf", sample_name), 
   width = 6, height = 4, device = 'pdf')
 
-  # Collect threshold data for summary plot
+  # Collect threshold data for summary plots
   threshold_list[[sample_id]] <- threshold_results
+  proportion_list[[sample_id]] <- count_long[, sample := sample_name]
 }
 
 
@@ -271,3 +274,22 @@ print(p6)
 
 ggsave(plot = p6, path = plot_path, filename = "all_donors_vgat_threshold_sweep.pdf",
 width = 7, height = 5, device = 'pdf')
+
+
+# Summary boxplot: proportion of VGAT+ and POU4F1+ objects by region across donors
+all_proportions <- data.table::rbindlist(proportion_list)
+
+p7 = ggplot(all_proportions |> filter(category == 'VGAT+'), aes(x = category, y = proportion, fill = region)) +
+  geom_boxplot() +
+  geom_point(aes(group = region), position = position_dodge(width = 0.75), size = 2, alpha = 0.7) +
+  scale_fill_manual(values = c("Inside Hb" = "#D73027", "Outside Hb" = "grey70")) +
+  labs(title = "Proportion of VGAT+ cells by region - All donors",
+       x = NULL, y = "Proportion of cells", fill = NULL) +
+  theme_minimal() +
+  theme(legend.text = element_text(size = 12),
+        legend.key.size = unit(0.8, "cm"))
+
+print(p7)
+
+ggsave(plot = p7, path = plot_path, filename = "all_donors_proportion_by_region_boxplot.pdf",
+width = 6, height = 5, device = 'pdf')
