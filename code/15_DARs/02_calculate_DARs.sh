@@ -6,7 +6,7 @@
 #SBATCH -t 10-00:00:00
 #SBATCH -o ../../processed-data/15_DARs/logs/02_calculate_DARs_%a.txt
 #SBATCH -e ../../processed-data/15_DARs/logs/02_calculate_DARs_%a.txt
-#SBATCH --array=1-20%20
+#SBATCH --array=21
 #SBATCH --exclude=compute-094
 
 set -e
