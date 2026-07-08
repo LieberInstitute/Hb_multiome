@@ -50,10 +50,14 @@ link_gr = read_parquet_duckdb(trio_path, prudence = "stingy") |>
     select(seqnames, start, end, width, strand, score, gene, pvalue) |>
     makeGRangesFromDataFrame(keep.extra.columns = TRUE)
 
-this_gene = trio_df$gene[1]
-this_peak = trio_df$peak[1]
-this_TF = trio_df$TF[1]
-this_cell_type = trio_df$cell_type[1]
+# this_gene = trio_df$gene[1]
+# this_peak = trio_df$peak[1]
+# this_TF = trio_df$TF[1]
+# this_cell_type = trio_df$cell_type[1]
+this_gene = 'UGT8'
+this_peak = 'chr4-114658193-114658527'
+this_TF = 'ZNF136'
+this_cell_type = 'Oligo'
 
 message(
     sprintf(
@@ -67,11 +71,17 @@ message(
 ################################################################################
 
 seur = qs_read(seur_path)
+# Idents(seur) = case_when(
+#     seur@meta.data$refined_mid_cluster == cell_type1 ~ cell_type1,
+#     grepl('Hb', seur@meta.data$refined_mid_cluster) ~ 'Other habenula',
+#     grepl('Thal', seur@meta.data$refined_mid_cluster) ~ 'Thalamus',
+#     TRUE ~ 'Glia'
+# )
 Idents(seur) = case_when(
-    seur@meta.data$refined_mid_cluster == cell_type1 ~ cell_type1,
-    grepl('Hb', seur@meta.data$refined_mid_cluster) ~ 'Other habenula',
+    seur@meta.data$refined_mid_cluster == this_cell_type ~ this_cell_type,
+    grepl('Hb', seur@meta.data$refined_mid_cluster) ~ 'Habenula',
     grepl('Thal', seur@meta.data$refined_mid_cluster) ~ 'Thalamus',
-    TRUE ~ 'Glia'
+    TRUE ~ 'Other Glia'
 )
 
 #   Really just checks we're importing the right data, as this certainly
