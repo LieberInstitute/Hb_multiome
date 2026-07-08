@@ -52,7 +52,7 @@ my_barplot = function(dar_df, cell_types, resolution, lab_title) {
                 axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
             ) +
             guides(fill = 'none') +
-            labs(x = "Cell type", y = "Number of DARs (log10)", title = lab_title)
+            labs(x = "Cell type", y = "Number of DARs", title = lab_title)
     
     return(p)
 }
@@ -118,13 +118,13 @@ dar_df = bind_rows(dar_df_list) |>
 dar_df_list = list()
 
 dar_df_list[['broad']] = dar_df |>
-    filter(!str_detect(cell_type, '^[ML]Hb|Thal')) |>
+    filter(!str_detect(cell_type, '[ML]Hb|Thal')) |>
     mutate(resolution = 'broad')
 
 dar_df_list[['mid']] = dar_df |>
     filter(
         (resolution == 'mid') |
-        ((resolution == 'fine') & !str_detect(cell_type, '^[ML]Hb|Thal'))
+        ((resolution == 'fine') & !str_detect(cell_type, '[ML]Hb|Thal'))
     ) |>
     mutate(resolution = 'mid')
 
@@ -138,13 +138,13 @@ task_map = read_csv(task_map_path, show_col_types = FALSE)
 task_map_df_list = list()
 
 task_map_df_list[['broad']] = task_map |>
-    filter(!str_detect(cell_type, '^[ML]Hb|Thal')) |>
+    filter(!str_detect(cell_type, '[ML]Hb|Thal')) |>
     mutate(resolution = 'broad')
 
 task_map_df_list[['mid']] = task_map |>
     filter(
         (resolution == 'mid') |
-        ((resolution == 'fine') & !str_detect(cell_type, '^[ML]Hb|Thal'))
+        ((resolution == 'fine') & !str_detect(cell_type, '[ML]Hb|Thal'))
     ) |>
     mutate(resolution = 'mid')
 
