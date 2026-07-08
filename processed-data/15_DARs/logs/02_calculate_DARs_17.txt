@@ -1,10 +1,10 @@
 **** Job starts ****
-Wed Jul  1 11:55:43 PM EDT 2026
+Mon Jul  6 05:07:09 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 33808147
+Job id: 33931963
 Job name: 02_calculate_DARs
-Node name: compute-168
+Node name: compute-099
 Task id: 17
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -127,7 +127,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 1223.
+✔ Number of reports ready for upload: 1225.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -144,7 +144,7 @@ There were 50 or more warnings (use warnings() to see the first 50)
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-07-02
+ date     2026-07-07
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.9.38 @ /users/neagles/.positron-server/bin/63f0568b148d4d18b7a3194286686d6fb970bed3/quarto/bin/quarto
 
@@ -297,4 +297,4 @@ There were 50 or more warnings (use warnings() to see the first 50)
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Thu Jul  2 08:07:33 AM EDT 2026
+Tue Jul  7 03:11:46 PM EDT 2026
