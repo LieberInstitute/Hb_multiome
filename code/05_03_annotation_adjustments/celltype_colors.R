@@ -34,16 +34,30 @@ my_colors_mid = c(
   Excit.Thal = "#2e6296",
   Inhib.Thal = "#8DADCA",
   LHb.4 = "#082844",
-  Inhib_LHb_4.1 = "#9c66c0",
-  Inhib_LHb_4.2 = "#5e0c56",
+  LHb_C = "#082844",
+
+  GABA_LHb_C.1 = "#9c66c0",
+  GABA_LHb_C.2 = "#5e0c56",
   LHb.1.3 = "#527BAA",
   LHb.1 = "#0C383E",
+
   LHb.2.7 = "#ee9630",
+  LHb_A = "#ee9630",
+
   LHb.1.3.4 = "#306171",
+  LHb_B = "#306171",
+
   MHb.1 = "#5e0c01",
+  MHb_A = "#5e0c01",
+
   MHb.1.2 = "#f67104",
+  MHb_C = "#f67104",
+
   MHb.2 = "#943f02",
-  MHb.3 = "#f4d5ab"
+  MHb_B = "#943f02",
+  
+  MHb.3 = "#f4d5ab", 
+  MHb_D = "#f4d5ab"
 ) 
 
 my_colors_class <- c(
