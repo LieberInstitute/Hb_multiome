@@ -94,14 +94,20 @@ celltype_order = c('MHb.1','MHb.1.2','MHb.2', 'MHb.3',
 'Inhib.Thal','Excit.Thal',
 'Ependymal','Astrocyte','Microglia','Endo','Oligo','OPC')
 
+cons_celltype_order = c('MHb_A','MHb_C','MHb_B', 'MHb_D',
+'LHb_A','LHb_B','LHb_C', 'GABA_LHb_C.1', 'GABA_LHb_C.2', 
+'Inhib.Thal','Excit.Thal',
+'Ependymal','Astrocyte','Microglia','Endo','Oligo','OPC')
+
 multiome_sce$mid_cluster_adj <- factor(multiome_sce$mid_cluster_adj, levels = celltype_order)
+multiome_sce$refined_mid_cluster <- factor(multiome_sce$refined_mid_cluster, levels = cons_celltype_order)
 
 plt1 <- plotReducedDim(multiome_sce, 
                 dimred = "wnn.umap",
                 colour_by = "mid_cluster_adj", 
               point_size = .5) +
   scale_color_manual(values = my_colors_mid) +
-  guides(colour = guide_legend(override.aes = list(size = 3), reverse = TRUE)) +
+  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1), reverse = TRUE)) +
   labs(
     title = "WNN (RNA+ATAC) UMAP",
     x = "UMAP 1",
@@ -123,7 +129,7 @@ plt2 <- plotReducedDim(multiome_sce,
                 colour_by = "mid_cluster_adj", 
               point_size = .5) +
   scale_color_manual(values = my_colors_mid) +
-  guides(colour = guide_legend(override.aes = list(size = 3), reverse = TRUE)) +
+  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1), reverse = TRUE)) +
   labs(
     title = "RNA UMAP",
     x = "UMAP 1",
@@ -145,7 +151,7 @@ plt3 <- plotReducedDim(multiome_sce,
                 colour_by = "mid_cluster_adj", 
               point_size = .5) +
   scale_color_manual(values = my_colors_mid) +
-  guides(colour = guide_legend(override.aes = list(size = 3), reverse = TRUE)) +
+  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1), reverse = TRUE)) +
   labs(
     title = "ATAC UMAP",
     x = "UMAP 1",
@@ -169,7 +175,7 @@ plt4 <- plotReducedDim(multiome_sce,
                 colour_by = "refined_mid_cluster", 
               point_size = .5) +
   scale_color_manual(values = my_colors_mid) +
-  guides(colour = guide_legend(override.aes = list(size = 3), reverse = TRUE)) +
+  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1), reverse = TRUE)) +
   labs(
     title = "RNA UMAP",
     x = "UMAP 1",
@@ -184,25 +190,25 @@ plt4 <- plotReducedDim(multiome_sce,
     axis.text.y = element_text(size = 10)
   )
 # Build centroid table for labels
-emb <- as.data.frame(reducedDim(multiome_sce, "umap.integrated"))
-colnames(emb)[1:2] <- c("UMAP1", "UMAP2")
-emb$cluster <- multiome_sce$refined_mid_cluster
+# emb <- as.data.frame(reducedDim(multiome_sce, "umap.integrated"))
+# colnames(emb)[1:2] <- c("UMAP1", "UMAP2")
+# emb$cluster <- multiome_sce$refined_mid_cluster
 
-centers <- emb |>
-  summarize(
-    UMAP1 = median(UMAP1),
-    UMAP2 = median(UMAP2),
-    .by = cluster
-  )
+# centers <- emb |>
+#   summarize(
+#     UMAP1 = median(UMAP1),
+#     UMAP2 = median(UMAP2),
+#     .by = cluster
+#   )
 
-# Add labels
-plt4 = plt4 +
-  ggrepel::geom_text_repel(
-    data = centers,
-    aes(x = UMAP1, y = UMAP2, label = cluster),
-    inherit.aes = FALSE,
-    size = 3
-  )
+# # Add labels
+# plt4 = plt4 +
+#   ggrepel::geom_text_repel(
+#     data = centers,
+#     aes(x = UMAP1, y = UMAP2, label = cluster),
+#     inherit.aes = FALSE,
+#     size = 3
+#   )
 
 
 plt4
