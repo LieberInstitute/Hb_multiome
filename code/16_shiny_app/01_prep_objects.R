@@ -5,22 +5,29 @@ library(qs2)
 library(here)
 library(sessioninfo)
 library(Matrix)
+library(duckplyr)
 
 cell_types = c(
     "Astrocyte", "Ependymal", "Excit.Thal", "Inhib_LHb_4.1",
     "Inhib_LHb_4.2", "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1",
     "MHb.1.2", "MHb.2", "Microglia", "Oligo", "OPC"
 )
+dar_path = here("processed-data", "15_DARs", "03_gather", "DARs_fine.csv.gz")
+trio_path = here(
+    "processed-data", "13_tripod_trios", "09_gather_trios",
+    "filtered_trios_fine.parquet"
+)
 in_paths = here(
     "processed-data", "13_tripod_trios", "02_tripod_preprocess",
     sprintf("preprocessed_objects_%s.qs2", cell_types)
 )
-out_path = here(
-    "processed-data", "16_shiny_app", "01_prep_objects",
-    "merged_metacell_seur.qs2"
-)
+out_dir = here("processed-data", "16_shiny_app", "01_prep_objects")
 
-dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
+duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
+fallback_config(info = FALSE)
+
+dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
 ################################################################################
 #   Prep metacell Seurat object
@@ -79,14 +86,41 @@ meta_df = tibble(
 
 stopifnot(identical(rownames(rna_mat), rownames(peak_mat)))
 
-merged_metacell_seur = CreateSeuratObject(
+seur = CreateSeuratObject(
     counts = t(rna_mat),
     meta.data = meta_df,
     assay = "RNA"
 )
-merged_metacell_seur[["ATAC"]] = CreateAssayObject(counts = t(peak_mat))
-DefaultAssay(merged_metacell_seur) = "RNA"
+seur[["ATAC"]] = CreateAssayObject(counts = t(peak_mat))
+DefaultAssay(seur) = "RNA"
 
-qs_save(merged_metacell_seur, out_path)
+#   Add info about DARs to ATAC metadata
+dar_df = read_csv(dar_path, show_col_types = FALSE) |>
+    dplyr::rename(
+        DAR_cell_type = cell_type, DAR_logFC = avg_log2FC, DAR_p_adj = p_val_adj
+    ) |>
+    select(peak, DAR_cell_type, DAR_logFC, DAR_p_adj)
+
+seur[['ATAC']][[]] = tibble(
+        peak = rownames(seur[['ATAC']]),
+        peak_order = seq_along(rownames(seur[['ATAC']]))
+    ) |>
+    left_join(dar_df, by = 'peak') |>
+    arrange(peak_order) |>
+    select(-peak_order) |>
+    column_to_rownames('peak')
+
+qs_save(seur, file.path(out_dir, "merged_metacell_seur.qs2"))
+
+################################################################################
+#   Prep trios
+################################################################################
+
+trio_df = read_parquet_duckdb(trio_path, prudence = "stingy") |>
+    filter(stringency_level == 1, is_intersect) |>
+    dplyr::rename(trio_cor = coef, trio_p_adj = adj) |>
+    select(peak, gene, TF, cell_type, trio_cor, trio_p_adj) |>
+    collect() |>
+    write_csv(file.path(out_dir, "trios.csv"))
 
 session_info()
