@@ -5,7 +5,7 @@ library(ggplot2)
 library(thematic)
 library(DT)
 
-validate_color_vars <- function(seur, color_vars) {
+validate_color_vars <- function(seur, color_vars, default_color_by = NULL) {
   if (!is.character(color_vars) || length(color_vars) == 0) {
     stop("`color_vars` must be a non-empty character vector.")
   }
@@ -19,9 +19,15 @@ validate_color_vars <- function(seur, color_vars) {
 
   missing_color_vars <- setdiff(color_vars, meta_vars)
 
+  selected_color_by <- default_color_by
+  if (is.null(selected_color_by) || !selected_color_by %in% available_color_vars) {
+    selected_color_by <- available_color_vars[[1]]
+  }
+
   list(
     available = available_color_vars,
-    missing = missing_color_vars
+    missing = missing_color_vars,
+    selected = selected_color_by
   )
 }
 
@@ -77,7 +83,7 @@ validate_metacell_inputs <- function(metacell_seur, trio_df) {
   )
 }
 
-build_atlas_panel <- function(reduction_choices, selected_reduction, color_choices, missing_color_vars) {
+build_atlas_panel <- function(reduction_choices, selected_reduction, color_choices, selected_color_by, missing_color_vars) {
   layout_sidebar(
     sidebar = sidebar(
       selectInput(
@@ -90,7 +96,7 @@ build_atlas_panel <- function(reduction_choices, selected_reduction, color_choic
         inputId = "color_by",
         label = "Color by",
         choices = color_choices,
-        selected = color_choices[[1]]
+        selected = selected_color_by
       ),
       if (length(missing_color_vars) > 0) {
         helpText(
@@ -142,7 +148,7 @@ build_metacell_panel <- function(trio_df, dropped_trio_rows) {
       if (dropped_trio_rows > 0) {
         helpText(sprintf("Dropped %d trio rows with missing gene or peak features.", dropped_trio_rows))
       },
-      textOutput("feature_selection_text")
+      verbatimTextOutput("feature_selection_text")
     ),
     card(
       full_screen = TRUE,
@@ -171,6 +177,7 @@ build_app_ui <- function(
   reduction_choices,
   selected_reduction,
   color_choices,
+  selected_color_by,
   missing_color_vars,
   trio_df,
   dropped_trio_rows
@@ -184,6 +191,7 @@ build_app_ui <- function(
         reduction_choices = reduction_choices,
         selected_reduction = selected_reduction,
         color_choices = color_choices,
+        selected_color_by = selected_color_by,
         missing_color_vars = missing_color_vars
       )
     ),
@@ -270,24 +278,32 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df) {
     output$feature_selection_text <- renderText({
       if (identical(input$feature_mode, "manual")) {
         paste(
-          "Manual selection:",
-          selected_gene() %||% "<gene>",
-          "and",
-          selected_peak() %||% "<peak>"
+          c(
+            "Manual selection:",
+            paste0("Gene: ", selected_gene() %||% "<gene>"),
+            paste0("Peak: ", selected_peak() %||% "<peak>")
+          ),
+          collapse = "\n"
         )
       } else {
         req(input$trio_table_rows_selected)
 
         trio_row <- selected_trio_row()
-        trio_label <- paste(trio_row$gene[[1]], trio_row$peak[[1]], sep = " | ")
-
-        extra_bits <- intersect(c("TF", "cell_type", "trio_cor", "trio_p_adj"), colnames(trio_row))
-        extra_text <- paste(
-          vapply(extra_bits, function(col) paste0(col, ": ", trio_row[[col]][[1]]), character(1)),
-          collapse = " | "
+        trio_lines <- c(
+          "Trio selection:",
+          paste0("Gene: ", trio_row$gene[[1]]),
+          paste0("Peak: ", trio_row$peak[[1]])
         )
 
-        paste("Trio selection:", trio_label, if (nzchar(extra_text)) paste0(" | ", extra_text) else "")
+        if ("cell_type" %in% colnames(trio_row)) {
+          trio_lines <- c(trio_lines, paste0("Cell type: ", trio_row$cell_type[[1]]))
+        }
+
+        if ("TF" %in% colnames(trio_row)) {
+          trio_lines <- c(trio_lines, paste0("TF: ", trio_row$TF[[1]]))
+        }
+
+        paste(trio_lines, collapse = "\n")
       }
     })
 
@@ -311,7 +327,10 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df) {
         features = selected_gene(),
         assay = "RNA",
         group.by = "cell_type"
-      )
+      ) +
+        guides(fill = "none") +
+        labs(title = NULL) +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
     }, res = 110)
 
     output$peak_vln_plot <- renderPlot({
@@ -326,7 +345,10 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df) {
         features = selected_peak(),
         assay = "ATAC",
         group.by = "cell_type"
-      )
+      ) +
+        guides(fill = "none") +
+        labs(title = NULL) +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
     }, res = 110)
 
     output$trio_table <- renderDT({
@@ -350,9 +372,14 @@ run_app <- function(
   color_vars,
   metacell_seur,
   trio_df,
-  default_reduction = NULL
+  default_reduction = NULL,
+  default_color_by = NULL
 ) {
-  color_info <- validate_color_vars(atlas_seur, color_vars)
+  color_info <- validate_color_vars(
+    atlas_seur,
+    color_vars,
+    default_color_by = default_color_by
+  )
   reduction_info <- validate_reductions(atlas_seur, default_reduction = default_reduction)
   trio_info <- validate_metacell_inputs(metacell_seur, trio_df)
 
@@ -360,6 +387,7 @@ run_app <- function(
     reduction_choices = reduction_info$available,
     selected_reduction = reduction_info$selected,
     color_choices = color_info$available,
+    selected_color_by = color_info$selected,
     missing_color_vars = color_info$missing,
     trio_df = trio_info$trio_df,
     dropped_trio_rows = trio_info$dropped_rows
