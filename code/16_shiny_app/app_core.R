@@ -5,21 +5,22 @@ library(ggplot2)
 library(thematic)
 library(DT)
 
-validate_color_vars <- function(seur, color_vars, default_color_by = NULL) {
+validate_color_vars <- function(seur, color_vars, cell_type_var = NULL) {
   if (!is.character(color_vars) || length(color_vars) == 0) {
     stop("`color_vars` must be a non-empty character vector.")
   }
 
+  requested_color_vars <- unique(c(cell_type_var, color_vars))
   meta_vars <- colnames(seur[[]])
-  available_color_vars <- intersect(color_vars, meta_vars)
+  available_color_vars <- intersect(requested_color_vars, meta_vars)
 
   if (length(available_color_vars) == 0) {
     stop("None of the requested `color_vars` were found in the Seurat metadata.")
   }
 
-  missing_color_vars <- setdiff(color_vars, meta_vars)
+  missing_color_vars <- setdiff(requested_color_vars, meta_vars)
 
-  selected_color_by <- default_color_by
+  selected_color_by <- cell_type_var
   if (is.null(selected_color_by) || !selected_color_by %in% available_color_vars) {
     selected_color_by <- available_color_vars[[1]]
   }
@@ -29,6 +30,21 @@ validate_color_vars <- function(seur, color_vars, default_color_by = NULL) {
     missing = missing_color_vars,
     selected = selected_color_by
   )
+}
+
+get_matching_colors <- function(values, color_map) {
+  if (is.null(color_map) || length(color_map) == 0) {
+    return(NULL)
+  }
+
+  present_levels <- unique(as.character(values))
+  matched_colors <- color_map[names(color_map) %in% present_levels]
+
+  if (length(matched_colors) == 0) {
+    return(NULL)
+  }
+
+  matched_colors
 }
 
 validate_reductions <- function(seur, default_reduction = NULL) {
@@ -139,7 +155,7 @@ build_metacell_panel <- function(trio_df, dropped_trio_rows) {
         inputId = "feature_mode",
         label = "Feature selection mode",
         choices = c("Manual feature search" = "manual", "Trio table" = "trio"),
-        selected = "manual"
+        selected = "trio"
       ),
       conditionalPanel(
         condition = "input.feature_mode === 'manual'",
@@ -227,16 +243,20 @@ build_app_ui <- function(
   )
 }
 
-build_app_server <- function(atlas_seur, metacell_seur, trio_df) {
+build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, cell_type_colors) {
   force(atlas_seur)
   force(metacell_seur)
   force(trio_df)
+  force(cell_type_var)
+  force(cell_type_colors)
 
   gene_choices <- rownames(metacell_seur[["RNA"]])
   peak_choices <- rownames(metacell_seur[["ATAC"]])
   metacell_meta <- metacell_seur[[]]
+  metacell_group_var <- if (cell_type_var %in% colnames(metacell_meta)) cell_type_var else "cell_type"
   rna_plot_mat <- get_assay_matrix(metacell_seur, assay = "RNA", preferred_layers = c("data", "counts"))
   atac_plot_mat <- get_assay_matrix(metacell_seur, assay = "ATAC", preferred_layers = c("data", "counts"))
+  metacell_cell_type_colors <- get_matching_colors(metacell_meta[[metacell_group_var]], cell_type_colors)
 
   function(input, output, session) {
     thematic_shiny()
@@ -274,12 +294,22 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df) {
         need(ncol(reduction_mat) >= 2, "Selected reduction has fewer than two dimensions.")
       )
 
-      DimPlot(
+      dim_plot <- DimPlot(
         object = atlas_seur,
         reduction = input$reduction,
         group.by = input$color_by,
         raster = TRUE
       )
+
+      if (identical(input$color_by, cell_type_var)) {
+        atlas_cell_type_colors <- get_matching_colors(atlas_seur[[]][[cell_type_var]], cell_type_colors)
+
+        if (!is.null(atlas_cell_type_colors)) {
+          dim_plot <- dim_plot + scale_color_manual(values = atlas_cell_type_colors)
+        }
+      }
+
+      dim_plot
     }, res = 110)
 
     selected_trio_row <- reactive({
@@ -409,15 +439,21 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df) {
         need(selected_gene() %in% gene_choices, "Selected gene is not available in the RNA assay.")
       )
 
-      VlnPlot(
+      gene_plot <- VlnPlot(
         object = metacell_seur,
         features = selected_gene(),
         assay = "RNA",
-        group.by = "cell_type"
+        group.by = metacell_group_var
       ) +
         guides(fill = "none") +
         labs(title = NULL) +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+      if (!is.null(metacell_cell_type_colors)) {
+        gene_plot <- gene_plot + scale_fill_manual(values = metacell_cell_type_colors)
+      }
+
+      gene_plot
     }, res = 110)
 
     output$peak_vln_plot <- renderPlot({
@@ -427,15 +463,21 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df) {
         need(selected_peak() %in% peak_choices, "Selected peak is not available in the ATAC assay.")
       )
 
-      VlnPlot(
+      peak_plot <- VlnPlot(
         object = metacell_seur,
         features = selected_peak(),
         assay = "ATAC",
-        group.by = "cell_type"
+        group.by = metacell_group_var
       ) +
         guides(fill = "none") +
         labs(title = NULL) +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+      if (!is.null(metacell_cell_type_colors)) {
+        peak_plot <- peak_plot + scale_fill_manual(values = metacell_cell_type_colors)
+      }
+
+      peak_plot
     }, res = 110)
 
     output$trio_scatter_plot <- renderPlot({
@@ -476,7 +518,7 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df) {
         trio_df,
         rownames = FALSE,
         filter = "top",
-        selection = "single",
+        selection = list(mode = "single", selected = 1, target = "row"),
         options = list(
           pageLength = 15,
           lengthMenu = c(15, 30, 50, 100),
@@ -492,13 +534,14 @@ run_app <- function(
   color_vars,
   metacell_seur,
   trio_df,
-  default_reduction = NULL,
-  default_color_by = NULL
+  cell_type_var,
+  cell_type_colors = NULL,
+  default_reduction = NULL
 ) {
   color_info <- validate_color_vars(
     atlas_seur,
     color_vars,
-    default_color_by = default_color_by
+    cell_type_var = cell_type_var
   )
   reduction_info <- validate_reductions(atlas_seur, default_reduction = default_reduction)
   trio_info <- validate_metacell_inputs(metacell_seur, trio_df)
@@ -516,7 +559,9 @@ run_app <- function(
   app_server <- build_app_server(
     atlas_seur = atlas_seur,
     metacell_seur = metacell_seur,
-    trio_df = trio_info$trio_df
+    trio_df = trio_info$trio_df,
+    cell_type_var = cell_type_var,
+    cell_type_colors = cell_type_colors
   )
 
   shinyApp(ui = app_ui, server = app_server)

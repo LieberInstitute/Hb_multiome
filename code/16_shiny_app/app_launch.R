@@ -56,6 +56,7 @@ run_app(
     color_vars = allowed_color_vars,
     metacell_seur = metacell_seur,
     trio_df = trio_df,
-    default_reduction = "wnn_umap",
-    default_color_by = "mid_cluster"
+    cell_type_var = "mid_cluster",
+    cell_type_colors = cell_type_colors,
+    default_reduction = "wnn_umap"
 )
