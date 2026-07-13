@@ -22,6 +22,10 @@ out_path = here(
 
 dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
 
+################################################################################
+#   Prep metacell Seurat object
+################################################################################
+
 metacell_objs = purrr::map(in_paths, \(in_path) {
     qs_read(in_path)$metacell_seur
 })
@@ -68,9 +72,9 @@ rna_mat = merge_metacell_assay(metacell_objs, "rna")
 peak_mat = merge_metacell_assay(metacell_objs, "peak")
 
 meta_df = tibble(
-    cell = rownames(rna_mat),
-    broad_cell_type = stringr::str_remove(cell, "_metacell_\\d+$")
-) |>
+        cell = rownames(rna_mat),
+        cell_type = stringr::str_remove(cell, "_metacell_\\d+$")
+    ) |>
     tibble::column_to_rownames("cell")
 
 stopifnot(identical(rownames(rna_mat), rownames(peak_mat)))
