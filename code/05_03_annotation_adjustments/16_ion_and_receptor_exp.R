@@ -30,7 +30,7 @@ altExps(multiome_sce) <- NULL
 gc()
 
 #Filter for just the habenula cell-types
-hab_celltypes = c('Inhib_LHb_4.1','Inhib_LHb_4.2','LHb.4','LHb.2.7','LHb.1.3.4','MHb.1','MHb.1.2','MHb.2','MHb.3')
+hab_celltypes = c('GABA_LHb_C.1','GABA_LHb_C.2','LHb_C','LHb_A','LHb_B','MHb_A','MHb_C','MHb_B','MHb_D')
 multiome_nonHab_sce = multiome_sce[ ,!multiome_sce$refined_mid_cluster %in% hab_celltypes]
 multiome_sce = multiome_sce[ ,multiome_sce$refined_mid_cluster %in% hab_celltypes]
 
@@ -163,7 +163,8 @@ get_gene_exp_heatmap = function(sce, assay_type, gene_list, gene_list_name, exp_
   rownames(col_anno_data) <- colnames(avg_marker_exp)
   
   # Define colors for merged_cluster values
-  merged_cluster_colors <- c("LHb" = my_colors_class[['LHb']], "MHb" = my_colors_class[['MHb']])
+  merged_cluster_colors <- c("LHb" = my_colors_class[['LHb']], "MHb" = my_colors_class[['MHb']], 
+  'Excit_Thal' = my_colors_class[['Thalamus']], 'Inhib_Thal' = my_colors_class[['Thalamus']])
   
   col_anno = HeatmapAnnotation(
     df = col_anno_data,
@@ -389,6 +390,10 @@ dev.off()
 
 #And check out expression in the UMAP too
 
+#Reload the full dataset
+multiome_sce = qs_read(paste0(multiome_path, '/refined_annotation_multiomeHab_SCE.qs2'))
+assay(multiome_sce, 'cpm') = MetaMarkers::convert_to_cpm(assay(multiome_sce, 'counts'))
+
 plt2 <- scater::plotReducedDim(multiome_sce, 
                 dimred = "umap.integrated",
                 colour_by = "refined_mid_cluster", 
@@ -497,7 +502,84 @@ plot_gene_on_umap(multiome_sce, "HCN1")
 plot_gene_on_umap(multiome_sce, "HCN2")
 plot_gene_on_umap(multiome_sce, "HCN3")
 
+plot_gene_on_umap(multiome_sce, "CACNA1G")
+plot_gene_on_umap(multiome_sce, "CACNA1I")
 
+plot_gene_on_umap(multiome_sce, "NALCN")
+
+plot_gene_on_umap(multiome_sce, "HTR2A")
+plot_gene_on_umap(multiome_sce, "HTR2C")
+plot_gene_on_umap(multiome_sce, "HTR4")
+plot_gene_on_umap(multiome_sce, "HTR7")
+
+plot_gene_on_umap(multiome_sce, "GNAO1")
+plot_gene_on_umap(multiome_sce, "ADCY8")
+plot_gene_on_umap(multiome_sce, "OGFRL1")
+plot_gene_on_umap(multiome_sce, "OPRM1")
+plot_gene_on_umap(multiome_sce, "GNAS")
+plot_gene_on_umap(multiome_sce, "SYP")
+plot_gene_on_umap(multiome_sce, "OGFR")
+plot_gene_on_umap(multiome_sce, "SIGMAR1")
+plot_gene_on_umap(multiome_sce, "PENK")
+plot_gene_on_umap(multiome_sce, "PNOC")
+
+plot_gene_on_umap(multiome_sce, "PVALB")
 #Is it worth doing a quick comparison of expression patterns of these particular genes between human and mouse habenula neurons?
 
+source(here('code','05_03_annotation_adjustments','celltype_colors.R'))
 
+
+# Function to plot gene expression with violin plot
+plot_gene_violin <- function(gene_name, sce = multiome_sce, assay_name = "logcounts", 
+                             group_by = "refined_mid_cluster") {
+  
+  # Check if gene exists in the object
+  if (!gene_name %in% rownames(sce)) {
+    stop(paste0("Gene '", gene_name, "' not found in the SCE object"))
+  }
+  
+  # Extract expression data
+  expr_data <- assay(sce, assay_name)[gene_name, ]
+  
+  # Create data frame for plotting
+  plot_df <- data.frame(
+    expression = expr_data,
+    celltype = colData(sce)[[group_by]]
+  )
+  
+  # Order celltypes by median expression
+  celltype_order <- plot_df |>
+    group_by(celltype) |>
+    summarise(mean_expr = mean(expression, na.rm = TRUE)) |>
+    arrange(mean_expr) |>
+    pull(celltype)
+  
+  plot_df$celltype <- factor(plot_df$celltype, levels = celltype_order)
+  
+  # Create violin plot
+  ggplot(plot_df, aes(x = celltype, y = expression, fill = celltype)) +
+    geom_violin(scale = "width", trim = FALSE) +
+    geom_boxplot(width = 0.1, fill = "white", outlier.shape = NA) +
+    scale_fill_manual(values = my_colors_mid) +
+    labs(
+      title = paste0(gene_name, " Expression"),
+      x = "Cell Type",
+      y = "Log-normalized Expression"
+    ) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      legend.position = "none"
+    )
+}
+
+# Test with a gene (using one from your existing gene lists)
+plot_gene_violin("SLC17A6")
+plot_gene_violin("HCN1")
+plot_gene_violin("SLC12A5")
+
+plot_gene_violin("CACNA1G")
+plot_gene_violin("CACNA1H")
+plot_gene_violin("CACNA1I")
+
+plot_gene_violin("NALCN")
