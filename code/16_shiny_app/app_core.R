@@ -54,6 +54,23 @@ validate_reductions <- function(seur, default_reduction = NULL) {
   )
 }
 
+get_assay_matrix <- function(seur, assay, preferred_layers = c("data", "counts")) {
+  assay_obj <- seur[[assay]]
+  assay_layers <- Layers(assay_obj)
+  selected_layer <- preferred_layers[preferred_layers %in% assay_layers][[1]]
+
+  if (is.null(selected_layer) || is.na(selected_layer)) {
+    stop(
+      paste0(
+        "Assay `", assay, "` is missing all preferred layers: ",
+        paste(preferred_layers, collapse = ", ")
+      )
+    )
+  }
+
+  LayerData(assay_obj, layer = selected_layer)
+}
+
 validate_metacell_inputs <- function(metacell_seur, trio_df) {
   if (!"cell_type" %in% colnames(metacell_seur[[]])) {
     stop("`metacell_seur` must contain a `cell_type` metadata column.")
@@ -165,6 +182,14 @@ build_metacell_panel <- function(trio_df, dropped_trio_rows) {
         )
       )
     ),
+    conditionalPanel(
+      condition = "input.feature_mode === 'trio'",
+      card(
+        full_screen = TRUE,
+        card_header(textOutput("trio_scatter_title")),
+        plotOutput("trio_scatter_plot", height = "550px")
+      )
+    ),
     card(
       full_screen = TRUE,
       card_header("Trio table"),
@@ -209,6 +234,9 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df) {
 
   gene_choices <- rownames(metacell_seur[["RNA"]])
   peak_choices <- rownames(metacell_seur[["ATAC"]])
+  metacell_meta <- metacell_seur[[]]
+  rna_plot_mat <- get_assay_matrix(metacell_seur, assay = "RNA", preferred_layers = c("data", "counts"))
+  atac_plot_mat <- get_assay_matrix(metacell_seur, assay = "ATAC", preferred_layers = c("data", "counts"))
 
   function(input, output, session) {
     thematic_shiny()
@@ -257,6 +285,44 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df) {
     selected_trio_row <- reactive({
       req(input$trio_table_rows_selected)
       trio_df[input$trio_table_rows_selected, , drop = FALSE]
+    })
+
+    trio_scatter_df <- reactive({
+      req(identical(input$feature_mode, "trio"))
+      trio_row <- selected_trio_row()
+
+      validate(
+        need("TF" %in% colnames(trio_row), "Selected trio row does not contain a TF column."),
+        need("cell_type" %in% colnames(trio_row), "Selected trio row does not contain a cell_type column.")
+      )
+
+      trio_gene <- trio_row$gene[[1]]
+      trio_peak <- trio_row$peak[[1]]
+      trio_tf <- trio_row$TF[[1]]
+      trio_cell_type <- trio_row$cell_type[[1]]
+
+      validate(
+        need(trio_gene %in% gene_choices, "Selected trio gene is not available in the RNA assay."),
+        need(trio_peak %in% peak_choices, "Selected trio peak is not available in the ATAC assay."),
+        need(trio_tf %in% gene_choices, "Selected trio TF is not available in the RNA assay.")
+      )
+
+      cell_idx <- rownames(metacell_meta)[metacell_meta$cell_type == trio_cell_type]
+
+      validate(
+        need(length(cell_idx) > 0, "No metacells matched the trio-selected cell type.")
+      )
+
+      data.frame(
+        cell = cell_idx,
+        gene_expr = as.numeric(rna_plot_mat[trio_gene, cell_idx]),
+        peak_expr = as.numeric(atac_plot_mat[trio_peak, cell_idx]),
+        tf_expr = as.numeric(rna_plot_mat[trio_tf, cell_idx]),
+        cell_type = trio_cell_type,
+        gene = trio_gene,
+        peak = trio_peak,
+        TF = trio_tf
+      )
     })
 
     selected_gene <- reactive({
@@ -315,6 +381,18 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df) {
       paste("ATAC:", selected_peak() %||% "No peak selected")
     })
 
+    output$trio_scatter_title <- renderText({
+      req(identical(input$feature_mode, "trio"))
+      trio_row <- selected_trio_row()
+      paste0(
+        "RNA vs ATAC in ",
+        trio_row$cell_type[[1]],
+        " metacells, colored by log TF expression (",
+        trio_row$TF[[1]],
+        ")"
+      )
+    })
+
     output$gene_vln_plot <- renderPlot({
       req(selected_gene())
 
@@ -349,6 +427,21 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df) {
         guides(fill = "none") +
         labs(title = NULL) +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+    }, res = 110)
+
+    output$trio_scatter_plot <- renderPlot({
+      plot_df <- trio_scatter_df()
+
+      ggplot(
+        plot_df,
+        aes(x = gene_expr, y = peak_expr, color = log1p(tf_expr))
+      ) +
+        geom_point(size = 2.5) +
+        labs(
+          x = paste0("RNA: ", unique(plot_df$gene)),
+          y = paste0("ATAC: ", unique(plot_df$peak)),
+          color = paste0("log1p RNA: ", unique(plot_df$TF))
+        )
     }, res = 110)
 
     output$trio_table <- renderDT({
