@@ -313,7 +313,7 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df) {
         need(length(cell_idx) > 0, "No metacells matched the trio-selected cell type.")
       )
 
-      data.frame(
+      plot_df <- data.frame(
         cell = cell_idx,
         gene_expr = as.numeric(rna_plot_mat[trio_gene, cell_idx]),
         peak_expr = as.numeric(atac_plot_mat[trio_peak, cell_idx]),
@@ -323,6 +323,15 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df) {
         peak = trio_peak,
         TF = trio_tf
       )
+
+      plot_df <- subset(plot_df, tf_expr > 0)
+
+      validate(
+        need(nrow(plot_df) > 0, "No metacells had positive TF expression for the selected trio."),
+        need(sum(stats::complete.cases(plot_df[, c("gene_expr", "peak_expr")])) >= 2, "Not enough metacells remained to compute the scatter plot.")
+      )
+
+      plot_df
     })
 
     selected_gene <- reactive({
@@ -432,11 +441,29 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df) {
     output$trio_scatter_plot <- renderPlot({
       plot_df <- trio_scatter_df()
 
+      global_cor <- stats::cor(
+        plot_df$gene_expr,
+        plot_df$peak_expr,
+        use = "complete.obs"
+      )
+
+      x_pos <- min(plot_df$gene_expr, na.rm = TRUE)
+      y_pos <- max(plot_df$peak_expr, na.rm = TRUE)
+
       ggplot(
         plot_df,
         aes(x = gene_expr, y = peak_expr, color = log1p(tf_expr))
       ) +
         geom_point(size = 2.5) +
+        annotate(
+          geom = "text",
+          x = x_pos,
+          y = y_pos,
+          label = sprintf("Global cor: %.3f", global_cor),
+          hjust = 0,
+          vjust = 1
+        ) +
+        scale_color_viridis_c() +
         labs(
           x = paste0("RNA: ", unique(plot_df$gene)),
           y = paste0("ATAC: ", unique(plot_df$peak)),
