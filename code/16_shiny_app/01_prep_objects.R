@@ -12,6 +12,11 @@ cell_types = c(
     "Inhib_LHb_4.2", "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1",
     "MHb.1.2", "MHb.2", "Microglia", "Oligo", "OPC"
 )
+cell_type_levels = c(
+    'MHb_A', 'MHb_B', 'MHb_C', 'MHb_D', 'LHb_A', 'LHb_B', 'LHb_C',
+    'GABA_LHb_C.1', 'GABA_LHb_C.2', 'Excit.Thal', 'Inhib.Thal', 'Astrocyte',
+    'Endo', 'Ependymal', 'Microglia', 'Oligo', 'OPC'
+)
 dar_path = here("processed-data", "15_DARs", "03_gather", "DARs_fine.csv.gz")
 cell_map_path = here('raw-data', 'cell_type_map.csv')
 trio_path = here(
@@ -92,7 +97,8 @@ meta_df = tibble(
     mutate(
         mid_cluster = dplyr::coalesce(
             unname(rename_map[mid_cluster]), mid_cluster
-        )
+        ) |>
+        factor(levels = cell_type_levels)
     )
 
 stopifnot(identical(rownames(rna_mat), rownames(peak_mat)))
@@ -129,9 +135,16 @@ qs_save(seur, file.path(out_dir, "merged_metacell_seur.qs2"))
 
 trio_df = read_parquet_duckdb(trio_path, prudence = "stingy") |>
     filter(stringency_level == 1, is_intersect) |>
-    dplyr::rename(trio_cor = coef, trio_p_adj = adj) |>
-    select(peak, gene, TF, cell_type, trio_cor, trio_p_adj) |>
+    dplyr::rename(
+        trio_cor = coef, trio_p_adj = adj, mid_cluster = cell_type
+    ) |>
+    select(peak, gene, TF, mid_cluster, trio_cor, trio_p_adj) |>
     collect() |>
+    mutate(
+        mid_cluster = dplyr::coalesce(
+            unname(rename_map[mid_cluster]), mid_cluster
+        )
+    ) |>
     write_csv(file.path(out_dir, "trios.csv"))
 
 session_info()
