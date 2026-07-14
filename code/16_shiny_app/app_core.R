@@ -70,23 +70,6 @@ validate_reductions <- function(seur, default_reduction = NULL) {
   )
 }
 
-get_assay_matrix <- function(seur, assay, preferred_layers = c("data", "counts")) {
-  assay_obj <- seur[[assay]]
-  assay_layers <- Layers(assay_obj)
-  selected_layer <- preferred_layers[preferred_layers %in% assay_layers][[1]]
-
-  if (is.null(selected_layer) || is.na(selected_layer)) {
-    stop(
-      paste0(
-        "Assay `", assay, "` is missing all preferred layers: ",
-        paste(preferred_layers, collapse = ", ")
-      )
-    )
-  }
-
-  LayerData(assay_obj, layer = selected_layer)
-}
-
 validate_metacell_inputs <- function(metacell_seur, trio_df, cell_type_var) {
   if (!cell_type_var %in% colnames(metacell_seur[[]])) {
     stop(paste0("`metacell_seur` must contain the `", cell_type_var, "` metadata column."))
@@ -250,12 +233,15 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, 
   force(cell_type_var)
   force(cell_type_colors)
 
-  gene_choices <- rownames(metacell_seur[["RNA"]])
-  peak_choices <- rownames(metacell_seur[["ATAC"]])
+  rna_assay <- metacell_seur[["RNA"]]
+  atac_assay <- metacell_seur[["ATAC"]]
+  rna_layer <- intersect(c("data", "counts"), Layers(rna_assay))[[1]]
+  atac_layer <- intersect(c("data", "counts"), Layers(atac_assay))[[1]]
+
+  gene_choices <- rownames(rna_assay)
+  peak_choices <- rownames(atac_assay)
   metacell_meta <- metacell_seur[[]]
   metacell_group_var <- cell_type_var
-  rna_plot_mat <- get_assay_matrix(metacell_seur, assay = "RNA", preferred_layers = c("data", "counts"))
-  atac_plot_mat <- get_assay_matrix(metacell_seur, assay = "ATAC", preferred_layers = c("data", "counts"))
   metacell_cell_type_colors <- get_matching_colors(metacell_meta[[metacell_group_var]], cell_type_colors)
 
   function(input, output, session) {
@@ -345,9 +331,9 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, 
 
       plot_df <- data.frame(
         cell = cell_idx,
-        gene_expr = as.numeric(rna_plot_mat[trio_gene, cell_idx]),
-        peak_expr = as.numeric(atac_plot_mat[trio_peak, cell_idx]),
-        tf_expr = as.numeric(rna_plot_mat[trio_tf, cell_idx]),
+        gene_expr = as.numeric(LayerData(rna_assay, layer = rna_layer, features = trio_gene, cells = cell_idx)),
+        peak_expr = as.numeric(LayerData(atac_assay, layer = atac_layer, features = trio_peak, cells = cell_idx)),
+        tf_expr = as.numeric(LayerData(rna_assay, layer = rna_layer, features = trio_tf, cells = cell_idx)),
         plot_group = trio_cell_type,
         gene = trio_gene,
         peak = trio_peak,
