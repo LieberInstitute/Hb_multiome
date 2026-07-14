@@ -19,8 +19,8 @@ fallback_config(info = FALSE)
 dir.create(plot_dir, showWarnings = FALSE)
 
 trio_df = read_parquet_duckdb(trio_path, prudence = "stingy") |>
-    filter(is_intersect, stringency_level == 1) |>
-    select(peak, gene, TF, cell_type, coef, adj) |>
+    dplyr::filter(is_intersect, stringency_level == 1) |>
+    dplyr::select(peak, gene, TF, cell_type, coef, adj) |>
     collect()
 
 tss_gr = genes(EnsDb.Hsapiens.v86)
