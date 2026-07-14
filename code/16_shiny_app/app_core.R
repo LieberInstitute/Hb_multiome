@@ -87,12 +87,12 @@ get_assay_matrix <- function(seur, assay, preferred_layers = c("data", "counts")
   LayerData(assay_obj, layer = selected_layer)
 }
 
-validate_metacell_inputs <- function(metacell_seur, trio_df) {
-  if (!"cell_type" %in% colnames(metacell_seur[[]])) {
-    stop("`metacell_seur` must contain a `cell_type` metadata column.")
+validate_metacell_inputs <- function(metacell_seur, trio_df, cell_type_var) {
+  if (!cell_type_var %in% colnames(metacell_seur[[]])) {
+    stop(paste0("`metacell_seur` must contain the `", cell_type_var, "` metadata column."))
   }
 
-  required_trio_cols <- c("peak", "gene")
+  required_trio_cols <- c("peak", "gene", cell_type_var)
   missing_trio_cols <- setdiff(required_trio_cols, colnames(trio_df))
 
   if (length(missing_trio_cols) > 0) {
@@ -224,7 +224,7 @@ build_app_ui <- function(
   dropped_trio_rows
 ) {
   page_navbar(
-    title = "Habenula atlas viewer",
+    title = "Habenula Atlas Multiome",
     theme = bs_theme(version = 5),
     nav_panel(
       "Atlas embeddings",
@@ -253,7 +253,7 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, 
   gene_choices <- rownames(metacell_seur[["RNA"]])
   peak_choices <- rownames(metacell_seur[["ATAC"]])
   metacell_meta <- metacell_seur[[]]
-  metacell_group_var <- if (cell_type_var %in% colnames(metacell_meta)) cell_type_var else "cell_type"
+  metacell_group_var <- cell_type_var
   rna_plot_mat <- get_assay_matrix(metacell_seur, assay = "RNA", preferred_layers = c("data", "counts"))
   atac_plot_mat <- get_assay_matrix(metacell_seur, assay = "ATAC", preferred_layers = c("data", "counts"))
   metacell_cell_type_colors <- get_matching_colors(metacell_meta[[metacell_group_var]], cell_type_colors)
@@ -323,13 +323,13 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, 
 
       validate(
         need("TF" %in% colnames(trio_row), "Selected trio row does not contain a TF column."),
-        need("cell_type" %in% colnames(trio_row), "Selected trio row does not contain a cell_type column.")
+        need(cell_type_var %in% colnames(trio_row), paste0("Selected trio row does not contain the `", cell_type_var, "` column."))
       )
 
       trio_gene <- trio_row$gene[[1]]
       trio_peak <- trio_row$peak[[1]]
       trio_tf <- trio_row$TF[[1]]
-      trio_cell_type <- trio_row$cell_type[[1]]
+      trio_cell_type <- trio_row[[cell_type_var]][[1]]
 
       validate(
         need(trio_gene %in% gene_choices, "Selected trio gene is not available in the RNA assay."),
@@ -337,7 +337,7 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, 
         need(trio_tf %in% gene_choices, "Selected trio TF is not available in the RNA assay.")
       )
 
-      cell_idx <- rownames(metacell_meta)[metacell_meta$cell_type == trio_cell_type]
+      cell_idx <- rownames(metacell_meta)[metacell_meta[[cell_type_var]] == trio_cell_type]
 
       validate(
         need(length(cell_idx) > 0, "No metacells matched the trio-selected cell type.")
@@ -348,7 +348,7 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, 
         gene_expr = as.numeric(rna_plot_mat[trio_gene, cell_idx]),
         peak_expr = as.numeric(atac_plot_mat[trio_peak, cell_idx]),
         tf_expr = as.numeric(rna_plot_mat[trio_tf, cell_idx]),
-        cell_type = trio_cell_type,
+        plot_group = trio_cell_type,
         gene = trio_gene,
         peak = trio_peak,
         TF = trio_tf
@@ -400,8 +400,8 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, 
           paste0("Peak: ", trio_row$peak[[1]])
         )
 
-        if ("cell_type" %in% colnames(trio_row)) {
-          trio_lines <- c(trio_lines, paste0("Cell type: ", trio_row$cell_type[[1]]))
+        if (cell_type_var %in% colnames(trio_row)) {
+          trio_lines <- c(trio_lines, paste0(cell_type_var, ": ", trio_row[[cell_type_var]][[1]]))
         }
 
         if ("TF" %in% colnames(trio_row)) {
@@ -425,7 +425,7 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, 
       trio_row <- selected_trio_row()
       paste0(
         "RNA vs ATAC in ",
-        trio_row$cell_type[[1]],
+        trio_row[[cell_type_var]][[1]],
         " metacells, colored by log TF expression (",
         trio_row$TF[[1]],
         ")"
@@ -544,7 +544,11 @@ run_app <- function(
     cell_type_var = cell_type_var
   )
   reduction_info <- validate_reductions(atlas_seur, default_reduction = default_reduction)
-  trio_info <- validate_metacell_inputs(metacell_seur, trio_df)
+  trio_info <- validate_metacell_inputs(
+    metacell_seur,
+    trio_df,
+    cell_type_var = cell_type_var
+  )
 
   app_ui <- build_app_ui(
     reduction_choices = reduction_info$available,
