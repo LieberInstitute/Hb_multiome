@@ -9,6 +9,7 @@ library(scater)
 library(tidyverse)
 library(Matrix)
 library(edgeR)
+library(MetaMarkers)
 library(BSgenome.Hsapiens.UCSC.hg38)
 
 
@@ -29,6 +30,9 @@ path_to_orthologs = here('processed-data', '05_02_external_Hb_comparisons', 'hum
 load(paste0(hashikawa_path, '/sce_mouse_habenula.Rdata'))
 hashikawa_sce_all = sce_mouse_sub$all #Using just the neuron subset
 hashikawa_sce_neuron = sce_mouse_sub$neuron
+
+assay(hashikawa_sce_all, 'cpm') = MetaMarkers::convert_to_cpm(assay(hashikawa_sce_all, 'counts'))
+assay(hashikawa_sce_neuron, 'cpm') = MetaMarkers::convert_to_cpm(assay(hashikawa_sce_neuron, 'counts'))
 
 # Add in the updated mouse annotations we generated for this subset
 neuron_hashikawa_metadata = readRDS(paste0(hashikawa_data_path, '/hashikawa_mouse_neuron_metaclust_celltype_annot_metadata.rds'))
@@ -135,6 +139,24 @@ marker_stats <- marker_stats_MeanRatio |>
 saveRDS(marker_stats_MeanRatio, file = paste0(new_data_path, '/marker_stats_MeanRatio.rds'))
 saveRDS(marker_stats_1vAll , file = paste0(new_data_path, '/marker_stats_1vAll.rds'))
 saveRDS(marker_stats, file = paste0(new_data_path, '/marker_stats_combo.rds'))
+
+
+#And now generate metaMarkers too, based on the stim vs cntl labels from hashikawa, the only sample info we have
+table(hashikawa_final_sce$stim)
+hashikawa_cntl = hashikawa_final_sce[ , hashikawa_final_sce$stim == 'cntl' ]
+hashikawa_stim = hashikawa_final_sce[ , hashikawa_final_sce$stim == 'stim' ]
+
+mouse_marker_list = list(
+  cntl = compute_markers(assay(hashikawa_cntl, 'cpm'), hashikawa_cntl$consensus_annot),
+  stim = compute_markers(assay(hashikawa_stim, 'cpm'), hashikawa_stim$consensus_annot)
+)
+
+mouse_metaMarkers = make_meta_markers(mouse_marker_list , detailed_stats = TRUE)
+
+#Save the metamarkers
+export_meta_markers(mouse_metaMarkers, 
+  paste0(new_data_path, '/hashikawa_meta_markers.csv'), 
+  names(mouse_metaMarkers))
 
 
 session_info()
