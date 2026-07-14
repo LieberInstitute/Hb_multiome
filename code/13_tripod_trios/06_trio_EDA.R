@@ -28,10 +28,16 @@ if (cell_type_res == 'broad') {
         "Inhib_LHb_4.2", "Inhib.Thal", "LHb.1.3.4", "LHb.2.7", "LHb.4", "MHb.1",
         "MHb.1.2", "MHb.2", "MHb.3", "Microglia", "Oligo", "OPC"
     )
+    cell_type_levels = c(
+        "MHb_A", "MHb_B", "MHb_C", "MHb_D", "LHb_A", "LHb_B", "LHb_C",
+        "GABA_LHb_C.1", "GABA_LHb_C.2", "Excit.Thal", "Inhib.Thal",
+        "Astrocyte", "Endo", "Ependymal", "Microglia", "Oligo", "OPC"
+    )
+    cell_map_path = here("raw-data", "cell_type_map.csv")
 
     source(here("code", "05_03_annotation_adjustments", "celltype_colors.R"))
     my_colors_mid[['shared']] = "gray"
-    my_colors_mid = my_colors_mid[c('shared', cell_types)]
+    my_colors_mid = my_colors_mid[c('shared', cell_type_levels)]
 }
 
 trio_path = here(
@@ -60,8 +66,15 @@ dir.create(dirname(out_path), showWarnings = FALSE)
 #   Functions
 ################################################################################
 
+plot_cell_type = identity
+if (cell_type_res == "fine") {
+    cluster_map = read_csv(cell_map_path, show_col_types = FALSE)
+    rename_map = stats::setNames(cluster_map$new_cell_type, cluster_map$old_cell_type)
+    plot_cell_type = function(x) dplyr::coalesce(unname(rename_map[x]), x)
+}
+
 plot_facet_by_set = function(intersect_set, plot_path) {
-    p = ggplot(intersect_set, aes(x = cell_type, fill = shared_type)) +
+    p = ggplot(intersect_set, aes(x = cell_type_plot, fill = shared_type)) +
         geom_bar() +
         scale_y_continuous(labels = scales::comma) +
         scale_fill_manual(values = my_colors_mid) +
@@ -78,9 +91,9 @@ plot_facet_by_set = function(intersect_set, plot_path) {
 }
 
 plot_facet_by_celltype = function(intersect_set, plot_path) {
-    p = ggplot(intersect_set, aes(x = category, fill = cell_type)) +
+    p = ggplot(intersect_set, aes(x = category, fill = cell_type_plot)) +
         geom_bar() +
-        facet_wrap(~cell_type, scales = "fixed") +
+        facet_wrap(~cell_type_plot, scales = "fixed") +
         scale_y_continuous(transform = "log10", labels = scales::comma) +
         scale_fill_manual(values = my_colors_mid) +
         labs(x = NULL, y = "Number of significant trios") +
@@ -102,10 +115,12 @@ plot_facet_by_celltype = function(intersect_set, plot_path) {
 trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
     collect() |>
     mutate(
+        cell_type_plot = plot_cell_type(cell_type),
         shared_type = factor(
-            ifelse(is_unique_intersect | !is_intersect, cell_type, "shared"),
+            ifelse(is_unique_intersect | !is_intersect, cell_type_plot, "shared"),
             levels = names(my_colors_mid)
         ),
+        cell_type_plot = factor(cell_type_plot, levels = setdiff(names(my_colors_mid), "shared")),
         cell_type = factor(cell_type, levels = cell_types)
     )
 
@@ -138,18 +153,18 @@ trio_df |>
 
 level1_set = trio_df |>
     filter(stringency_level == 1) |>
-    select(peak, gene, TF, cell_type, shared_type) |>
+    select(peak, gene, TF, cell_type, cell_type_plot, shared_type) |>
     mutate(category = "Level 1")
 
 level2_set = trio_df |>
     filter(stringency_level == 2) |>
-    select(peak, gene, TF, cell_type, shared_type) |>
+    select(peak, gene, TF, cell_type, cell_type_plot, shared_type) |>
     mutate(category = "Level 2")
 
 intersect_set = inner_join(
         level1_set |> select(-category),
         level2_set |> select(-c(category, shared_type)),
-        by = c("peak", "gene", "TF", "cell_type")
+        by = c("peak", "gene", "TF", "cell_type", "cell_type_plot")
     ) |>
     mutate(category = "Intersection")
   
@@ -171,7 +186,7 @@ plot_facet_by_celltype(
 
 p = trio_df |>
     filter(is_intersect, stringency_level == 1, grepl('Hb', cell_type)) |>
-    ggplot(aes(x = cell_type, fill = cell_type)) +
+    ggplot(aes(x = cell_type_plot, fill = cell_type_plot)) +
         geom_bar() +
         scale_y_continuous(labels = scales::comma) +
         scale_fill_manual(values = my_colors_mid) +
