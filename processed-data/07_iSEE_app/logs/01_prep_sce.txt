@@ -1,10 +1,10 @@
 **** Job starts ****
-Mon Jun 29 03:56:07 PM EDT 2026
+Tue Jul 14 09:58:41 AM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 33638427
+Job id: 34090498
 Job name: 01_prep_sce
-Node name: compute-166
+Node name: compute-099
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -208,8 +208,8 @@ In .check_reddim_names(x, value, withDimnames) :
 'reducedDim<-'. This will be an error in the next release of
 Bioconductor.
              used    (Mb) gc trigger    (Mb)   max used    (Mb)
-Ncells   12220352   652.7   19884392  1062.0   19884392  1062.0
-Vcells 2389891188 18233.5 3848323857 29360.4 3067833218 23405.8
+Ncells   12225351   653.0   19884392  1062.0   19884392  1062.0
+Vcells 2389902349 18233.6 3848339972 29360.6 3067845149 23405.9
 Warning messages:
 1: In S4Vectors:::anyMissing(runValue(x_seqnames)) :
   'S4Vectors:::anyMissing()' is deprecated.
@@ -234,9 +234,9 @@ iSEE object sizes (RNA then ATAC):
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-06-29
+ date     2026-07-14
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.9.38 @ /users/neagles/.positron-server/bin/63f0568b148d4d18b7a3194286686d6fb970bed3/quarto/bin/quarto
+ quarto   1.9.38 @ /users/neagles/.positron-server/bin/d3cdd608df5afa3378c24c9a9c81b01fe1433a87/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package              * version   date (UTC) lib source
@@ -401,4 +401,4 @@ iSEE object sizes (RNA then ATAC):
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Mon Jun 29 04:08:03 PM EDT 2026
+Tue Jul 14 10:26:00 AM EDT 2026

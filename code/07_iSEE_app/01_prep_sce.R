@@ -17,6 +17,7 @@ peak_path = here(
     'processed-data', '11_link_prep', '01_call_peaks',
     'macs3_peaks.csv.gz'
 )
+cell_map_path = here('raw-data', 'cell_type_map.csv')
 gtf_path = '/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0/genes/genes.gtf.gz'
 out_dir = here('processed-data', '07_iSEE_app', '01_prep_sce')
 metadata_drop_cols = c(
@@ -61,10 +62,22 @@ for (this_reduction_name in Reductions(seur)[!Reductions(seur) %in% keep_map]) {
 #   Clean up metadata and add peak_called_in column to ATAC assay
 ################################################################################
 
+cluster_map = read_csv(cell_map_path, show_col_types = FALSE)
+rename_map <- stats::setNames(
+    cluster_map$new_cell_type, cluster_map$old_cell_type
+)
+
 seur@meta.data <- seur@meta.data |>
     select(-all_of(metadata_drop_cols)) |>
     dplyr::rename(
         fine_cluster = refined_cluster_ann, mid_cluster = refined_mid_cluster
+    ) |>
+    #   Map old cell-type names to new ones
+    mutate(
+        across(
+            c(fine_cluster, mid_cluster),
+            ~ dplyr::coalesce(unname(rename_map[.x]), .x)
+        )
     )
 
 #   Add 'peak_called_in' metadata column to the ATAC assay
