@@ -6,6 +6,13 @@ library(ComplexHeatmap)
 library(qs2)
 library(Seurat)
 
+cell_type_levels = c(
+    "MHb_A", "MHb_B", "MHb_C", "MHb_D", "LHb_A", "LHb_B", "LHb_C",
+    "GABA_LHb_C.1", "GABA_LHb_C.2", "Excit.Thal", "Inhib.Thal",
+    "Astrocyte", "Endo", "Ependymal", "Microglia", "Oligo", "OPC"
+)
+cell_map_path = here("raw-data", "cell_type_map.csv")
+
 trio_path = here(
     "processed-data", "13_tripod_trios", "09_gather_trios",
     "filtered_trios_fine.parquet"
@@ -39,11 +46,17 @@ trio_df = read_parquet_duckdb(trio_path, prudence = "stingy") |>
     ungroup() |>
     select(peak, gene, TF, cell_type, adj)
 
+cluster_map = read_csv(cell_map_path, show_col_types = FALSE)
+rename_map = stats::setNames(cluster_map$new_cell_type, cluster_map$old_cell_type)
+plot_cell_type = function(x) dplyr::coalesce(unname(rename_map[x]), x)
+plot_cell_type_order = cell_type_levels[cell_type_levels %in% unique(plot_cell_type(trio_df$cell_type))]
+
 #-------------------------------------------------------------------------------
 #   Load metacell data and build feature matrices
 #-------------------------------------------------------------------------------
 
 cell_type_order <- unique(trio_df$cell_type)
+plot_cell_types = plot_cell_type(cell_type_order)
 
 mats_list <- setNames(vector("list", length(cell_type_order)), cell_type_order)
 for (ct in cell_type_order) {
@@ -86,7 +99,7 @@ ct_col_ranges <- local({
 })
 
 # Shared color palettes
-ct_colors   <- setNames(scales::hue_pal()(length(cell_type_order)), cell_type_order)
+ct_colors   <- setNames(scales::hue_pal()(length(plot_cell_type_order)), plot_cell_type_order)
 feat_colors <- c("Gene" = "#4DAF4A", "Peak" = "#377EB8", "TF" = "#E41A1C")
 
 #-------------------------------------------------------------------------------
@@ -116,7 +129,7 @@ rownames(combined_mat) <- c(
 )
 
 row_groups    <- rep(c("TF", "Peak", "Gene"), each = nrow(trio_df))
-col_cell_types <- sub("_[0-9]+$", "", colnames(combined_mat))
+col_cell_types <- plot_cell_type(sub("_[0-9]+$", "", colnames(combined_mat)))
 
 hm1 <- Heatmap(
     combined_mat,
@@ -130,7 +143,7 @@ hm1 <- Heatmap(
     show_row_names   = FALSE,
     show_column_names = FALSE,
     row_split        = row_groups,
-    column_split     = col_cell_types,
+    column_split     = factor(col_cell_types, levels = plot_cell_type_order),
     left_annotation  = rowAnnotation(
         feature_type = row_groups,
         col = list(feature_type = c("TF" = "lightblue", "Peak" = "lightgreen", "Gene" = "lightyellow")),
@@ -198,7 +211,7 @@ col_blocks <- lapply(cell_type_order, function(ct) {
     list(
         mat  = cbind(gene_mat_z2[, idx], peak_mat_z2[, idx], tf_mat_z2[, idx]),
         names = c(paste0(ct, "_gene_", mc), paste0(ct, "_peak_", mc), paste0(ct, "_tf_", mc)),
-        ct   = rep(ct,  3 * length(idx)),
+        ct   = rep(plot_cell_type(ct), 3 * length(idx)),
         feat = rep(c("Gene", "Peak", "TF"), each = length(idx))
     )
 })
@@ -211,20 +224,21 @@ colnames(new_mat) <- unlist(lapply(col_blocks, `[[`, "names"))
 # Row ordering: group by source CT, cluster within each group using all three
 # features from that CT's metacell columns
 source_ct <- trio_df$cell_type
+source_ct_plot <- plot_cell_type(source_ct)
 row_order  <- integer(0)
 row_group_labels <- character(0)
 
 for (ct in cell_type_order) {
     trio_idx <- which(source_ct == ct)
     if (length(trio_idx) == 0) next
-    sub_mat  <- new_mat[trio_idx, col_annot_ct == ct, drop = FALSE]
+    sub_mat  <- new_mat[trio_idx, col_annot_ct == plot_cell_type(ct), drop = FALSE]
     ordering <- if (length(trio_idx) == 1) 1L else hclust(dist(sub_mat), method = "complete")$order
     row_order        <- c(row_order, trio_idx[ordering])
-    row_group_labels <- c(row_group_labels, rep(ct, length(trio_idx)))
+    row_group_labels <- c(row_group_labels, rep(plot_cell_type(ct), length(trio_idx)))
 }
 
 new_mat_ordered <- new_mat[row_order, ]
-row_source_ct   <- source_ct[row_order]
+row_source_ct   <- source_ct_plot[row_order]
 row_labels      <- paste0(trio_df$gene[row_order], " / ", trio_df$TF[row_order])
 
 hm2 <- Heatmap(
@@ -233,7 +247,7 @@ hm2 <- Heatmap(
     col  = circlize::colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
     cluster_columns       = FALSE,
     cluster_column_slices = FALSE,
-    column_split          = factor(col_annot_ct, levels = cell_type_order),
+    column_split          = factor(col_annot_ct, levels = plot_cell_type_order),
     show_column_names     = FALSE,
     show_column_dend      = FALSE,
     column_title_gp       = gpar(fontsize = 7, fontface = "bold"),
@@ -241,7 +255,7 @@ hm2 <- Heatmap(
     column_gap            = unit(1.5, "mm"),
     cluster_rows          = FALSE,
     cluster_row_slices    = FALSE,
-    row_split             = factor(row_group_labels, levels = cell_type_order),
+    row_split             = factor(row_group_labels, levels = plot_cell_type_order),
     show_row_dend         = FALSE,
     show_row_names        = FALSE,
     row_title_gp          = gpar(fontsize = 7, fontface = "bold"),
@@ -299,7 +313,14 @@ palette_20 <- c(
 # trio_sub: subset of trio_df; row_idx: corresponding row indices into feature matrices
 make_cor_heatmap <- function(trio_sub, row_idx, filename) {
     source_ct_sub <- trio_sub$cell_type
-    ct_sub_order  <- cell_type_order[cell_type_order %in% unique(source_ct_sub)]
+    source_ct_sub_plot <- plot_cell_type(source_ct_sub)
+    ct_sub_order_plot <- plot_cell_type_order[
+        plot_cell_type_order %in% unique(source_ct_sub_plot)
+    ]
+    ct_sub_order <- cell_type_order[match(
+        ct_sub_order_plot,
+        plot_cell_type(cell_type_order)
+    )]
 
     # Top 20 TFs and color palette computed from this specific subset. This sort
     # of bizarre logic prioritizes TFs that appear in many trios, but also
@@ -310,10 +331,11 @@ make_cor_heatmap <- function(trio_sub, row_idx, filename) {
         mutate(n = n()) |>
         ungroup() |>
         arrange(desc(n)) |>
-        group_by(cell_type) |>
+        mutate(cell_type_plot = plot_cell_type(cell_type)) |>
+        group_by(cell_type_plot) |>
         mutate(row_num = row_number()) |>
         ungroup() |>
-        arrange(row_num, cell_type) |>
+        arrange(row_num, cell_type_plot) |>
         distinct(TF) |>
         slice_head(n = 20) |>
         pull(TF)
@@ -329,10 +351,10 @@ make_cor_heatmap <- function(trio_sub, row_idx, filename) {
                      tf_mat_z2[row_idx[ti],   idx, drop = FALSE])
         o   <- if (length(ti) == 1) 1L else hclust(dist(sm), method = "complete")$order
         row_ord <- c(row_ord, ti[o])
-        row_grp <- c(row_grp, rep(ct, length(ti)))
+        row_grp <- c(row_grp, rep(plot_cell_type(ct), length(ti)))
     }
 
-    rsc    <- source_ct_sub[row_ord]
+    rsc    <- source_ct_sub_plot[row_ord]
     tf_sub <- factor(
         ifelse(trio_sub$TF[row_ord] %in% top20_tfs, trio_sub$TF[row_ord], "Other"),
         levels = c(top20_tfs, "Other")
@@ -341,13 +363,13 @@ make_cor_heatmap <- function(trio_sub, row_idx, filename) {
     # Correlation matrix: rows in row_ord order, columns = all cell types
     # Restricted to metacells with nonzero raw TF expression (>= 3 required, else NA)
     cm <- matrix(NA_real_, nrow = nrow(trio_sub), ncol = length(ct_sub_order),
-                 dimnames = list(NULL, ct_sub_order))
+                 dimnames = list(NULL, ct_sub_order_plot))
     for (ct in ct_sub_order) {
         idx <- ct_col_ranges[[ct]]
         for (i in seq_len(nrow(trio_sub))) {
             nz <- which(tf_mat[row_idx[row_ord[i]], idx] > 0)
             if (length(nz) < 3) next
-            cm[i, ct] <- suppressWarnings(cor(
+            cm[i, plot_cell_type(ct)] <- suppressWarnings(cor(
                 gene_mat_z2[row_idx[row_ord[i]], idx[nz]],
                 peak_mat_z2[row_idx[row_ord[i]], idx[nz]]
             ))
@@ -361,7 +383,7 @@ make_cor_heatmap <- function(trio_sub, row_idx, filename) {
         na_col = "grey85",
         cluster_rows       = FALSE,
         cluster_row_slices = FALSE,
-        row_split          = factor(row_grp, levels = ct_sub_order),
+        row_split          = factor(row_grp, levels = plot_cell_type_order),
         show_row_dend      = FALSE,
         show_row_names     = FALSE,
         row_title_gp       = gpar(fontsize = 7, fontface = "bold"),
@@ -373,7 +395,7 @@ make_cor_heatmap <- function(trio_sub, row_idx, filename) {
         column_names_rot   = 90,
         left_annotation  = rowAnnotation(
             `Source CT` = rsc,
-            col = list(`Source CT` = ct_colors[ct_sub_order]),
+            col = list(`Source CT` = ct_colors[ct_sub_order_plot]),
             show_legend = FALSE,
             annotation_name_gp = gpar(fontsize = 8),
             simple_anno_size   = unit(0.4, "cm")
