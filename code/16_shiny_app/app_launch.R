@@ -33,6 +33,10 @@ atlas_seur <- qs_read("atlas_seur_minimal.qs2")
 metacell_seur <- qs_read("merged_metacell_seur.qs2")
 trio_df <- read_csv("trios.csv", show_col_types = FALSE)
 
+atlas_seur@meta.data$mid_cluster <- factor(
+    atlas_seur@meta.data$mid_cluster, levels = names(cell_type_colors)
+)
+
 run_app(
     atlas_seur = atlas_seur,
     color_vars = allowed_color_vars,
