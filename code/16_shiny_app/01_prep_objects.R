@@ -13,6 +13,7 @@ cell_types = c(
     "MHb.1.2", "MHb.2", "Microglia", "Oligo", "OPC"
 )
 dar_path = here("processed-data", "15_DARs", "03_gather", "DARs_fine.csv.gz")
+cell_map_path = here('raw-data', 'cell_type_map.csv')
 trio_path = here(
     "processed-data", "13_tripod_trios", "09_gather_trios",
     "filtered_trios_fine.parquet"
@@ -78,11 +79,21 @@ merge_metacell_assay = function(metacell_objs, assay_name) {
 rna_mat = merge_metacell_assay(metacell_objs, "rna")
 peak_mat = merge_metacell_assay(metacell_objs, "peak")
 
+cluster_map = read_csv(cell_map_path, show_col_types = FALSE)
+rename_map <- stats::setNames(
+    cluster_map$new_cell_type, cluster_map$old_cell_type
+)
+
 meta_df = tibble(
         cell = rownames(rna_mat),
-        cell_type = stringr::str_remove(cell, "_metacell_\\d+$")
+        mid_cluster = stringr::str_remove(cell, "_metacell_\\d+$")
     ) |>
-    tibble::column_to_rownames("cell")
+    tibble::column_to_rownames("cell") |>
+    mutate(
+        mid_cluster = dplyr::coalesce(
+            unname(rename_map[mid_cluster]), mid_cluster
+        )
+    )
 
 stopifnot(identical(rownames(rna_mat), rownames(peak_mat)))
 
