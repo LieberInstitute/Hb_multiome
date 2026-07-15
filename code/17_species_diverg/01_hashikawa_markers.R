@@ -17,11 +17,25 @@ library(BSgenome.Hsapiens.UCSC.hg38)
 hashikawa_path = '/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/09_cross_species_analysis/Hashikawa_data'
 hashikawa_data_path = here('processed-data','05_02_external_Hb_comparisons','04_wallace_hashikawa_mouse')
 
+wallace_path = here('processed-data', '05_02_external_Hb_comparisons', '02_qc_and_clust_wallace_2019')
+wallace_data_path = here('processed-data', '05_02_external_Hb_comparisons', '03_metaMarkers_wallace_2019')
+
+
 new_data_path = here('processed-data','17_species_diverg','01_hashikawa_markers')
 dir.create(new_data_path, showWarnings = FALSE)
 
 #Path to orthologs
 path_to_orthologs = here('processed-data', '05_02_external_Hb_comparisons', 'human_mouse_zebrafish_orthologs.txt.gz')
+
+
+#Wallace mouse data
+wallace_sce = readRDS(paste0(wallace_path, '/all_donor_sce_with_denovo_clusters.rds'))
+
+# Add the mouse metadata
+current_mouse_metadata = readRDS(paste0(wallace_data_path, '/wallace_mouse_metaclust_celltype_annot_metadata.rds'))
+colData(wallace_sce) = S4Vectors::DataFrame(current_mouse_metadata)
+
+
 
 
 #Loads the sce_mouse_sub list, has two sce objects. We have the consensus annotations for just the neuronal subset object
@@ -77,9 +91,22 @@ hashikawa_final_sce$consensus_annot[grepl('OPC', hashikawa_final_sce$celltype) ]
 
 table(hashikawa_final_sce$consensus_annot)
 
+#wallace annotations
+wallace_sce$consensus_annot = wallace_sce$meta_clust_celltype_annot
+wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('MHb_subP')] = 'MHb.1'
+wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('MHb_cholinergic')] = 'MHb.2'
+wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('LHb_2')] = 'LHb.2.7'
+wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('LHb_1')] = 'LHb.4'
+wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('Astrocytes')] = 'Astrocyte'
+wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('Oligodendrocytes')] = 'Oligo'
+wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('Differentiating Oligodendrocytes')] = 'OPC'
+
+table(wallace_sce$consensus_annot)
+
 
 #Gene symbols as the rownames
 rownames(hashikawa_final_sce) = rowData(hashikawa_final_sce)$Symbol
+#rownames(wallace_sce) = rowData(wallace_sce)$Symbol
 
 #Maybe clear up some memory, dont need the reduced dims for the t-stats
 reducedDims(hashikawa_final_sce) <- list()
@@ -99,6 +126,8 @@ hu_mu_zf_ortholog_df <- hu_mu_zf_ortholog_df %>%
   filter(!duplicated(`Gene name`))
 dim(hu_mu_zf_ortholog_df)
 
+index = match(rownames(wallace_sce), hu_mu_zf_ortholog_df$`Mouse gene name`)
+rownames(wallace_sce) = hu_mu_zf_ortholog_df$`Gene name`[index]
 
 index = match(rownames(hashikawa_final_sce), hu_mu_zf_ortholog_df$`Mouse gene name`)
 rownames(hashikawa_final_sce) = hu_mu_zf_ortholog_df$`Gene name`[index]
@@ -107,6 +136,11 @@ rownames(hashikawa_final_sce) = hu_mu_zf_ortholog_df$`Gene name`[index]
 na_gene_index = !is.na(rownames(hashikawa_final_sce))
 hashikawa_final_sce = hashikawa_final_sce[na_gene_index, ]
 table(is.na(rownames(hashikawa_final_sce)))
+
+na_gene_index = !is.na(rownames(wallace_sce))
+wallace_sce = wallace_sce[na_gene_index, ]
+table(is.na(rownames(wallace_sce)))
+
 
 #logcounts normalization
 hashikawa_final_sce = logNormCounts(hashikawa_final_sce)
@@ -146,16 +180,30 @@ table(hashikawa_final_sce$stim)
 hashikawa_cntl = hashikawa_final_sce[ , hashikawa_final_sce$stim == 'cntl' ]
 hashikawa_stim = hashikawa_final_sce[ , hashikawa_final_sce$stim == 'stim' ]
 
+
+#Also add in the Wallace data here too
+colnames(colData(wallace_sce))
+table(wallace_sce$putative_donor, wallace_sce$consensus_annot)
+wallace_d1 = wallace_sce[ , wallace_sce$putative_donor == '160822' ]
+wallace_d2 = wallace_sce[ , wallace_sce$putative_donor == '161102' ]
+wallace_d3 = wallace_sce[ , wallace_sce$putative_donor == '161103' ]
+wallace_d4 = wallace_sce[ , wallace_sce$putative_donor == '161105' ]
+
 mouse_marker_list = list(
   cntl = compute_markers(assay(hashikawa_cntl, 'cpm'), hashikawa_cntl$consensus_annot),
-  stim = compute_markers(assay(hashikawa_stim, 'cpm'), hashikawa_stim$consensus_annot)
-)
+  stim = compute_markers(assay(hashikawa_stim, 'cpm'), hashikawa_stim$consensus_annot),
+  wallace_d1 = compute_markers(assay(wallace_d1, 'cpm'), wallace_d1$consensus_annot),
+  wallace_d2 = compute_markers(assay(wallace_d2, 'cpm'), wallace_d2$consensus_annot),
+  wallace_d3 = compute_markers(assay(wallace_d3, 'cpm'), wallace_d3$consensus_annot),
+  wallace_d4 = compute_markers(assay(wallace_d4, 'cpm'), wallace_d4$consensus_annot)
+  )
+
 
 mouse_metaMarkers = make_meta_markers(mouse_marker_list , detailed_stats = TRUE)
 
 #Save the metamarkers
 export_meta_markers(mouse_metaMarkers, 
-  paste0(new_data_path, '/hashikawa_meta_markers.csv'), 
+  paste0(new_data_path, '/mouse_meta_markers.csv'), 
   names(mouse_metaMarkers))
 
 
