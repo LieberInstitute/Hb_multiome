@@ -24,6 +24,10 @@ wallace_data_path = here('processed-data', '05_02_external_Hb_comparisons', '03_
 new_data_path = here('processed-data','17_species_diverg','01_hashikawa_markers')
 dir.create(new_data_path, showWarnings = FALSE)
 
+#colors
+source(here('code','05_03_annotation_adjustments','celltype_colors.R'))
+
+
 #Path to orthologs
 path_to_orthologs = here('processed-data', '05_02_external_Hb_comparisons', 'human_mouse_zebrafish_orthologs.txt.gz')
 
@@ -144,6 +148,7 @@ table(is.na(rownames(wallace_sce)))
 
 #logcounts normalization
 hashikawa_final_sce = logNormCounts(hashikawa_final_sce)
+wallace_sce = logNormCounts(wallace_sce)
 
 #Now get the marker stats
 #MeanRatio markers
@@ -205,6 +210,55 @@ mouse_metaMarkers = make_meta_markers(mouse_marker_list , detailed_stats = TRUE)
 export_meta_markers(mouse_metaMarkers, 
   paste0(new_data_path, '/mouse_meta_markers.csv'), 
   names(mouse_metaMarkers))
+
+
+
+# Function to plot gene expression with violin plot
+plot_gene_violin <- function(gene_name, sce = multiome_sce, assay_name = "logcounts", 
+                             group_by = "refined_mid_cluster") {
+  
+  # Check if gene exists in the object
+  if (!gene_name %in% rownames(sce)) {
+    stop(paste0("Gene '", gene_name, "' not found in the SCE object"))
+  }
+  
+  # Extract expression data
+  expr_data <- assay(sce, assay_name)[gene_name, ]
+  
+  # Create data frame for plotting
+  plot_df <- data.frame(
+    expression = expr_data,
+    celltype = colData(sce)[[group_by]]
+  )
+  
+  # Order celltypes by median expression
+  celltype_order <- plot_df |>
+    group_by(celltype) |>
+    summarise(mean_expr = mean(expression, na.rm = TRUE)) |>
+    arrange(mean_expr) |>
+    pull(celltype)
+  
+  plot_df$celltype <- factor(plot_df$celltype, levels = celltype_order)
+  
+  # Create violin plot
+  ggplot(plot_df, aes(x = celltype, y = expression, fill = celltype)) +
+    geom_violin(scale = "width", trim = FALSE) +
+    geom_boxplot(width = 0.1, fill = "white", outlier.shape = NA) +
+    scale_fill_manual(values = my_colors_mid) +
+    labs(
+      title = paste0(gene_name, " Expression"),
+      x = "Cell Type",
+      y = "Log-normalized Expression"
+    ) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      legend.position = "none"
+    )
+}
+
+plot_gene_violin('SLC12A5', sce = hashikawa_final_sce, assay_name = "logcounts", group_by = "consensus_annot")
+plot_gene_violin('SLC12A5', sce = wallace_sce, assay_name = "logcounts", group_by = "consensus_annot")
 
 
 session_info()
