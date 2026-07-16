@@ -6,11 +6,6 @@ library(ComplexHeatmap)
 library(qs2)
 library(Seurat)
 
-cell_type_levels = c(
-    "MHb_A", "MHb_B", "MHb_C", "MHb_D", "LHb_A", "LHb_B", "LHb_C",
-    "GABA_LHb_C.1", "GABA_LHb_C.2", "Excit.Thal", "Inhib.Thal",
-    "Astrocyte", "Endo", "Ependymal", "Microglia", "Oligo", "OPC"
-)
 cell_map_path = here("raw-data", "cell_type_map.csv")
 
 trio_path = here(
@@ -24,6 +19,26 @@ prep_path = here(
 )
 
 plot_dir = here("plots", "13_tripod_trios", "13_summary_heatmap")
+cell_type_colors = c(
+    MHb_A = "#5e0c01",
+    MHb_B = "#943f02",
+    MHb_C = "#f67104",
+    MHb_D = "#f4d5ab",
+    LHb_A = "#ee9630",
+    LHb_B = "#306171",
+    LHb_C = "#082844",
+    GABA_LHb_C.1 = "#9c66c0",
+    GABA_LHb_C.2 = "#5e0c56",
+    Excit.Thal = "#2e6296",
+    Inhib.Thal = "#8DADCA",
+    Astrocyte = "#972f2f",
+    Endo = "#f65a45",
+    Ependymal = "#dbb369",
+    Microglia = "#141b02",
+    Oligo = "#384a08",
+    OPC = "#829454"
+)
+cell_type_levels = names(cell_type_colors)
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 num_cores = if (is.na(num_cores)) 1L else num_cores
@@ -99,7 +114,14 @@ ct_col_ranges <- local({
 })
 
 # Shared color palettes
-ct_colors   <- setNames(scales::hue_pal()(length(plot_cell_type_order)), plot_cell_type_order)
+missing_ct_colors <- setdiff(plot_cell_type_order, names(cell_type_colors))
+if (length(missing_ct_colors) > 0) {
+    stop(sprintf(
+        "Missing colors in cell_type_colors for: %s",
+        paste(missing_ct_colors, collapse = ", ")
+    ))
+}
+ct_colors   <- cell_type_colors[plot_cell_type_order]
 feat_colors <- c("Gene" = "#4DAF4A", "Peak" = "#377EB8", "TF" = "#E41A1C")
 
 #-------------------------------------------------------------------------------

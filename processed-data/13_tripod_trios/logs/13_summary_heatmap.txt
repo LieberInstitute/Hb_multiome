@@ -1,10 +1,10 @@
 **** Job starts ****
-Wed Jul  1 11:15:26 AM EDT 2026
+Thu Jul 16 10:18:17 AM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 33798108
+Job id: 34138855
 Job name: 13_summary_heatmap
-Node name: compute-169
+Node name: compute-175
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -32,7 +32,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 1222.
+✔ Number of reports ready for upload: 1257.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -82,14 +82,16 @@ null device
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-07-01
+ date     2026-07-16
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.9.38 @ /users/neagles/.positron-server/bin/63f0568b148d4d18b7a3194286686d6fb970bed3/quarto/bin/quarto
+ quarto   1.9.38 @ /users/neagles/.positron-server/bin/d3cdd608df5afa3378c24c9a9c81b01fe1433a87/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package          * version date (UTC) lib source
  abind              1.4-8   2024-09-12 [1] CRAN (R 4.5.0)
  BiocGenerics       0.54.0  2025-04-15 [1] Bioconduc~
+ bit                4.6.0   2025-03-06 [2] CRAN (R 4.5.0)
+ bit64              4.6.0-1 2025-01-16 [2] CRAN (R 4.5.0)
  cachem             1.1.0   2024-05-16 [1] CRAN (R 4.5.0)
  Cairo              1.6-2   2023-11-28 [2] CRAN (R 4.5.0)
  circlize           0.4.16  2024-02-20 [2] CRAN (R 4.5.0)
@@ -222,6 +224,7 @@ null device
  uwot               0.2.3   2025-02-24 [1] CRAN (R 4.5.0)
  vctrs              0.6.5   2023-12-01 [1] CRAN (R 4.5.0)
  viridisLite        0.4.2   2023-05-02 [1] CRAN (R 4.5.0)
+ vroom              1.6.5   2023-12-05 [2] CRAN (R 4.5.0)
  withr              3.0.2   2024-10-28 [1] CRAN (R 4.5.0)
  xtable             1.8-4   2019-04-21 [2] CRAN (R 4.5.0)
  zoo                1.8-14  2025-04-10 [2] CRAN (R 4.5.0)
@@ -233,4 +236,4 @@ null device
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Jul  1 11:17:10 AM EDT 2026
+Thu Jul 16 10:24:30 AM EDT 2026
