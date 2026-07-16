@@ -1,10 +1,10 @@
 **** Job starts ****
-Tue Jul 14 01:38:34 PM EDT 2026
+Thu Jul 16 01:20:50 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 34096790
+Job id: 34140128
 Job name: 15_tss_distance
-Node name: compute-178
+Node name: compute-176
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -32,7 +32,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 1237.
+✔ Number of reports ready for upload: 1259.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -171,7 +171,14 @@ In S4Vectors:::anyMissing(runValue(from)) :
   'S4Vectors:::anyMissing()' is deprecated.
 Use 'anyNA()' instead.
 See help("Deprecated")
-Saving 7 x 7 in image
+Saving 9 x 7 in image
+Warning message:
+Removed 17 rows containing non-finite outside the scale range
+(`stat_density()`). 
+Saving 9 x 7 in image
+Warning message:
+Removed 194521 rows containing non-finite outside the scale range
+(`stat_density()`). 
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -182,7 +189,7 @@ Saving 7 x 7 in image
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-07-14
+ date     2026-07-16
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.9.38 @ /users/neagles/.positron-server/bin/d3cdd608df5afa3378c24c9a9c81b01fe1433a87/quarto/bin/quarto
 
@@ -289,4 +296,4 @@ Saving 7 x 7 in image
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Tue Jul 14 01:38:57 PM EDT 2026
+Thu Jul 16 01:21:10 PM EDT 2026
