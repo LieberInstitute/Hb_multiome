@@ -17,6 +17,8 @@ plot_path = here('plots','05_03_annotation_adjustments', '15_marker_GO_enrich')
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
 
+#colors
+source(here('code','05_03_annotation_adjustments','celltype_colors.R'))
 
 human_marker_path = here('processed-data', '05_03_annotation_adjustments', '08_metamarkers')
 mouse_marker_path = here('processed-data','17_species_diverg','01_hashikawa_markers')
@@ -25,7 +27,7 @@ mouse_marker_path = here('processed-data','17_species_diverg','01_hashikawa_mark
 #human_marker_stats = readRDS(file = paste0(human_marker_path, '/marker_stats_combo.rds'))
 #mouse_marker_stats = readRDS(file = paste0(mouse_marker_path, '/marker_stats_combo.rds'))
 
-human_markers = read_meta_markers(paste0(human_marker_path, '/multiome_refined_mid_noInhibLHb4_meta_markers.csv.gz'))
+human_markers = read_meta_markers(paste0(human_marker_path, '/multiome_no_thal_mid_meta_markers.csv.gz'))
 mouse_markers = read_meta_markers(paste0(mouse_marker_path, '/mouse_meta_markers.csv.gz'))
 
 #Filter for shared genes
@@ -38,6 +40,12 @@ mouse_markers = mouse_markers[mouse_markers$gene %in% shared_genes, ]
 
 human_markers |> filter(rank <= 75) |> View()
 mouse_markers |> filter(rank <= 75) |> View()
+
+
+#Update the mouse cell-type names
+mouse_markers$cell_type = recode(mouse_markers$cell_type, 
+  'MHb.1' = 'MHb_A', 'MHb.2' = 'MHb_B', 'LHb.2.7' = 'LHb_A', 
+  'LHb.1.3.4' = 'LHb_B', 'LHb.4' = 'LHb_C')
 
 
 plot_de_stats = function(hu_markers, mou_markers, stat_of_interest, 
@@ -94,7 +102,7 @@ plot_de_stats = function(hu_markers, mou_markers, stat_of_interest,
                fill = "purple", alpha = 0.2) +
       geom_point(alpha = .5, show.legend = FALSE) +
       geom_abline(intercept = 0, slope = 1, color = 'red', linetype = 'dashed') + 
-      geom_label_repel(max.overlaps = Inf, min.segment.length = 0, size = 2) +
+      geom_label_repel(max.overlaps = Inf, min.segment.length = 0, size = 3) +
       scale_color_manual(values = c('Not labeled' = 'black', 'Labeled' = 'red')) +
       scale_size_manual(values = c('Not labeled' = 1, 'Labeled' = 2)) +
       scale_alpha_manual(values = c('Not labeled' = .25, 'Labeled' = 1) ) +
@@ -108,7 +116,7 @@ plot_de_stats = function(hu_markers, mou_markers, stat_of_interest,
     color = point_color_fc, size = point_color_fc, alpha = point_color_fc)) + 
       geom_point(alpha = .5, show.legened = FALSE) +
       geom_abline(intercept = 0, slope = 1, color = 'red', linetype = 'dashed') + 
-      geom_label_repel(max.overlaps = Inf, min.segment.length = 0, size = 2) +
+      geom_label_repel(max.overlaps = Inf, min.segment.length = 0, size = 3) +
       scale_color_manual(values = c('Not labeled' = 'black', 'Labeled' = 'red')) +
       scale_size_manual(values = c('Not labeled' = 1, 'Labeled' = 2)) +
       scale_alpha_manual(values = c('Not labeled' = .25, 'Labeled' = 1) ) +
@@ -126,47 +134,77 @@ astro_fc_p
 
 
 subP_auroc_p = plot_de_stats(human_markers, mouse_markers, 'auroc', 
-human_celltype = 'MHb.1', mouse_celltype = 'MHb.1', gene_labels = c( 'SLC12A5', 'TAC1', 'SLC12A2', 'CA7'))
+human_celltype = 'MHb_A', mouse_celltype = 'MHb_A', gene_labels = c( 'SLC12A5', 'TAC1'))
 subP_auroc_p
 subP_fc_p = plot_de_stats(human_markers, mouse_markers, 'fold_change', 
-human_celltype = 'MHb.1', mouse_celltype = 'MHb.1', gene_labels = c('SLC12A5', 'TAC1', 'SLC12A2'))
+human_celltype = 'MHb_A', mouse_celltype = 'MHb_A', gene_labels = c('SLC12A5', 'TAC1'))
 subP_fc_p
 
 chol_auroc_p = plot_de_stats(human_markers, mouse_markers, 'auroc', 
-human_celltype = 'MHb.2', mouse_celltype = 'MHb.2', gene_labels = c('SLC12A5', 'SLC5A7', 'SLC12A2', 'CA7'))
+human_celltype = 'MHb_B', mouse_celltype = 'MHb_B', gene_labels = c('SLC12A5', 'SLC5A7'))
 chol_auroc_p
 chol_fc_p = plot_de_stats(human_markers, mouse_markers, 'fold_change', 
-human_celltype = 'MHb.2', mouse_celltype = 'MHb.2', gene_labels = c('SLC12A5', 'SLC5A7', 'SLC12A2'))
+human_celltype = 'MHb_B', mouse_celltype = 'MHb_B', gene_labels = c('SLC12A5', 'SLC5A7'))
 chol_fc_p
 
 
 LHb_A_auroc_p = plot_de_stats(human_markers, mouse_markers, 'auroc', 
-human_celltype = 'LHb.2.7', mouse_celltype = 'LHb.2.7', gene_labels = c('SLC12A5', 'HTR2C', 'CBLN2', 'SLC12A2', 'CA7'))
+human_celltype = 'LHb_A', mouse_celltype = 'LHb_A', gene_labels = c('SLC12A5', 'HTR2C', 'CBLN2'))
 LHb_A_auroc_p
 LHb_A_fc_p = plot_de_stats(human_markers, mouse_markers, 'fold_change', 
-human_celltype = 'LHb.2.7', mouse_celltype = 'LHb.2.7', gene_labels = c('SLC12A5', 'HTR2C', 'CBLN2', 'SLC12A2'))
+human_celltype = 'LHb_A', mouse_celltype = 'LHb_A', gene_labels = c('SLC12A5', 'HTR2C', 'CBLN2'))
 LHb_A_fc_p
 
 LHb_B_auroc_p = plot_de_stats(human_markers, mouse_markers, 'auroc', 
-human_celltype = 'LHb.1.3.4', mouse_celltype = 'LHb.1.3.4', gene_labels = c('SLC12A5', 'TENM1', 'HTR4', 'SLC12A2', 'CA7'))
+human_celltype = 'LHb_B', mouse_celltype = 'LHb_B', gene_labels = c('SLC12A5', 'TENM1'))
 LHb_B_auroc_p
 LHb_B_fc_p = plot_de_stats(human_markers, mouse_markers, 'fold_change', 
-human_celltype = 'LHb.1.3.4', mouse_celltype = 'LHb.1.3.4', gene_labels = c('SLC12A5', 'TENM1', 'HTR4', 'SLC12A2', 'CA7'))
+human_celltype = 'LHb_B', mouse_celltype = 'LHb_B', gene_labels = c('SLC12A5', 'TENM1'))
 LHb_B_fc_p
 
 LHb_C_auroc_p = plot_de_stats(human_markers, mouse_markers, 'auroc', 
-human_celltype = 'LHb.4', mouse_celltype = 'LHb.4', gene_labels = c('SLC12A5',  'GABRB1', 'SLC12A2', 'CA7'))
+human_celltype = 'LHb_C', mouse_celltype = 'LHb_C', gene_labels = c('SLC12A5',  'GABRB1'))
 LHb_C_auroc_p
 LHb_C_fc_p = plot_de_stats(human_markers, mouse_markers, 'fold_change', 
-human_celltype = 'LHb.4', mouse_celltype = 'LHb.4', gene_labels = c('SLC12A5','GABRB1', 'SLC12A2' ))
+human_celltype = 'LHb_C', mouse_celltype = 'LHb_C', gene_labels = c('SLC12A5','GABRB1'))
 LHb_C_fc_p
 
 table(human_markers$cell_type)
 
 
 
-human_markers |> filter(gene == 'SLC25A5' & cell_type %in% c())
+human_kcc2_stats = human_markers |>
+  filter(gene == 'SLC12A5' & cell_type %in% c('MHb_A','MHb_B','LHb_A','LHb_B','LHb_C')) |> 
+  select(cell_type, auroc) |> 
+  mutate(species = 'Human', gene = 'SLC12A5')
 
+mouse_kcc2_stats = mouse_markers |>
+  filter(gene == 'SLC12A5' & cell_type %in% c('MHb_A','MHb_B','LHb_A','LHb_B','LHb_C')) |> 
+  select(cell_type, auroc) |> 
+  mutate(species = 'Mouse', gene = 'SLC12A5')
+
+# Combine the data for grouped lollipop plot
+plot_data <- bind_rows(human_kcc2_stats, mouse_kcc2_stats)
+plot_data$cell_type = factor(plot_data$cell_type, levels = c('LHb_C','LHb_B','LHb_A','MHb_A','MHb_B'))
+# Create grouped lollipop chart
+ggplot(plot_data, aes(x = cell_type, y = auroc, group = species)) +
+  geom_line(aes(group = cell_type, color = cell_type), linewidth = 2) +
+  scale_color_manual(values = my_colors_mid, name = "Cell Type") +
+  ggnewscale::new_scale_color() +
+  geom_point(size = 4, aes(color = species)) +
+  scale_color_manual(values = c("Human" = "#e92f16", "Mouse" = "#22c3e7"), name = "Species") +
+  geom_hline(yintercept = 0.5, linetype = "dashed", color = "red") +
+  labs(
+    x = "Cell Type",
+    y = "AUROC",
+    title = "KCC2 (SLC12A5) Marker Specificity by Cell Type"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5, face = "bold")
+  )
 
 
 
