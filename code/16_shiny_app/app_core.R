@@ -432,7 +432,7 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, 
         group.by = metacell_group_var
       ) +
         guides(fill = "none") +
-        labs(title = NULL) +
+        labs(x = "Cell Type", y = "Expression", title = NULL) +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 
       if (!is.null(metacell_cell_type_colors)) {
@@ -456,7 +456,7 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, 
         group.by = metacell_group_var
       ) +
         guides(fill = "none") +
-        labs(title = NULL) +
+        labs(x = "Cell Type", y = "Accessibility", title = NULL) +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 
       if (!is.null(metacell_cell_type_colors)) {
