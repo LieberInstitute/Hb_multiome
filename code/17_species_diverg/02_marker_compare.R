@@ -10,9 +10,9 @@ here::here()
 
 
 #Path to save any generated data
-new_data_path = here('processed-data', '05_03_annotation_adjustments', '15_marker_GO_enrich')
+new_data_path = here('processed-data', '17_species_diverg', '02_marker_compare')
 #Path to plot directory
-plot_path = here('plots','05_03_annotation_adjustments', '15_marker_GO_enrich')
+plot_path = here('plots','17_species_diverg', '02_marker_compare')
 
 if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
@@ -127,12 +127,6 @@ plot_de_stats = function(hu_markers, mou_markers, stat_of_interest,
 }
 
 
-astro_auroc_p = plot_de_stats(human_markers, mouse_markers, 'auroc', 'Astrocyte', gene_labels = c('AQP4'))
-astro_auroc_p
-astro_fc_p = plot_de_stats(human_markers, mouse_markers, 'fold_change', 'Astrocyte', gene_labels = c('AQP4'))
-astro_fc_p
-
-
 subP_auroc_p = plot_de_stats(human_markers, mouse_markers, 'auroc', 
 human_celltype = 'MHb_A', mouse_celltype = 'MHb_A', gene_labels = c( 'SLC12A5', 'TAC1'))
 subP_auroc_p
@@ -187,7 +181,7 @@ mouse_kcc2_stats = mouse_markers |>
 plot_data <- bind_rows(human_kcc2_stats, mouse_kcc2_stats)
 plot_data$cell_type = factor(plot_data$cell_type, levels = c('LHb_C','LHb_B','LHb_A','MHb_A','MHb_B'))
 # Create grouped lollipop chart
-ggplot(plot_data, aes(x = cell_type, y = auroc, group = species)) +
+lolly_plot = ggplot(plot_data, aes(x = cell_type, y = auroc, group = species)) +
   geom_line(aes(group = cell_type, color = cell_type), linewidth = 2) +
   scale_color_manual(values = my_colors_mid, name = "Cell Type") +
   ggnewscale::new_scale_color() +
@@ -197,7 +191,7 @@ ggplot(plot_data, aes(x = cell_type, y = auroc, group = species)) +
   labs(
     x = "Cell Type",
     y = "AUROC",
-    title = "KCC2 (SLC12A5) Marker Specificity by Cell Type"
+    title = "KCC2 (SLC12A5) Marker DE by Cell Type"
   ) +
   theme_minimal() +
   theme(
@@ -205,6 +199,25 @@ ggplot(plot_data, aes(x = cell_type, y = auroc, group = species)) +
     axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold")
   )
+lolly_plot
+
+
+#save plots
+
+ggsave(plot = subP_auroc_p, filename = paste0(plot_path, '/subP_auroc_cross_species.pdf'), 
+width = 6, height = 5, device = 'pdf')
+ggsave(plot = chol_auroc_p, filename = paste0(plot_path, '/chol_auroc_cross_species.pdf'), 
+width = 6, height = 5, device = 'pdf')
+ggsave(plot = LHb_A_auroc_p, filename = paste0(plot_path, '/LHb_A_auroc_cross_species.pdf'), 
+width = 6, height = 5, device = 'pdf')
+ggsave(plot = LHb_B_auroc_p, filename = paste0(plot_path, '/LHb_B_auroc_cross_species.pdf'), 
+width = 6, height = 5, device = 'pdf')
+ggsave(plot = LHb_C_auroc_p, filename = paste0(plot_path, '/LHb_C_auroc_cross_species.pdf'), 
+width = 6, height = 5, device = 'pdf')
+
+ggsave(plot = lolly_plot, filename = paste0(plot_path, '/KCC2_lollipop_plot.pdf'), 
+width = 6, height = 5, device = 'pdf')
+
 
 
 
