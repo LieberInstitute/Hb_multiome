@@ -219,7 +219,6 @@ export_meta_markers(mouse_metaMarkers,
 
 # Function to create condensed violin plots similar to Tasic et al. 2018 Fig 4C
 # Y-axis is max-normalized expression across cell types
-
 plot_violin_maxnorm <- function(sce, gene, assay_name = "logcounts", celltype_col, study_label) {
   expr <- assay(sce, assay_name)[gene, ]
   celltype <- colData(sce)[[celltype_col]]
@@ -241,23 +240,23 @@ plot_violin_maxnorm <- function(sce, gene, assay_name = "logcounts", celltype_co
   
   # Compute medians per celltype for the dot overlay
   medians <- df |>
-    summarise(median_expr = median(norm_expr), .by = celltype)
+    summarise(median_expr = median(expression), .by = celltype)
   
-  ggplot(df, aes(x = celltype, y = norm_expr, fill = celltype)) +
+  ggplot(df, aes(x = celltype, y = expression, fill = celltype)) +
     geom_violin(
       scale = "width",
       width = 0.9,
       color = NA,
       trim = TRUE
     ) +
-    scale_fill_manual(values = my_colors_mid, guide = FALSE) +
+    scale_fill_manual(values = my_colors_mid, guide = 'none') +
     geom_point(
       data = medians,
       aes(x = celltype, y = median_expr),
       size = 1.5,
       color = "black"
     ) +
-    scale_y_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1)) +
+    scale_y_continuous(limits = c(0, 6), breaks = c(0, 2, 4, 6)) +
     labs(x = NULL, y = "Max-normalized expression", title = sprintf('%s - %s', study_label, gene)) +
     theme_classic(base_size = 10) +
     theme(
