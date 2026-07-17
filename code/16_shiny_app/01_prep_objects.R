@@ -103,13 +103,27 @@ meta_df = tibble(
 
 stopifnot(identical(rownames(rna_mat), rownames(peak_mat)))
 
-seur = CreateSeuratObject(
-    counts = t(rna_mat),
+#   Metacell matrices take raw counts, library-size normalize them, multiply
+#   by an arbitrary constant, but don't log-transform. Log-transform here.
+#   https://github.com/yuchaojiang/TRIPOD/blob/c8421358f6bfddeb6b219cbc836a40aae9d20016/package/R/prep.R#L167-L171
+rna_data  <- log1p(t(rna_mat))
+atac_data <- log1p(t(peak_mat))
+
+rna_assay  <- CreateAssay5Object(data = rna_data)
+atac_assay <- CreateAssay5Object(data = atac_data)
+
+seur <- CreateSeuratObject(
+    counts = Matrix(
+        0, nrow = nrow(rna_data), ncol = ncol(rna_data), sparse = TRUE,
+        dimnames = dimnames(rna_data)
+    ),
     meta.data = meta_df,
     assay = "RNA"
 )
-seur[["ATAC"]] = CreateAssayObject(counts = t(peak_mat))
-DefaultAssay(seur) = "RNA"
+
+seur[["RNA"]] <- rna_assay
+seur[["ATAC"]] <- atac_assay
+DefaultAssay(seur) <- "RNA"
 
 #   Add info about DARs to ATAC metadata
 dar_df = read_csv(dar_path, show_col_types = FALSE) |>
@@ -139,7 +153,6 @@ trio_df = read_parquet_duckdb(trio_path, prudence = "stingy") |>
         trio_coef = coef, trio_p_adj = adj, mid_cluster = cell_type,
         trio_level = stringency_level
     ) |>
-    select(trio_level, peak, gene, TF, mid_cluster, trio_coef, trio_p_adj) |>
     collect() |>
     mutate(
         trio_level = factor(
@@ -151,6 +164,7 @@ trio_df = read_parquet_duckdb(trio_path, prudence = "stingy") |>
             levels = cell_type_levels
         )
     ) |>
+    select(trio_level, peak, gene, TF, mid_cluster, trio_coef, trio_p_adj) |>
     arrange(trio_level, mid_cluster, trio_p_adj, trio_coef) |>
     write_csv(file.path(out_dir, "trios.csv.gz"))
 

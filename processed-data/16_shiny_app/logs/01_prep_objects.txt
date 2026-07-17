@@ -1,10 +1,10 @@
 **** Job starts ****
-Tue Jul 14 11:04:59 AM EDT 2026
+Fri Jul 17 12:53:26 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 34091081
+Job id: 34199670
 Job name: 01_prep_objects
-Node name: compute-168
+Node name: compute-178
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -49,12 +49,14 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 1235.
+✔ Number of reports ready for upload: 2269.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
 ✔ Overwriting dplyr methods with duckplyr methods.
 ℹ Turn off with `duckplyr::methods_restore()`.
+Warning: No layers found matching search pattern provided
+Warning: No layers found matching search pattern provided
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -65,7 +67,7 @@ be uploaded.
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-07-14
+ date     2026-07-17
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.9.38 @ /users/neagles/.positron-server/bin/d3cdd608df5afa3378c24c9a9c81b01fe1433a87/quarto/bin/quarto
 
@@ -218,4 +220,4 @@ be uploaded.
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Tue Jul 14 11:07:39 AM EDT 2026
+Fri Jul 17 01:02:51 PM EDT 2026

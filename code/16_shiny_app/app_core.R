@@ -412,7 +412,7 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, 
       paste0(
         "RNA vs ATAC in ",
         trio_row[[cell_type_var]][[1]],
-        " metacells, colored by log TF expression (",
+        " metacells, colored by TF expression (",
         trio_row$TF[[1]],
         ")"
       )
@@ -480,7 +480,7 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, 
 
       ggplot(
         plot_df,
-        aes(x = gene_expr, y = peak_expr, color = log1p(tf_expr))
+        aes(x = gene_expr, y = peak_expr, color = tf_expr)
       ) +
         geom_point(size = 2.5) +
         annotate(
@@ -495,7 +495,7 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, 
         labs(
           x = paste0("RNA: ", unique(plot_df$gene)),
           y = paste0("ATAC: ", unique(plot_df$peak)),
-          color = paste0("log1p RNA: ", unique(plot_df$TF))
+          color = paste0("TF: ", unique(plot_df$TF))
         )
     }, res = 110)
 
