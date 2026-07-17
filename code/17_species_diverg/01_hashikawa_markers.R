@@ -11,6 +11,8 @@ library(Matrix)
 library(edgeR)
 library(MetaMarkers)
 library(BSgenome.Hsapiens.UCSC.hg38)
+library(dplyr)
+library(ggplot2)
 
 
 
@@ -22,8 +24,9 @@ wallace_data_path = here('processed-data', '05_02_external_Hb_comparisons', '03_
 
 
 new_data_path = here('processed-data','17_species_diverg','01_hashikawa_markers')
+plot_path = here('plots','17_species_diverg','01_hashikawa_markers')
 dir.create(new_data_path, showWarnings = FALSE)
-
+dir.create(plot_path, showWarnings = FALSE)
 #colors
 source(here('code','05_03_annotation_adjustments','celltype_colors.R'))
 
@@ -213,52 +216,79 @@ export_meta_markers(mouse_metaMarkers,
 
 
 
-# Function to plot gene expression with violin plot
-plot_gene_violin <- function(gene_name, sce = multiome_sce, assay_name = "logcounts", 
-                             group_by = "refined_mid_cluster") {
+
+# Function to create condensed violin plots similar to Tasic et al. 2018 Fig 4C
+# Y-axis is max-normalized expression across cell types
+
+plot_violin_maxnorm <- function(sce, gene, assay_name = "logcounts", celltype_col, study_label) {
+  expr <- assay(sce, assay_name)[gene, ]
+  celltype <- colData(sce)[[celltype_col]]
   
-  # Check if gene exists in the object
-  if (!gene_name %in% rownames(sce)) {
-    stop(paste0("Gene '", gene_name, "' not found in the SCE object"))
-  }
-  
-  # Extract expression data
-  expr_data <- assay(sce, assay_name)[gene_name, ]
-  
-  # Create data frame for plotting
-  plot_df <- data.frame(
-    expression = expr_data,
-    celltype = colData(sce)[[group_by]]
+  df <- data.frame(
+    expression = as.numeric(expr),
+    celltype = celltype
   )
   
-  # Order celltypes by median expression
-  celltype_order <- plot_df |>
-    group_by(celltype) |>
-    summarise(mean_expr = mean(expression, na.rm = TRUE)) |>
-    arrange(mean_expr) |>
-    pull(celltype)
+  # Max-normalize
+  max_exp <- max(df$expression)
   
-  plot_df$celltype <- factor(plot_df$celltype, levels = celltype_order)
+  if (max_exp == 0) {
+    warning("Gene '", gene, "' has zero expression across all cell types.")
+    df$norm_expr <- 0
+  } else {
+    df$norm_expr <- df$expression / max_exp
+  }
   
-  # Create violin plot
-  ggplot(plot_df, aes(x = celltype, y = expression, fill = celltype)) +
-    geom_violin(scale = "width", trim = FALSE) +
-    geom_boxplot(width = 0.1, fill = "white", outlier.shape = NA) +
-    scale_fill_manual(values = my_colors_mid) +
-    labs(
-      title = paste0(gene_name, " Expression"),
-      x = "Cell Type",
-      y = "Log-normalized Expression"
+  # Compute medians per celltype for the dot overlay
+  medians <- df |>
+    summarise(median_expr = median(norm_expr), .by = celltype)
+  
+  ggplot(df, aes(x = celltype, y = norm_expr, fill = celltype)) +
+    geom_violin(
+      scale = "width",
+      width = 0.9,
+      color = NA,
+      trim = TRUE
     ) +
-    theme_bw() +
+    scale_fill_manual(values = my_colors_mid, guide = FALSE) +
+    geom_point(
+      data = medians,
+      aes(x = celltype, y = median_expr),
+      size = 1.5,
+      color = "black"
+    ) +
+    scale_y_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1)) +
+    labs(x = NULL, y = "Max-normalized expression", title = sprintf('%s - %s', study_label, gene)) +
+    theme_classic(base_size = 10) +
     theme(
-      axis.text.x = element_text(angle = 45, hjust = 1),
-      legend.position = "none"
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 7),
+      axis.ticks.x = element_blank(),
+      plot.title = element_text(face = "italic", size = 11),
+      panel.grid = element_blank(),
+      # Condensed vertical height — control via coord_cartesian or plot sizing
+      aspect.ratio = 0.15
     )
 }
 
-plot_gene_violin('SLC12A5', sce = hashikawa_final_sce, assay_name = "logcounts", group_by = "consensus_annot")
-plot_gene_violin('SLC12A5', sce = wallace_sce, assay_name = "logcounts", group_by = "consensus_annot")
 
+hashikawa_neuron = hashikawa_final_sce[ , hashikawa_final_sce$consensus_annot %in% c('MHb.1', 'MHb.2', 'LHb.2.7', 'LHb.1.3.4', 'LHb.4')]
+wallace_neuron = wallace_sce[ , wallace_sce$consensus_annot %in% c('MHb.1', 'MHb.2', 'LHb.2.7', 'LHb.1.3.4', 'LHb.4')]
+
+hashikawa_neuron$consensus_annot = factor(hashikawa_neuron$consensus_annot, levels = c('MHb.2', 'MHb.1', 'LHb.2.7', 'LHb.1.3.4', 'LHb.4'))
+wallace_neuron$consensus_annot = factor(wallace_neuron$consensus_annot, levels = c('MHb.2', 'MHb.1', 'LHb.2.7', 'LHb.1.3.4', 'LHb.4'))
+
+p1 = plot_violin_maxnorm(hashikawa_neuron, gene = "SLC12A5", 
+assay_name = "logcounts", celltype_col = "consensus_annot", study_label = "Hashikawa")
+
+p2 = plot_violin_maxnorm(wallace_neuron, gene = "SLC12A5", 
+assay_name = "logcounts", celltype_col = "consensus_annot", study_label = "Wallace")
+
+p1
+p2
+
+ggsave(plot = p1, filename = paste0(plot_path, '/hashikawa_SLC12A5_violin.pdf'), 
+width = 6, height = 2, device = 'pdf')
+ggsave(plot = p2, filename = paste0(plot_path, '/wallace_SLC12A5_violin.pdf'), 
+width = 6, height = 2, device = 'pdf')
 
 session_info()
