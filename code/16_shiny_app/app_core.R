@@ -235,8 +235,8 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, 
 
   rna_assay <- metacell_seur[["RNA"]]
   atac_assay <- metacell_seur[["ATAC"]]
-  rna_layer <- intersect(c("data", "counts"), Layers(rna_assay))[[1]]
-  atac_layer <- intersect(c("data", "counts"), Layers(atac_assay))[[1]]
+  rna_layer <- "data"
+  atac_layer <- "data"
 
   gene_choices <- rownames(rna_assay)
   peak_choices <- rownames(atac_assay)
