@@ -100,8 +100,12 @@ validate_metacell_inputs <- function(metacell_seur, trio_df, cell_type_var) {
 }
 
 build_atlas_panel <- function(reduction_choices, selected_reduction, color_choices, selected_color_by, missing_color_vars) {
-  layout_sidebar(
-    sidebar = sidebar(
+  tagList(
+    p(
+      "Cell-level embeddings colored by cell-type label. By default, the WNN (weighted nearest-neighbor) UMAP, which was built on a consensus of the RNA and ATAC data, is shown for all cells in the dataset."
+    ),
+    layout_sidebar(
+      sidebar = sidebar(
       selectInput(
         inputId = "reduction",
         label = "Reduced dimension",
@@ -123,17 +127,22 @@ build_atlas_panel <- function(reduction_choices, selected_reduction, color_choic
         )
       }
     ),
-    card(
-      full_screen = TRUE,
-      card_header(textOutput("plot_title")),
-      plotOutput("dim_plot", height = "700px")
+      card(
+        full_screen = TRUE,
+        card_header(textOutput("plot_title")),
+        plotOutput("dim_plot", height = "700px")
+      )
     )
   )
 }
 
 build_metacell_panel <- function(trio_df, dropped_trio_rows) {
-  layout_sidebar(
-    sidebar = sidebar(
+  tagList(
+    p(
+      "Gene expression, peak accessibility, and optionally transcription factor expression can be explored at the metacell level in this tab. Metacells are aggregates of many individual cells of the same cell type with similar feature expression, used by the TRIPOD method to find gene-peak-TF trios."
+    ),
+    layout_sidebar(
+      sidebar = sidebar(
       radioButtons(
         inputId = "feature_mode",
         label = "Feature selection mode",
@@ -189,10 +198,11 @@ build_metacell_panel <- function(trio_df, dropped_trio_rows) {
         plotOutput("trio_scatter_plot", height = "550px")
       )
     ),
-    card(
-      full_screen = TRUE,
-      card_header("Trio table"),
-      DTOutput("trio_table")
+      card(
+        full_screen = TRUE,
+        card_header("Trio table"),
+        DTOutput("trio_table")
+      )
     )
   )
 }
@@ -210,7 +220,7 @@ build_app_ui <- function(
     title = "Habenula Atlas Multiome",
     theme = bs_theme(version = 5),
     nav_panel(
-      "Atlas embeddings",
+      "Cell-Level Embeddings",
       build_atlas_panel(
         reduction_choices = reduction_choices,
         selected_reduction = selected_reduction,
@@ -220,7 +230,7 @@ build_app_ui <- function(
       )
     ),
     nav_panel(
-      "Metacell features",
+      "Metacell Features and Trios",
       build_metacell_panel(trio_df = trio_df, dropped_trio_rows = dropped_trio_rows)
     )
   )
