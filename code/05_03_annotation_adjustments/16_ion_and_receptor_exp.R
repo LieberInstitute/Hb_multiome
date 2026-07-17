@@ -66,7 +66,7 @@ sodium_genes = rownames(multiome_sce)[grepl('SCN', rownames(multiome_sce)) & !gr
 
 calcium_genes = rownames(multiome_sce)[grepl('CACNA', rownames(multiome_sce))]
 
-dopamine_genes = c("DRD1", "DRD2", "DRD3", "DRD4", "DRD5", 'TH')
+#dopamine_genes = c("DRD1", "DRD2", "DRD3", "DRD4", "DRD5", 'TH')
 
 serotonin_genes = rownames(multiome_sce)[grepl('HTR', rownames(multiome_sce))]
 
@@ -76,7 +76,7 @@ endocannabinoid_genes = unique(unlist(unname(go_sets[grepl('endocannabinoid',nam
 
 opioid_genes = c(unique(unlist(unname(go_sets[grepl('opioid',names(go_sets))]))))
 
-glp_genes = c('GLP1R', 'GLP2R','ZGLP1')
+#glp_genes = c('GLP1R', 'GLP2R','ZGLP1')
 
 #And the GPR orphan receptors
 gpr_genes = rownames(multiome_sce)[grepl('GPR', rownames(multiome_sce)) & !grepl('GPRASP', rownames(multiome_sce)) & !grepl('GPRIN', rownames(multiome_sce))]
@@ -99,6 +99,12 @@ gaba_genes = c("ATF4", "CACNB4", "GABBR1", "GABRA1", "GABRA2", "GABRA3", "GABRA4
 
 glut_genes = c("GRIA1", "GRIA2", "GRIA3", "GRIA4", "GRID1", "GRID2", "GRIK1", "GRIK2", "GRIK3", "GRIK4", "GRIK5", "GRIN1", "GRIN2A",
                "GRIN2B", "GRIN2C", "GRIN2D", "GRM1", "GRM2", "GRM3", "GRM4", "GRM5", "GRM6", "GRM7", "GRM8", "GRIN3A", "GRIN3B")
+
+
+#Save a table with the genes of interest
+#
+#
+#
 
 
 table(multiome_sce$merged_cluster, multiome_sce$refined_cluster_ann)
@@ -529,57 +535,65 @@ plot_gene_on_umap(multiome_sce, "PVALB")
 source(here('code','05_03_annotation_adjustments','celltype_colors.R'))
 
 
-# Function to plot gene expression with violin plot
-plot_gene_violin <- function(gene_name, sce = multiome_sce, assay_name = "logcounts", 
-                             group_by = "refined_mid_cluster") {
+
+
+plot_violin_maxnorm <- function(sce, gene, assay_name = "logcounts", celltype_col, study_label) {
+  expr <- assay(sce, assay_name)[gene, ]
+  celltype <- colData(sce)[[celltype_col]]
   
-  # Check if gene exists in the object
-  if (!gene_name %in% rownames(sce)) {
-    stop(paste0("Gene '", gene_name, "' not found in the SCE object"))
-  }
-  
-  # Extract expression data
-  expr_data <- assay(sce, assay_name)[gene_name, ]
-  
-  # Create data frame for plotting
-  plot_df <- data.frame(
-    expression = expr_data,
-    celltype = colData(sce)[[group_by]]
+  df <- data.frame(
+    expression = as.numeric(expr),
+    celltype = celltype
   )
   
-  # Order celltypes by median expression
-  celltype_order <- plot_df |>
-    group_by(celltype) |>
-    summarise(mean_expr = mean(expression, na.rm = TRUE)) |>
-    arrange(mean_expr) |>
-    pull(celltype)
+  # Max-normalize
+  max_exp <- max(df$expression)
   
-  plot_df$celltype <- factor(plot_df$celltype, levels = celltype_order)
+  if (max_exp == 0) {
+    warning("Gene '", gene, "' has zero expression across all cell types.")
+    df$norm_expr <- 0
+  } else {
+    df$norm_expr <- df$expression / max_exp
+  }
   
-  # Create violin plot
-  ggplot(plot_df, aes(x = celltype, y = expression, fill = celltype)) +
-    geom_violin(scale = "width", trim = FALSE) +
-    geom_boxplot(width = 0.1, fill = "white", outlier.shape = NA) +
-    scale_fill_manual(values = my_colors_mid) +
-    labs(
-      title = paste0(gene_name, " Expression"),
-      x = "Cell Type",
-      y = "Log-normalized Expression"
+  # Compute medians per celltype for the dot overlay
+  medians <- df |>
+    summarise(median_expr = median(norm_expr), .by = celltype)
+  
+  ggplot(df, aes(x = celltype, y = norm_expr, fill = celltype)) +
+    geom_violin(
+      scale = "width",
+      width = 0.9,
+      color = NA,
+      trim = TRUE
     ) +
-    theme_bw() +
+    scale_fill_manual(values = my_colors_mid, guide = FALSE) +
+    geom_point(
+      data = medians,
+      aes(x = celltype, y = median_expr),
+      size = 1.5,
+      color = "black"
+    ) +
+    scale_y_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1)) +
+    labs(x = NULL, y = "Max-normalized expression", title = sprintf('%s - %s', study_label, gene)) +
+    theme_classic(base_size = 10) +
     theme(
-      axis.text.x = element_text(angle = 45, hjust = 1),
-      legend.position = "none"
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 7),
+      axis.ticks.x = element_blank(),
+      plot.title = element_text(face = "italic", size = 11),
+      panel.grid = element_blank(),
+      # Condensed vertical height — control via coord_cartesian or plot sizing
+      aspect.ratio = 0.15
     )
 }
 
-# Test with a gene (using one from your existing gene lists)
-plot_gene_violin("SLC17A6")
-plot_gene_violin("HCN1")
-plot_gene_violin("SLC12A5")
 
-plot_gene_violin("CACNA1G")
-plot_gene_violin("CACNA1H")
-plot_gene_violin("CACNA1I")
+#Load up the Yalcinbas data too to look at KCC2 expression
 
-plot_gene_violin("NALCN")
+
+
+
+
+plot_violin_maxnorm(multiome_sce, "SLC12A5", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Multiome")
+
