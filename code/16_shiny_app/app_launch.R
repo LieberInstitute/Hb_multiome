@@ -31,7 +31,7 @@ allowed_color_vars <- c("mid_cluster", "fine_cluster")
 
 atlas_seur <- qs_read("atlas_seur_minimal.qs2")
 metacell_seur <- qs_read("merged_metacell_seur.qs2")
-trio_df <- read_csv("trios.csv", show_col_types = FALSE)
+trio_df <- read_csv("trios.csv.gz", show_col_types = FALSE)
 
 atlas_seur@meta.data$mid_cluster <- factor(
     atlas_seur@meta.data$mid_cluster, levels = names(cell_type_colors)

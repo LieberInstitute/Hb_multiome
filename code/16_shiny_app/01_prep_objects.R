@@ -134,17 +134,24 @@ qs_save(seur, file.path(out_dir, "merged_metacell_seur.qs2"))
 ################################################################################
 
 trio_df = read_parquet_duckdb(trio_path, prudence = "stingy") |>
-    filter(stringency_level == 1, is_intersect) |>
+    filter(!is_intersect | (is_intersect & stringency_level == 1)) |>
     dplyr::rename(
-        trio_cor = coef, trio_p_adj = adj, mid_cluster = cell_type
+        trio_coef = coef, trio_p_adj = adj, mid_cluster = cell_type,
+        trio_level = stringency_level
     ) |>
-    select(peak, gene, TF, mid_cluster, trio_cor, trio_p_adj) |>
+    select(trio_level, peak, gene, TF, mid_cluster, trio_coef, trio_p_adj) |>
     collect() |>
     mutate(
-        mid_cluster = dplyr::coalesce(
-            unname(rename_map[mid_cluster]), mid_cluster
+        trio_level = factor(
+            ifelse(is_intersect, 'Intersect', trio_level),
+            levels = c('Intersect', '1', '2')
+        ),
+        mid_cluster = factor(
+            dplyr::coalesce(unname(rename_map[mid_cluster]), mid_cluster),
+            levels = cell_type_levels
         )
     ) |>
-    write_csv(file.path(out_dir, "trios.csv"))
+    arrange(trio_level, mid_cluster, trio_p_adj, trio_coef) |>
+    write_csv(file.path(out_dir, "trios.csv.gz"))
 
 session_info()

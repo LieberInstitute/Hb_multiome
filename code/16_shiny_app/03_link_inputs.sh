@@ -32,7 +32,7 @@ f_name=merged_metacell_seur.qs2
 rm -f ${f_name}
 ln -s ../../processed-data/16_shiny_app/01_prep_objects/${f_name} ${f_name}
 
-f_name=trios.csv
+f_name=trios.csv.gz
 rm -f ${f_name}
 ln -s ../../processed-data/16_shiny_app/01_prep_objects/${f_name} ${f_name}
 
