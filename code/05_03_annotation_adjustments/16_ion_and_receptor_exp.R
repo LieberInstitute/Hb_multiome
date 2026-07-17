@@ -12,7 +12,9 @@ library(here)
 library(sessioninfo)
 
 plot_path = here('plots','05_03_annotation_adjustments', '16_ion_and_receptor_exp')
+new_data_path = here('processed-data','05_03_annotation_adjustments', '16_ion_and_receptor_exp')
 if (!dir.exists(plot_path)) dir.create(plot_path)
+if (!dir.exists(new_data_path)) dir.create(new_data_path)
 
 #colors
 source(here('code','05_03_annotation_adjustments','celltype_colors.R'))
@@ -102,9 +104,14 @@ glut_genes = c("GRIA1", "GRIA2", "GRIA3", "GRIA4", "GRID1", "GRID2", "GRIK1", "G
 
 
 #Save a table with the genes of interest
-#
-#
-#
+genes_of_interest_df = data.frame(gene = c(hcn_genes, potassium_genes, sodium_genes, calcium_genes, serotonin_genes, acetylcholine_genes, endocannabinoid_genes, opioid_genes, gpr_genes, non_canon_inhib_genes, gaba_genes, glut_genes), 
+category = c(rep('HCN', length(hcn_genes)), rep('Potassium', length(potassium_genes)), rep('Sodium', length(sodium_genes)), rep('Calcium', length(calcium_genes)), rep('Serotonin', length(serotonin_genes)), rep('Acetylcholine', length(acetylcholine_genes)), 
+rep('Endocannabinoid', length(endocannabinoid_genes)), rep('Opioid', length(opioid_genes)), rep('GPR', length(gpr_genes)), rep('Non-canonical inhibitory', length(non_canon_inhib_genes)), rep('GABA', length(gaba_genes)), rep('Glutamate', length(glut_genes))))
+
+genes_of_interest_df
+write.csv(genes_of_interest_df, file.path(new_data_path, 'genes_of_interest.csv'), row.names = FALSE)
+
+
 
 
 table(multiome_sce$merged_cluster, multiome_sce$refined_cluster_ann)
@@ -530,7 +537,6 @@ plot_gene_on_umap(multiome_sce, "PENK")
 plot_gene_on_umap(multiome_sce, "PNOC")
 
 plot_gene_on_umap(multiome_sce, "PVALB")
-#Is it worth doing a quick comparison of expression patterns of these particular genes between human and mouse habenula neurons?
 
 source(here('code','05_03_annotation_adjustments','celltype_colors.R'))
 
@@ -558,23 +564,23 @@ plot_violin_maxnorm <- function(sce, gene, assay_name = "logcounts", celltype_co
   
   # Compute medians per celltype for the dot overlay
   medians <- df |>
-    summarise(median_expr = median(norm_expr), .by = celltype)
+    summarise(median_expr = median(expression), .by = celltype)
   
-  ggplot(df, aes(x = celltype, y = norm_expr, fill = celltype)) +
+  ggplot(df, aes(x = celltype, y = expression, fill = celltype)) +
     geom_violin(
       scale = "width",
       width = 0.9,
       color = NA,
       trim = TRUE
     ) +
-    scale_fill_manual(values = my_colors_mid, guide = FALSE) +
+    scale_fill_manual(values = my_colors_mid, guide = 'none') +
     geom_point(
       data = medians,
       aes(x = celltype, y = median_expr),
       size = 1.5,
       color = "black"
     ) +
-    scale_y_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1)) +
+    scale_y_continuous(limits = c(0, 6), breaks = c(0, 2, 4, 6)) +
     labs(x = NULL, y = "Max-normalized expression", title = sprintf('%s - %s', study_label, gene)) +
     theme_classic(base_size = 10) +
     theme(
@@ -589,11 +595,37 @@ plot_violin_maxnorm <- function(sce, gene, assay_name = "logcounts", celltype_co
 
 
 #Load up the Yalcinbas data too to look at KCC2 expression
+yalcinbas_path = '/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/sce_objects'
+load(paste0(yalcinbas_path, '/official_final_sce.RDATA'))
+yalcinbas_sce = sce
+table(yalcinbas_sce$final_Annotations) 
 
+yalcinbas_sce$consensus_annot = yalcinbas_sce$final_Annotations
+yalcinbas_sce$consensus_annot[yalcinbas_sce$final_Annotations == 'MHb.1'] = 'MHb_A'
+yalcinbas_sce$consensus_annot[yalcinbas_sce$final_Annotations == 'MHb.2'] = 'MHb_B'
+yalcinbas_sce$consensus_annot[yalcinbas_sce$final_Annotations == 'MHb.3'] = 'MHb_D'
+yalcinbas_sce$consensus_annot[yalcinbas_sce$final_Annotations %in% c('LHb.2', 'LHb.7')] = 'LHb_A'
+yalcinbas_sce$consensus_annot[yalcinbas_sce$final_Annotations %in% c('LHb.1', 'LHb.5')] = 'LHb_B'
+yalcinbas_sce$consensus_annot[yalcinbas_sce$final_Annotations %in% c('LHb.3', 'LHb.4')] = 'LHb_C'
 
+table(yalcinbas_sce$consensus_annot, yalcinbas_sce$final_Annotations)
 
+yalcinbas_neuron = yalcinbas_sce[, yalcinbas_sce$consensus_annot %in% c('MHb_A', 'MHb_B', 'LHb_A', 'LHb_B', 'LHb_C')]
+yalcinbas_neuron$consensus_annot = factor(yalcinbas_neuron$consensus_annot, levels = c('MHb_B', 'MHb_A', 'LHb_A', 'LHb_B', 'LHb_C'))
 
+yalcinbas_kcc2_p = plot_violin_maxnorm(yalcinbas_neuron, "SLC12A5", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Yalcinbas")
 
-plot_violin_maxnorm(multiome_sce, "SLC12A5", assay_name = "logcounts", 
+multiome_sce$consensus_annot = multiome_sce$refined_mid_cluster
+multiome_sce$consensus_annot[multiome_sce$refined_mid_cluster %in% c('GABA_LHb_C.1','GABA_LHb_C.2')] = 'LHb_C'
+
+multiome_neuron = multiome_sce[, multiome_sce$consensus_annot %in% c('MHb_B', 'MHb_A', 'LHb_A', 'LHb_B', 'LHb_C')]
+multiome_neuron$consensus_annot = factor(multiome_neuron$consensus_annot, levels = c('MHb_B', 'MHb_A', 'LHb_A', 'LHb_B', 'LHb_C'))
+
+multiome_kcc2_p = plot_violin_maxnorm(multiome_neuron, "SLC12A5", assay_name = "logcounts", 
 celltype_col = "consensus_annot", study_label = "Multiome")
 
+yalcinbas_kcc2_p
+multiome_kcc2_p
+ggsave(plot = yalcinbas_kcc2_p, filename = file.path(plot_path, 'Yalcinbas_SLC12A5_violin.pdf'), width = 6, height = 2)
+ggsave(plot = multiome_kcc2_p, filename = file.path(plot_path, 'Multiome_SLC12A5_violin.pdf'), width = 6, height = 2)
