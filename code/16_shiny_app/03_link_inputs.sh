@@ -40,5 +40,13 @@ f_name=atlas_seur_minimal.qs2
 rm -f ${f_name}
 ln -s ../../processed-data/16_shiny_app/02_prep_cell_level/${f_name} ${f_name}
 
+f_name=DARs.csv.gz
+rm -f ${f_name}
+ln -s ../../processed-data/16_shiny_app/04_prep_DARs/${f_name} ${f_name}
+
+f_name=seur_pb_DARs.qs2
+rm -f ${f_name}
+ln -s ../../processed-data/16_shiny_app/04_prep_DARs/${f_name} ${f_name}
+
 echo "**** Job ends ****"
 date
