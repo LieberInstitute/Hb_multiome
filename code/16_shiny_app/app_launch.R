@@ -1,4 +1,5 @@
 library(Seurat)
+library(Signac)
 library(qs2)
 library(readr)
 
@@ -32,6 +33,8 @@ allowed_color_vars <- c("mid_cluster", "fine_cluster")
 atlas_seur <- qs_read("atlas_seur_minimal.qs2")
 metacell_seur <- qs_read("merged_metacell_seur.qs2")
 trio_df <- read_csv("trios.csv.gz", show_col_types = FALSE)
+dar_df <- read_csv("DARs.csv.gz", show_col_types = FALSE)
+seur_pb <- qs_read('seur_pb_DARs.qs2')
 
 atlas_seur@meta.data$mid_cluster <- factor(
     atlas_seur@meta.data$mid_cluster, levels = names(cell_type_colors)
@@ -42,6 +45,8 @@ run_app(
     color_vars = allowed_color_vars,
     metacell_seur = metacell_seur,
     trio_df = trio_df,
+    dar_df = dar_df,
+    seur_pb = seur_pb,
     cell_type_var = "mid_cluster",
     cell_type_colors = cell_type_colors,
     default_reduction = "wnn_umap"

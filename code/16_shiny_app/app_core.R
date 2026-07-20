@@ -207,6 +207,29 @@ build_metacell_panel <- function(trio_df, dropped_trio_rows) {
   )
 }
 
+build_dar_panel <- function() {
+  tagList(
+    p(
+      "In this tab, differentially accessible regions (DARs), which are ATAC peaks with higher or lower accessibility in one cell type (against all others), can be explored. DARs were computed using the ATAC data pseudobulked by cell type."
+    ),
+    layout_sidebar(
+      sidebar = sidebar(
+        helpText("Select one DAR row to plot its peak accessibility across cell types.")
+      ),
+      card(
+        full_screen = TRUE,
+        card_header(textOutput("dar_peak_plot_title")),
+        plotOutput("dar_peak_vln_plot", height = "550px")
+      ),
+      card(
+        full_screen = TRUE,
+        card_header("DAR table"),
+        DTOutput("dar_table")
+      )
+    )
+  )
+}
+
 build_app_ui <- function(
   reduction_choices,
   selected_reduction,
@@ -232,27 +255,39 @@ build_app_ui <- function(
     nav_panel(
       "Metacell Features and Trios",
       build_metacell_panel(trio_df = trio_df, dropped_trio_rows = dropped_trio_rows)
+    ),
+    nav_panel(
+      "DAR Exploration",
+      build_dar_panel()
     )
   )
 }
 
-build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, cell_type_colors) {
+build_app_server <- function(atlas_seur, metacell_seur, trio_df, dar_df, seur_pb, cell_type_var, cell_type_colors) {
   force(atlas_seur)
   force(metacell_seur)
   force(trio_df)
+  force(dar_df)
+  force(seur_pb)
   force(cell_type_var)
   force(cell_type_colors)
 
   rna_assay <- metacell_seur[["RNA"]]
   atac_assay <- metacell_seur[["ATAC"]]
+  pb_atac_assay <- seur_pb[["ATAC"]]
   rna_layer <- "data"
   atac_layer <- "data"
+  pb_atac_layer <- "data"
 
   gene_choices <- rownames(rna_assay)
   peak_choices <- rownames(atac_assay)
+  pb_peak_choices <- rownames(pb_atac_assay)
   metacell_meta <- metacell_seur[[]]
   metacell_group_var <- cell_type_var
   metacell_cell_type_colors <- get_matching_colors(metacell_meta[[metacell_group_var]], cell_type_colors)
+  pb_meta <- seur_pb[[]]
+  pb_group_var <- cell_type_var
+  pb_cell_type_colors <- get_matching_colors(pb_meta[[pb_group_var]], cell_type_colors)
 
   function(input, output, session) {
     thematic_shiny()
@@ -522,6 +557,56 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, cell_type_var, 
         )
       )
     })
+
+    selected_dar_row <- reactive({
+      req(input$dar_table_rows_selected)
+      dar_df[input$dar_table_rows_selected, , drop = FALSE]
+    })
+
+    output$dar_peak_plot_title <- renderText({
+      req(input$dar_table_rows_selected)
+      paste("Peak accessibility:", selected_dar_row()$peak[[1]])
+    })
+
+    output$dar_peak_vln_plot <- renderPlot({
+      req(input$dar_table_rows_selected)
+      selected_peak <- selected_dar_row()$peak[[1]]
+
+      validate(
+        need(selected_peak %in% pb_peak_choices, "Selected DAR peak is not available in the pseudobulk ATAC assay."),
+        need(pb_group_var %in% colnames(pb_meta), paste0("The pseudobulk object is missing the `", pb_group_var, "` metadata column."))
+      )
+
+      dar_plot <- VlnPlot(
+        object = seur_pb,
+        features = selected_peak,
+        assay = "ATAC",
+        group.by = pb_group_var
+      ) +
+        guides(fill = "none") +
+        labs(x = "Cell Type", y = "Accessibility", title = NULL) +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+      if (!is.null(pb_cell_type_colors)) {
+        dar_plot <- dar_plot + scale_fill_manual(values = pb_cell_type_colors)
+      }
+
+      dar_plot
+    }, res = 110)
+
+    output$dar_table <- renderDT({
+      datatable(
+        dar_df,
+        rownames = FALSE,
+        filter = "top",
+        selection = list(mode = "single", selected = 1, target = "row"),
+        options = list(
+          pageLength = 15,
+          lengthMenu = c(15, 30, 50, 100),
+          scrollX = TRUE
+        )
+      )
+    })
   }
 }
 
@@ -530,6 +615,8 @@ run_app <- function(
   color_vars,
   metacell_seur,
   trio_df,
+  dar_df,
+  seur_pb,
   cell_type_var,
   cell_type_colors = NULL,
   default_reduction = NULL
@@ -560,6 +647,8 @@ run_app <- function(
     atlas_seur = atlas_seur,
     metacell_seur = metacell_seur,
     trio_df = trio_info$trio_df,
+    dar_df = dar_df,
+    seur_pb = seur_pb,
     cell_type_var = cell_type_var,
     cell_type_colors = cell_type_colors
   )
