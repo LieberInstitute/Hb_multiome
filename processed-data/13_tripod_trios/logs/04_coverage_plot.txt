@@ -1,10 +1,10 @@
 **** Job starts ****
-Thu Jun 18 01:55:42 PM EDT 2026
+Mon Jul 20 04:13:46 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 32996694
+Job id: 34275686
 Job name: 04_coverage_plot
-Node name: compute-168
+Node name: compute-175
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -66,7 +66,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 1213.
+✔ Number of reports ready for upload: 2287.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -175,6 +175,7 @@ See help("Deprecated")
   'S4Vectors:::anyMissing()' is deprecated.
 Use 'anyNA()' instead.
 See help("Deprecated")
+Plotting trio VSTM5; chr11-94220620-94221806; ZNF384 for cell type LHb.2.7
 Warning messages:
 1: In S4Vectors:::anyMissing(runValue(x_seqnames)) :
   'S4Vectors:::anyMissing()' is deprecated.
@@ -226,6 +227,10 @@ See help("Deprecated")
   'S4Vectors:::anyMissing()' is deprecated.
 Use 'anyNA()' instead.
 See help("Deprecated")
+Motif for TF ZNF384 is MA1125.1
+Warning message:
+Removed 132 rows containing missing values or values outside the scale range
+(`geom_segment()`). 
 null device 
           1 
 ─ Session info ───────────────────────────────────────────────────────────────
@@ -238,9 +243,9 @@ null device
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-06-18
+ date     2026-07-20
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.9.38 @ /users/neagles/.positron-server/bin/d5f94f072b1083b8237930739cb6525c6e12e1da/quarto/bin/quarto
+ quarto   1.9.38 @ /users/neagles/.positron-server/bin/d3cdd608df5afa3378c24c9a9c81b01fe1433a87/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package          * version date (UTC) lib source
@@ -400,4 +405,4 @@ null device
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Thu Jun 18 01:58:49 PM EDT 2026
+Mon Jul 20 04:15:06 PM EDT 2026

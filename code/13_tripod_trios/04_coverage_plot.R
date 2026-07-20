@@ -28,6 +28,7 @@ this_gene = 'VSTM5'
 this_peak = 'chr11-94220620-94221806'
 this_TF = 'ZNF384'
 this_cell_type = 'LHb.2.7'
+gene_cap_quantile = 0.8
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
@@ -70,6 +71,29 @@ Idents(seur) = case_when(
 #   Really just checks we're importing the right data, as this certainly
 #   should be true
 stopifnot(all(link_gr$gene %in% rownames(seur[['RNA']])))
+
+#   Cap the plotted gene expression within each sample to reduce the impact of
+#   outliers on CoveragePlot's expression violin. This modifies only the RNA
+#   data layer used for visualization, not the counts layer.
+rna_data = LayerData(seur[['RNA']], layer = 'data')
+gene_idx = match(this_gene, rownames(rna_data))
+stopifnot(!is.na(gene_idx), 'refined_mid_cluster' %in% colnames(seur@meta.data))
+
+gene_expr = as.numeric(rna_data[gene_idx, ])
+cap_by_sample = tibble(
+        cell = colnames(seur),
+        refined_mid_cluster = unname(Idents(seur)),
+        gene_expr = gene_expr
+    ) |>
+    group_by(refined_mid_cluster) |>
+    mutate(
+        cap_value = quantile(gene_expr[gene_expr > 0], probs = gene_cap_quantile, na.rm = TRUE)
+    ) |>
+    ungroup() |>
+    mutate(gene_expr_capped = pmin(gene_expr, cap_value))
+
+rna_data[gene_idx, cap_by_sample$cell] = cap_by_sample$gene_expr_capped
+LayerData(seur[['RNA']], layer = 'data') = rna_data
 
 #   Import links for the cell type of interest
 Links(seur[['ATAC']]) = link_gr
