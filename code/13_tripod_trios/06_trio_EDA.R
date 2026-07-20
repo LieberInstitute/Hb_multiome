@@ -192,9 +192,9 @@ p = trio_df |>
         scale_fill_manual(values = my_colors_mid) +
         labs(x = "Cell Type", y = "Significant trios") +
         guides(fill = "none") +
-        theme_bw(base_size = 20) +
+        theme_bw(base_size = 25) +
         theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
-pdf(file.path(plot_dir, "main_figure_subset.pdf"), height = 5)
+pdf(file.path(plot_dir, "main_figure_subset.pdf"), height = 5, width = 5)
 print(p)
 dev.off()
 

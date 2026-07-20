@@ -1,8 +1,8 @@
 **** Job starts ****
-Wed Jul  1 10:46:26 AM EDT 2026
+Mon Jul 20 04:47:56 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 33797777
+Job id: 34276284
 Job name: 06_trio_EDA
 Node name: compute-169
 Task id: 2
@@ -32,7 +32,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 1221.
+✔ Number of reports ready for upload: 2288.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -62,9 +62,9 @@ null device
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-07-01
- pandoc   3.8.3 @ /users/neagles/.positron-server/bin/63f0568b148d4d18b7a3194286686d6fb970bed3/quarto/bin/tools/x86_64/ (via rmarkdown)
- quarto   1.9.38 @ /users/neagles/.positron-server/bin/63f0568b148d4d18b7a3194286686d6fb970bed3/quarto/bin/quarto
+ date     2026-07-20
+ pandoc   3.8.3 @ /users/neagles/.positron-server/bin/d3cdd608df5afa3378c24c9a9c81b01fe1433a87/quarto/bin/tools/x86_64/ (via rmarkdown)
+ quarto   1.9.38 @ /users/neagles/.positron-server/bin/d3cdd608df5afa3378c24c9a9c81b01fe1433a87/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package          * version date (UTC) lib source
@@ -245,4 +245,4 @@ null device
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Jul  1 10:46:40 AM EDT 2026
+Mon Jul 20 04:48:14 PM EDT 2026
