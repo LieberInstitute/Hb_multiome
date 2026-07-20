@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=20G
+#SBATCH --mem=10G
 #SBATCH --job-name=04_prep_DARs
 #SBATCH -c 1
 #SBATCH -t 1-00:00:00

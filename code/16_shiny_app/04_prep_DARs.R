@@ -14,7 +14,7 @@ cell_map_path = here('raw-data', 'cell_type_map.csv')
 dar_dir = here('processed-data', '15_DARs', '02_calculate_DARs')
 out_dir = here("processed-data", "16_shiny_app", "04_prep_DARs")
 log_fc_cutoff = log2(1.5)
-p_adj_cutoff 
+p_adj_cutoff = 0.05
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
