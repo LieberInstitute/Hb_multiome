@@ -9,6 +9,7 @@ trio_path = here(
     "processed-data", "13_tripod_trios", "09_gather_trios",
     "filtered_trios_fine.parquet"
 )
+cell_map_path = here("raw-data", "cell_type_map.csv")
 plot_dir = here("plots", "13_tripod_trios", "12_TF_overlap")
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
@@ -17,10 +18,18 @@ fallback_config(info = FALSE)
 
 dir.create(plot_dir, showWarnings = FALSE)
 
+cluster_map = read_csv(cell_map_path, show_col_types = FALSE)
+rename_map = stats::setNames(
+    cluster_map$new_cell_type, cluster_map$old_cell_type
+)
+
 trio_df = read_parquet_duckdb(trio_path, prudence = 'stingy') |>
     filter(is_intersect, stringency_level == 1) |>
     select(TF, cell_type) |>
-    collect()
+    collect() |>
+    mutate(
+        cell_type = dplyr::coalesce(unname(rename_map[cell_type]), cell_type)
+    )
 
 #-------------------------------------------------------------------------------
 #   TF breadth: histogram of how many cell types each TF appears in
@@ -86,8 +95,8 @@ ht_jaccard = Heatmap(
     cluster_rows    = TRUE,
     cluster_columns = TRUE,
     column_title    = "TF set Jaccard index between cell types",
-    row_names_gp    = gpar(fontsize = 11),
-    column_names_gp = gpar(fontsize = 11),
+    row_names_gp    = gpar(fontsize = 14),
+    column_names_gp = gpar(fontsize = 14),
     column_names_rot = 90
 )
 
@@ -103,8 +112,8 @@ ht_overlap = Heatmap(
     cluster_rows    = TRUE,
     cluster_columns = TRUE,
     column_title    = "TF overlap coefficient between cell types",
-    row_names_gp    = gpar(fontsize = 11),
-    column_names_gp = gpar(fontsize = 11),
+    row_names_gp    = gpar(fontsize = 14),
+    column_names_gp = gpar(fontsize = 14),
     column_names_rot = 90
 )
 

@@ -1,10 +1,10 @@
 **** Job starts ****
-Wed Jun 17 11:11:31 AM EDT 2026
+Tue Jul 21 08:42:27 AM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 32957073
+Job id: 34294699
 Job name: 12_TF_overlap
-Node name: compute-176
+Node name: compute-168
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -32,7 +32,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 1206.
+✔ Number of reports ready for upload: 2290.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -90,13 +90,15 @@ null device
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-06-17
+ date     2026-07-21
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.9.38 @ /users/neagles/.positron-server/bin/d5f94f072b1083b8237930739cb6525c6e12e1da/quarto/bin/quarto
+ quarto   1.9.38 @ /users/neagles/.positron-server/bin/d3cdd608df5afa3378c24c9a9c81b01fe1433a87/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package        * version date (UTC) lib source
  BiocGenerics     0.54.0  2025-04-15 [1] Bioconduc~
+ bit              4.6.0   2025-03-06 [2] CRAN (R 4.5.0)
+ bit64            4.6.0-1 2025-01-16 [2] CRAN (R 4.5.0)
  cachem           1.1.0   2024-05-16 [1] CRAN (R 4.5.0)
  Cairo            1.6-2   2023-11-28 [2] CRAN (R 4.5.0)
  circlize       * 0.4.16  2024-02-20 [2] CRAN (R 4.5.0)
@@ -162,6 +164,7 @@ null device
  tzdb             0.5.0   2025-03-15 [2] CRAN (R 4.5.0)
  vctrs            0.6.5   2023-12-01 [1] CRAN (R 4.5.0)
  viridisLite      0.4.2   2023-05-02 [1] CRAN (R 4.5.0)
+ vroom            1.6.5   2023-12-05 [2] CRAN (R 4.5.0)
  withr            3.0.2   2024-10-28 [1] CRAN (R 4.5.0)
 
  [1] /users/neagles/R/4.5
@@ -171,4 +174,4 @@ null device
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Jun 17 11:13:06 AM EDT 2026
+Tue Jul 21 08:42:35 AM EDT 2026
