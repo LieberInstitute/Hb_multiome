@@ -11,6 +11,7 @@ task_map_path = here(
     'processed-data', '15_DARs', '01_pseudobulk_atac',
     'task_map.csv'
 )
+cell_map_path = here("raw-data", "cell_type_map.csv")
 colors_path = here(
     'code', '05_03_annotation_adjustments', 'celltype_colors.R'
 )
@@ -29,20 +30,45 @@ source(colors_path)
 cell_type_colors = c(my_colors_mid, my_colors_class)
 cell_type_colors[['Neuron']] = '#532222'
 
+cluster_map = read_csv(cell_map_path, show_col_types = FALSE)
+rename_map = stats::setNames(
+    cluster_map$new_cell_type, cluster_map$old_cell_type
+)
+
 ################################################################################
 #   Functions
 ################################################################################
 
 my_barplot = function(dar_df, cell_types, resolution, lab_title) {
-    p = dar_df |>
+    dar_df = dar_df |>
         group_by(cell_type) |>
         summarise(num_DARs = n(), .groups = 'drop') |>
         right_join(
             tibble(cell_type = cell_types),
             by = 'cell_type'
         ) |>
-        mutate(num_DARs = replace_na(num_DARs, 0)) |>
-        mutate(cell_type = factor(cell_type, levels = cell_types)) |>
+        mutate(
+            num_DARs = replace_na(num_DARs, 0),
+            cell_type = factor(cell_type, levels = cell_types)
+        )
+
+    if (resolution == 'fine') {
+        dar_df = dar_df |>
+            mutate(
+                cell_type = dplyr::coalesce(
+                    unname(rename_map[as.character(cell_type)]),
+                    as.character(cell_type)
+                ) |>
+                factor(levels = cluster_map$new_cell_type)
+            )
+        
+        cell_types = dplyr::coalesce(
+            unname(rename_map[as.character(cell_types)]),
+            as.character(cell_types)
+        )
+    }
+
+    p = dar_df |>
         ggplot(aes(x = cell_type, y = num_DARs, fill = cell_type)) +
             geom_bar(stat = 'identity') +
             scale_fill_manual(values = cell_type_colors[cell_types]) +
