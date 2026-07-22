@@ -17,7 +17,7 @@ colors_path = here(
 )
 p_adj_cutoff = 0.05
 log_fc_cutoff = log2(1.5)
-max_dars = 1000
+max_dars = 5000
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
 duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
