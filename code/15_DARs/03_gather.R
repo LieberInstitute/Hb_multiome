@@ -15,8 +15,8 @@ cell_map_path = here("raw-data", "cell_type_map.csv")
 colors_path = here(
     'code', '05_03_annotation_adjustments', 'celltype_colors.R'
 )
-p_adj_cutoff = 0.05
-log_fc_cutoff = log2(1.5)
+p_adj_cutoff = 0.2
+log_fc_cutoff = 0
 max_dars = 5000
 
 num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
