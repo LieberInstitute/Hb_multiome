@@ -26,7 +26,10 @@ myCol <- brewer.pal(3, "Pastel2")
 
 ## Read directories
 Seurat_base_name <- "seurat.norm_counts_Harmony_All"
-cellrangerDir_reanalyze <- here("processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", paste0(Seurat_base_name, ".rds"))
+cellrangerDir_reanalyze <- here(
+  "processed-data", "03_pseudobulking", "cellrangerARC_reanalyze", "old",
+  paste0(Seurat_base_name, ".rds")
+)
 plotDir_reanalyze <- here("plots", "01_preprocessing_QC", "cellrangerARC_reanalyze")
 
 # Check processed_data and plot directories exists
@@ -196,10 +199,14 @@ ggsave(filename = plotName, plot = plt_low_genes_gex, width = 10, height = 5, bg
 caption_label <- paste0("*Cells to discard: ", length(sce$discard_auto[sce$discard_auto]), " (", round(total_p, digits = 2) ,"%) from ", total_unfiltered_cells)
 plot_grid <- gridExtra::grid.arrange(  
   plt_hm + ggtitle("Mitochondrial percentage") + labs(caption = "") +
+    theme_bw(base_size = 15) +
     theme(axis.text.x=element_blank()),
   plt_low_sum_gex + ggtitle("Total count") + labs(caption = "") +
+    theme_bw(base_size = 15) +
     theme(axis.text.x=element_blank()),
   plt_low_genes_gex + ggtitle("Total feature") + labs(caption = "") +
+    theme_bw(base_size = 15) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
     scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)) +
     scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)), 
   nrow = 3,
@@ -365,10 +372,14 @@ ggsave(filename = plotName, plot = plt_low_TSS, width = 10, height = 5, bg="whit
 caption_label <- paste0("*Cells to discard: ", length(sce_atac$discard_auto_atac[sce_atac$discard_auto_atac]), " (",  " (", round(total_p, digits = 2) ,"%) from ", total_unfiltered_cells)
 plot_grid <- gridExtra::grid.arrange(  
   plt_low_atac + ggtitle("Low nCount ATAC") + labs(caption = "") +
+    theme_bw(base_size = 15) +
     theme(axis.text.x=element_blank()),
   plt_low_sum_atac + ggtitle("Low nFeature_ATAC") + labs(caption = "") +
+    theme_bw(base_size = 15) +
     theme(axis.text.x=element_blank()),
   plt_low_TSS + ggtitle("Low TSS.enrichment") + labs(caption = "") +
+    theme_bw(base_size = 15) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
     scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)) +
     scale_x_discrete(labels = ~ str_wrap(gsub('_', ' ', .x), 10)), 
   nrow = 3,
