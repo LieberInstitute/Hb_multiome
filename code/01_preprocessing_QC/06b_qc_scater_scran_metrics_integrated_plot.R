@@ -216,7 +216,10 @@ plot_grid <- gridExtra::grid.arrange(
 
 # Save the plot
 plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_GEX_ALL_OUTLIERS.png"))
-ggsave(filename = plotName, plot = plot_grid, width = 10, height = 12, bg="white")
+ggsave(
+  filename = plotName, plot = plot_grid, width = 10, height = 12, bg="white",
+  dpi = 500
+)
 
 print("Saved GEX plots with outliers!")
 
@@ -389,7 +392,10 @@ plot_grid <- gridExtra::grid.arrange(
 
 # Save the plot
 plotName <- here(plotDir_reanalyze, paste0(Seurat_base_name, "_ATAC_ALL_OUTLIERS.png"))
-ggsave(filename = plotName, plot = plot_grid, width = 10, height = 12, bg="white")
+ggsave(
+  filename = plotName, plot = plot_grid, width = 10, height = 12, bg="white",
+  dpi = 500
+)
 
 print("Saved ATAC plots with outliers!")
 
