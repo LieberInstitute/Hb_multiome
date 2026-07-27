@@ -1,10 +1,10 @@
 **** Job starts ****
-Mon Jul 20 03:07:03 PM EDT 2026
+Mon Jul 27 01:47:37 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 34275103
+Job id: 34478478
 Job name: 17_trio_cartoon
-Node name: compute-095
+Node name: compute-177
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -26,6 +26,7 @@ Currently Loaded Modules:
 ✖ dplyr::lag()    masks stats::lag()
 ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
 here() starts at /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome
+Saving 7 x 7 in image
 `geom_smooth()` using formula = 'y ~ x'
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
@@ -37,7 +38,7 @@ here() starts at /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-07-20
+ date     2026-07-27
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.9.38 @ /users/neagles/.positron-server/bin/d3cdd608df5afa3378c24c9a9c81b01fe1433a87/quarto/bin/quarto
 
@@ -95,4 +96,4 @@ here() starts at /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Mon Jul 20 03:07:10 PM EDT 2026
+Mon Jul 27 01:47:41 PM EDT 2026
