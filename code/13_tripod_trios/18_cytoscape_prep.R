@@ -19,7 +19,7 @@ fallback_config(info = FALSE)
 dir.create(dirname(out_path), showWarnings = FALSE)
 
 read_parquet_duckdb(trio_path, prudence = 'stingy') |>
-    filter(is_intersect, stringency_level == 1) |>
+    filter(is_intersect, stringency_level == 2) |>
     select(gene, TF, cell_type, coef, adj) |>
     collect() |>
     write_csv(out_path)
