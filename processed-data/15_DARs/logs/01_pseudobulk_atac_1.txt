@@ -1,10 +1,10 @@
 **** Job starts ****
-Mon Jul  6 04:50:07 PM EDT 2026
+Mon Jul 27 03:39:07 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 33931714
+Job id: 34478864
 Job name: 01_pseudobulk_atac
-Node name: compute-099
+Node name: compute-168
 Task id: 1
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -138,9 +138,9 @@ See help("Deprecated")
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-07-06
+ date     2026-07-27
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.9.38 @ /users/neagles/.positron-server/bin/63f0568b148d4d18b7a3194286686d6fb970bed3/quarto/bin/quarto
+ quarto   1.9.38 @ /users/neagles/.positron-server/bin/d3cdd608df5afa3378c24c9a9c81b01fe1433a87/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package          * version date (UTC) lib source
@@ -282,4 +282,4 @@ See help("Deprecated")
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Mon Jul  6 04:52:24 PM EDT 2026
+Mon Jul 27 03:40:26 PM EDT 2026

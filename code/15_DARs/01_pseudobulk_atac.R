@@ -83,11 +83,6 @@ seur_pb@meta.data$donor = rownames(seur_pb@meta.data) |>
     str_extract('S[0-9]{2}-Hb-r$') |>
     str_replace_all('-', '_')
 
-#   Drop 'data' layer (we only need 'counts' for DAR calculation)
-seur_pb[["ATAC"]] = subset(
-    seur_pb[["ATAC"]], cells = colnames(seur_pb), layer = "counts"
-)
-
 qs_save(seur_pb, seur_out_path)
 
 session_info()
