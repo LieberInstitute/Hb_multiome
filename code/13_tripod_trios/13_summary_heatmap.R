@@ -439,11 +439,41 @@ make_cor_heatmap <- function(trio_sub, row_idx, filename) {
     draw(hm, heatmap_legend_side = "right", annotation_legend_side = "right",
          padding = unit(c(4, 4, 4, 4), "mm"))
     dev.off()
-    invisible(NULL)
+    invisible(cm)
+}
+
+plot_ct_dendrogram <- function(cm, filename) {
+    valid_cols <- colSums(!is.na(cm)) > 1
+    cm_valid <- cm[, valid_cols, drop = FALSE]
+
+    if (ncol(cm_valid) < 2) {
+        stop("Need at least two cell types with sufficient data to cluster columns.")
+    }
+
+    col_dist <- as.dist(1 - cor(cm_valid, use = "pairwise.complete.obs"))
+    col_hclust <- hclust(col_dist, method = "complete")
+
+    pdf(file.path(plot_dir, filename), width = 10, height = 6)
+    op <- par(mar = c(10, 4, 4, 2) + 0.1)
+    on.exit(par(op), add = TRUE)
+    plot(
+        as.dendrogram(col_hclust),
+        main = "Cell type clustering from peak-gene correlation matrix",
+        xlab = "",
+        ylab = "1 - correlation"
+    )
+    dev.off()
+
+    invisible(col_hclust)
 }
 
 # All cell types
-make_cor_heatmap(trio_df, seq_len(nrow(trio_df)), "peak_gene_correlation_heatmap.pdf")
+all_ct_cor_mat <- make_cor_heatmap(
+    trio_df,
+    seq_len(nrow(trio_df)),
+    "peak_gene_correlation_heatmap.pdf"
+)
+plot_ct_dendrogram(all_ct_cor_mat, "peak_gene_correlation_cell_type_dendrogram.pdf")
 
 # Habenula neurons only (LHb and MHb cell types)
 hb_idx <- which(grepl("Hb", trio_df$cell_type))
