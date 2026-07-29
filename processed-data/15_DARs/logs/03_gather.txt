@@ -1,10 +1,10 @@
 **** Job starts ****
-Wed Jul 22 01:48:05 PM EDT 2026
+Wed Jul 29 01:29:43 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 34339633
+Job id: 34532594
 Job name: 03_gather
-Node name: compute-096
+Node name: compute-093
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -32,7 +32,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 2295.
+✔ Number of reports ready for upload: 2312.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -45,7 +45,6 @@ The following object is masked from ‘package:lubridate’:
 
     stamp
 
-There were 12 warnings (use warnings() to see them)
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.5.0 Patched (2025-05-21 r88220)
@@ -56,7 +55,7 @@ There were 12 warnings (use warnings() to see them)
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-07-22
+ date     2026-07-29
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
  quarto   1.9.38 @ /users/neagles/.positron-server/bin/d3cdd608df5afa3378c24c9a9c81b01fe1433a87/quarto/bin/quarto
 
@@ -118,4 +117,4 @@ There were 12 warnings (use warnings() to see them)
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Jul 22 01:48:21 PM EDT 2026
+Wed Jul 29 01:30:28 PM EDT 2026
