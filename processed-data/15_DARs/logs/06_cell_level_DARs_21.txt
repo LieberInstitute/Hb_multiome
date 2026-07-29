@@ -1,11 +1,11 @@
 **** Job starts ****
-Wed Jul 29 01:16:16 PM EDT 2026
+Wed Jul 29 01:18:13 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 34532494
+Job id: 34532375
 Job name: 06_cell_level_DARs
-Node name: compute-166
-Task id: 11
+Node name: compute-176
+Task id: 21
 Unloading conda_R/4.5
 Loading conda_R/4.5
 
@@ -304,4 +304,4 @@ Warning message:
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Jul 29 01:18:12 PM EDT 2026
+Wed Jul 29 01:19:52 PM EDT 2026

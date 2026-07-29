@@ -1,10 +1,10 @@
 **** Job starts ****
-Wed Jul 29 11:21:26 AM EDT 2026
+Wed Jul 29 01:13:11 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 34529870
+Job id: 34532382
 Job name: 06_cell_level_DARs
-Node name: compute-168
+Node name: compute-178
 Task id: 7
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -127,7 +127,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 2309.
+✔ Number of reports ready for upload: 2311.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -304,4 +304,4 @@ Warning message:
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Jul 29 11:24:05 AM EDT 2026
+Wed Jul 29 01:16:17 PM EDT 2026
