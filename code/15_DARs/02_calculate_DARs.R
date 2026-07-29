@@ -42,11 +42,10 @@ seur_pb@meta.data$orig.ident = str_replace_all(
 )
 Idents(seur_pb) = seur_pb$orig.ident
 
-#   Using Cynthia's 1-vs-all approach with logistic regression on raw counts,
-#   and conservative initial filtering of results
+#   1-vs-all approach with minimal filtering. Roughly based off of:
+#   https://stuartlab.org/signac/articles/pbmc_vignette.html#find-differentially-accessible-peaks-between-cell-types
 temp = FindMarkers(
         object = seur_pb, ident.1 = cell_type, ident.2 = NULL, only.pos = FALSE,
-        test.use = "LR", slot = "counts", latent.vars = "nCount_ATAC",
         logfc.threshold = 0, min.pct = 0.1
     ) |>
     rownames_to_column("peak") |>
