@@ -8,21 +8,25 @@ library(ComplexHeatmap)
 library(circlize)
 library(RColorBrewer)
 
-dar_path = here('processed-data', '15_DARs', '03_gather', 'DARs_fine.csv.gz')
+dar_path = here(
+    'processed-data', '15_DARs', '07_cell_level_gather', 'DARs_all.csv.gz'
+)
 seur_path = here(
-    'processed-data', '15_DARs', '01_pseudobulk_atac', 'seur_pb_fine.qs2'
+    'processed-data', '11_link_prep', '02_rebuild_atac_assay',
+    'cell_level_seur.qs2'
 )
 out_path = here('plots', '15_DARs', '05_heatmap')
 dir.create(out_path, recursive = TRUE, showWarnings = FALSE)
 
 seur = qs_read(seur_path)
-dar_df = read_csv(dar_path, show_col_types = FALSE)
+dar_df = read_csv(dar_path, show_col_types = FALSE) |>
+    filter(avg_log2FC > 0)
 
-## Top 5 peaks per cell type by adjusted p-value ----------------------------
+## Top 5 peaks per cell type by FC ----------------------------
 
 top_peaks = dar_df |>
     group_by(cell_type) |>
-    slice_min(p_val_adj, n = 5, with_ties = FALSE) |>
+    slice_max(avg_log2FC, n = 5, with_ties = FALSE) |>
     ungroup()
 
 peak_vec = unique(top_peaks$peak)
@@ -34,7 +38,7 @@ mat = LayerData(seur, assay = "ATAC", layer = "data")[peak_vec, ]
 meta = seur@meta.data
 
 cell_type_means = sapply(cell_types_ordered, function(ct) {
-    cols = rownames(meta)[meta$orig.ident == ct]
+    cols = rownames(meta)[meta$refined_mid_cluster == ct]
     if (length(cols) == 1) mat[, cols]
     else rowMeans(mat[, cols])
 })
