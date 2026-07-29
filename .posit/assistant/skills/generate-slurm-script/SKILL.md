@@ -19,7 +19,9 @@ When asked to generate a `.sh` file for a given `.R` script, follow these steps:
    - ChromVAR, large matrix ops → 100GB, 10 cores, long time limit
    - Default: 50GB, 1 core, 1 day, `shared` partition
 
-3. **Generate the shell script** using the appropriate template below.
+3. **Check the logs directory**: After determining the log output path for the generated script, check whether that directory exists. If it does not exist, ask the user if they'd like you to create it. If they agree, create it with `mkdir -p`.
+
+4. **Generate the shell script** using the appropriate template below.
 
 ## Naming Convention
 
