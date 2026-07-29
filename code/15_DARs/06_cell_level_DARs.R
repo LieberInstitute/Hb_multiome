@@ -16,6 +16,7 @@ task_map_path = here(
 )
 task_map = read_csv(task_map_path, show_col_types = FALSE)
 cell_type = task_map$cell_type[task_id]
+resolution = task_map$resolution[task_id]
 
 seur_path = here(
     'processed-data', '11_link_prep', '02_rebuild_atac_assay',
@@ -35,7 +36,27 @@ dir.create(dirname(out_path), showWarnings = FALSE)
 
 seur = qs_read(seur_path)
 
-Idents(seur) = seur$refined_mid_cluster
+#   Assign the 3 cell-type resolutions. Shockingly, the 'seur@meta.data$' syntax
+#   is required; assigning like 'seur$' causes unexpected NAs and in some cases,
+#   failure to even assign values
+if (resolution == 'broad') {
+    seur@meta.data$cell_class = ifelse(
+        grepl('[ML]Hb|Thal', seur$refined_mid_cluster),
+        'Neuron',
+        seur$refined_mid_cluster
+    )
+} else if (resolution == 'mid') {
+    seur@meta.data$cell_class = case_when(
+        grepl('^MHb', seur$refined_mid_cluster) ~ 'MHb',
+        grepl('LHb', seur$refined_mid_cluster) ~ 'LHb',
+        grepl('Thal', seur$refined_mid_cluster) ~ 'Thalamus',
+        TRUE ~ seur$refined_mid_cluster
+    )
+} else {
+    seur@meta.data$cell_class = seur$refined_mid_cluster
+}
+
+Idents(seur) = seur$cell_class
 
 #   1-vs-all approach with minimal filtering. Roughly based off of:
 #   https://stuartlab.org/signac/articles/pbmc_vignette.html#find-differentially-accessible-peaks-between-cell-types
@@ -46,7 +67,8 @@ temp = FindMarkers(
     rownames_to_column("peak") |>
     as_tibble() |>
     filter(p_val_adj < p_adj_cutoff) |>
-    mutate(cell_type = cell_type) |>
+    mutate(cell_type = cell_type, resolution = resolution) |>
     compute_parquet(out_path)
 
 session_info()
+    
