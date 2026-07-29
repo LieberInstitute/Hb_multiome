@@ -10,7 +10,7 @@ library(circlize)
 cell_map_path = here("raw-data", "cell_type_map.csv")
 colors_path = here('code', '05_03_annotation_adjustments', 'celltype_colors.R')
 dar_path = here(
-    'processed-data', '15_DARs', '07_cell_level_gather', 'DARs_all.csv.gz'
+    'processed-data', '15_DARs', '03_gather', 'DARs_all.csv.gz'
 )
 seur_path = here(
     'processed-data', '11_link_prep', '02_rebuild_atac_assay',
@@ -29,7 +29,7 @@ rename_map = stats::setNames(
 
 seur = qs_read(seur_path)
 dar_df = read_csv(dar_path, show_col_types = FALSE) |>
-    filter(avg_log2FC > 0)
+    filter(avg_log2FC > 0, resolution == 'fine')
 
 ## Top 5 peaks per cell type by FC ----------------------------
 

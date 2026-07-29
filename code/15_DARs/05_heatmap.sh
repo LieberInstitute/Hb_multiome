@@ -1,11 +1,12 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=5G
+#SBATCH --mem=20G
 #SBATCH --job-name=05_heatmap
 #SBATCH -c 1
 #SBATCH -t 1-00:00:00
 #SBATCH -o ../../processed-data/15_DARs/logs/05_heatmap.txt
 #SBATCH -e ../../processed-data/15_DARs/logs/05_heatmap.txt
+#SBATCH --exclude=compute-169
 
 set -e
 
