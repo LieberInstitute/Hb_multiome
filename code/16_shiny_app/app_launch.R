@@ -2,6 +2,12 @@ library(Seurat)
 library(Signac)
 library(qs2)
 library(readr)
+library(shiny)
+library(bslib)
+library(Seurat)
+library(ggplot2)
+library(thematic)
+library(DT)
 
 # For testing at JHPCE
 # setwd(here::here("code", "16_shiny_app"))
