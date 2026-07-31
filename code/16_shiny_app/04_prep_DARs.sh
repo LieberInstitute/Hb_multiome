@@ -6,6 +6,7 @@
 #SBATCH -t 1-00:00:00
 #SBATCH -o ../../processed-data/16_shiny_app/logs/04_prep_DARs.txt
 #SBATCH -e ../../processed-data/16_shiny_app/logs/04_prep_DARs.txt
+#SBATCH --exclude=compute-169
 
 set -e
 

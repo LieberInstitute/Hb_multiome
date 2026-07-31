@@ -4,48 +4,28 @@ library(Signac)
 library(tidyverse)
 library(here)
 library(qs2)
-library(duckplyr)
 
 seur_pb_path = here(
     'processed-data', '15_DARs', '01_pseudobulk_atac',
     'seur_pb_fine.qs2'
 )
 cell_map_path = here('raw-data', 'cell_type_map.csv')
-dar_dir = here('processed-data', '15_DARs', '02_calculate_DARs')
+dar_in_path = here('processed-data', '15_DARs', '03_gather', 'DARs_all.csv.gz')
 out_dir = here("processed-data", "16_shiny_app", "04_prep_DARs")
-log_fc_cutoff = log2(1.5)
-p_adj_cutoff = 0.05
-
-num_cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
-duckplyr::db_exec(sprintf("SET threads = %d", num_cores))
-fallback_config(info = FALSE)
 
 dir.create(out_dir, showWarnings = FALSE)
+
+################################################################################
+#   Prep DARs data frame
+################################################################################
 
 cluster_map = read_csv(cell_map_path, show_col_types = FALSE)
 rename_map <- stats::setNames(
     cluster_map$new_cell_type, cluster_map$old_cell_type
 )
 
-################################################################################
-#   Prep DARs data frame
-################################################################################
-
-in_files = list.files(
-    dar_dir, pattern = "^DARs_fine_.*\\.parquet$", full.names = TRUE
-)
-dar_df_list = list()
-for (in_file in in_files) {
-    dar_df_list[[in_file]] = read_parquet_duckdb(
-            in_file, prudence = "lavish"
-        ) |>
-        select(peak, cell_type, avg_log2FC, p_val_adj) |>
-        filter(p_val_adj < p_adj_cutoff, abs(avg_log2FC) > log_fc_cutoff) |>
-        dplyr::rename(p_adj = p_val_adj)
-}
-dar_df = bind_rows(dar_df_list) |>
-    collect() |>
-    filter(str_detect(peak, '^chr')) |>
+dar_df = read_csv(dar_in_path, show_col_types = FALSE) |>
+    filter(resolution == 'fine', str_detect(peak, '^chr')) |>
     mutate(
         DA_direction = factor(
             ifelse(avg_log2FC > 0, 'up', 'down'),
@@ -55,6 +35,7 @@ dar_df = bind_rows(dar_df_list) |>
             unname(rename_map[cell_type]), cell_type
         )
     ) |>
+    dplyr::rename(p_adj = p_val_adj) |>
     group_by(peak, DA_direction) |>
     arrange(p_adj) |>
     summarize(
