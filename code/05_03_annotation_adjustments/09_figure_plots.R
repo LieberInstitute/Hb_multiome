@@ -244,7 +244,7 @@ p_bubble = get_bubble_plot_sce(multiome_sce,
     'OLIG2', 'PDGFRA','MOG','S100B','CLDN5', 'PECAM1', 'P2RY12','CX3CR1',
 'SLC1A2', 'GFAP', 'FOXJ1', 'PIFO', #Non-neuronal markers
 'GAP43','SNAP25', 'SLC17A6','SLC17A7', #Neuronal markers
-'LYPD6B','ADARB2','DRD2','SOX14','RORB', #THalamus markers
+'LYPD6B','ADARB2','SOX14','RORB', #THalamus markers
 'GAD1','GAD2','SLC32A1', #Inhibitory markers
 'LYNX1','CHRM3','GABRA1','PCDH10','HTR2C', #Lateral habenula markers
 'GPR151','POU4F1', #Habenula markers

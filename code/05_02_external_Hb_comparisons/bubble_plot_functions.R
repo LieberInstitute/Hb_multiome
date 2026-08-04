@@ -96,7 +96,7 @@ get_bubble_plot_sce = function(sce_object, top_markers, sample_name, group_col =
       limits = c(0, max_val)) +
     scale_size_continuous(range = c(2, 8)) +
     theme_minimal() + ggtitle(sample_name) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     labs(x = "Gene", y = group_col, size = "% Expression", color = "Mean Expression")
 
   p2 = ggplot(summary_data, aes(x = gene, y = group_var, size = pct_expressing, color = mean_expression_zscore)) +
@@ -107,7 +107,7 @@ get_bubble_plot_sce = function(sce_object, top_markers, sample_name, group_col =
     name = "Mean Exp. z-score") +
     scale_size_continuous(range = c(2, 8)) +
     theme_minimal() + ggtitle(sample_name) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     labs(x = "Gene", y = group_col, size = "% Expressing", color = "Mean Exp. z-score")
   return(list(p1, p2))
 }
