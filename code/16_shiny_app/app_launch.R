@@ -55,5 +55,7 @@ run_app(
     seur_pb = seur_pb,
     cell_type_var = "mid_cluster",
     cell_type_colors = cell_type_colors,
-    default_reduction = "wnn_umap"
+    default_reduction = "wnn_umap",
+    default_gene = "OPRM1",
+    default_peak = "chr2-177852216-177852855"
 )

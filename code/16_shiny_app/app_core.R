@@ -210,7 +210,7 @@ build_metacell_panel <- function(trio_df, dropped_trio_rows) {
 build_dar_panel <- function() {
   tagList(
     p(
-      "In this tab, differentially accessible regions (DARs), which are ATAC peaks with higher or lower accessibility in one cell type (against all others), can be explored. DARs were computed using the ATAC data pseudobulked by cell type."
+      "In this tab, differentially accessible regions (DARs), which are ATAC peaks with higher or lower accessibility in one cell type (against all others), can be explored. DARs were computed using the cell-level ATAC data, but for visualization we show data pseudobulked by cell type."
     ),
     layout_sidebar(
       sidebar = sidebar(
@@ -263,7 +263,7 @@ build_app_ui <- function(
   )
 }
 
-build_app_server <- function(atlas_seur, metacell_seur, trio_df, dar_df, seur_pb, cell_type_var, cell_type_colors) {
+build_app_server <- function(atlas_seur, metacell_seur, trio_df, dar_df, seur_pb, cell_type_var, cell_type_colors, default_gene = NULL, default_peak = NULL) {
   force(atlas_seur)
   force(metacell_seur)
   force(trio_df)
@@ -296,14 +296,14 @@ build_app_server <- function(atlas_seur, metacell_seur, trio_df, dar_df, seur_pb
       session = session,
       inputId = "manual_gene",
       choices = gene_choices,
-      selected = gene_choices[[1]],
+      selected = if (!is.null(default_gene) && default_gene %in% gene_choices) default_gene else gene_choices[[1]],
       server = TRUE
     )
     updateSelectizeInput(
       session = session,
       inputId = "manual_peak",
       choices = peak_choices,
-      selected = peak_choices[[1]],
+      selected = if (!is.null(default_peak) && default_peak %in% peak_choices) default_peak else peak_choices[[1]],
       server = TRUE
     )
 
@@ -619,7 +619,9 @@ run_app <- function(
   seur_pb,
   cell_type_var,
   cell_type_colors = NULL,
-  default_reduction = NULL
+  default_reduction = NULL,
+  default_gene = NULL,
+  default_peak = NULL
 ) {
   color_info <- validate_color_vars(
     atlas_seur,
@@ -650,7 +652,9 @@ run_app <- function(
     dar_df = dar_df,
     seur_pb = seur_pb,
     cell_type_var = cell_type_var,
-    cell_type_colors = cell_type_colors
+    cell_type_colors = cell_type_colors,
+    default_gene = default_gene,
+    default_peak = default_peak
   )
 
   shinyApp(ui = app_ui, server = app_server)
