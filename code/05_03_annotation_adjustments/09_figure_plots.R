@@ -367,8 +367,7 @@ p_bubble = get_bubble_plot_sce(all_mouse_sce,
   top_markers = c(
   'Lynx1','Chrm3','Gabra1','Pcdh10','Htr2c', #Lateral habenula markers
   'Gpr151','Pou4f1','Tac2', #Habenula markers
-  'Chrnb4', 'Chat','Slc5a7','Slc18a3','Tac1', #medial habenula markers
-  'Oprm1', 'Cartpt', 'Glp1r', 'Glp2r'),
+  'Chrnb4', 'Chat','Slc5a7','Slc18a3','Tac1'), #medial habenula markers,
  sample_name = "Wallace mouse Habenula", group_col = "author_subHab_celltype", group_order = celltype_order, exp_assay = 'cpm')
 p_bubble
 
@@ -382,12 +381,10 @@ p_bubble = get_bubble_plot_sce(hashikawa_sce_neuron,
   top_markers = c(
   'Lynx1','Chrm3','Gabra1','Pcdh10','Htr2c', #Lateral habenula markers
   'Gpr151','Pou4f1','Tac2', #Habenula markers
-  'Chrnb4', 'Chat','Slc5a7','Slc18a3','Tac1', #medial habenula markers
-  'Oprm1', 'Cartpt','Glp1r', 'Glp2r'),
+  'Chrnb4', 'Chat','Slc5a7','Slc18a3','Tac1'), #medial habenula markers
  sample_name = "Hashikawa mouse Habenula", group_col = "celltype", group_order = celltype_order, exp_assay = 'cpm')
 p_bubble
 
-table(grepl('Glp', rownames(hashikawa_sce_neuron)))
 
 
 # Add the mouse metadata for wallace
@@ -517,6 +514,28 @@ hashikawa_sce_sub$plot_annot = hashikawa_sce_sub$final_Annotations
 hashikawa_sce_sub$plot_annot[hashikawa_sce_sub$final_Annotations %in% c('Astrocyte1', 'Astrocyte2','Endothelial','Epen','Microglia',
 'Mural', 'Oligo1','Oligo2','Oligo3','OPC1', 'OPC2', 'OPC3')] = 'Non-neurons'
 
+
+#Metacluster annots
+umap_wallace_meta <- plotReducedDim(all_mouse_sce, 
+                dimred = "umap",
+                colour_by = "meta_cluster", 
+              point_size = .5) +
+  guides(colour = guide_legend(override.aes = list(size = 3))) +
+  labs(
+    title = "Wallace et. al UMAP",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Meta-cluster"
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
+
+umap_wallace_meta
 
 umap_wallace <- plotReducedDim(all_mouse_sce, 
                 dimred = "umap",
