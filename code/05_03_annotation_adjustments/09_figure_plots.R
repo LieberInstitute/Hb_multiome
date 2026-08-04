@@ -406,11 +406,18 @@ colData(hashikawa_sce_sub) = S4Vectors::DataFrame(hashikawa_metadata)
 #Pass in the neuronal subset annotations
 index = match(rownames(neuronal_subset_metadata), colnames(hashikawa_sce_sub) )
 hashikawa_sce_sub$meta_clust_celltype_annot[index] = neuronal_subset_metadata$meta_clust_celltype_annot
+#These are the annotations we used to match to Wallace
+hashikawa_sce_sub$author_celltype = hashikawa_sce_sub$celltype
+hashikawa_sce_sub$author_celltype[index] = neuronal_subset_metadata$celltype
+table(hashikawa_sce_sub$author_celltype, hashikawa_sce_sub$celltype)
 
 #Give a generic neuron label for the cells that were not included in the neuronal subset
 table(hashikawa_sce_sub$meta_clust_celltype_annot)
 index = hashikawa_sce_sub$meta_clust_celltype_annot %in% c('LHb_1.1','LHb_1.2','LHb_1.3','MHb.1','MHb.2','MHb.3')
 hashikawa_sce_sub$meta_clust_celltype_annot[index] = 'Neuron'
+
+index = hashikawa_sce_sub$author_celltype %in% c('Neuron1','Neuron2','Neuron3','Neuron4','Neuron5','Neuron6', 'Neuron7','Neuron8')
+hashikawa_sce_sub$author_celltype[index] = 'Neuron'
 
 #Load embedding
 umap_mat <- readRDS(paste0(hashikawa_data_path,"/hashikawa_mouse_umap_embeddings.rds"))
@@ -458,8 +465,8 @@ broad_nonN_color <- my_colors_class['Non-neurons']
 
 
 #Zebrafish palette
-zeb_lat_fine <- c("ventral", "ventral_immediate_early", 'inhibitory_gap43')
-zeb_med_fine <- c("dorsolateral_left_subP_BDNF", "dorsomedial_neuron", 'dorsomedial_right_cholinergic', 'dorsomedial_right_cholinergic_GAT1')
+zeb_lat_fine <- c("ventral", "ventral_2", 'inhibitory_gap43')
+zeb_med_fine <- c("dorsolateral_left_subP", "dorsomedial_neuron", 'dorsomedial_right_cholinergic', 'dorsomedial_right_cholinergic_2')
 
 zeb_lat_fine_colors <- setNames(make_cluster_shades(broad_lateral_color, length(zeb_lat_fine)), zeb_lat_fine)
 zeb_med_fine_colors <- setNames(make_cluster_shades(broad_medial_color, length(zeb_med_fine)), zeb_med_fine)
@@ -501,6 +508,9 @@ hashikawa_palette_vec <- c(broad_nonN_color, 'outliers' = 'grey50', hashikawa_la
 #Group the non-neurons
 zeb_sce$plot_annot = zeb_sce$final_Annotations
 zeb_sce$plot_annot[zeb_sce$final_Annotations %in% c('non_neuronal')] = 'Non-neurons'
+zeb_sce$plot_annot[zeb_sce$final_Annotations == 'dorsomedial_right_cholinergic_GAT1'] = 'dorsomedial_right_cholinergic_2'
+zeb_sce$plot_annot[zeb_sce$final_Annotations == 'dorsolateral_left_subP_BDNF'] = 'dorsolateral_left_subP'
+zeb_sce$plot_annot[zeb_sce$final_Annotations == 'ventral_immediate_early'] = 'ventral_2'
 
 yalcinbas_sce$plot_annot = yalcinbas_sce$final_Annotations
 yalcinbas_sce$plot_annot[yalcinbas_sce$final_Annotations %in% c('Astrocyte', 'Endo', 'Microglia','Oligo','OPC')] = 'Non-neurons'
@@ -559,6 +569,47 @@ umap_wallace <- plotReducedDim(all_mouse_sce,
 
 umap_wallace
 
+# Add the bubble plot for how the metaclusters were annotated 
+#And now the bubble plot with the Wallace marker panel
+
+custom_markers = c('Cldn5','Abcc9','Pdgfrb','Col3a1','Cx3cr1','Mrc1','Slc6a11','Gpr17',
+'Mbp','Mog','Olig1','Pdgfra','Slc17a6','Snap25','Tac2','Slc17a7','Pou4f1','Gpr151','Tac1',
+'Chat', 'Slc18a3','Slc5a7', 'Gap43', 'Gad1','Gad2','Slc32a1')
+
+cell_type_order = c('meta_cluster4', 'meta_cluster14', 'meta_cluster8','meta_cluster10',
+'meta_cluster1','meta_cluster2', 'meta_cluster9', 'meta_cluster11', 'meta_cluster6',
+'meta_cluster5','meta_cluster13','meta_cluster7', 'meta_cluster12', 'meta_cluster3')
+
+p_bubble_paper_markers = get_bubble_plot_sce(all_mouse_sce , custom_markers, 
+  'Wallace 2019: mouse', group_col = 'meta_cluster', group_order = cell_type_order)
+p_bubble_paper_markers
+
+ggsave(p_bubble_paper_markers[[2]], filename = paste0(plot_path, '/wallace_markers_for_meta_annot_bubble.pdf'), device = 'pdf', 
+width = 8, height = 4)
+
+
+
+umap_hashikawa_author <- plotReducedDim(hashikawa_sce_sub, 
+                dimred = "umap",
+                colour_by = "author_celltype", 
+              point_size = .5) +
+  guides(colour = guide_legend(override.aes = list(size = 3))) +
+  labs(
+    title = "Hashikawa et. al UMAP",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "AuthorCell type"
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
+
+umap_hashikawa_author
+
 
 umap_hashikawa <- plotReducedDim(hashikawa_sce_sub, 
                 dimred = "umap",
@@ -581,6 +632,26 @@ umap_hashikawa <- plotReducedDim(hashikawa_sce_sub,
   )
 
 umap_hashikawa
+
+custom_markers = c('Cldn5','Foxj1','Abcc9','Pdgfrb','Col3a1','Cx3cr1','Mrc1','Slc6a11','Gpr17',
+'Mbp','Mog','Olig1','Pdgfra','Slc17a6','Snap25','Tac2','Slc17a7','Pou4f1','Gpr151','Tac1',
+'Chat', 'Slc18a3','Slc5a7', 'Gap43', 'Gad1','Gad2','Slc32a1')
+
+cell_type_order = c('LHb3','LHb1','LHb2','LHb4','LHb5','LHb6','MHb6','MHb4', 'MHb3', 'MHb2','MHb1',
+'MHb5','Neuron','Oligo1','Oligo2','Oligo3', 'OPC1','OPC2','OPC3', 'Astrocyte1', 'Astrocyte2','Microglia',
+'Mural','Epen', 'Endothelial')
+
+p_bubble_paper_markers = get_bubble_plot_sce(hashikawa_sce_sub , custom_markers, 
+  'Hashikawa 2020: mouse', group_col = 'author_celltype', group_order = cell_type_order)
+p_bubble_paper_markers
+
+ggsave(p_bubble_paper_markers[[2]], filename = paste0(plot_path, '/hashikawa_markers_for_meta_annot_bubble.pdf'), device = 'pdf', 
+width = 8, height = 4)
+
+
+
+
+
 
 umap_yalcinbas <- plotReducedDim(yalcinbas_sce, 
                 dimred = "UMAP",
@@ -605,6 +676,9 @@ umap_yalcinbas <- plotReducedDim(yalcinbas_sce,
 umap_yalcinbas
 
 
+
+
+
 umap_zebrafish <- plotReducedDim(zeb_sce, 
                 dimred = "UMAP",
                 colour_by = "plot_annot",
@@ -625,15 +699,61 @@ umap_zebrafish <- plotReducedDim(zeb_sce,
     axis.text.y = element_text(size = 10)
   )
 
+umap_zebrafish_meta <- plotReducedDim(zeb_sce, 
+                dimred = "UMAP",
+                colour_by = "meta_cluster",
+              point_size = .5) +
+  guides(colour = guide_legend(override.aes = list(size = 3))) +
+  labs(
+    title = "Pendey et. al UMAP",
+    x = "UMAP 1",
+    y = "UMAP 2",
+    colour = "Cell type"
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10)
+  )
+
+
+#Zebrafish regional markers
+custom_markers = c('CLDN5','MRC1','SLC6A11',
+'MBP','SLC17A6','SNAP25','TAC3','SLC17A7','POU4F1','GPR151','TAC1',
+'SLC5A7', 'GAP43', 'GAD1','GAD2','SLC32A1')
+
+cell_type_order = c('meta_cluster7','meta_cluster2','meta_cluster1','meta_cluster5','meta_cluster4','meta_cluster3','meta_cluster6','meta_cluster8')
+
+p_bubble_paper_markers = get_bubble_plot_sce(zeb_sce , custom_markers, 
+  'Pandey 2018: zebrafish', group_col = 'meta_cluster', group_order = cell_type_order)
+p_bubble_paper_markers
+
+ggsave(p_bubble_paper_markers[[2]], filename = paste0(plot_path, '/zebrafish_markers_for_meta_annot_bubble.pdf'), device = 'pdf', 
+width = 8, height = 4)
+
+
+
+
 umap_zebrafish
+umap_zebrafish_meta
 umap_yalcinbas
 umap_wallace
 umap_hashikawa
 
 ggsave(umap_zebrafish, filename = 'zebrafish_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(umap_zebrafish_meta, filename = 'zebrafish_meta_cluster_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+
 ggsave(umap_yalcinbas, filename = 'yalcinbas_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+
 ggsave(umap_wallace, filename = 'wallace_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(umap_wallace_meta, filename = 'wallace_meta_cluster_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+
 ggsave(umap_hashikawa, filename = 'hashikawa_grouped_small_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+ggsave(umap_hashikawa_author, filename = 'hashikawa_author_annot_umap.pdf', path = plot_path, device = 'pdf', height = 3, width = 6)
+
+
 
 #Violin plot of OPRM1 expression across the clusters
 
@@ -774,13 +894,12 @@ ggsave(umap_oprm1_hashikawa, filename = 'oprm1_hashikawa_grouped_small_umap.pdf'
 #Wallace data
 
 all_mouse_sce$grouped_annot = all_mouse_sce$final_Annotations
-all_mouse_sce$grouped_annot[all_mouse_sce$final_Annotations %in% c('MHb_subP')] = 'MHb.1'
-all_mouse_sce$grouped_annot[all_mouse_sce$final_Annotations %in% c('MHb_subP_cholinergic')] = 'MHb.1.2'
-all_mouse_sce$grouped_annot[all_mouse_sce$final_Annotations %in% c('MHb_cholinergic')] = 'MHb.2'
-all_mouse_sce$grouped_annot[all_mouse_sce$final_Annotations %in% c('LHb_2')] = 'LHb.2.7'
-all_mouse_sce$grouped_annot[all_mouse_sce$final_Annotations %in% c('LHb_1')] = 'LHb.1.3.4'
+all_mouse_sce$grouped_annot[all_mouse_sce$final_Annotations %in% c('MHb_subP')] = 'MHb_A'
+all_mouse_sce$grouped_annot[all_mouse_sce$final_Annotations %in% c('MHb_cholinergic')] = 'MHb_B'
+all_mouse_sce$grouped_annot[all_mouse_sce$final_Annotations %in% c('LHb_2')] = 'LHb_A'
+all_mouse_sce$grouped_annot[all_mouse_sce$final_Annotations %in% c('LHb_1')] = 'LHb_C'
 
-celltype_order = c('LHb.4','LHb.1.3.4','LHb.2.7','MHb.2','MHb.1.2','MHb.1')
+celltype_order = c('LHb_C','LHb_B','LHb_A','MHb_B','MHb_subP_cholinergic','MHb_A')
 cell_index = all_mouse_sce$grouped_annot %in% celltype_order
 
 p_bubble = get_bubble_plot_sce(all_mouse_sce[ , cell_index], 
@@ -802,14 +921,13 @@ wallace_bubble
 
 #Hashikawa data
 hashikawa_sce_sub$grouped_annot = hashikawa_sce_sub$final_Annotations
-hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$final_Annotations %in% c('MHb_subP')] = 'MHb.1'
-hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$final_Annotations %in% c('MHb_subP_cholinergic')] = 'MHb.1.2'
-hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$final_Annotations %in% c(paste0('MHb_cholinergic_', 1:4))] = 'MHb.2'
-hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$final_Annotations %in% c('LHb_2', 'LHb_1_5')] = 'LHb.2.7'
-hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$final_Annotations %in% c('LHb_1_2', 'LHb_1_4')] = 'LHb.1.3.4'
-hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$final_Annotations %in% c('LHb_1_1', 'LHb_1_3')] = 'LHb.4'
+hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$final_Annotations %in% c('MHb_subP')] = 'MHb_A'
+hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$final_Annotations %in% c(paste0('MHb_cholinergic_', 1:4))] = 'MHb_B'
+hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$final_Annotations %in% c('LHb_2', 'LHb_1_5')] = 'LHb_A'
+hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$final_Annotations %in% c('LHb_1_2', 'LHb_1_4')] = 'LHb_B'
+hashikawa_sce_sub$grouped_annot[hashikawa_sce_sub$final_Annotations %in% c('LHb_1_1', 'LHb_1_3')] = 'LHb_C'
 
-celltype_order = c('LHb.4','LHb.1.3.4','LHb.2.7','MHb.2','MHb.1.2','MHb.1')
+celltype_order = c('LHb_C','LHb_B','LHb_A','MHb_B','MHb_subP_cholinergic','MHb_A')
 cell_index = hashikawa_sce_sub$grouped_annot %in% celltype_order
 
 p_bubble = get_bubble_plot_sce(hashikawa_sce_sub[ , cell_index], 
@@ -830,10 +948,17 @@ hashikawa_bubble
 
 
 #Pandey data
-cell_index = !zeb_sce$plot_annot %in% c('Non-neurons', 'outliers')
 
-celltype_order = c('inhibitory_gap43','ventral_immediate_early','ventral','dorsomedial_right_cholinergic_GAT1',
- 'dorsomedial_right_cholinergic','dorsomedial_neuron','dorsolateral_left_subP_BDNF')
+zeb_sce$grouped_annot = zeb_sce$plot_annot
+zeb_sce$grouped_annot[zeb_sce$plot_annot %in% c('dorsolateral_left_subP')] = 'MHb_A'
+zeb_sce$grouped_annot[zeb_sce$plot_annot %in% c('dorsomedial_right_cholinergic','dorsomedial_right_cholinergic_2')] = 'MHb_B'
+zeb_sce$grouped_annot[zeb_sce$plot_annot %in% c('ventral', 'ventral_2')] = 'LHb_B'
+zeb_sce$grouped_annot[zeb_sce$plot_annot %in% c('inhibitory_gap43')] = 'LHb_C'
+
+
+cell_index = !zeb_sce$grouped_annot %in% c('outliers', 'Non-neurons')
+
+celltype_order = c('LHb_C','LHb_B','LHb_A','MHb_B','dorsomedial_neuron','MHb_A')
 
 p_bubble = get_bubble_plot_sce(zeb_sce[ , cell_index], 
   top_markers = c('TAC1','TAC3',
@@ -843,7 +968,7 @@ p_bubble = get_bubble_plot_sce(zeb_sce[ , cell_index],
   'GAP43','CHRM3', 
   'GAD1','GAD2','SLC32A1',
   'GPR151','POU4F1'),
- sample_name = "Pandey Zebrafish", group_col = "final_Annotations", group_order = celltype_order)
+ sample_name = "Pandey Zebrafish", group_col = "grouped_annot", group_order = celltype_order)
 
 #p_bubble[[1]]
 pandey_bubble = p_bubble[[2]] 
@@ -851,70 +976,70 @@ pandey_bubble = p_bubble[[2]]
 pandey_bubble
 
 
-#Yalcinbas data
-yalcinbas_sce$grouped_annot = yalcinbas_sce$final_Annotations
-yalcinbas_sce$grouped_annot[yalcinbas_sce$final_Annotations %in% c('MHb.1')] = 'MHb.1'
-yalcinbas_sce$grouped_annot[yalcinbas_sce$final_Annotations %in% c('LHb.6')] = 'MHb.1.2'
-yalcinbas_sce$grouped_annot[yalcinbas_sce$final_Annotations %in% c('MHb.2')] = 'MHb.2'
-yalcinbas_sce$grouped_annot[yalcinbas_sce$final_Annotations %in% c('LHb.2', 'LHb.7')] = 'LHb.2.7'
-yalcinbas_sce$grouped_annot[yalcinbas_sce$final_Annotations %in% c('LHb.5', 'LHb.1')] = 'LHb.1.3.4'
-yalcinbas_sce$grouped_annot[yalcinbas_sce$final_Annotations %in% c('LHb.3', 'LHb.4')] = 'LHb.4'
+# #Yalcinbas data
+# yalcinbas_sce$grouped_annot = yalcinbas_sce$final_Annotations
+# yalcinbas_sce$grouped_annot[yalcinbas_sce$final_Annotations %in% c('MHb.1')] = 'MHb.1'
+# yalcinbas_sce$grouped_annot[yalcinbas_sce$final_Annotations %in% c('LHb.6')] = 'MHb.1.2'
+# yalcinbas_sce$grouped_annot[yalcinbas_sce$final_Annotations %in% c('MHb.2')] = 'MHb.2'
+# yalcinbas_sce$grouped_annot[yalcinbas_sce$final_Annotations %in% c('LHb.2', 'LHb.7')] = 'LHb.2.7'
+# yalcinbas_sce$grouped_annot[yalcinbas_sce$final_Annotations %in% c('LHb.5', 'LHb.1')] = 'LHb.1.3.4'
+# yalcinbas_sce$grouped_annot[yalcinbas_sce$final_Annotations %in% c('LHb.3', 'LHb.4')] = 'LHb.4'
 
-celltype_order = c('LHb.4','LHb.1.3.4','LHb.2.7','MHb.2','MHb.1.2','MHb.1')
-cell_index = yalcinbas_sce$grouped_annot %in% celltype_order
+# celltype_order = c('LHb.4','LHb.1.3.4','LHb.2.7','MHb.2','MHb.1.2','MHb.1')
+# cell_index = yalcinbas_sce$grouped_annot %in% celltype_order
 
-p_bubble = get_bubble_plot_sce(yalcinbas_sce[ , cell_index], 
-  top_markers = c('TAC1','TAC3',
-  'SSTR2','C1QL1',
-  'CHAT','SLC5A7', 'SLC18A3',
-  'OPRM1','PCDH10','HTR2C', 
-  'COL25A1', 
-  'GRIK4', 
-  'GAP43','RPH3A','CHRM3', 
-  'GAD1','GAD2','SLC32A1',
-  'GPR151','POU4F1'),
- sample_name = "Yalcinbas Human", group_col = "grouped_annot", group_order = celltype_order)
+# p_bubble = get_bubble_plot_sce(yalcinbas_sce[ , cell_index], 
+#   top_markers = c('TAC1','TAC3',
+#   'SSTR2','C1QL1',
+#   'CHAT','SLC5A7', 'SLC18A3',
+#   'OPRM1','PCDH10','HTR2C', 
+#   'COL25A1', 
+#   'GRIK4', 
+#   'GAP43','RPH3A','CHRM3', 
+#   'GAD1','GAD2','SLC32A1',
+#   'GPR151','POU4F1'),
+#  sample_name = "Yalcinbas Human", group_col = "grouped_annot", group_order = celltype_order)
 
-#p_bubble[[1]]
-yalcinbas_bubble = p_bubble[[2]] 
-yalcinbas_bubble
+# #p_bubble[[1]]
+# yalcinbas_bubble = p_bubble[[2]] 
+# yalcinbas_bubble
 
-multiome_sce$final_Annotations = as.character(multiome_sce$mid_cluster_adj)
-multiome_sce$final_Annotations[ multiome_sce$refined_mid_cluster == 'Inhib_LHb_4.1'] = 'Inhib_LHb_4.1'
-multiome_sce$final_Annotations[ multiome_sce$refined_mid_cluster == 'Inhib_LHb_4.2'] = 'Inhib_LHb_4.2'
+# multiome_sce$final_Annotations = as.character(multiome_sce$mid_cluster_adj)
+# multiome_sce$final_Annotations[ multiome_sce$refined_mid_cluster == 'Inhib_LHb_4.1'] = 'Inhib_LHb_4.1'
+# multiome_sce$final_Annotations[ multiome_sce$refined_mid_cluster == 'Inhib_LHb_4.2'] = 'Inhib_LHb_4.2'
 
-multiome_sce$grouped_annot = multiome_sce$final_Annotations
-multiome_sce$grouped_annot[multiome_sce$final_Annotations %in% c('LHb.1', 'LHb.1.3', 'LHb.1.3.4')] = 'LHb.1.3.4'
+# multiome_sce$grouped_annot = multiome_sce$final_Annotations
+# multiome_sce$grouped_annot[multiome_sce$final_Annotations %in% c('LHb.1', 'LHb.1.3', 'LHb.1.3.4')] = 'LHb.1.3.4'
 
-celltype_order = c('Inhib_LHb_4.2', 'Inhib_LHb_4.1','LHb.4','LHb.1.3.4','LHb.1.3','LHb.1','LHb.2.7','MHb.2','MHb.1.2','MHb.1')
-cell_index = multiome_sce$grouped_annot %in% celltype_order
+# celltype_order = c('Inhib_LHb_4.2', 'Inhib_LHb_4.1','LHb.4','LHb.1.3.4','LHb.1.3','LHb.1','LHb.2.7','MHb.2','MHb.1.2','MHb.1')
+# cell_index = multiome_sce$grouped_annot %in% celltype_order
 
-p_bubble = get_bubble_plot_sce(multiome_sce[ , cell_index], 
-  top_markers = c('TAC1','TAC3',
-  'SSTR2','C1QL1',
-  'CHAT','SLC5A7', 'SLC18A3',
-  'OPRM1','PCDH10','HTR2C', 
-  'COL25A1', 
-  'GRIK4', 
-  'GAP43','RPH3A','CHRM3', 
-  'GAD1','GAD2','SLC32A1',
-  'GPR151','POU4F1'),
- sample_name = "Multiome Human", group_col = "grouped_annot", group_order = celltype_order)
+# p_bubble = get_bubble_plot_sce(multiome_sce[ , cell_index], 
+#   top_markers = c('TAC1','TAC3',
+#   'SSTR2','C1QL1',
+#   'CHAT','SLC5A7', 'SLC18A3',
+#   'OPRM1','PCDH10','HTR2C', 
+#   'COL25A1', 
+#   'GRIK4', 
+#   'GAP43','RPH3A','CHRM3', 
+#   'GAD1','GAD2','SLC32A1',
+#   'GPR151','POU4F1'),
+#  sample_name = "Multiome Human", group_col = "grouped_annot", group_order = celltype_order)
 
-#p_bubble[[1]]
-multiome_bubble = p_bubble[[2]] 
-multiome_bubble 
+# #p_bubble[[1]]
+# multiome_bubble = p_bubble[[2]] 
+# multiome_bubble 
 
 
 wallace_bubble
 hashikawa_bubble
 pandey_bubble
-yalcinbas_bubble
-multiome_bubble
+#yalcinbas_bubble
+#multiome_bubble
 
 ggsave(wallace_bubble, filename = 'wallace_grouped_bubble.pdf', path = plot_path, device = 'pdf', height = 4, width = 6)
 ggsave(hashikawa_bubble, filename = 'hashikawa_grouped_bubble.pdf', path = plot_path, device = 'pdf', height = 4, width = 6)
 ggsave(pandey_bubble, filename = 'pandey_grouped_bubble.pdf', path = plot_path, device = 'pdf', height = 4, width = 8)
-ggsave(yalcinbas_bubble, filename = 'yalcinbas_grouped_bubble.pdf', path = plot_path, device = 'pdf', height = 4, width = 6)
-ggsave(multiome_bubble, filename = 'multiome_grouped_bubble.pdf', path = plot_path, device = 'pdf', height = 4, width = 6)
+#ggsave(yalcinbas_bubble, filename = 'yalcinbas_grouped_bubble.pdf', path = plot_path, device = 'pdf', height = 4, width = 6)
+#ggsave(multiome_bubble, filename = 'multiome_grouped_bubble.pdf', path = plot_path, device = 'pdf', height = 4, width = 6)
 
