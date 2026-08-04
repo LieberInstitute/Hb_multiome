@@ -13,11 +13,12 @@ here::here()
 
 
 #Path to save any generated data
-#new_data_path = here('processed-data', '05_03_annotation_adjustments', '09_figure_plots')
+new_data_path = here('processed-data', '05_03_annotation_adjustments', '09_figure_plots')
 #Path to plot directory
 plot_path = here('plots','05_03_annotation_adjustments', '09_figure_plots')
 
-#if (!dir.exists(new_data_path)) dir.create(new_data_path)
+
+if (!dir.exists(new_data_path)) dir.create(new_data_path)
 if (!dir.exists(plot_path)) dir.create(plot_path)
 
 
@@ -1042,4 +1043,30 @@ ggsave(hashikawa_bubble, filename = 'hashikawa_grouped_bubble.pdf', path = plot_
 ggsave(pandey_bubble, filename = 'pandey_grouped_bubble.pdf', path = plot_path, device = 'pdf', height = 4, width = 8)
 #ggsave(yalcinbas_bubble, filename = 'yalcinbas_grouped_bubble.pdf', path = plot_path, device = 'pdf', height = 4, width = 6)
 #ggsave(multiome_bubble, filename = 'multiome_grouped_bubble.pdf', path = plot_path, device = 'pdf', height = 4, width = 6)
+
+
+
+#Pull together non-human metadata for supplemental tables
+all_mouse_sce$cell_id = colnames(all_mouse_sce)
+wallace_meta = colData(all_mouse_sce) %>% as.data.frame() %>% dplyr::select(c('cell_id', 'author_celltype', 'author_subHab_celltype', 
+'meta_cluster', 'meta_clust_celltype_annot','grouped_annot'))
+
+colnames(wallace_meta) = c('cell_id','author_celltype','author_subHab_celltype','meta_cluster','Annotated_meta_cluster','consensus_annotation')
+
+
+hashikawa_sce_sub$cell_id = colnames(hashikawa_sce_sub)
+hashikawa_meta = colData(hashikawa_sce_sub) %>% as.data.frame() %>% dplyr::select(c('cell_id', 'author_celltype', 
+'meta_clust_celltype_annot','grouped_annot'))
+
+colnames(hashikawa_meta) = c('cell_id','author_celltype','Annotated_meta_cluster','consensus_annotation')
+
+zeb_sce$cell_id = colnames(zeb_sce)
+zeb_meta = colData(zeb_sce) %>% as.data.frame() %>% dplyr::select(c('cell_id', 'meta_cluster', 'plot_annot', 'grouped_annot'))
+
+colnames(zeb_meta) = c('cell_id','meta_cluster','Annotated_meta_cluster','consensus_annotation')
+
+
+write.csv(wallace_meta, file = paste0(new_data_path, '/wallace_meta_for_supplemental_table.csv'), row.names = F)
+write.csv(hashikawa_meta, file = paste0(new_data_path, '/hashikawa_meta_for_supplemental_table.csv'), row.names = F)
+write.csv(zeb_meta, file = paste0(new_data_path, '/zeb_meta_for_supplemental_table.csv'), row.names = F)
 
