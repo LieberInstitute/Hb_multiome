@@ -1069,4 +1069,3 @@ colnames(zeb_meta) = c('cell_id','meta_cluster','Annotated_meta_cluster','consen
 write.csv(wallace_meta, file = paste0(new_data_path, '/wallace_meta_for_supplemental_table.csv'), row.names = F)
 write.csv(hashikawa_meta, file = paste0(new_data_path, '/hashikawa_meta_for_supplemental_table.csv'), row.names = F)
 write.csv(zeb_meta, file = paste0(new_data_path, '/zeb_meta_for_supplemental_table.csv'), row.names = F)
-
