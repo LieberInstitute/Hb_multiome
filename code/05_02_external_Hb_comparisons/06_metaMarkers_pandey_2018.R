@@ -142,7 +142,8 @@ DimPlot(all_donor_seurat, reduction = "umap") + NoLegend()
 #aoc1 ventral domain
 zeb_region_markers = c('nptx2a','gpr151','pou4f1','aoc1')
 zeb_region_markers = toupper(zeb_region_markers)
-p_bubble = get_bubble_plot(all_donor_seurat, zeb_region_markers, 'Zebrafish: Hab region markers')
+celltype_order = c('meta_cluster7','meta_cluster2','meta_cluster1','meta_cluster5','meta_cluster4','meta_cluster3','meta_cluster6','meta_cluster8')
+p_bubble = get_bubble_plot_sce(all_donor_sce, zeb_region_markers, 'Zebrafish: Hab region markers', group_col = "meta_cluster", group_order = celltype_order, exp_assay = 'cpm')
 p_bubble[[1]]
 p_bubble[[2]]
 #From these markers
@@ -300,6 +301,9 @@ meta_annot_vec  = setNames(names(meta_annot_vec), meta_annot_vec)
 all_donor_seurat$meta_clust_celltype_annot = unname(meta_annot_vec[all_donor_seurat$meta_cluster])
 table(all_donor_seurat$meta_clust_celltype_annot, all_donor_seurat$meta_cluster)
 
+all_donor_sce$meta_clust_celltype_annot = unname(meta_annot_vec[all_donor_sce$meta_cluster])
+table(all_donor_sce$meta_clust_celltype_annot, all_donor_sce$meta_cluster)
+
 #Save the metadata as a data.frame to add to the seurat data object later
 full_seurat_metadata = all_donor_seurat@meta.data
 saveRDS(full_seurat_metadata, paste0(new_data_path, '/pandey_zebrafish_metaclust_celltype_annot_metadata.rds'))
@@ -342,14 +346,25 @@ pdf(paste0(plot_path, '/Zebrafish_Hab_marker_bubbles_Zscore_meanExp.pdf'), width
 p_bubble[[2]]
 dev.off()
 
+meta_annot_vec = c( 'ventral' = 'meta_cluster1',
+                    'ventral_immediate_early' = 'meta_cluster2',
+                    'dorsolateral_left_subP_BDNF' = 'meta_cluster3',
+                    'dorsomedial_right_cholinergic' = 'meta_cluster4',
+                    'dorsomedial_right_cholinergic_GAT1' = 'meta_cluster5',
+                    'dorsomedial_neuron' = 'meta_cluster6',
+                    'inhibitory_gap43' = 'meta_cluster7',
+                    'non_neuronal' = 'meta_cluster8',
+                    'outliers' = 'outliers'  
+)
 
 
 #And the regional zebrafish markers
 zeb_region_markers = c('nptx2a','gpr151','pou4f1','aoc1')
 zeb_region_markers = toupper(zeb_region_markers)
-p_bubble = get_bubble_plot(all_donor_seurat, 
+celltype_order = c('meta_cluster7','meta_cluster2','meta_cluster1','meta_cluster5','meta_cluster4','meta_cluster3','meta_cluster6','meta_cluster8')
+p_bubble = get_bubble_plot_sce(all_donor_sce, 
   top_markers = zeb_region_markers, 
-  sample_name = "Zebrafish Habenula", group_col = "meta_clust_celltype_annot")
+  sample_name = "Zebrafish Habenula", group_col = "meta_cluster", group_order = celltype_order)
 p_bubble[[1]]
 p_bubble[[2]]
 
