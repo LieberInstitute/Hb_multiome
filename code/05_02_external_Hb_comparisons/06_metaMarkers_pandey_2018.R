@@ -346,17 +346,6 @@ pdf(paste0(plot_path, '/Zebrafish_Hab_marker_bubbles_Zscore_meanExp.pdf'), width
 p_bubble[[2]]
 dev.off()
 
-meta_annot_vec = c( 'ventral' = 'meta_cluster1',
-                    'ventral_immediate_early' = 'meta_cluster2',
-                    'dorsolateral_left_subP_BDNF' = 'meta_cluster3',
-                    'dorsomedial_right_cholinergic' = 'meta_cluster4',
-                    'dorsomedial_right_cholinergic_GAT1' = 'meta_cluster5',
-                    'dorsomedial_neuron' = 'meta_cluster6',
-                    'inhibitory_gap43' = 'meta_cluster7',
-                    'non_neuronal' = 'meta_cluster8',
-                    'outliers' = 'outliers'  
-)
-
 
 #And the regional zebrafish markers
 zeb_region_markers = c('nptx2a','gpr151','pou4f1','aoc1')
@@ -368,10 +357,10 @@ p_bubble = get_bubble_plot_sce(all_donor_sce,
 p_bubble[[1]]
 p_bubble[[2]]
 
-pdf(paste0(plot_path, '/Zebrafish_Hab_regional_marker_bubbles_meanExp.pdf'), width = 10, height = 8)
+pdf(paste0(plot_path, '/Zebrafish_Hab_regional_marker_bubbles_meanExp.pdf'), width = 6, height = 4)
 p_bubble[[1]]
 dev.off()
-pdf(paste0(plot_path, '/Zebrafish_Hab_regional_marker_bubbles_Zscore_meanExp.pdf'), width = 10, height = 8)
+pdf(paste0(plot_path, '/Zebrafish_Hab_regional_marker_bubbles_Zscore_meanExp.pdf'), width = 6, height = 4)
 p_bubble[[2]]
 dev.off()
 
