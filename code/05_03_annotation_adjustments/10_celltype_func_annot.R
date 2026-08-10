@@ -28,7 +28,7 @@ altExps(multiome_sce) <- NULL
 gc()
 
 #Filter for just the habenula cell-types
-hab_celltypes = c('Inhib_LHb_4.1','Inhib_LHb_4.2','LHb.4','LHb.2.7','LHb.1.3.4','MHb.1','MHb.1.2','MHb.2','MHb.3')
+hab_celltypes = c('GABA_LHb_C.1','GABA_LHb_C.2','LHb_C','LHb_A','LHb_B','MHb_A','MHb_C','MHb_B','MHb_D')
 multiome_hab_sce = multiome_sce[ ,multiome_sce$refined_mid_cluster %in% hab_celltypes]
 
 #And filter for the non-neurons
