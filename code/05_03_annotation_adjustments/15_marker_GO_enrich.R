@@ -44,7 +44,7 @@ multiome_path = here('processed-data', '05_03_annotation_adjustments','06_refine
 multiome_sce = qs_read(paste0(multiome_path, '/refined_annotation_multiomeHab_SCE.qs2'))
 
 #Filter for just the habenula cell-types
-hab_celltypes = c('Inhib_LHb_4.1','Inhib_LHb_4.2','LHb.4','LHb.2.7','LHb.1.3.4','MHb.1','MHb.1.2','MHb.2','MHb.3', 'Excit.Thal', 'Inhib.Thal')
+hab_celltypes = c('GABA_LHb_C.1','GABA_LHb_C.2','LHb_C','LHb_A','LHb_B','MHb_A','MHb_B','MHb_C','MHb_D', 'Excit.Thal', 'Inhib.Thal')
 multiome_nonHab_sce = multiome_sce[ ,!multiome_sce$refined_mid_cluster %in% hab_celltypes]
 multiome_sce = multiome_sce[ ,multiome_sce$refined_mid_cluster %in% hab_celltypes]
 gc()
@@ -171,16 +171,19 @@ index = match(enrichment_df$GO_term, rownames(go_aurocs))
 enrichment_df$MN_go_score = go_aurocs$average[index]
 enrichment_df$n_go_genes= go_aurocs$n_genes[index]
 
-enrichment_df$alpha_label = ifelse(enrichment_df$n_go_genes <= 30 , 'N genes <= 30', 'N genes > 30')
+enrichment_df$alpha_label = ifelse(enrichment_df$n_go_genes <= 30 & enrichment_df$fdr_adjusted_p <= 0.05 & enrichment_df$MN_go_score >= 0.75, 'Gene sets of interest', 'All other gene sets')
 
-ggplot(filter(enrichment_df, cell_type %in% hab_celltypes), 
-aes(x = MN_go_score, y = -log10(fdr_adjusted_p), alpha = alpha_label)) +
+gene_set_scatter_p = ggplot(filter(enrichment_df, cell_type %in% hab_celltypes), 
+aes(x = MN_go_score, y = -log10(fdr_adjusted_p), alpha = alpha_label, color = alpha_label)) +
   geom_point() +
-  scale_alpha_manual(values = c('N genes <= 30' = 1, 'N genes > 30' = .25), name = 'Gene set size') +
+  scale_alpha_manual(values = c('Gene sets of interest' = 1, 'All other gene sets' = .25), name = 'Gene set size') +
+  scale_color_manual(values = c('Gene sets of interest' = 'red', 'All other gene sets' = 'black'), name = 'Gene set size') +
   geom_hline(yintercept = -log10(.05), color = 'red') +
   geom_vline(xintercept = .75, color = 'red') +
   theme_bw() + ggtitle('1vall markers: GO term enrichment and MN AUROC scores') +
   ylab('GO term enrichment for top markers (-log10(FDR-adjusted p-value))') + xlab('Cross-cell type predictability (MetaNeighbor AUROC)')
+
+gene_set_scatter_p 
 
 sig_go_terms = enrichment_df |> filter(fdr_adjusted_p <= .05 & cell_type %in% hab_celltypes & MN_go_score >= .75 & n_go_genes <= 30  ) |> pull(GO_term) |> unique()
 length(sig_go_terms)
@@ -219,6 +222,12 @@ unique(unlist(go_sets[sig_go_terms[grepl('glutamate', sig_go_terms)]]))
 #[1] "GRIA1"  "GRIA2"  "GRIA3"  "GRIA4"  "GRID1"  "GRID2"  "GRIK1"  "GRIK2"  "GRIK3"  "GRIK4"  "GRIK5"  "GRIN1"  "GRIN2A"
 #[14] "GRIN2B" "GRIN2C" "GRIN2D" "GRM1"   "GRM2"   "GRM3"   "GRM4"   "GRM5"   "GRM6"   "GRM7"   "GRM8"   "GRIN3A" "GRIN3B"
 
+#Save scatter plot
+ggsave(plot = gene_set_scatter_p, filename = here(plot_path, '1vall_markers_GO_enrichment_MN_AUROC_scatter.pdf'), 
+width = 8, height = 3, device = 'pdf')
+
+
+
 
 
 #And get heatmaps of expression for the top 10 1vall markers for all cell-types
@@ -248,7 +257,7 @@ avg_marker_exp <- sweep(pseudobulk_marker_exp, 2, cell_counts, "/")
 
 scaled_avg_marker_exp = t(scale(t(avg_marker_exp)))
 
-celltype_order = c('Inhib.Thal','Excit.Thal','Inhib_LHb_4.1','Inhib_LHb_4.2','LHb.4','LHb.1.3.4','LHb.2.7','MHb.1','MHb.1.2','MHb.2','MHb.3')
+celltype_order = c('Inhib.Thal','Excit.Thal','GABA_LHb_C.1','GABA_LHb_C.2','LHb_C','LHb_B','LHb_A','MHb_A','MHb_C','MHb_B','MHb_D')
 col_order = match(celltype_order, colnames(scaled_avg_marker_exp))
 
 top_10_1vall_neurons$cell_type = factor(top_10_1vall_neurons$cell_type, levels = celltype_order)
@@ -279,65 +288,6 @@ marker_heatmap = draw(marker_heatmap)
 
 
 pdf(here(plot_path, 'top_10_1vall_markers_heatmap.pdf'), width = 10, height = 4)
-draw(marker_heatmap)
-dev.off()
-
-
-
-top_10_MR_neurons = marker_stats_MeanRatio |> filter(MeanRatio.rank <= 10 & cellType.target %in% hab_celltypes) |> 
-  dplyr::select(cellType.target, gene) |> 
-  mutate(type = 'MeanRatio')
-colnames(top_10_MR_neurons) = c('cell_type', 'gene', 'type')
-
-dim(top_10_MR_neurons)
-
-top_10_MR_neurons = top_10_MR_neurons[!duplicated(top_10_MR_neurons$gene), ]
-
-gene_index = rownames(multiome_sce)  %in% top_10_MR_neurons$gene
-marker_exp = assay(multiome_sce, 'logcounts')[gene_index, ]
-
-
-cell_annot_matrix <- Matrix::sparse.model.matrix(~ 0 + refined_mid_cluster, data = colData(multiome_sce))
-colnames(cell_annot_matrix) <- gsub("refined_mid_cluster", "", colnames(cell_annot_matrix))
-
-cell_counts = colSums(cell_annot_matrix)
-pseudobulk_marker_exp = marker_exp %*% cell_annot_matrix
-
-table(colnames(pseudobulk_marker_exp) == names(cell_counts))
-
-avg_marker_exp <- sweep(pseudobulk_marker_exp, 2, cell_counts, "/")
-
-scaled_avg_marker_exp = t(scale(t(avg_marker_exp)))
-
-celltype_order = c('Inhib.Thal','Excit.Thal','Inhib_LHb_4.1','Inhib_LHb_4.2','LHb.4','LHb.1.3.4','LHb.2.7','MHb.1','MHb.1.2','MHb.2','MHb.3')
-col_order = match(celltype_order, colnames(scaled_avg_marker_exp))
-
-top_10_MR_neurons$cell_type = factor(top_10_MR_neurons$cell_type, levels = celltype_order)
-gene_order = c(top_10_MR_neurons[order(top_10_MR_neurons$cell_type), 'gene' ])
-row_order = match(gene_order$gene, rownames(scaled_avg_marker_exp))
-
-
-scaled_avg_marker_exp = scaled_avg_marker_exp[row_order, col_order]
-
-scaled_avg_marker_exp = t(scaled_avg_marker_exp) 
-
-
-index = match(colnames(scaled_avg_marker_exp), top_10_MR_neurons$gene)
-column_groups = top_10_MR_neurons$cell_type[index]
-
-col_func = auroc_cols <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(11,"RdYlBu"))(100))
-marker_heatmap = Heatmap(scaled_avg_marker_exp, name = 'Scaled average expression', show_row_names = TRUE, show_column_names = TRUE,
-        row_title = 'Cell types', column_title = 'Top 10 MeanRatio markers',
-        cluster_rows = FALSE, cluster_columns = FALSE, col = col_func,
-      height = unit(30, "mm"),
-      row_names_gp = gpar(fontsize = 5),      # Row text size
-      column_names_gp = gpar(fontsize = 5),
-    column_split = column_groups )
-
-marker_heatmap = draw(marker_heatmap)
-
-
-pdf(here(plot_path, 'top_10_MeanRatio_markers_heatmap.pdf'), width = 10, height = 4)
 draw(marker_heatmap)
 dev.off()
 
