@@ -106,12 +106,12 @@ export_meta_markers(multiome_mid_metaMarkers,
   paste0(new_data_path, '/multiome_refined_mid_meta_markers.csv'), 
   names(multiome_mid_metaMarkers))
 
-multiome_mid_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_refined_mid_meta_markers.csv.gz'))
+#multiome_mid_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_refined_mid_meta_markers.csv.gz'))
 
-unique(multiome_mid_metaMarkers$gene[grepl('GLP', multiome_mid_metaMarkers$gene)])
+#unique(multiome_mid_metaMarkers$gene[grepl('GLP', multiome_mid_metaMarkers$gene)])
 
-multiome_mid_metaMarkers %>% group_by(cell_type) %>% slice_min(rank, n = 25) %>% View()
-multiome_mid_metaMarkers %>% filter( gene %in% c('GLP1R', 'GLP2R','ZGLP1')) %>% View()
+#multiome_mid_metaMarkers %>% group_by(cell_type) %>% slice_min(rank, n = 25) %>% View()
+#multiome_mid_metaMarkers %>% filter( gene %in% c('GLP1R', 'GLP2R','ZGLP1')) %>% View()
 
 
 
@@ -139,9 +139,9 @@ export_meta_markers(multiome_mid_noInhib_metaMarkers,
   paste0(new_data_path, '/multiome_refined_mid_noInhibLHb4_meta_markers.csv'), 
   names(multiome_mid_noInhib_metaMarkers))
 
-multiome_mid_noInhib_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_refined_mid_noInhibLHb4_meta_markers.csv.gz'))
+#multiome_mid_noInhib_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_refined_mid_noInhibLHb4_meta_markers.csv.gz'))
 
-multiome_mid_noInhib_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
+#multiome_mid_noInhib_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
 
 
 #No thalamus markers
@@ -169,10 +169,10 @@ export_meta_markers(multiome_no_thal_mid_metaMarkers,
   paste0(new_data_path, '/multiome_no_thal_mid_meta_markers.csv'), 
   names(multiome_no_thal_mid_metaMarkers))
 
-multiome_no_thal_mid_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_no_thal_mid_meta_markers.csv.gz'))
+#multiome_no_thal_mid_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_no_thal_mid_meta_markers.csv.gz'))
 
-multiome_no_thal_mid_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
-multiome_no_thal_mid_metaMarkers  %>% filter(gene == 'SLC12A5') %>% View()
+#multiome_no_thal_mid_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
+#multiome_no_thal_mid_metaMarkers  %>% filter(gene == 'SLC12A5') %>% View()
 
 
 
@@ -201,10 +201,10 @@ export_meta_markers(multiome_class_metaMarkers,
   paste0(new_data_path, '/multiome_class_meta_markers.csv'), 
   names(multiome_class_metaMarkers))
 
-multiome_class_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_class_meta_markers.csv.gz'))
+#multiome_class_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_class_meta_markers.csv.gz'))
 
-multiome_class_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
-plot_pareto_summary(multiome_class_metaMarkers , min_recurrence = 0)
+#multiome_class_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
+#plot_pareto_summary(multiome_class_metaMarkers , min_recurrence = 0)
 
 #And cell-type metamarkers taking into account the hierarchy information
 multiome_hier_ct_markers = list(
@@ -231,15 +231,15 @@ export_meta_markers(multiome_hier_ct_metaMarkers,
   paste0(new_data_path, '/multiome_hier_ct_meta_markers.csv'), 
   names(multiome_hier_ct_metaMarkers))
 
-multiome_hier_ct_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_hier_ct_meta_markers.csv.gz'))
+# multiome_hier_ct_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_hier_ct_meta_markers.csv.gz'))
 
-multiome_hier_ct_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
-plot_pareto_summary(multiome_hier_ct_metaMarkers, min_recurrence = 0)
+# multiome_hier_ct_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
+# plot_pareto_summary(multiome_hier_ct_metaMarkers, min_recurrence = 0)
 
 
-plot_pareto_markers(multiome_hier_ct_metaMarkers , "Inhib.Thal", min_recurrence=0) + ggtitle('Inhibitory Thalamus')
-plot_pareto_markers(multiome_hier_ct_metaMarkers , "Astrocyte", min_recurrence=0) + ggtitle('Astrocyte')
-plot_pareto_markers(multiome_hier_ct_metaMarkers , "MHb.2", min_recurrence=0) + ggtitle('MHb.2')
+# plot_pareto_markers(multiome_hier_ct_metaMarkers , "Inhib.Thal", min_recurrence=0) + ggtitle('Inhibitory Thalamus')
+# plot_pareto_markers(multiome_hier_ct_metaMarkers , "Astrocyte", min_recurrence=0) + ggtitle('Astrocyte')
+# plot_pareto_markers(multiome_hier_ct_metaMarkers , "MHb.2", min_recurrence=0) + ggtitle('MHb.2')
 
 
 
