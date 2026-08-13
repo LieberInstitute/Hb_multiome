@@ -71,6 +71,7 @@ calcium_genes = rownames(multiome_sce)[grepl('CACNA', rownames(multiome_sce))]
 #dopamine_genes = c("DRD1", "DRD2", "DRD3", "DRD4", "DRD5", 'TH')
 
 serotonin_genes = rownames(multiome_sce)[grepl('HTR', rownames(multiome_sce))]
+serotonin_genes = c(serotonin_genes, 'SLC6A4') #Including the serotonin transporter protein, primary target of SSRIs
 
 acetylcholine_genes = rownames(multiome_sce)[grepl('CHRN|CHRM', rownames(multiome_sce))]
 
@@ -470,6 +471,12 @@ plot_gene_on_umap <- function(sce, gene_name, reduction = "umap.integrated", ass
 # Test with Oprm1
 plot_gene_on_umap(multiome_sce, "OPRM1")
 
+plot_gene_on_umap(multiome_sce, "SLC6A4")
+plot_gene_on_umap(multiome_sce, "MME")
+plot_gene_on_umap(multiome_sce, "GPR149")
+plot_gene_on_umap(multiome_sce, "GSDME")
+plot_gene_on_umap(multiome_sce, "MIR548XHG")
+
 plot_gene_on_umap(multiome_sce, "CHRNA6")
 plot_gene_on_umap(multiome_sce, "CHRNB3")
 plot_gene_on_umap(multiome_sce, "CHRNA3")
@@ -581,7 +588,7 @@ plot_violin_maxnorm <- function(sce, gene, assay_name = "logcounts", celltype_co
       color = "black"
     ) +
     scale_y_continuous(limits = c(0, 6), breaks = c(0, 2, 4, 6)) +
-    labs(x = NULL, y = "Max-normalized expression", title = sprintf('%s - %s', study_label, gene)) +
+    labs(x = NULL, y = "Logcounts", title = sprintf('%s - %s', study_label, gene)) +
     theme_classic(base_size = 10) +
     theme(
       axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 7),
@@ -616,6 +623,10 @@ yalcinbas_neuron$consensus_annot = factor(yalcinbas_neuron$consensus_annot, leve
 yalcinbas_kcc2_p = plot_violin_maxnorm(yalcinbas_neuron, "SLC12A5", assay_name = "logcounts", 
 celltype_col = "consensus_annot", study_label = "Yalcinbas")
 
+yalcinbas_slc6a4_p = plot_violin_maxnorm(yalcinbas_neuron, "SLC6A4", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Yalcinbas")
+
+
 multiome_sce$consensus_annot = multiome_sce$refined_mid_cluster
 multiome_sce$consensus_annot[multiome_sce$refined_mid_cluster %in% c('GABA_LHb_C.1','GABA_LHb_C.2')] = 'LHb_C'
 
@@ -625,7 +636,74 @@ multiome_neuron$consensus_annot = factor(multiome_neuron$consensus_annot, levels
 multiome_kcc2_p = plot_violin_maxnorm(multiome_neuron, "SLC12A5", assay_name = "logcounts", 
 celltype_col = "consensus_annot", study_label = "Multiome")
 
+multiome_slc6a4_p = plot_violin_maxnorm(multiome_neuron, "SLC6A4", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Multiome")
+
 yalcinbas_kcc2_p
 multiome_kcc2_p
 ggsave(plot = yalcinbas_kcc2_p, filename = file.path(plot_path, 'Yalcinbas_SLC12A5_violin.pdf'), width = 6, height = 2)
 ggsave(plot = multiome_kcc2_p, filename = file.path(plot_path, 'Multiome_SLC12A5_violin.pdf'), width = 6, height = 2)
+
+
+#Adding regression lines to the violin plots
+# Extract SLC12A5 expression and cell type for both datasets
+# Yalcinbas
+yalcinbas_df <- data.frame(
+  expression = as.numeric(logcounts(yalcinbas_neuron["SLC12A5", ])),
+  celltype = yalcinbas_neuron$consensus_annot
+)
+yalcinbas_df$celltype_numeric <- as.numeric(yalcinbas_df$celltype)  # 1=MHb_B, 2=MHb_A, ..., 5=LHb_C
+
+# Multiome
+multiome_df <- data.frame(
+  expression = as.numeric(logcounts(multiome_neuron["SLC12A5", ])),
+  celltype = multiome_neuron$consensus_annot
+)
+multiome_df$celltype_numeric <- as.numeric(multiome_df$celltype)
+
+# Fit linear trend models
+yalcinbas_lm <- lm(expression ~ celltype_numeric, data = yalcinbas_df)
+multiome_lm <- lm(expression ~ celltype_numeric, data = multiome_df)
+
+summary(yalcinbas_lm)
+summary(multiome_lm)$coefficients[2, 4]
+
+
+# Add regression line and slope annotation to the violin plots
+add_trend_line <- function(p, lm_fit, df) {
+  slope <- coef(lm_fit)[2]
+  pval <- summary(lm_fit)$coefficients[2, 4]
+  r2 <- summary(lm_fit)$r.squared
+  
+  if(pval < 2.2e-16) {
+    pval_text <- "p < 2.2e-16"
+  } else {
+    pval_text <- sprintf("p = %.3f", pval)
+  }
+  label <- sprintf("slope = %.3f, R² = %.3f, %s", slope, r2, pval_text)
+  
+  # Get predicted values at each level for the line
+  pred_df <- data.frame(
+    celltype_numeric = 1:5,
+    celltype = levels(df$celltype)
+  )
+  pred_df$predicted <- predict(lm_fit, newdata = pred_df)
+  
+  p + 
+    geom_line(data = pred_df, aes(x = celltype, y = predicted, group = 1), 
+              color = "red", linewidth = 0.8) +
+    geom_point(data = pred_df, aes(x = celltype, y = predicted), 
+               color = "red", size = 2) +
+    annotate("text", x = 3, y = max(df$expression) * 0.9, 
+             label = label, size = 3, color = "red")
+}
+
+yalcinbas_kcc2_trend <- add_trend_line(yalcinbas_kcc2_p, yalcinbas_lm, yalcinbas_df)
+yalcinbas_kcc2_trend
+multiome_kcc2_trend <- add_trend_line(multiome_kcc2_p, multiome_lm, multiome_df)
+multiome_kcc2_trend
+
+ggsave(plot = yalcinbas_kcc2_trend, filename = file.path(plot_path, 'Yalcinbas_SLC12A5_violin_trend.pdf'), width = 6, height = 2)
+ggsave(plot = multiome_kcc2_trend, filename = file.path(plot_path, 'Multiome_SLC12A5_violin_trend.pdf'), width = 6, height = 2)
+
+
