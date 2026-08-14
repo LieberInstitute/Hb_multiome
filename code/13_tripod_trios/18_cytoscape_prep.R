@@ -6,13 +6,16 @@ library(here)
 library(duckplyr)
 library(RCy3)
 
+#   This was manually changed in an interactive R session. Can be "intersect" or
+#   "level_2"
+mode = "level_2"
+
 trio_path = here(
     "processed-data", "13_tripod_trios", "09_gather_trios",
     "filtered_trios_fine.parquet"
 )
 cell_map_path = here("raw-data", "cell_type_map.csv")
-out_dir = here("plots", "13_tripod_trios", "18_cytoscape_prep")
-pdf_dir = file.path(out_dir, "pdf_pages")
+pdf_dir = here("plots", "13_tripod_trios", "18_cytoscape_prep", mode)
 cell_type_colors = c(
     MHb_A = "#5e0c01",
     MHb_B = "#943f02",
@@ -47,10 +50,23 @@ rename_map = stats::setNames(
     cluster_map$old_cell_type
 )
 
-tf_targets = read_parquet_duckdb(trio_path, prudence = "stingy") |>
-    filter(is_intersect, stringency_level == 2) |>
-    select(gene, TF, cell_type, coef, adj) |>
-    collect() |>
+if (mode == 'intersect') {
+    tf_targets = read_parquet_duckdb(trio_path, prudence = "stingy") |>
+        filter(is_intersect, stringency_level == 2) |>
+        select(gene, TF, cell_type, coef, adj) |>
+        collect()
+} else {
+    tf_targets = read_parquet_duckdb(trio_path, prudence = "stingy") |>
+        filter(stringency_level == 2) |>
+        select(gene, TF, cell_type, coef, adj) |>
+        collect() |>
+        group_by(cell_type) |>
+        arrange(adj) |>
+        slice_head(n = 200) |>
+        ungroup()
+}
+
+tf_targets = tf_targets |>
     mutate(
         coef = log(coef) - min(log(coef)),
         neg_log10_adj = -log10(adj),
