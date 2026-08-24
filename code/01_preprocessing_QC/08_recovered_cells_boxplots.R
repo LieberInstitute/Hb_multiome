@@ -1,5 +1,7 @@
 library(here)
 library(tidyverse)
+library(ggpubr)
+library(ggthemes)
 library(sessioninfo)
 
 name_map = tibble(
@@ -34,6 +36,7 @@ for (run_name in c("GEX", "ARC", "ATAC")) {
                     pull(matches("[Ee]stimated [Nn]umber of [Cc]ells"))
             }
         ),
+        sample_id = str_extract(basename(csv_files), "^S\\d+"),
         run_name = run_name
     )
 }
@@ -58,14 +61,24 @@ plot_df_list[['ARC_reanalyze']] = tibble(
                 as.numeric()
         }
     ) |> unname(),
+    # Normalize inverted IDs like "4S" -> "S4"
+    sample_id = basename(csv_files) |>
+        str_extract("^(\\d+S|S\\d+)") |>
+        str_replace("^(\\d+)(S)$", "\\2\\1"),
     run_name = 'ARC_reanalyze'
 )
 
 p = bind_rows(plot_df_list) |>
     left_join(name_map, by = 'run_name') |>
-    mutate(run_label = factor(run_label, levels = name_map$run_label)) |>
+    mutate(
+        run_label = factor(run_label, levels = name_map$run_label),
+        sample_id = factor(sample_id, levels = paste0('S', 3:12))
+    ) |>
     ggplot(aes(x = run_label, y = num_cells)) +
-        geom_boxplot() +
+        geom_boxplot(outlier.shape = NA) +
+        geom_line(aes(group = sample_id, color = sample_id), alpha = 0.5) +
+        geom_point(aes(color = sample_id)) +
+        scale_color_tableau(palette = "Tableau 10", name = "Sample") +
         labs(x = "Pipeline", y = "Recovered Cells") +
         theme_bw(base_size = 18) +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
