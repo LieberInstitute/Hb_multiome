@@ -51,15 +51,25 @@ dir.create(plot_dir, showWarnings = FALSE)
 #   Load and filter trio data
 #-------------------------------------------------------------------------------
 
-# Top 20 trios per cell type by adjusted p-value (stringency level 1)
+# Intersection trios, except because Excit.Thal has a gigantic number, we filter
+# to the top 20 for that cell type
 trio_df = read_parquet_duckdb(trio_path, prudence = "stingy") |>
     filter(is_intersect, stringency_level == 1) |>
-    collect() |>
-    group_by(cell_type) |>
+    select(peak, gene, TF, cell_type, adj) |>
+    collect()
+
+thal_trios = trio_df |>
+    filter(cell_type == 'Excit.Thal') |>
     arrange(adj) |>
     slice(1:20) |>
-    ungroup() |>
-    select(peak, gene, TF, cell_type, adj)
+    mutate(full_trio = paste(TF, peak, gene, sep = "_")) |>
+    pull(full_trio)
+
+trio_df = trio_df |>
+    filter(
+        (cell_type != 'Excit.Thal') |
+        (paste(TF, peak, gene, sep = "_") %in% thal_trios)
+    )
 
 cluster_map = read_csv(cell_map_path, show_col_types = FALSE)
 rename_map = stats::setNames(cluster_map$new_cell_type, cluster_map$old_cell_type)
