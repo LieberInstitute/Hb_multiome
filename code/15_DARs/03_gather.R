@@ -73,7 +73,7 @@ my_barplot = function(dar_df, cell_types, resolution) {
             geom_bar(stat = 'identity') +
             scale_fill_manual(values = cell_type_colors[cell_types]) +
             scale_y_log10() +
-            theme_bw(base_size = 18) +
+            theme_bw(base_size = 20) +
             theme(
                 axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
             ) +
@@ -92,22 +92,25 @@ plot_and_process = function(dar_df, task_map_df, this_resolution) {
         filter(resolution == this_resolution)
 
     p = my_barplot(this_dar_df, these_cell_types, this_resolution)
-    pdf(file.path(plot_dir, sprintf("DAR_barplot_%s.pdf", this_resolution)))
+    pdf(
+        file.path(plot_dir, sprintf("DAR_barplot_%s.pdf", this_resolution)),
+        width = 12, height = 5
+    )
     print(p)
     dev.off()
 
     #   For LDSC, limit the number of DARs and retain just basic info
-    this_dar_df = this_dar_df |>
-        mutate(DA_direction = ifelse(sign(avg_log2FC) > 0, "Up", "Down")) |>
-        group_by(cell_type, DA_direction) |>
-        arrange(desc(abs(avg_log2FC))) |>
-        slice_head(n = max_dars) |>
-        ungroup() |>
-        select(peak, cell_type, DA_direction) |>
-        arrange(cell_type, DA_direction, peak) |>
-        write_csv(
-            file.path(out_dir, sprintf("DARs_LDSC_%s.csv.gz", this_resolution))
-        )
+    # this_dar_df = this_dar_df |>
+    #     mutate(DA_direction = ifelse(sign(avg_log2FC) > 0, "Up", "Down")) |>
+    #     group_by(cell_type, DA_direction) |>
+    #     arrange(desc(abs(avg_log2FC))) |>
+    #     slice_head(n = max_dars) |>
+    #     ungroup() |>
+    #     select(peak, cell_type, DA_direction) |>
+    #     arrange(cell_type, DA_direction, peak) |>
+    #     write_csv(
+    #         file.path(out_dir, sprintf("DARs_LDSC_%s.csv.gz", this_resolution))
+    #     )
 }
 
 ################################################################################

@@ -120,7 +120,7 @@ ht = Heatmap(
     cluster_rows = FALSE,
     cluster_columns = FALSE,
     show_column_names = TRUE,
-    column_names_gp = gpar(fontsize = 7),
+    column_names_gp = gpar(fontsize = 9),
     column_names_rot = 90,
     row_names_gp = gpar(fontsize = 9),
     row_names_side = "left",
@@ -135,7 +135,7 @@ ht = Heatmap(
 
 ## Save ---------------------------------------------------------------------
 
-pdf(file.path(out_path, "dar_accessibility_heatmap.pdf"), width = 9, height = 6)
+pdf(file.path(out_path, "dar_accessibility_heatmap.pdf"), width = 12, height = 6)
 draw(ht)
 dev.off()
 
