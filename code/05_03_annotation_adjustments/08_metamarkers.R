@@ -43,6 +43,16 @@ multiome_sce$class_label = class_label
 
 table(multiome_sce$class_label, multiome_sce$refined_mid_cluster)
 
+#And try a broader neuron vs non-neuron classification
+neuron_label = rep('Non-neurons', ncol(multiome_sce))
+neuron_label[multiome_sce$refined_mid_cluster %in% c('GABA_LHb_C.1','GABA_LHb_C.2','LHb_B','LHb_A','LHb_C',
+'MHb_A','MHb_C', 'MHb_B', 'MHb_D', 'Excit.Thal','Inhib.Thal')] = 'Neuron'
+
+multiome_sce$neuron_label = neuron_label
+
+
+table(multiome_sce$neuron_label, multiome_sce$refined_mid_cluster)
+
 #And also get metamarkers excluding the thalamus, for a more comparable set to the mouse data with no annotated thalamus clusters
 multiome_sce_noThal = multiome_sce[, multiome_sce$class_label != 'Thalamus']
 table(multiome_sce_noThal$refined_noLHB4Inhib)
@@ -73,9 +83,18 @@ for(i in 1:length(all_donors)){
   #Class markers
   markers_sub = compute_markers(assay(sce_sub, "cpm"), sce_sub$class_label)
   export_markers(markers_sub, paste0(new_data_path, sprintf('/markers_%s_class_label.csv', all_donors[i])))
+  
   #Celltype markers but with hierarchical information
   markers_sub = compute_markers(assay(sce_sub, "cpm"),sce_sub$refined_noLHB4Inhib, sce_sub$class_label)
   export_markers(markers_sub, paste0(new_data_path, sprintf('/markers_%s_hierarchical_celltype_markers.csv', all_donors[i])))
+
+  #Neuron markers
+  markers_sub = compute_markers(assay(sce_sub, "cpm"), sce_sub$neuron_label)
+  export_markers(markers_sub, paste0(new_data_path, sprintf('/markers_%s_neuron_label.csv', all_donors[i])))
+  
+  #Celltype markers but with hierarchical information
+  markers_sub = compute_markers(assay(sce_sub, "cpm"),sce_sub$refined_noLHB4Inhib, sce_sub$neuron_label)
+  export_markers(markers_sub, paste0(new_data_path, sprintf('/markers_%s_hierarchical_neuron_markers.csv', all_donors[i])))
 }
 
 
@@ -206,6 +225,38 @@ export_meta_markers(multiome_class_metaMarkers,
 #multiome_class_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
 #plot_pareto_summary(multiome_class_metaMarkers , min_recurrence = 0)
 
+#Neuron level metamarkers
+multiome_neuron_markers = list(
+    all_donors_1 = read_markers(paste0(new_data_path, sprintf('/markers_%s_neuron_label.csv.gz', all_donors[1]))),
+    all_donors_2 = read_markers(paste0(new_data_path, sprintf('/markers_%s_neuron_label.csv.gz', all_donors[2]))),
+    all_donors_3 = read_markers(paste0(new_data_path, sprintf('/markers_%s_neuron_label.csv.gz', all_donors[3]))),
+    all_donors_4 = read_markers(paste0(new_data_path, sprintf('/markers_%s_neuron_label.csv.gz', all_donors[4]))),
+    all_donors_5 = read_markers(paste0(new_data_path, sprintf('/markers_%s_neuron_label.csv.gz', all_donors[5]))),
+    all_donors_6 = read_markers(paste0(new_data_path, sprintf('/markers_%s_neuron_label.csv.gz', all_donors[6]))),
+    all_donors_7 = read_markers(paste0(new_data_path, sprintf('/markers_%s_neuron_label.csv.gz', all_donors[7]))),
+    all_donors_8 = read_markers(paste0(new_data_path, sprintf('/markers_%s_neuron_label.csv.gz', all_donors[8]))),
+    all_donors_9 = read_markers(paste0(new_data_path, sprintf('/markers_%s_neuron_label.csv.gz', all_donors[9]))),
+    all_donors_10 = read_markers(paste0(new_data_path, sprintf('/markers_%s_neuron_label.csv.gz', all_donors[10])))
+ 
+)
+
+names(multiome_neuron_markers) = all_donors
+multiome_neuron_markers
+
+multiome_neuron_metaMarkers = make_meta_markers(multiome_neuron_markers, detailed_stats = TRUE)
+
+#Save the metamarkers
+export_meta_markers(multiome_neuron_metaMarkers, 
+  paste0(new_data_path, '/multiome_neuron_meta_markers.csv'), 
+  names(multiome_neuron_metaMarkers))
+
+#multiome_neuron_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_neuron_meta_markers.csv.gz'))
+
+#multiome_neuron_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
+#plot_pareto_summary(multiome_neuron_metaMarkers , min_recurrence = 0)
+
+
+
 #And cell-type metamarkers taking into account the hierarchy information
 multiome_hier_ct_markers = list(
     all_donors_1 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_celltype_markers.csv.gz', all_donors[1]))),
@@ -242,5 +293,34 @@ export_meta_markers(multiome_hier_ct_metaMarkers,
 # plot_pareto_markers(multiome_hier_ct_metaMarkers , "MHb.2", min_recurrence=0) + ggtitle('MHb.2')
 
 
+#And cell-type metamarkers taking into account the hierarchy information, but at the neuron vs non-neuron level
+multiome_hier_neuron_markers = list(
+    all_donors_1 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_neuron_markers.csv.gz', all_donors[1]))),
+    all_donors_2 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_neuron_markers.csv.gz', all_donors[2]))),
+    all_donors_3 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_neuron_markers.csv.gz', all_donors[3]))),
+    all_donors_4 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_neuron_markers.csv.gz', all_donors[4]))),
+    all_donors_5 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_neuron_markers.csv.gz', all_donors[5]))),
+    all_donors_6 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_neuron_markers.csv.gz', all_donors[6]))),
+    all_donors_7 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_neuron_markers.csv.gz', all_donors[7]))),
+    all_donors_8 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_neuron_markers.csv.gz', all_donors[8]))),
+    all_donors_9 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_neuron_markers.csv.gz', all_donors[9]))),
+    all_donors_10 = read_markers(paste0(new_data_path, sprintf('/markers_%s_hierarchical_neuron_markers.csv.gz', all_donors[10])))
+ 
+)
+
+names(multiome_hier_neuron_markers ) = all_donors
+multiome_hier_neuron_markers 
+
+multiome_hier_neuron_metaMarkers = make_meta_markers(multiome_hier_neuron_markers , detailed_stats = TRUE)
+
+#Save the metamarkers
+export_meta_markers(multiome_hier_neuron_metaMarkers, 
+  paste0(new_data_path, '/multiome_hier_neuron_meta_markers.csv'), 
+  names(multiome_hier_neuron_metaMarkers))
+
+# multiome_hier_neuron_metaMarkers = read_meta_markers(paste0(new_data_path, '/multiome_hier_neuron_meta_markers.csv.gz'))
+
+# multiome_hier_neuron_metaMarkers  %>% group_by(cell_type) %>% slice_min(rank, n = 20) %>% View()
+# plot_pareto_summary(multiome_hier_neuron_metaMarkers, min_recurrence = 0)
 
 
