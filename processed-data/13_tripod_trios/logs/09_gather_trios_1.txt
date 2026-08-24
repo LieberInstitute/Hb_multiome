@@ -1,8 +1,8 @@
 **** Job starts ****
-Wed Jun 17 04:31:08 PM EDT 2026
+Mon Aug 24 02:47:17 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 32962569
+Job id: 35137841
 Job name: 09_gather_trios
 Node name: compute-168
 Task id: 1
@@ -42,7 +42,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 1210.
+✔ Number of reports ready for upload: 10.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -57,21 +57,6 @@ The following object is masked from ‘package:lubridate’:
 
 Trios were not found for cell type Endo; skipping
 Dropping 8696 of 75807 trios (11.47%) with < 10 nonzero metacells
-# A duckplyr data frame: 10 variables
-   peak          gene  TF     coef   adj stringency_level cell_type is_intersect
-   <chr>         <chr> <chr> <dbl> <dbl>            <dbl> <chr>     <lgl>       
- 1 chr1-6663572… RNF2… ESRRB 0.918     0                1 Inhib_LHb FALSE       
- 2 chr1-6454530… ZBTB… NRF1  0.850     0                1 Inhib_LHb FALSE       
- 3 chr1-7727745… VAMP3 POU2… 0.855     0                1 Inhib_LHb FALSE       
- 4 chr1-1583428… SLC2… SP1   0.853     0                1 Inhib_LHb FALSE       
- 5 chr1-1584720… FBLI… ZNF16 0.927     0                1 Inhib_LHb FALSE       
- 6 chr1-2599744… HMGN2 THRB  0.848     0                1 Inhib_LHb FALSE       
- 7 chr1-2710656… PIGV  NHLH2 0.945     0                1 Inhib_LHb FALSE       
- 8 chr1-2749660… STX12 OTX2  0.850     0                1 Inhib_LHb FALSE       
- 9 chr1-3220028… TMEM… SREB… 0.850     0                1 Inhib_LHb FALSE       
-10 chr1-3177182… EIF3I ESRRB 0.955     0                1 Inhib_LHb FALSE       
-# ℹ more rows
-# ℹ 2 more variables: is_unique_intersect <lgl>, is_top_TF <lgl>
 null device 
           1 
 ─ Session info ───────────────────────────────────────────────────────────────
@@ -84,9 +69,9 @@ null device
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-06-17
+ date     2026-08-24
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.9.38 @ /users/neagles/.positron-server/bin/d5f94f072b1083b8237930739cb6525c6e12e1da/quarto/bin/quarto
+ quarto   1.10.18 @ /users/neagles/.positron-server/bin/48dc4cee686939f35fe4a714d34375f67fd62082/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package          * version date (UTC) lib source
@@ -220,7 +205,6 @@ null device
  timechange         0.3.0   2024-01-18 [2] CRAN (R 4.5.0)
  tzdb               0.5.0   2025-03-15 [2] CRAN (R 4.5.0)
  UCSC.utils         1.4.0   2025-04-15 [2] Bioconductor 3.21 (R 4.5.0)
- utf8               1.2.6   2025-06-08 [1] CRAN (R 4.5.0)
  uwot               0.2.3   2025-02-24 [1] CRAN (R 4.5.0)
  vctrs              0.6.5   2023-12-01 [1] CRAN (R 4.5.0)
  viridisLite        0.4.2   2023-05-02 [1] CRAN (R 4.5.0)
@@ -236,4 +220,4 @@ null device
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Jun 17 04:45:38 PM EDT 2026
+Mon Aug 24 03:02:35 PM EDT 2026

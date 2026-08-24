@@ -1,8 +1,8 @@
 **** Job starts ****
-Wed Jun 17 04:31:08 PM EDT 2026
+Mon Aug 24 02:47:17 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 32962568
+Job id: 35137840
 Job name: 09_gather_trios
 Node name: compute-168
 Task id: 2
@@ -42,7 +42,7 @@ guide future development. By default, data will be collected but no data will
 be uploaded.
 ℹ Automatic fallback uploading is not controlled and therefore disabled, see
   `?duckplyr::fallback()`.
-✔ Number of reports ready for upload: 1210.
+✔ Number of reports ready for upload: 10.
 → Review with `duckplyr::fallback_review()`, upload with
   `duckplyr::fallback_upload()`.
 ℹ Configure automatic uploading with `duckplyr::fallback_config()`.
@@ -58,21 +58,6 @@ The following object is masked from ‘package:lubridate’:
 Trios were not found for cell type Endo; skipping
 Trios were not found for cell type MHb.3; skipping
 Dropping 87435 of 296235 trios (29.52%) with < 10 nonzero metacells
-# A duckplyr data frame: 10 variables
-   peak          gene  TF     coef   adj stringency_level cell_type is_intersect
-   <chr>         <chr> <chr> <dbl> <dbl>            <dbl> <chr>     <lgl>       
- 1 chr22-419462… SMDT1 ZNF1… 0.923     0                1 Astrocyte FALSE       
- 2 chr21-332660… GART  SP1   0.907     0                1 Astrocyte FALSE       
- 3 chr11-627610… AHNAK ETV1  0.862     0                1 Astrocyte FALSE       
- 4 chr11-626784… STX5  KLF15 0.944     0                1 Astrocyte FALSE       
- 5 chr1-2044939… MDM4  SP3   0.9       0                1 Astrocyte FALSE       
- 6 chr1-2309777… GNPAT YY1   0.873     0                1 Astrocyte FALSE       
- 7 chr1-2449695… EFCA… KLF9  0.906     0                1 Astrocyte FALSE       
- 8 chr1-8877728… ENO1  SP4   0.877     0                1 Astrocyte FALSE       
- 9 chr1-2355915… ID3   KLF13 0.881     0                1 Astrocyte FALSE       
-10 chr1-3239388… MARC… SP4   0.890     0                1 Astrocyte FALSE       
-# ℹ more rows
-# ℹ 2 more variables: is_unique_intersect <lgl>, is_top_TF <lgl>
 null device 
           1 
 ─ Session info ───────────────────────────────────────────────────────────────
@@ -85,9 +70,9 @@ null device
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-06-17
+ date     2026-08-24
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.9.38 @ /users/neagles/.positron-server/bin/d5f94f072b1083b8237930739cb6525c6e12e1da/quarto/bin/quarto
+ quarto   1.10.18 @ /users/neagles/.positron-server/bin/48dc4cee686939f35fe4a714d34375f67fd62082/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package          * version date (UTC) lib source
@@ -221,7 +206,6 @@ null device
  timechange         0.3.0   2024-01-18 [2] CRAN (R 4.5.0)
  tzdb               0.5.0   2025-03-15 [2] CRAN (R 4.5.0)
  UCSC.utils         1.4.0   2025-04-15 [2] Bioconductor 3.21 (R 4.5.0)
- utf8               1.2.6   2025-06-08 [1] CRAN (R 4.5.0)
  uwot               0.2.3   2025-02-24 [1] CRAN (R 4.5.0)
  vctrs              0.6.5   2023-12-01 [1] CRAN (R 4.5.0)
  viridisLite        0.4.2   2023-05-02 [1] CRAN (R 4.5.0)
@@ -237,4 +221,4 @@ null device
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Wed Jun 17 04:56:06 PM EDT 2026
+Mon Aug 24 03:13:55 PM EDT 2026

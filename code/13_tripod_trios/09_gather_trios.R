@@ -130,7 +130,14 @@ make_scatter_pdf = function(plot_df, pdf_path) {
                     aes(x = access, y = expr, color = tf_expr_log)
                 ) +
                 geom_point(size = 0.15) +
-                scale_color_viridis_c() +
+                scale_color_viridis_c(
+                    guide = guide_colorbar(
+                        barheight = unit(10, "pt"),
+                        barwidth = unit(2, "pt"),
+                        ticks.linewidth = 0.15,
+                        frame.linewidth = 0.15
+                    )
+                ) +
                 labs(
                     title = sprintf(
                         "%s\n%s | %s", ct,
@@ -139,10 +146,7 @@ make_scatter_pdf = function(plot_df, pdf_path) {
                     x = "Access.", y = "Expr."
                 ) +
                 theme_bw(base_size = 6) +
-                theme(
-                    plot.title = element_text(size = 2.5, lineheight = 1.1),
-                    legend.position = "none"
-                )
+                theme(plot.title = element_text(size = 2.5, lineheight = 1.1))
         }
 
         # Pad with blank panels so each cell type occupies a full row
@@ -154,7 +158,7 @@ make_scatter_pdf = function(plot_df, pdf_path) {
     }
 
     n_cell_types = length(unique(plot_df$cell_type))
-    pdf(pdf_path, width = 5, height = n_cell_types)
+    pdf(pdf_path, width = 8, height = n_cell_types)
     print(plot_grid(plotlist = plot_list, ncol = num_examples))
     dev.off()
 }
