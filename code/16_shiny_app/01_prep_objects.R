@@ -168,4 +168,31 @@ trio_df = read_parquet_duckdb(trio_path, prudence = "stingy") |>
     arrange(trio_level, mid_cluster, trio_p_adj, trio_coef) |>
     write_csv(file.path(out_dir, "trios.csv.gz"))
 
+#   Alternative export: wide form preserving both level-1 and level-2 stats.
+#   Intersect trios have all four columns populated; non-intersect trios have
+#   NAs in stats for one of the trio levels. This version is for a supplemental
+#   table
+read_parquet_duckdb(trio_path, prudence = "stingy") |>
+    dplyr::rename(
+        trio_coef = coef, trio_p_adj = adj, mid_cluster = cell_type,
+        trio_level = stringency_level
+    ) |>
+    collect() |>
+    mutate(
+        mid_cluster = factor(
+            dplyr::coalesce(unname(rename_map[mid_cluster]), mid_cluster),
+            levels = cell_type_levels
+        )
+    ) |>
+    pivot_wider(
+        id_cols = c(peak, gene, TF, mid_cluster, is_intersect, is_unique_intersect, is_top_TF),
+        names_from = trio_level,
+        values_from = c(trio_coef, trio_p_adj),
+        names_glue = "{.value}_lvl{trio_level}"
+    ) |>
+    arrange(mid_cluster, trio_p_adj_lvl1, trio_coef_lvl1) |>
+    select(-c(is_intersect, is_unique_intersect, is_top_TF)) |>
+    write_csv(file.path(out_dir, "trios_supp_table.csv.gz"))
+
+
 session_info()
