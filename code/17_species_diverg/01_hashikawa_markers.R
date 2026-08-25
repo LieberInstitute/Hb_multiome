@@ -87,11 +87,11 @@ table(hashikawa_final_sce$celltype)
 #This is the consensus cross-species mapping. Notably, we're leaving the mouse MHb_subP_cholinergic cell-type as is, as did not find a strong match in humans
 #Also group the non-neuronal subtypes
 hashikawa_final_sce$consensus_annot = hashikawa_final_sce$celltype
-hashikawa_final_sce$consensus_annot[hashikawa_final_sce$celltype %in% c('MHb_subP')] = 'MHb.1'
-hashikawa_final_sce$consensus_annot[hashikawa_final_sce$celltype %in% c(paste0('MHb_cholinergic_', 1:4))] = 'MHb.2'
-hashikawa_final_sce$consensus_annot[hashikawa_final_sce$celltype %in% c('LHb_2', 'LHb_1_5')] = 'LHb.2.7'
-hashikawa_final_sce$consensus_annot[hashikawa_final_sce$celltype %in% c('LHb_1_2', 'LHb_1_4')] = 'LHb.1.3.4'
-hashikawa_final_sce$consensus_annot[hashikawa_final_sce$celltype %in% c('LHb_1_1', 'LHb_1_3')] = 'LHb.4'
+hashikawa_final_sce$consensus_annot[hashikawa_final_sce$celltype %in% c('MHb_subP')] = 'MHb_A'
+hashikawa_final_sce$consensus_annot[hashikawa_final_sce$celltype %in% c(paste0('MHb_cholinergic_', 1:4))] = 'MHb_B'
+hashikawa_final_sce$consensus_annot[hashikawa_final_sce$celltype %in% c('LHb_2', 'LHb_1_5')] = 'LHb_A'
+hashikawa_final_sce$consensus_annot[hashikawa_final_sce$celltype %in% c('LHb_1_2', 'LHb_1_4')] = 'LHb_B'
+hashikawa_final_sce$consensus_annot[hashikawa_final_sce$celltype %in% c('LHb_1_1', 'LHb_1_3')] = 'LHb_C'
 hashikawa_final_sce$consensus_annot[grepl('Astrocyte', hashikawa_final_sce$celltype) ] = 'Astrocyte'
 hashikawa_final_sce$consensus_annot[grepl('Oligo', hashikawa_final_sce$celltype) ] = 'Oligo'
 hashikawa_final_sce$consensus_annot[grepl('OPC', hashikawa_final_sce$celltype) ] = 'OPC'
@@ -100,10 +100,10 @@ table(hashikawa_final_sce$consensus_annot)
 
 #wallace annotations
 wallace_sce$consensus_annot = wallace_sce$meta_clust_celltype_annot
-wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('MHb_subP')] = 'MHb.1'
-wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('MHb_cholinergic')] = 'MHb.2'
-wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('LHb_2')] = 'LHb.2.7'
-wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('LHb_1')] = 'LHb.4'
+wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('MHb_subP')] = 'MHb_A'
+wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('MHb_cholinergic')] = 'MHb_B'
+wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('LHb_2')] = 'LHb_A'
+wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('LHb_1')] = 'LHb_C'
 wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('Astrocytes')] = 'Astrocyte'
 wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('Oligodendrocytes')] = 'Oligo'
 wallace_sce$consensus_annot[wallace_sce$meta_clust_celltype_annot %in% c('Differentiating Oligodendrocytes')] = 'OPC'
@@ -270,11 +270,11 @@ plot_violin_maxnorm <- function(sce, gene, assay_name = "logcounts", celltype_co
 }
 
 
-hashikawa_neuron = hashikawa_final_sce[ , hashikawa_final_sce$consensus_annot %in% c('MHb.1', 'MHb.2', 'LHb.2.7', 'LHb.1.3.4', 'LHb.4')]
-wallace_neuron = wallace_sce[ , wallace_sce$consensus_annot %in% c('MHb.1', 'MHb.2', 'LHb.2.7', 'LHb.1.3.4', 'LHb.4')]
+hashikawa_neuron = hashikawa_final_sce[ , hashikawa_final_sce$consensus_annot %in% c('MHb_A', 'MHb_B', 'LHb_A', 'LHb_B', 'LHb_C')]
+wallace_neuron = wallace_sce[ , wallace_sce$consensus_annot %in% c('MHb_A', 'MHb_B', 'LHb_A', 'LHb_B', 'LHb_C')]
 
-hashikawa_neuron$consensus_annot = factor(hashikawa_neuron$consensus_annot, levels = c('MHb.2', 'MHb.1', 'LHb.2.7', 'LHb.1.3.4', 'LHb.4'))
-wallace_neuron$consensus_annot = factor(wallace_neuron$consensus_annot, levels = c('MHb.2', 'MHb.1', 'LHb.2.7', 'LHb.1.3.4', 'LHb.4'))
+hashikawa_neuron$consensus_annot = factor(hashikawa_neuron$consensus_annot, levels = c('MHb_B', 'MHb_A', 'LHb_A', 'LHb_B', 'LHb_C'))
+wallace_neuron$consensus_annot = factor(wallace_neuron$consensus_annot, levels = c('MHb_B', 'MHb_A', 'LHb_A', 'LHb_C'))
 
 p1 = plot_violin_maxnorm(hashikawa_neuron, gene = "SLC12A5", 
 assay_name = "logcounts", celltype_col = "consensus_annot", study_label = "Hashikawa")
@@ -289,5 +289,175 @@ ggsave(plot = p1, filename = paste0(plot_path, '/hashikawa_SLC12A5_violin.pdf'),
 width = 6, height = 2, device = 'pdf')
 ggsave(plot = p2, filename = paste0(plot_path, '/wallace_SLC12A5_violin.pdf'), 
 width = 6, height = 2, device = 'pdf')
+
+# Add the regression lines
+
+#Adding regression lines to the violin plots
+# Extract SLC12A5 expression and cell type for both datasets
+# Yalcinbas
+wallace_df <- data.frame(
+  expression = as.numeric(logcounts(wallace_neuron["SLC12A5", ])),
+  celltype = wallace_neuron$consensus_annot
+)
+wallace_df$celltype_numeric <- as.numeric(wallace_df$celltype)  # 1=MHb_B, 2=MHb_A, ..., 5=LHb_C
+
+# Multiome
+hashikawa_df <- data.frame(
+  expression = as.numeric(logcounts(hashikawa_neuron["SLC12A5", ])),
+  celltype = hashikawa_neuron$consensus_annot
+)
+hashikawa_df$celltype_numeric <- as.numeric(hashikawa_df$celltype)
+
+# Fit linear trend models
+wallace_lm <- lm(expression ~ celltype_numeric, data = wallace_df)
+hashikawa_lm <- lm(expression ~ celltype_numeric, data = hashikawa_df)
+
+summary(wallace_lm)
+summary(hashikawa_lm)
+
+
+# Add regression line and slope annotation to the violin plots
+add_trend_line <- function(p, lm_fit, df) {
+  slope <- coef(lm_fit)[2]
+  pval <- summary(lm_fit)$coefficients[2, 4]
+  r2 <- summary(lm_fit)$r.squared
+  
+  if(pval < 2.2e-16) {
+    pval_text <- "p < 2.2e-16"
+  } else {
+    pval_text <- sprintf("p = %.3f", pval)
+  }
+  label <- sprintf("slope = %.3f, R² = %.3f, %s", slope, r2, pval_text)
+  
+  # Get predicted values at each level for the line
+  num_celltypes = max(df$celltype_numeric)
+  pred_df <- data.frame(
+    celltype_numeric = 1:num_celltypes,
+    celltype = levels(df$celltype)
+  )
+  pred_df$predicted <- predict(lm_fit, newdata = pred_df)
+  
+  p + 
+    geom_line(data = pred_df, aes(x = celltype, y = predicted, group = 1), 
+              color = "red", linewidth = 0.8) +
+    geom_point(data = pred_df, aes(x = celltype, y = predicted), 
+               color = "red", size = 2) +
+    annotate("text", x = 3, y = max(df$expression) * 0.9, 
+             label = label, size = 3, color = "red")
+}
+
+wallace_trend <- add_trend_line(p2, wallace_lm, wallace_df)
+wallace_trend
+hashikawa_trend <- add_trend_line(p1, hashikawa_lm, hashikawa_df)
+hashikawa_trend
+
+ggsave(plot = hashikawa_trend, filename = paste0(plot_path, '/hashikawa_SLC12A5_violin_trend.pdf'), 
+width = 6, height = 2, device = 'pdf')
+ggsave(plot = wallace_trend, filename = paste0(plot_path, '/wallace_SLC12A5_violin_trend.pdf'), 
+width = 6, height = 2, device = 'pdf')
+
+
+#And other genes of interest
+hashikawa_cnr1_p = plot_violin_maxnorm(hashikawa_neuron, "CNR1", assay_name = "logcounts",
+celltype_col = "consensus_annot", study_label = "Hashikawa")
+
+hashikawa_oprm1_p = plot_violin_maxnorm(hashikawa_neuron, "OPRM1", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Hashikawa")
+
+hashikawa_htr2c_p = plot_violin_maxnorm(hashikawa_neuron, "HTR2C", assay_name = "logcounts",
+celltype_col = "consensus_annot", study_label = "Hashikawa")
+
+hashikawa_htr4_p = plot_violin_maxnorm(hashikawa_neuron, "HTR4", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Hashikawa")
+
+hashikawa_htr7_p = plot_violin_maxnorm(hashikawa_neuron, "HTR7", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Hashikawa")
+
+hashikawa_htr2a_p = plot_violin_maxnorm(hashikawa_neuron, "HTR2A", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Hashikawa")
+
+#Gene not present
+#hashikawa_htr1e_p = plot_violin_maxnorm(hashikawa_neuron, "HTR1E", assay_name = "logcounts", 
+#celltype_col = "consensus_annot", study_label = "Hashikawa")
+
+hashikawa_htra1_p = plot_violin_maxnorm(hashikawa_neuron, "HTRA1", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Hashikawa")
+
+hashikawa_chrna3_p = plot_violin_maxnorm(hashikawa_neuron, "CHRNA3", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Hashikawa")
+
+hashikawa_chrnb4_p = plot_violin_maxnorm(hashikawa_neuron, "CHRNB4", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Hashikawa")
+
+hashikawa_chrna5_p = plot_violin_maxnorm(hashikawa_neuron, "CHRNA5", assay_name = "logcounts",
+celltype_col = "consensus_annot", study_label = "Hashikawa")
+
+#Wallace
+
+wallace_cnr1_p = plot_violin_maxnorm(wallace_neuron, "CNR1", assay_name = "logcounts",
+celltype_col = "consensus_annot", study_label = "Wallace")
+
+wallace_oprm1_p = plot_violin_maxnorm(wallace_neuron, "OPRM1", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Wallace")
+
+wallace_htr2c_p = plot_violin_maxnorm(wallace_neuron, "HTR2C", assay_name = "logcounts",
+celltype_col = "consensus_annot", study_label = "Wallace")
+
+wallace_htr4_p = plot_violin_maxnorm(wallace_neuron, "HTR4", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Wallace")
+
+wallace_htr7_p = plot_violin_maxnorm(wallace_neuron, "HTR7", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Wallace")
+
+wallace_htr2a_p = plot_violin_maxnorm(wallace_neuron, "HTR2A", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Wallace")
+
+#Gene not present
+#wallace_htr1e_p = plot_violin_maxnorm(wallace_neuron, "HTR1E", assay_name = "logcounts", 
+#celltype_col = "consensus_annot", study_label = "Wallace")
+
+wallace_htra1_p = plot_violin_maxnorm(wallace_neuron, "HTRA1", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Wallace")
+
+wallace_chrna3_p = plot_violin_maxnorm(wallace_neuron, "CHRNA3", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Wallace")
+
+wallace_chrnb4_p = plot_violin_maxnorm(wallace_neuron, "CHRNB4", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Wallace")
+
+wallace_chrna5_p = plot_violin_maxnorm(wallace_neuron, "CHRNA5", assay_name = "logcounts",
+celltype_col = "consensus_annot", study_label = "Wallace")
+
+
+ggsave(plot = wallace_cnr1_p, filename = file.path(plot_path, 'Wallace_CNR1_violin.pdf'), width = 6, height = 2)
+ggsave(plot = hashikawa_cnr1_p, filename = file.path(plot_path, 'Hashikawa_CNR1_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = wallace_oprm1_p, filename = file.path(plot_path, 'Wallace_OPRM1_violin.pdf'), width = 6, height = 2)
+ggsave(plot = hashikawa_oprm1_p, filename = file.path(plot_path, 'Hashikawa_OPRM1_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = wallace_htr2c_p, filename = file.path(plot_path, 'Wallace_HTR2C_violin.pdf'), width = 6, height = 2)
+ggsave(plot = hashikawa_htr2c_p, filename = file.path(plot_path, 'Hashikawa_HTR2C_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = wallace_htr4_p, filename = file.path(plot_path, 'Wallace_HTR4_violin.pdf'), width = 6, height = 2)
+ggsave(plot = hashikawa_htr4_p, filename = file.path(plot_path, 'Hashikawa_HTR4_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = wallace_htr7_p, filename = file.path(plot_path, 'Wallace_HTR7_violin.pdf'), width = 6, height = 2)
+ggsave(plot = hashikawa_htr7_p, filename = file.path(plot_path, 'Hashikawa_HTR7_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = wallace_htr2a_p, filename = file.path(plot_path, 'Wallace_HTR2A_violin.pdf'), width = 6, height = 2)
+ggsave(plot = hashikawa_htr2a_p, filename = file.path(plot_path, 'Hashikawa_HTR2A_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = wallace_htra1_p, filename = file.path(plot_path, 'Wallace_HTRA1_violin.pdf'), width = 6, height = 2)
+ggsave(plot = hashikawa_htra1_p, filename = file.path(plot_path, 'Hashikawa_HTRA1_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = wallace_chrna3_p, filename = file.path(plot_path, 'Wallace_CHRNA3_violin.pdf'), width = 6, height = 2)
+ggsave(plot = hashikawa_chrna3_p, filename = file.path(plot_path, 'Hashikawa_CHRNA3_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = wallace_chrnb4_p, filename = file.path(plot_path, 'Wallace_CHRNB4_violin.pdf'), width = 6, height = 2)
+ggsave(plot = hashikawa_chrnb4_p, filename = file.path(plot_path, 'Hashikawa_CHRNB4_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = wallace_chrna5_p, filename = file.path(plot_path, 'Wallace_CHRNA5_violin.pdf'), width = 6, height = 2)
+ggsave(plot = hashikawa_chrna5_p, filename = file.path(plot_path, 'Hashikawa_CHRNA5_violin.pdf'), width = 6, height = 2)
+
 
 session_info()
