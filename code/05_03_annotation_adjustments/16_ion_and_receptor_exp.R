@@ -620,29 +620,138 @@ table(yalcinbas_sce$consensus_annot, yalcinbas_sce$final_Annotations)
 yalcinbas_neuron = yalcinbas_sce[, yalcinbas_sce$consensus_annot %in% c('MHb_A', 'MHb_B', 'LHb_A', 'LHb_B', 'LHb_C')]
 yalcinbas_neuron$consensus_annot = factor(yalcinbas_neuron$consensus_annot, levels = c('MHb_B', 'MHb_A', 'LHb_A', 'LHb_B', 'LHb_C'))
 
-yalcinbas_kcc2_p = plot_violin_maxnorm(yalcinbas_neuron, "SLC12A5", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Yalcinbas")
 
-yalcinbas_slc6a4_p = plot_violin_maxnorm(yalcinbas_neuron, "SLC6A4", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Yalcinbas")
-
-
+#Adjust the multiome annots, really just dropping MHb_C and MHb_D, since not shared between human and mouse
 multiome_sce$consensus_annot = multiome_sce$refined_mid_cluster
-multiome_sce$consensus_annot[multiome_sce$refined_mid_cluster %in% c('GABA_LHb_C.1','GABA_LHb_C.2')] = 'LHb_C'
+#multiome_sce$consensus_annot[multiome_sce$refined_mid_cluster %in% c('GABA_LHb_C.1','GABA_LHb_C.2')] = 'LHb_C'
 
-multiome_neuron = multiome_sce[, multiome_sce$consensus_annot %in% c('MHb_B', 'MHb_A', 'LHb_A', 'LHb_B', 'LHb_C')]
-multiome_neuron$consensus_annot = factor(multiome_neuron$consensus_annot, levels = c('MHb_B', 'MHb_A', 'LHb_A', 'LHb_B', 'LHb_C'))
+multiome_neuron = multiome_sce[, multiome_sce$consensus_annot %in% c('MHb_B', 'MHb_A', 'LHb_A', 'LHb_B', 'LHb_C', 'GABA_LHb_C.1','GABA_LHb_C.2')]
+multiome_neuron$consensus_annot = factor(multiome_neuron$consensus_annot, levels = c('MHb_B', 'MHb_A', 'LHb_A', 'LHb_B', 'LHb_C', 'GABA_LHb_C.1','GABA_LHb_C.2'))
 
+
+#Plot genes of interest
+
+#KCC2
 multiome_kcc2_p = plot_violin_maxnorm(multiome_neuron, "SLC12A5", assay_name = "logcounts", 
 celltype_col = "consensus_annot", study_label = "Multiome")
 
-multiome_slc6a4_p = plot_violin_maxnorm(multiome_neuron, "SLC6A4", assay_name = "logcounts", 
+#Other genes of interest
+#CNR1, OPRM1
+
+multiome_cnr1_p = plot_violin_maxnorm(multiome_neuron, "CNR1", assay_name = "logcounts",
 celltype_col = "consensus_annot", study_label = "Multiome")
 
-yalcinbas_kcc2_p
-multiome_kcc2_p
+multiome_oprm1_p = plot_violin_maxnorm(multiome_neuron, "OPRM1", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Multiome")
+
+multiome_htr2c_p = plot_violin_maxnorm(multiome_neuron, "HTR2C", assay_name = "logcounts",
+celltype_col = "consensus_annot", study_label = "Multiome")
+
+multiome_htr4_p = plot_violin_maxnorm(multiome_neuron, "HTR4", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Multiome")
+
+multiome_htr7_p = plot_violin_maxnorm(multiome_neuron, "HTR7", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Multiome")
+
+multiome_htr2a_p = plot_violin_maxnorm(multiome_neuron, "HTR2A", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Multiome")
+
+multiome_htr1e_p = plot_violin_maxnorm(multiome_neuron, "HTR1E", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Multiome")
+
+multiome_htra1_p = plot_violin_maxnorm(multiome_neuron, "HTRA1", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Multiome")
+
+multiome_chrna3_p = plot_violin_maxnorm(multiome_neuron, "CHRNA3", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Multiome")
+
+multiome_chrnb4_p = plot_violin_maxnorm(multiome_neuron, "CHRNB4", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Multiome")
+
+multiome_chrna5_p = plot_violin_maxnorm(multiome_neuron, "CHRNA5", assay_name = "logcounts",
+celltype_col = "consensus_annot", study_label = "Multiome")
+
+
+#Yalcinbas
+
+yalcinbas_kcc2_p = plot_violin_maxnorm(yalcinbas_neuron, "SLC12A5", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Yalcinbas")
+
+#Other genes of interest
+
+
+yalcinbas_cnr1_p = plot_violin_maxnorm(yalcinbas_neuron, "CNR1", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Yalcinbas")
+
+yalcinbas_oprm1_p = plot_violin_maxnorm(yalcinbas_neuron, "OPRM1", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Yalcinbas")
+
+yalcinbas_htr2c_p = plot_violin_maxnorm(yalcinbas_neuron, "HTR2C", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Yalcinbas")
+
+yalcinbas_htr4_p = plot_violin_maxnorm(yalcinbas_neuron, "HTR4", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Yalcinbas")
+
+yalcinbas_htr7_p = plot_violin_maxnorm(yalcinbas_neuron, "HTR7", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Yalcinbas")
+
+yalcinbas_htr2a_p = plot_violin_maxnorm(yalcinbas_neuron, "HTR2A", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Yalcinbas")
+
+yalcinbas_htr1e_p = plot_violin_maxnorm(yalcinbas_neuron, "HTR1E", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Yalcinbas")
+
+yalcinbas_htra1_p = plot_violin_maxnorm(yalcinbas_neuron, "HTRA1", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Yalcinbas")
+
+yalcinbas_chrna3_p = plot_violin_maxnorm(yalcinbas_neuron, "CHRNA3", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Yalcinbas")
+
+yalcinbas_chrnb4_p = plot_violin_maxnorm(yalcinbas_neuron, "CHRNB4", assay_name = "logcounts", 
+celltype_col = "consensus_annot", study_label = "Yalcinbas")
+
+yalcinbas_chrna5_p = plot_violin_maxnorm(yalcinbas_neuron, "CHRNA5", assay_name = "logcounts",
+celltype_col = "consensus_annot", study_label = "Yalcinbas")
+
+
+
+
+
 ggsave(plot = yalcinbas_kcc2_p, filename = file.path(plot_path, 'Yalcinbas_SLC12A5_violin.pdf'), width = 6, height = 2)
 ggsave(plot = multiome_kcc2_p, filename = file.path(plot_path, 'Multiome_SLC12A5_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = yalcinbas_cnr1_p, filename = file.path(plot_path, 'Yalcinbas_CNR1_violin.pdf'), width = 6, height = 2)
+ggsave(plot = multiome_cnr1_p, filename = file.path(plot_path, 'Multiome_CNR1_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = yalcinbas_oprm1_p, filename = file.path(plot_path, 'Yalcinbas_OPRM1_violin.pdf'), width = 6, height = 2)
+ggsave(plot = multiome_oprm1_p, filename = file.path(plot_path, 'Multiome_OPRM1_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = yalcinbas_htr2c_p, filename = file.path(plot_path, 'Yalcinbas_HTR2C_violin.pdf'), width = 6, height = 2)
+ggsave(plot = multiome_htr2c_p, filename = file.path(plot_path, 'Multiome_HTR2C_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = yalcinbas_htr4_p, filename = file.path(plot_path, 'Yalcinbas_HTR4_violin.pdf'), width = 6, height = 2)
+ggsave(plot = multiome_htr4_p, filename = file.path(plot_path, 'Multiome_HTR4_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = yalcinbas_htr7_p, filename = file.path(plot_path, 'Yalcinbas_HTR7_violin.pdf'), width = 6, height = 2)
+ggsave(plot = multiome_htr7_p, filename = file.path(plot_path, 'Multiome_HTR7_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = yalcinbas_htr2a_p, filename = file.path(plot_path, 'Yalcinbas_HTR2A_violin.pdf'), width = 6, height = 2)
+ggsave(plot = multiome_htr2a_p, filename = file.path(plot_path, 'Multiome_HTR2A_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = yalcinbas_htr1e_p, filename = file.path(plot_path, 'Yalcinbas_HTR1E_violin.pdf'), width = 6, height = 2)
+ggsave(plot = multiome_htr1e_p, filename = file.path(plot_path, 'Multiome_HTR1E_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = yalcinbas_htra1_p, filename = file.path(plot_path, 'Yalcinbas_HTRA1_violin.pdf'), width = 6, height = 2)
+ggsave(plot = multiome_htra1_p, filename = file.path(plot_path, 'Multiome_HTRA1_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = yalcinbas_chrna3_p, filename = file.path(plot_path, 'Yalcinbas_CHRNA3_violin.pdf'), width = 6, height = 2)
+ggsave(plot = multiome_chrna3_p, filename = file.path(plot_path, 'Multiome_CHRNA3_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = yalcinbas_chrnb4_p, filename = file.path(plot_path, 'Yalcinbas_CHRNB4_violin.pdf'), width = 6, height = 2)
+ggsave(plot = multiome_chrnb4_p, filename = file.path(plot_path, 'Multiome_CHRNB4_violin.pdf'), width = 6, height = 2)
+
+ggsave(plot = yalcinbas_chrna5_p, filename = file.path(plot_path, 'Yalcinbas_CHRNA5_violin.pdf'), width = 6, height = 2)
+ggsave(plot = multiome_chrna5_p, filename = file.path(plot_path, 'Multiome_CHRNA5_violin.pdf'), width = 6, height = 2)
 
 
 #Adding regression lines to the violin plots
@@ -666,7 +775,7 @@ yalcinbas_lm <- lm(expression ~ celltype_numeric, data = yalcinbas_df)
 multiome_lm <- lm(expression ~ celltype_numeric, data = multiome_df)
 
 summary(yalcinbas_lm)
-summary(multiome_lm)$coefficients[2, 4]
+summary(multiome_lm)
 
 
 # Add regression line and slope annotation to the violin plots
@@ -683,8 +792,9 @@ add_trend_line <- function(p, lm_fit, df) {
   label <- sprintf("slope = %.3f, R² = %.3f, %s", slope, r2, pval_text)
   
   # Get predicted values at each level for the line
+  num_celltypes = max(df$celltype_numeric)
   pred_df <- data.frame(
-    celltype_numeric = 1:5,
+    celltype_numeric = 1:num_celltypes,
     celltype = levels(df$celltype)
   )
   pred_df$predicted <- predict(lm_fit, newdata = pred_df)
