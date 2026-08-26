@@ -550,7 +550,7 @@ source(here('code','05_03_annotation_adjustments','celltype_colors.R'))
 
 
 
-plot_violin_maxnorm <- function(sce, gene, assay_name = "logcounts", celltype_col, study_label) {
+plot_violin_maxnorm <- function(sce, gene, assay_name = "logcounts", celltype_col, study_label, y_max = 6) {
   expr <- assay(sce, assay_name)[gene, ]
   celltype <- colData(sce)[[celltype_col]]
   
@@ -587,7 +587,7 @@ plot_violin_maxnorm <- function(sce, gene, assay_name = "logcounts", celltype_co
       size = 1.5,
       color = "black"
     ) +
-    scale_y_continuous(limits = c(0, 6), breaks = c(0, 2, 4, 6)) +
+    scale_y_continuous(limits = c(0, y_max), breaks = seq(0, y_max, by = ifelse(y_max <= 1, 1, 2))) +
     labs(x = NULL, y = "Logcounts", title = sprintf('%s - %s', study_label, gene)) +
     theme_classic(base_size = 10) +
     theme(
@@ -633,25 +633,25 @@ multiome_neuron$consensus_annot = factor(multiome_neuron$consensus_annot, levels
 
 #KCC2
 multiome_kcc2_p = plot_violin_maxnorm(multiome_neuron, "SLC12A5", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Multiome")
+celltype_col = "consensus_annot", study_label = "Multiome", y_max = 4)
 
 #Other genes of interest
 #CNR1, OPRM1
 
 multiome_cnr1_p = plot_violin_maxnorm(multiome_neuron, "CNR1", assay_name = "logcounts",
-celltype_col = "consensus_annot", study_label = "Multiome")
+celltype_col = "consensus_annot", study_label = "Multiome", y_max = 4)
 
 multiome_oprm1_p = plot_violin_maxnorm(multiome_neuron, "OPRM1", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Multiome")
+celltype_col = "consensus_annot", study_label = "Multiome", y_max = 4)
 
 multiome_htr2c_p = plot_violin_maxnorm(multiome_neuron, "HTR2C", assay_name = "logcounts",
 celltype_col = "consensus_annot", study_label = "Multiome")
 
 multiome_htr4_p = plot_violin_maxnorm(multiome_neuron, "HTR4", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Multiome")
+celltype_col = "consensus_annot", study_label = "Multiome", y_max = 4)
 
 multiome_htr7_p = plot_violin_maxnorm(multiome_neuron, "HTR7", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Multiome")
+celltype_col = "consensus_annot", study_label = "Multiome", y_max = 4)
 
 multiome_htr2a_p = plot_violin_maxnorm(multiome_neuron, "HTR2A", assay_name = "logcounts", 
 celltype_col = "consensus_annot", study_label = "Multiome")
@@ -663,13 +663,13 @@ multiome_htra1_p = plot_violin_maxnorm(multiome_neuron, "HTRA1", assay_name = "l
 celltype_col = "consensus_annot", study_label = "Multiome")
 
 multiome_chrna3_p = plot_violin_maxnorm(multiome_neuron, "CHRNA3", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Multiome")
+celltype_col = "consensus_annot", study_label = "Multiome", y_max = 4)
 
 multiome_chrnb4_p = plot_violin_maxnorm(multiome_neuron, "CHRNB4", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Multiome")
+celltype_col = "consensus_annot", study_label = "Multiome", y_max = 4)
 
 multiome_chrna5_p = plot_violin_maxnorm(multiome_neuron, "CHRNA5", assay_name = "logcounts",
-celltype_col = "consensus_annot", study_label = "Multiome")
+celltype_col = "consensus_annot", study_label = "Multiome", y_max = 4)
 
 
 #Yalcinbas
@@ -681,10 +681,10 @@ celltype_col = "consensus_annot", study_label = "Yalcinbas")
 
 
 yalcinbas_cnr1_p = plot_violin_maxnorm(yalcinbas_neuron, "CNR1", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Yalcinbas")
+celltype_col = "consensus_annot", study_label = "Yalcinbas", y_max = 4)
 
 yalcinbas_oprm1_p = plot_violin_maxnorm(yalcinbas_neuron, "OPRM1", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Yalcinbas")
+celltype_col = "consensus_annot", study_label = "Yalcinbas", y_max = 4)
 
 yalcinbas_htr2c_p = plot_violin_maxnorm(yalcinbas_neuron, "HTR2C", assay_name = "logcounts", 
 celltype_col = "consensus_annot", study_label = "Yalcinbas")
@@ -705,13 +705,13 @@ yalcinbas_htra1_p = plot_violin_maxnorm(yalcinbas_neuron, "HTRA1", assay_name = 
 celltype_col = "consensus_annot", study_label = "Yalcinbas")
 
 yalcinbas_chrna3_p = plot_violin_maxnorm(yalcinbas_neuron, "CHRNA3", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Yalcinbas")
+celltype_col = "consensus_annot", study_label = "Yalcinbas", y_max = 4)
 
 yalcinbas_chrnb4_p = plot_violin_maxnorm(yalcinbas_neuron, "CHRNB4", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Yalcinbas")
+celltype_col = "consensus_annot", study_label = "Yalcinbas", y_max = 4)
 
 yalcinbas_chrna5_p = plot_violin_maxnorm(yalcinbas_neuron, "CHRNA5", assay_name = "logcounts",
-celltype_col = "consensus_annot", study_label = "Yalcinbas")
+celltype_col = "consensus_annot", study_label = "Yalcinbas", y_max = 4)
 
 
 
