@@ -219,7 +219,7 @@ export_meta_markers(mouse_metaMarkers,
 
 # Function to create condensed violin plots similar to Tasic et al. 2018 Fig 4C
 # Y-axis is max-normalized expression across cell types
-plot_violin_maxnorm <- function(sce, gene, assay_name = "logcounts", celltype_col, study_label) {
+plot_violin_maxnorm <- function(sce, gene, assay_name = "logcounts", celltype_col, study_label, y_max = 6) {
   expr <- assay(sce, assay_name)[gene, ]
   celltype <- colData(sce)[[celltype_col]]
   
@@ -256,7 +256,7 @@ plot_violin_maxnorm <- function(sce, gene, assay_name = "logcounts", celltype_co
       size = 1.5,
       color = "black"
     ) +
-    scale_y_continuous(limits = c(0, 6), breaks = c(0, 2, 4, 6)) +
+    scale_y_continuous(limits = c(0, y_max), breaks = seq(0, y_max, by = ifelse(y_max <= 1, 1, 2))) +
     labs(x = NULL, y = "Max-normalized expression", title = sprintf('%s - %s', study_label, gene)) +
     theme_classic(base_size = 10) +
     theme(
@@ -359,35 +359,35 @@ width = 6, height = 2, device = 'pdf')
 
 #And other genes of interest
 hashikawa_cnr1_p = plot_violin_maxnorm(hashikawa_neuron, "CNR1", assay_name = "logcounts",
-celltype_col = "consensus_annot", study_label = "Hashikawa")
+celltype_col = "consensus_annot", study_label = "Hashikawa", y_max = 2)
 
 hashikawa_oprm1_p = plot_violin_maxnorm(hashikawa_neuron, "OPRM1", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Hashikawa")
+celltype_col = "consensus_annot", study_label = "Hashikawa", y_max = 1)
 
 hashikawa_htr2c_p = plot_violin_maxnorm(hashikawa_neuron, "HTR2C", assay_name = "logcounts",
-celltype_col = "consensus_annot", study_label = "Hashikawa")
+celltype_col = "consensus_annot", study_label = "Hashikawa", y_max = 4)
 
 hashikawa_htr4_p = plot_violin_maxnorm(hashikawa_neuron, "HTR4", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Hashikawa")
+celltype_col = "consensus_annot", study_label = "Hashikawa", y_max = 4)
 
 hashikawa_htr7_p = plot_violin_maxnorm(hashikawa_neuron, "HTR7", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Hashikawa")
+celltype_col = "consensus_annot", study_label = "Hashikawa", y_max = 4)
 
 hashikawa_htr2a_p = plot_violin_maxnorm(hashikawa_neuron, "HTR2A", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Hashikawa")
+celltype_col = "consensus_annot", study_label = "Hashikawa", y_max = 4)
 
 #Gene not present
 #hashikawa_htr1e_p = plot_violin_maxnorm(hashikawa_neuron, "HTR1E", assay_name = "logcounts", 
 #celltype_col = "consensus_annot", study_label = "Hashikawa")
 
 hashikawa_htra1_p = plot_violin_maxnorm(hashikawa_neuron, "HTRA1", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Hashikawa")
+celltype_col = "consensus_annot", study_label = "Hashikawa", y_max = 4)
 
 hashikawa_chrna3_p = plot_violin_maxnorm(hashikawa_neuron, "CHRNA3", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Hashikawa")
+celltype_col = "consensus_annot", study_label = "Hashikawa", y_max = 4)
 
 hashikawa_chrnb4_p = plot_violin_maxnorm(hashikawa_neuron, "CHRNB4", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Hashikawa")
+celltype_col = "consensus_annot", study_label = "Hashikawa", y_max = 4)
 
 hashikawa_chrna5_p = plot_violin_maxnorm(hashikawa_neuron, "CHRNA5", assay_name = "logcounts",
 celltype_col = "consensus_annot", study_label = "Hashikawa")
@@ -395,38 +395,38 @@ celltype_col = "consensus_annot", study_label = "Hashikawa")
 #Wallace
 
 wallace_cnr1_p = plot_violin_maxnorm(wallace_neuron, "CNR1", assay_name = "logcounts",
-celltype_col = "consensus_annot", study_label = "Wallace")
+celltype_col = "consensus_annot", study_label = "Wallace", y_max = 2)
 
 wallace_oprm1_p = plot_violin_maxnorm(wallace_neuron, "OPRM1", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Wallace")
+celltype_col = "consensus_annot", study_label = "Wallace", y_max = 1)
 
 wallace_htr2c_p = plot_violin_maxnorm(wallace_neuron, "HTR2C", assay_name = "logcounts",
-celltype_col = "consensus_annot", study_label = "Wallace")
+celltype_col = "consensus_annot", study_label = "Wallace", y_max = 4)
 
 wallace_htr4_p = plot_violin_maxnorm(wallace_neuron, "HTR4", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Wallace")
+celltype_col = "consensus_annot", study_label = "Wallace", y_max = 4)
 
 wallace_htr7_p = plot_violin_maxnorm(wallace_neuron, "HTR7", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Wallace")
+celltype_col = "consensus_annot", study_label = "Wallace", y_max = 4)
 
 wallace_htr2a_p = plot_violin_maxnorm(wallace_neuron, "HTR2A", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Wallace")
+celltype_col = "consensus_annot", study_label = "Wallace", y_max = 4)
 
 #Gene not present
 #wallace_htr1e_p = plot_violin_maxnorm(wallace_neuron, "HTR1E", assay_name = "logcounts", 
 #celltype_col = "consensus_annot", study_label = "Wallace")
 
 wallace_htra1_p = plot_violin_maxnorm(wallace_neuron, "HTRA1", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Wallace")
+celltype_col = "consensus_annot", study_label = "Wallace", y_max = 4)
 
 wallace_chrna3_p = plot_violin_maxnorm(wallace_neuron, "CHRNA3", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Wallace")
+celltype_col = "consensus_annot", study_label = "Wallace", y_max = 4)
 
 wallace_chrnb4_p = plot_violin_maxnorm(wallace_neuron, "CHRNB4", assay_name = "logcounts", 
-celltype_col = "consensus_annot", study_label = "Wallace")
+celltype_col = "consensus_annot", study_label = "Wallace", y_max = 4)
 
 wallace_chrna5_p = plot_violin_maxnorm(wallace_neuron, "CHRNA5", assay_name = "logcounts",
-celltype_col = "consensus_annot", study_label = "Wallace")
+celltype_col = "consensus_annot", study_label = "Wallace", y_max = 4)
 
 
 ggsave(plot = wallace_cnr1_p, filename = file.path(plot_path, 'Wallace_CNR1_violin.pdf'), width = 6, height = 2)
