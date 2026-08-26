@@ -224,7 +224,7 @@ unique(unlist(go_sets[sig_go_terms[grepl('glutamate', sig_go_terms)]]))
 
 #Save scatter plot
 ggsave(plot = gene_set_scatter_p, filename = here(plot_path, '1vall_markers_GO_enrichment_MN_AUROC_scatter.pdf'), 
-width = 8, height = 3, device = 'pdf')
+width = 8, height = 6, device = 'pdf')
 
 
 
