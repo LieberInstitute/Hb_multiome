@@ -351,8 +351,49 @@ hb_targets = tf_targets |>
     slice_head(n = 200)
 hb_edges = build_edges(hb_targets)
 hb_nodes = build_nodes(hb_targets)
+focused_hb_targets = read_parquet_duckdb(trio_path, prudence = "stingy") |>
+    filter(stringency_level == 2) |>
+    select(gene, TF, cell_type, coef, adj) |>
+    collect() |>
+    mutate(
+        coef = log(coef) - min(log(coef)),
+        neg_log10_adj = -log10(adj),
+        source_cell_type = cell_type,
+        cell_type = dplyr::coalesce(
+            unname(rename_map[cell_type]),
+            cell_type
+        )
+    ) |>
+    filter(str_detect(cell_type, "Hb"))
 coef_range = range(overview_edges$coef, na.rm = TRUE)
 neg_log10_adj_range = range(overview_edges$neg_log10_adj, na.rm = TRUE)
+
+create_focused_hb_network = function(focus_gene) {
+    focus_targets = focused_hb_targets |>
+        filter(gene == focus_gene | TF == focus_gene)
+
+    if (nrow(focus_targets) == 0) {
+        message(sprintf(
+            "No focused Hb level-2 interactions found for %s; skipping network",
+            focus_gene
+        ))
+        return(tibble(
+            network_suid = NA_integer_,
+            title = sprintf("TF target network - Hb focused - %s", focus_gene),
+            style_name = NA_character_,
+            pdf_path = NA_character_
+        ))
+    }
+
+    create_and_export_network(
+        nodes = build_nodes(focus_targets),
+        edges = build_edges(focus_targets),
+        title = sprintf("TF target network - Hb focused - %s", focus_gene),
+        edge_color_mapper = map_edge_color_by_cell_type,
+        edge_color_args = list(edges = build_edges(focus_targets)),
+        coef_range = coef_range
+    )
+}
 
 bind_rows(
     create_and_export_network(
@@ -371,6 +412,8 @@ bind_rows(
         edge_color_args = list(edges = hb_edges),
         coef_range = coef_range
     ),
+    create_focused_hb_network("CACNA2D1"),
+    create_focused_hb_network("NRXN3"),
     tf_targets |>
         split(~ cell_type) |>
         imap(function(cell_type_targets, cell_type_name) {
