@@ -4,6 +4,7 @@ library(sessioninfo)
 library(tidyverse)
 library(here)
 library(duckplyr)
+library(qs2)
 library(RCy3)
 
 #   This was manually changed in an interactive R session. Can be "intersect" or
@@ -13,6 +14,13 @@ mode = "level_2"
 trio_path = here(
     "processed-data", "13_tripod_trios", "09_gather_trios",
     "filtered_trios_fine.parquet"
+)
+risk_path = here(
+    "processed-data", "13_tripod_trios", "18_cytoscape_prep", "risk_genes.csv"
+)
+prep_path = here(
+    "processed-data", "13_tripod_trios", "02_tripod_preprocess",
+    "preprocessed_objects_%s.qs2"
 )
 cell_map_path = here("raw-data", "cell_type_map.csv")
 pdf_dir = here("plots", "13_tripod_trios", "18_cytoscape_prep", mode)
@@ -50,6 +58,37 @@ rename_map = stats::setNames(
     cluster_map$old_cell_type
 )
 
+risk_df = read_csv(risk_path, show_col_types = FALSE)
+risk_flags = risk_df |>
+    distinct(trait, gene) |>
+    mutate(
+        trait = case_match(
+            trait,
+            "MDD" ~ "MDD",
+            "substance" ~ "substance",
+            .default = trait
+        ),
+        value = TRUE
+    ) |>
+    pivot_wider(
+        id_cols = gene,
+        names_from = trait,
+        values_from = value,
+        values_fill = FALSE,
+        names_prefix = "risk_"
+    ) |>
+    mutate(
+        risk_MDD = coalesce(risk_MDD, FALSE),
+        risk_substance = coalesce(risk_substance, FALSE),
+        is_risk_gene = risk_MDD | risk_substance,
+        risk_trait = case_when(
+            risk_MDD & risk_substance ~ "MDD + substance",
+            risk_MDD ~ "MDD",
+            risk_substance ~ "substance",
+            TRUE ~ "none"
+        )
+    )
+
 if (mode == 'intersect') {
     tf_targets = read_parquet_duckdb(trio_path, prudence = "stingy") |>
         filter(is_intersect, stringency_level == 2) |>
@@ -70,13 +109,55 @@ tf_targets = tf_targets |>
     mutate(
         coef = log(coef) - min(log(coef)),
         neg_log10_adj = -log10(adj),
+        source_cell_type = cell_type,
         cell_type = dplyr::coalesce(
             unname(rename_map[cell_type]),
             cell_type
         )
     )
 
+get_cell_type_expression = function(cell_type, genes) {
+    mats = qs_read(sprintf(prep_path, cell_type))$metacell_seur
+    genes_present = intersect(genes, colnames(mats$rna))
+
+    tibble(
+        source_cell_type = cell_type,
+        id = genes_present,
+        mean_expr = colMeans(mats$rna[, genes_present, drop = FALSE])
+    )
+}
+
+make_node_expression = function(tf_targets) {
+    genes_by_ct = tf_targets |>
+        transmute(source_cell_type, gene, TF) |>
+        pivot_longer(c(gene, TF), values_to = "id") |>
+        distinct(source_cell_type, id)
+
+    expr_by_ct = imap_dfr(
+        split(genes_by_ct$id, genes_by_ct$source_cell_type),
+        \(genes, cell_type) get_cell_type_expression(cell_type, genes)
+    )
+
+    expr_by_ct |>
+        group_by(id) |>
+        summarise(mean_expr = mean(mean_expr), .groups = "drop")
+}
+
+make_node_sizes = function(mean_expr, default_size = 48, size_range = c(30, 70)) {
+    log_expr = log1p(mean_expr)
+    expr_range = range(log_expr, na.rm = TRUE)
+
+    if (!all(is.finite(expr_range)) || diff(expr_range) == 0) {
+        return(rep(default_size, length(mean_expr)))
+    }
+
+    scales::rescale(log_expr, to = size_range, from = expr_range) |>
+        replace_na(default_size)
+}
+
 build_nodes = function(tf_targets) {
+    node_expression = make_node_expression(tf_targets)
+
     bind_rows(
         tf_targets |>
             distinct(id = TF) |>
@@ -86,6 +167,21 @@ build_nodes = function(tf_targets) {
             mutate(role = "Gene")
     ) |>
         distinct(id, .keep_all = TRUE) |>
+        left_join(risk_flags, by = c("id" = "gene")) |>
+        left_join(node_expression, by = "id") |>
+        mutate(
+            across(
+                c(risk_MDD, risk_substance, is_risk_gene),
+                \(x) replace_na(x, FALSE)
+            ),
+            risk_trait = replace_na(risk_trait, "none"),
+            node_fill_group = paste(
+                role,
+                if_else(is_risk_gene, "risk", "nonrisk"),
+                sep = "_"
+            ),
+            node_size = make_node_sizes(mean_expr)
+        ) |>
         as.data.frame()
 }
 
@@ -132,13 +228,29 @@ reset_style = function(style_name) {
     setNodeFontFaceDefault("SansSerif,bold,18", style.name = style_name)
 }
 
-map_shared_node_style = function(style_name, network_suid) {
+map_shared_node_style = function(style_name, network_suid, nodes) {
     setNodeLabelMapping("id", style.name = style_name, network = network_suid)
     setNodeColorMapping(
-        table.column = "role",
-        table.column.values = c("TF", "Gene"),
-        colors = c("#E69F00", "#56B4E9"),
+        table.column = "node_fill_group",
+        table.column.values = c("TF_nonrisk", "TF_risk", "Gene_nonrisk", "Gene_risk"),
+        colors = c("#E69F00", "#A35F00", "#56B4E9", "#2077A1"),
         mapping.type = "d",
+        style.name = style_name,
+        network = network_suid
+    )
+    setNodeShapeMapping(
+        table.column = "risk_trait",
+        table.column.values = c("none", "MDD", "substance", "MDD + substance"),
+        shapes = c("ELLIPSE", "TRIANGLE", "DIAMOND", "HEXAGON"),
+        style.name = style_name,
+        network = network_suid
+    )
+    setNodeSizeMapping(
+        table.column = "node_size",
+        table.column.values = range(nodes$node_size, na.rm = TRUE),
+        sizes = range(nodes$node_size, na.rm = TRUE),
+        mapping.type = "c",
+        default.size = 48,
         style.name = style_name,
         network = network_suid
     )
@@ -204,7 +316,7 @@ create_and_export_network = function(
     )
 
     reset_style(style_name)
-    map_shared_node_style(style_name, network_suid)
+    map_shared_node_style(style_name, network_suid, nodes)
     do.call(
         edge_color_mapper,
         c(
@@ -234,7 +346,9 @@ create_and_export_network = function(
 overview_edges = build_edges(tf_targets)
 overview_nodes = build_nodes(tf_targets)
 hb_targets = tf_targets |>
-    filter(str_detect(cell_type, "Hb"))
+    filter(str_detect(cell_type, "Hb")) |>
+    arrange(adj) |>
+    slice_head(n = 200)
 hb_edges = build_edges(hb_targets)
 hb_nodes = build_nodes(hb_targets)
 coef_range = range(overview_edges$coef, na.rm = TRUE)
