@@ -125,7 +125,7 @@ for (in_file in in_files) {
     dar_df_list[[in_file]] = read_parquet_duckdb(
             in_file, prudence = "lavish"
         ) |>
-        select(peak, cell_type, resolution, avg_log2FC, p_val_adj) |>
+        select(peak, cell_type, resolution, avg_log2FC, p_val, p_val_adj) |>
         filter(p_val_adj < p_adj_cutoff, abs(avg_log2FC) > log_fc_cutoff)
 }
 dar_df = bind_rows(dar_df_list) |>

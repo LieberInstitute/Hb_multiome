@@ -1,10 +1,10 @@
 **** Job starts ****
-Mon Apr 27 10:54:55 AM EDT 2026
+Tue Sep  1 12:34:42 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 31231000
+Job id: 35456001
 Job name: 04_gene_level_results
-Node name: compute-169
+Node name: compute-178
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -147,9 +147,9 @@ See help("Deprecated")
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-04-27
+ date     2026-09-01
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.9.37 @ /users/neagles/.positron-server/bin/5dfc92424b4381ca7139f3f0a122a65abc2a9383/quarto/bin/quarto
+ quarto   1.10.18 @ /users/neagles/.positron-server/bin/747dd536c5913adad71a568a57679bb2c5e5cd71/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package              * version   date (UTC) lib source
@@ -233,4 +233,4 @@ See help("Deprecated")
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Mon Apr 27 10:55:31 AM EDT 2026
+Tue Sep  1 12:35:30 PM EDT 2026
