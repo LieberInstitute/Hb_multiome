@@ -41,6 +41,7 @@ dar_df = read_csv(dar_in_path, show_col_types = FALSE) |>
     summarize(
         cell_type = paste(cell_type, collapse = ","),
         avg_log2FC = sign(avg_log2FC[1]) * max(abs(avg_log2FC)),
+        p_val = min(p_val),
         p_adj = min(p_adj)
     ) |>
     ungroup()
@@ -56,7 +57,7 @@ dar_df = dar_df |>
         )
     ) |>
     arrange(cell_type, DA_direction, p_adj, avg_log2FC) |>
-    select(peak, cell_type, DA_direction, avg_log2FC, p_adj)
+    select(peak, cell_type, DA_direction, avg_log2FC, p_val, p_adj)
 
 write_csv(dar_df, file.path(out_dir, "DARs.csv.gz"))
 

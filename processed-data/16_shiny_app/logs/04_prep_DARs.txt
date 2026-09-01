@@ -1,10 +1,10 @@
 **** Job starts ****
-Fri Jul 31 04:13:33 PM EDT 2026
+Tue Sep  1 04:01:29 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 34601767
+Job id: 35457886
 Job name: 04_prep_DARs
-Node name: compute-168
+Node name: compute-177
 Task id: 
 Unloading conda_R/4.5
 Loading conda_R/4.5
@@ -50,9 +50,9 @@ Converting layer counts in assay ATAC to empty dgCMatrix
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-07-31
+ date     2026-09-01
  pandoc   3.7.0.1 @ /jhpce/shared/community/core/conda_R/4.5/bin/pandoc
- quarto   1.9.38 @ /users/neagles/.positron-server/bin/d3cdd608df5afa3378c24c9a9c81b01fe1433a87/quarto/bin/quarto
+ quarto   1.10.18 @ /users/neagles/.positron-server/bin/747dd536c5913adad71a568a57679bb2c5e5cd71/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package          * version date (UTC) lib source
@@ -197,4 +197,4 @@ Converting layer counts in assay ATAC to empty dgCMatrix
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Fri Jul 31 04:14:22 PM EDT 2026
+Tue Sep  1 04:02:05 PM EDT 2026
