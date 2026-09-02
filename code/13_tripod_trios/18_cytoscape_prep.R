@@ -229,7 +229,7 @@ map_shared_node_style = function(style_name, network_suid, nodes) {
     setNodeColorMapping(
         table.column = "role",
         table.column.values = c("TF", "Gene"),
-        colors = c("#E69F00", "#56B4E9"),
+        colors = c("#05b929", "#16d3fe"),
         mapping.type = "d",
         style.name = style_name,
         network = network_suid
