@@ -175,11 +175,6 @@ build_nodes = function(tf_targets) {
                 \(x) replace_na(x, FALSE)
             ),
             risk_trait = replace_na(risk_trait, "none"),
-            node_fill_group = paste(
-                role,
-                if_else(is_risk_gene, "risk", "nonrisk"),
-                sep = "_"
-            ),
             node_size = make_node_sizes(mean_expr)
         ) |>
         as.data.frame()
@@ -203,11 +198,12 @@ make_style_name = function(title) {
     paste0("style__", gsub("[^A-Za-z0-9]+", "_", title))
 }
 
-make_pdf_path = function(title) {
-    file.path(
-        pdf_dir,
-        paste0(gsub("[^A-Za-z0-9]+", "_", title), ".pdf")
-    )
+make_pdf_path = function(title, filename_stem = NULL) {
+    if (is.null(filename_stem)) {
+        filename_stem = gsub("[^A-Za-z0-9]+", "_", title)
+    }
+
+    file.path(pdf_dir, paste0(filename_stem, ".pdf"))
 }
 
 reset_style = function(style_name) {
@@ -231,9 +227,9 @@ reset_style = function(style_name) {
 map_shared_node_style = function(style_name, network_suid, nodes) {
     setNodeLabelMapping("id", style.name = style_name, network = network_suid)
     setNodeColorMapping(
-        table.column = "node_fill_group",
-        table.column.values = c("TF_nonrisk", "TF_risk", "Gene_nonrisk", "Gene_risk"),
-        colors = c("#E69F00", "#A35F00", "#56B4E9", "#2077A1"),
+        table.column = "role",
+        table.column.values = c("TF", "Gene"),
+        colors = c("#E69F00", "#56B4E9"),
         mapping.type = "d",
         style.name = style_name,
         network = network_suid
@@ -303,10 +299,11 @@ create_and_export_network = function(
     edge_color_mapper,
     edge_color_args,
     coef_range,
-    collection = "TF target networks"
+    collection = "TF target networks",
+    filename_stem = NULL
 ) {
     style_name = make_style_name(title)
-    pdf_path = make_pdf_path(title)
+    pdf_path = make_pdf_path(title, filename_stem)
 
     network_suid = createNetworkFromDataFrames(
         nodes = nodes,
@@ -368,18 +365,165 @@ focused_hb_targets = read_parquet_duckdb(trio_path, prudence = "stingy") |>
 coef_range = range(overview_edges$coef, na.rm = TRUE)
 neg_log10_adj_range = range(overview_edges$neg_log10_adj, na.rm = TRUE)
 
-create_focused_hb_network = function(focus_gene) {
-    focus_targets = focused_hb_targets |>
-        filter(gene == focus_gene | TF == focus_gene)
+annotate_risk_edges = function(edges) {
+    edges |>
+        left_join(
+            risk_flags |>
+                select(
+                    gene,
+                    target_risk_MDD = risk_MDD,
+                    target_risk_substance = risk_substance
+                ),
+            by = "gene"
+        ) |>
+        left_join(
+            risk_flags |>
+                select(
+                    TF = gene,
+                    tf_risk_MDD = risk_MDD,
+                    tf_risk_substance = risk_substance
+                ),
+            by = "TF"
+        ) |>
+        mutate(
+            across(
+                c(
+                    target_risk_MDD,
+                    target_risk_substance,
+                    tf_risk_MDD,
+                    tf_risk_substance
+                ),
+                \(x) replace_na(x, FALSE)
+            )
+        )
+}
+
+get_same_trait_edges = function(edges, trait) {
+    risk_edges = annotate_risk_edges(edges)
+
+    if (trait == "MDD") {
+        risk_edges |>
+            filter(target_risk_MDD, tf_risk_MDD)
+    } else if (trait == "substance") {
+        risk_edges |>
+            filter(target_risk_substance, tf_risk_substance)
+    } else {
+        stop("trait must be 'MDD' or 'substance'")
+    }
+}
+
+summarize_focused_candidates = function(edges, trait, focus_type) {
+    seed_edges = get_same_trait_edges(edges, trait)
+
+    if (focus_type == "Gene") {
+        seed_summary = seed_edges |>
+            group_by(focus_id = gene) |>
+            summarise(
+                n_same_trait_risk_edges = n(),
+                n_same_trait_risk_partners = n_distinct(TF),
+                best_same_trait_adj = min(adj),
+                max_same_trait_coef = max(coef),
+                .groups = "drop"
+            )
+
+        candidate_summary = edges |>
+            filter(gene %in% seed_summary$focus_id) |>
+            group_by(focus_id = gene) |>
+            summarise(
+                n_hb_subtypes_connected = n_distinct(cell_type),
+                n_all_hb_edges = n(),
+                n_all_hb_partners = n_distinct(TF),
+                best_all_hb_adj = min(adj),
+                max_all_hb_coef = max(coef),
+                .groups = "drop"
+            )
+    } else if (focus_type == "TF") {
+        seed_summary = seed_edges |>
+            group_by(focus_id = TF) |>
+            summarise(
+                n_same_trait_risk_edges = n(),
+                n_same_trait_risk_partners = n_distinct(gene),
+                best_same_trait_adj = min(adj),
+                max_same_trait_coef = max(coef),
+                .groups = "drop"
+            )
+
+        candidate_summary = edges |>
+            filter(TF %in% seed_summary$focus_id) |>
+            group_by(focus_id = TF) |>
+            summarise(
+                n_hb_subtypes_connected = n_distinct(cell_type),
+                n_all_hb_edges = n(),
+                n_all_hb_partners = n_distinct(gene),
+                best_all_hb_adj = min(adj),
+                max_all_hb_coef = max(coef),
+                .groups = "drop"
+            )
+    } else {
+        stop("focus_type must be 'Gene' or 'TF'")
+    }
+
+    candidate_summary |>
+        left_join(seed_summary, by = "focus_id") |>
+        mutate(trait = trait, focus_type = focus_type) |>
+        arrange(
+            desc(n_hb_subtypes_connected),
+            desc(n_same_trait_risk_edges),
+            best_same_trait_adj
+        ) |>
+        mutate(rank = row_number(), .before = focus_id)
+}
+
+focused_candidate_ranks = crossing(
+    trait = c("MDD", "substance"),
+    focus_type = c("Gene", "TF")
+) |>
+    pmap_dfr(\(trait, focus_type) {
+        summarize_focused_candidates(focused_hb_targets, trait, focus_type) |>
+            slice_head(n = 3)
+    })
+
+if (nrow(focused_candidate_ranks) < 12) {
+    message(sprintf(
+        "Selected %d focused networks; fewer than 12 candidates met the same-trait risk criterion",
+        nrow(focused_candidate_ranks)
+    ))
+}
+
+if (!"CACNA2D1" %in% focused_candidate_ranks$focus_id) {
+    focused_candidate_ranks = bind_rows(
+        focused_candidate_ranks,
+        summarize_focused_candidates(focused_hb_targets, "MDD", "Gene") |>
+            filter(focus_id == "CACNA2D1") |>
+            mutate(rank = NA_integer_)
+    )
+}
+
+create_focused_hb_network = function(focus_id, focus_type, trait, rank) {
+    focus_targets = if (focus_type == "Gene") {
+        focused_hb_targets |>
+            filter(gene == focus_id)
+    } else if (focus_type == "TF") {
+        focused_hb_targets |>
+            filter(TF == focus_id)
+    } else {
+        stop("focus_type must be 'Gene' or 'TF'")
+    }
 
     if (nrow(focus_targets) == 0) {
         message(sprintf(
             "No focused Hb level-2 interactions found for %s; skipping network",
-            focus_gene
+            focus_id
         ))
         return(tibble(
             network_suid = NA_integer_,
-            title = sprintf("TF target network - Hb focused - %s", focus_gene),
+            title = sprintf(
+                "TF target network Hb focused %s %s %s rank%s",
+                focus_id,
+                focus_type,
+                trait,
+                rank
+            ),
             style_name = NA_character_,
             pdf_path = NA_character_
         ))
@@ -388,10 +532,23 @@ create_focused_hb_network = function(focus_gene) {
     create_and_export_network(
         nodes = build_nodes(focus_targets),
         edges = build_edges(focus_targets),
-        title = sprintf("TF target network - Hb focused - %s", focus_gene),
+        title = sprintf(
+            "TF target network Hb focused %s %s %s rank%s",
+            focus_id,
+            focus_type,
+            trait,
+            rank
+        ),
         edge_color_mapper = map_edge_color_by_cell_type,
         edge_color_args = list(edges = build_edges(focus_targets)),
-        coef_range = coef_range
+        coef_range = coef_range,
+        filename_stem = sprintf(
+            "TF_target_network_Hb_focused_%s_%s_%s_rank%s",
+            focus_id,
+            focus_type,
+            trait,
+            rank
+        )
     )
 }
 
@@ -412,8 +569,18 @@ bind_rows(
         edge_color_args = list(edges = hb_edges),
         coef_range = coef_range
     ),
-    create_focused_hb_network("CACNA2D1"),
-    create_focused_hb_network("NRXN3"),
+    focused_candidate_ranks |>
+        pmap_dfr(\(rank, focus_id, n_hb_subtypes_connected, n_all_hb_edges,
+                   n_all_hb_partners, best_all_hb_adj, max_all_hb_coef,
+                   n_same_trait_risk_edges, n_same_trait_risk_partners,
+                   best_same_trait_adj, max_same_trait_coef, trait, focus_type) {
+            create_focused_hb_network(
+                focus_id = focus_id,
+                focus_type = focus_type,
+                trait = trait,
+                rank = rank
+            )
+        }),
     tf_targets |>
         split(~ cell_type) |>
         imap(function(cell_type_targets, cell_type_name) {
