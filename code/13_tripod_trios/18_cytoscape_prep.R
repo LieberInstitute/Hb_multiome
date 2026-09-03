@@ -206,16 +206,19 @@ make_pdf_path = function(title, filename_stem = NULL) {
     file.path(pdf_dir, paste0(filename_stem, ".pdf"))
 }
 
-reset_style = function(style_name) {
+reset_style = function(style_name, defaults = list()) {
     if (style_name %in% getVisualStyleNames()) {
         deleteVisualStyle(style_name)
     }
 
     createVisualStyle(
         style.name = style_name,
-        defaults = list(
-            NODE_SIZE = 35,
-            EDGE_TARGET_ARROW_SHAPE = "DELTA"
+        defaults = c(
+            list(
+                NODE_SIZE = 35,
+                EDGE_TARGET_ARROW_SHAPE = "DELTA"
+            ),
+            defaults
         )
     )
 
@@ -252,11 +255,16 @@ map_shared_node_style = function(style_name, network_suid, nodes) {
     )
 }
 
-map_edge_width = function(style_name, network_suid, coef_range) {
+map_edge_width = function(
+    style_name,
+    network_suid,
+    coef_range,
+    widths = c(1, 8)
+) {
     setEdgeLineWidthMapping(
         table.column = "coef",
         table.column.values = coef_range,
-        widths = c(1, 8),
+        widths = widths,
         mapping.type = "c",
         style.name = style_name,
         network = network_suid
@@ -300,7 +308,9 @@ create_and_export_network = function(
     edge_color_args,
     coef_range,
     collection = "TF target networks",
-    filename_stem = NULL
+    filename_stem = NULL,
+    layout = "force-directed defaultSpringLength=50",
+    edge_widths = c(1, 8)
 ) {
     style_name = make_style_name(title)
     pdf_path = make_pdf_path(title, filename_stem)
@@ -321,9 +331,9 @@ create_and_export_network = function(
             edge_color_args
         )
     )
-    map_edge_width(style_name, network_suid, coef_range)
+    map_edge_width(style_name, network_suid, coef_range, edge_widths)
     setVisualStyle(style_name, network = network_suid)
-    layoutNetwork("force-directed defaultSpringLength=50", network = network_suid)
+    layoutNetwork(layout, network = network_suid)
     fitContent(network = network_suid)
     exportImage(
         filename = pdf_path,
@@ -552,6 +562,143 @@ create_focused_hb_network = function(focus_id, focus_type, trait, rank) {
     )
 }
 
+get_connected_component_edges = function(edges, center) {
+    if (!center %in% c(edges$gene, edges$TF)) {
+        return(edges[0, ])
+    }
+
+    reached = center
+    repeat {
+        touching_edges = edges |>
+            filter(gene %in% reached | TF %in% reached)
+        expanded = unique(c(touching_edges$gene, touching_edges$TF))
+
+        if (setequal(reached, expanded)) {
+            break
+        }
+        reached = expanded
+    }
+
+    edges |>
+        filter(gene %in% reached, TF %in% reached)
+}
+
+make_cacna2d1_risk_component = function() {
+    risk_node_ids = risk_flags |>
+        filter(is_risk_gene) |>
+        pull(gene) |>
+        unique()
+
+    astro_hb_level2 = read_parquet_duckdb(trio_path, prudence = "stingy") |>
+        filter(stringency_level == 2) |>
+        select(gene, TF, cell_type, coef, adj) |>
+        collect() |>
+        mutate(
+            coef_raw = coef,
+            neg_log10_adj = -log10(adj),
+            source_cell_type = cell_type,
+            cell_type = dplyr::coalesce(
+                unname(rename_map[cell_type]),
+                cell_type
+            )
+        ) |>
+        filter(cell_type == "Astrocyte" | str_detect(cell_type, "Hb"))
+
+    risk_edges = astro_hb_level2 |>
+        group_by(cell_type) |>
+        filter(coef_raw >= quantile(coef_raw, 0.5, na.rm = TRUE)) |>
+        ungroup() |>
+        filter(gene %in% risk_node_ids, TF %in% risk_node_ids) |>
+        group_by(TF) |>
+        arrange(desc(coef_raw), adj, .by_group = TRUE) |>
+        slice_head(n = 3) |>
+        ungroup()
+
+    component_edges = get_connected_component_edges(risk_edges, "CACNA2D1")
+
+    component_edges |>
+        mutate(coef = log(coef_raw) - min(log(coef_raw))) |>
+        select(gene, TF, cell_type, coef, adj, neg_log10_adj, source_cell_type)
+}
+
+map_cacna2d1_component_style = function(style_name, network_suid, nodes) {
+    map_shared_node_style(style_name, network_suid, nodes)
+    setNodeFontSizeDefault(18, style.name = style_name)
+    setNodeFontFaceDefault("SansSerif,bold,18", style.name = style_name)
+    setNodeBorderColorDefault("#2b2b2b", style.name = style_name)
+    setNodeBorderWidthDefault(2, style.name = style_name)
+    setEdgeFontSizeDefault(10, style.name = style_name)
+}
+
+create_cacna2d1_risk_component_network = function() {
+    component_targets = make_cacna2d1_risk_component()
+    component_edges = build_edges(component_targets)
+    component_nodes = build_nodes(component_targets) |>
+        mutate(
+            node_size = scales::rescale(
+                node_size,
+                to = c(28, 46),
+                from = range(node_size, na.rm = TRUE)
+            ) |>
+                replace_na(36)
+        )
+
+    title = "TF target network CACNA2D1 risk component Astrocyte Hb top50coefByCellType TFtop3"
+    style_name = make_style_name(title)
+    pdf_path = make_pdf_path(
+        title,
+        "TF_target_network_CACNA2D1_risk_component_Astrocyte_Hb_top50coefByCellType_TFtop3"
+    )
+
+    network_suid = createNetworkFromDataFrames(
+        nodes = component_nodes,
+        edges = component_edges,
+        title = title,
+        collection = "TF target networks"
+    )
+
+    reset_style(
+        style_name,
+        defaults = list(
+            NODE_SIZE = 36,
+            NODE_LABEL_COLOR = "#111111",
+            NODE_LABEL_TRANSPARENCY = 255,
+            NODE_LABEL_BACKGROUND_COLOR = "#FFFFFF",
+            NODE_LABEL_BACKGROUND_TRANSPARENCY = 210,
+            EDGE_TARGET_ARROW_SHAPE = "DELTA",
+            EDGE_TRANSPARENCY = 170,
+            NETWORK_BACKGROUND_PAINT = "#FFFFFF"
+        )
+    )
+    map_cacna2d1_component_style(style_name, network_suid, component_nodes)
+    map_edge_color_by_cell_type(style_name, network_suid, component_edges)
+    map_edge_width(
+        style_name,
+        network_suid,
+        range(component_edges$coef, na.rm = TRUE),
+        widths = c(0.6, 3.0)
+    )
+    setVisualStyle(style_name, network = network_suid)
+    layoutNetwork(
+        "force-directed defaultSpringLength=25 defaultSpringCoefficient=1.0 defaultNodeMass=4",
+        network = network_suid
+    )
+    fitContent(network = network_suid)
+    exportImage(
+        filename = pdf_path,
+        type = "PDF",
+        network = network_suid,
+        overwriteFile = TRUE
+    )
+
+    tibble(
+        network_suid = network_suid,
+        title = title,
+        style_name = style_name,
+        pdf_path = pdf_path
+    )
+}
+
 bind_rows(
     create_and_export_network(
         nodes = overview_nodes,
@@ -581,6 +728,7 @@ bind_rows(
                 rank = rank
             )
         }),
+    create_cacna2d1_risk_component_network(),
     tf_targets |>
         split(~ cell_type) |>
         imap(function(cell_type_targets, cell_type_name) {
