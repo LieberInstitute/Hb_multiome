@@ -623,11 +623,11 @@ make_cacna2d1_risk_component = function() {
 
 map_cacna2d1_component_style = function(style_name, network_suid, nodes) {
     map_shared_node_style(style_name, network_suid, nodes)
-    setNodeFontSizeDefault(18, style.name = style_name)
-    setNodeFontFaceDefault("SansSerif,bold,18", style.name = style_name)
+    setNodeFontSizeDefault(250, style.name = style_name)
+    setNodeFontFaceDefault("SansSerif,bold,250", style.name = style_name)
     setNodeBorderColorDefault("#2b2b2b", style.name = style_name)
-    setNodeBorderWidthDefault(2, style.name = style_name)
-    setEdgeFontSizeDefault(10, style.name = style_name)
+    setNodeBorderWidthDefault(1.5, style.name = style_name)
+    setEdgeFontSizeDefault(300, style.name = style_name)
 }
 
 create_cacna2d1_risk_component_network = function() {
@@ -637,10 +637,10 @@ create_cacna2d1_risk_component_network = function() {
         mutate(
             node_size = scales::rescale(
                 node_size,
-                to = c(28, 46),
+                to = c(400, 600),
                 from = range(node_size, na.rm = TRUE)
             ) |>
-                replace_na(36)
+                replace_na(500)
         )
 
     title = "TF target network CACNA2D1 risk component Astrocyte Hb top50coefByCellType TFtop3"
@@ -660,13 +660,14 @@ create_cacna2d1_risk_component_network = function() {
     reset_style(
         style_name,
         defaults = list(
-            NODE_SIZE = 36,
+            NODE_SIZE = 500,
             NODE_LABEL_COLOR = "#111111",
             NODE_LABEL_TRANSPARENCY = 255,
             NODE_LABEL_BACKGROUND_COLOR = "#FFFFFF",
-            NODE_LABEL_BACKGROUND_TRANSPARENCY = 210,
+            NODE_LABEL_BACKGROUND_TRANSPARENCY = 230,
+            NODE_LABEL_POSITION = "C,C,c,0.00,0.00",
             EDGE_TARGET_ARROW_SHAPE = "DELTA",
-            EDGE_TRANSPARENCY = 170,
+            EDGE_TRANSPARENCY = 150,
             NETWORK_BACKGROUND_PAINT = "#FFFFFF"
         )
     )
@@ -676,13 +677,10 @@ create_cacna2d1_risk_component_network = function() {
         style_name,
         network_suid,
         range(component_edges$coef, na.rm = TRUE),
-        widths = c(0.6, 3.0)
+        widths = c(35, 70)
     )
     setVisualStyle(style_name, network = network_suid)
-    layoutNetwork(
-        "force-directed defaultSpringLength=25 defaultSpringCoefficient=1.0 defaultNodeMass=4",
-        network = network_suid
-    )
+    layoutNetwork("cose", network = network_suid)
     fitContent(network = network_suid)
     exportImage(
         filename = pdf_path,
