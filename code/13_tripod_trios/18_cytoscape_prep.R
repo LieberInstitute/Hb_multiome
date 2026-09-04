@@ -708,6 +708,61 @@ create_cacna2d1_risk_component_network = function() {
     )
 }
 
+export_cacna2d1_edge_legend = function() {
+    component_targets = make_cacna2d1_risk_component()
+    present_cell_types = unique(component_targets$cell_type)
+    ordered_cell_types = names(cell_type_colors)[
+        names(cell_type_colors) %in% present_cell_types
+    ]
+    ordered_cell_types = c(
+        ordered_cell_types,
+        setdiff(sort(present_cell_types), ordered_cell_types)
+    )
+
+    legend_df = tibble(
+        cell_type = ordered_cell_types,
+        color = unname(cell_type_colors[cell_type]),
+        y = rev(seq_along(cell_type))
+    )
+
+    pdf_path = make_pdf_path(
+        "TF target network CACNA2D1 risk component edge legend",
+        "TF_target_network_CACNA2D1_risk_component_edge_cell_type_legend"
+    )
+
+    ggplot(legend_df) +
+        geom_segment(
+            aes(x = 0, xend = 0.45, y = y, yend = y, color = cell_type),
+            arrow = grid::arrow(length = grid::unit(0.18, "inches"), type = "closed"),
+            linewidth = 2.8,
+            lineend = "round"
+        ) +
+        geom_text(
+            aes(x = 0.58, y = y, label = cell_type),
+            hjust = 0,
+            size = 5,
+            fontface = "bold"
+        ) +
+        scale_color_manual(values = stats::setNames(legend_df$color, legend_df$cell_type)) +
+        coord_cartesian(xlim = c(-0.05, 2.2), ylim = c(0.5, nrow(legend_df) + 0.5), expand = FALSE) +
+        theme_void() +
+        theme(legend.position = "none")
+
+    ggsave(
+        filename = pdf_path,
+        width = 3.6,
+        height = max(1.6, 0.38 * nrow(legend_df) + 0.3),
+        units = "in"
+    )
+
+    tibble(
+        network_suid = NA_real_,
+        title = "TF target network CACNA2D1 risk component edge legend",
+        style_name = NA_character_,
+        pdf_path = pdf_path
+    )
+}
+
 bind_rows(
     create_and_export_network(
         nodes = overview_nodes,
@@ -738,6 +793,7 @@ bind_rows(
             )
         }),
     create_cacna2d1_risk_component_network(),
+    export_cacna2d1_edge_legend(),
     tf_targets |>
         split(~ cell_type) |>
         imap(function(cell_type_targets, cell_type_name) {
