@@ -623,8 +623,8 @@ make_cacna2d1_risk_component = function() {
 
 map_cacna2d1_component_style = function(style_name, network_suid, nodes) {
     map_shared_node_style(style_name, network_suid, nodes)
-    setNodeFontSizeDefault(250, style.name = style_name)
-    setNodeFontFaceDefault("SansSerif,bold,250", style.name = style_name)
+    setNodeFontSizeDefault(200, style.name = style_name)
+    setNodeFontFaceDefault("SansSerif,bold,200", style.name = style_name)
     setNodeBorderColorDefault("#2b2b2b", style.name = style_name)
     setNodeBorderWidthDefault(1.5, style.name = style_name)
     setEdgeFontSizeDefault(300, style.name = style_name)
@@ -663,13 +663,24 @@ create_cacna2d1_risk_component_network = function() {
             NODE_SIZE = 500,
             NODE_LABEL_COLOR = "#111111",
             NODE_LABEL_TRANSPARENCY = 255,
-            NODE_LABEL_BACKGROUND_COLOR = "#FFFFFF",
-            NODE_LABEL_BACKGROUND_TRANSPARENCY = 230,
+            NODE_LABEL_WIDTH = 900,
             NODE_LABEL_POSITION = "C,C,c,0.00,0.00",
             EDGE_TARGET_ARROW_SHAPE = "DELTA",
             EDGE_TRANSPARENCY = 150,
             NETWORK_BACKGROUND_PAINT = "#FFFFFF"
         )
+    )
+    setVisualPropertyDefault(
+        list(visualProperty = "NODE_LABEL_BACKGROUND_COLOR", value = "#FFFFFF"),
+        style.name = style_name
+    )
+    setVisualPropertyDefault(
+        list(visualProperty = "NODE_LABEL_BACKGROUND_SHAPE", value = "ROUND_RECTANGLE"),
+        style.name = style_name
+    )
+    setVisualPropertyDefault(
+        list(visualProperty = "NODE_LABEL_BACKGROUND_TRANSPARENCY", value = 255),
+        style.name = style_name
     )
     map_cacna2d1_component_style(style_name, network_suid, component_nodes)
     map_edge_color_by_cell_type(style_name, network_suid, component_edges)
