@@ -12,6 +12,6 @@ p_factor,p_factor_Grotzinger,PFactor_2025.txt.gz,Grotzinger,2025,https://doi.org
 panic,panic_Forster,pgc-panic2019.*,Forster,2019,https://doi.org/10.1038/s41380-019-0590-2
 SCZ,SCZ_Trubetskoy,PGC3_SCZ_wave3.european.autosome.public.v3.*,Trubetskoy,2022,https://doi.org/10.1038/s41586-022-04434-5
 SCZ_BPD,SCZ/BPD_F2_Grotzinger,F2_SchizophreniaBipolar_2025.txt.gz,Grotzinger,2025,https://doi.org/10.1038/s41586-025-09820-3
-SUD2,SUD_Hotoum,SUDEA.txt.gz,Hotoum,2023,https://doi.org/10.1038/s44220-023-00034-y
+SUD2,SUD_Hatoum,SUDEA.txt.gz,Hatoum,2023,https://doi.org/10.1038/s44220-023-00034-y
 SUD3,SUD_F5_Grotzinger,F5_SubstanceUse_2025.txt.gz,Grotzinger,2025,https://doi.org/10.1038/s41586-025-09820-3
 SUD2020,SUD_Polimanti,opi.DEPvEXP_EUR.noAF.*,Polimanti,2020,https://doi.org/10.1038/s41380-020-0677-9
