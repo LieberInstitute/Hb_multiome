@@ -175,7 +175,13 @@ build_nodes = function(tf_targets) {
                 \(x) replace_na(x, FALSE)
             ),
             risk_trait = replace_na(risk_trait, "none"),
-            node_size = make_node_sizes(mean_expr)
+            node_size = make_node_sizes(mean_expr),
+            node_label_size = scales::rescale(
+                node_size,
+                to = c(10, 15),
+                from = range(node_size, na.rm = TRUE)
+            ) |>
+                replace_na(12)
         ) |>
         as.data.frame()
 }
@@ -250,6 +256,15 @@ map_shared_node_style = function(style_name, network_suid, nodes) {
         sizes = range(nodes$node_size, na.rm = TRUE),
         mapping.type = "c",
         default.size = 48,
+        style.name = style_name,
+        network = network_suid
+    )
+    setNodeFontSizeMapping(
+        table.column = "node_label_size",
+        table.column.values = range(nodes$node_label_size, na.rm = TRUE),
+        sizes = range(nodes$node_label_size, na.rm = TRUE),
+        mapping.type = "c",
+        default.size = 12,
         style.name = style_name,
         network = network_suid
     )
@@ -623,8 +638,8 @@ make_cacna2d1_risk_component = function() {
 
 map_cacna2d1_component_style = function(style_name, network_suid, nodes) {
     map_shared_node_style(style_name, network_suid, nodes)
-    setNodeFontSizeDefault(200, style.name = style_name)
-    setNodeFontFaceDefault("SansSerif,bold,200", style.name = style_name)
+    setNodeFontSizeDefault(170, style.name = style_name)
+    setNodeFontFaceDefault("SansSerif,bold,170", style.name = style_name)
     setNodeBorderColorDefault("#2b2b2b", style.name = style_name)
     setNodeBorderWidthDefault(1.5, style.name = style_name)
     setEdgeFontSizeDefault(300, style.name = style_name)
@@ -637,10 +652,16 @@ create_cacna2d1_risk_component_network = function() {
         mutate(
             node_size = scales::rescale(
                 node_size,
-                to = c(400, 600),
+                to = c(280, 620),
                 from = range(node_size, na.rm = TRUE)
             ) |>
-                replace_na(500)
+                replace_na(450),
+            node_label_size = scales::rescale(
+                node_size,
+                to = c(140, 220),
+                from = range(node_size, na.rm = TRUE)
+            ) |>
+                replace_na(170)
         )
 
     title = "TF target network CACNA2D1 risk component Astrocyte Hb top50coefByCellType TFtop3"
@@ -660,7 +681,7 @@ create_cacna2d1_risk_component_network = function() {
     reset_style(
         style_name,
         defaults = list(
-            NODE_SIZE = 500,
+            NODE_SIZE = 450,
             NODE_LABEL_COLOR = "#111111",
             NODE_LABEL_TRANSPARENCY = 255,
             NODE_LABEL_WIDTH = 900,
@@ -688,10 +709,13 @@ create_cacna2d1_risk_component_network = function() {
         style_name,
         network_suid,
         range(component_edges$coef, na.rm = TRUE),
-        widths = c(35, 70)
+        widths = c(28, 58)
     )
     setVisualStyle(style_name, network = network_suid)
-    layoutNetwork("cose", network = network_suid)
+    layoutNetwork(
+        "cose idealEdgeLength=120 repulsionStrength=18000 springStrength=1",
+        network = network_suid
+    )
     fitContent(network = network_suid)
     exportImage(
         filename = pdf_path,
@@ -706,6 +730,21 @@ create_cacna2d1_risk_component_network = function() {
         style_name = style_name,
         pdf_path = pdf_path
     )
+}
+
+make_export_record = function(title, pdf_path) {
+    tibble(
+        network_suid = NA_real_,
+        title = title,
+        style_name = NA_character_,
+        pdf_path = pdf_path
+    )
+}
+
+save_legend_pdf = function(plot, title, filename_stem, width, height) {
+    pdf_path = make_pdf_path(title, filename_stem)
+    ggsave(filename = pdf_path, plot = plot, width = width, height = height, units = "in")
+    make_export_record(title, pdf_path)
 }
 
 export_cacna2d1_edge_legend = function() {
@@ -725,12 +764,7 @@ export_cacna2d1_edge_legend = function() {
         y = rev(seq_along(cell_type))
     )
 
-    pdf_path = make_pdf_path(
-        "TF target network CACNA2D1 risk component edge legend",
-        "TF_target_network_CACNA2D1_risk_component_edge_cell_type_legend"
-    )
-
-    ggplot(legend_df) +
+    plot = ggplot(legend_df) +
         geom_segment(
             aes(x = 0, xend = 0.45, y = y, yend = y, color = cell_type),
             arrow = grid::arrow(length = grid::unit(0.18, "inches"), type = "closed"),
@@ -748,18 +782,109 @@ export_cacna2d1_edge_legend = function() {
         theme_void() +
         theme(legend.position = "none")
 
-    ggsave(
-        filename = pdf_path,
+    save_legend_pdf(
+        plot,
+        "TF target network CACNA2D1 risk component edge cell type legend",
+        "TF_target_network_CACNA2D1_risk_component_edge_cell_type_legend",
         width = 3.6,
-        height = max(1.6, 0.38 * nrow(legend_df) + 0.3),
-        units = "in"
+        height = max(1.6, 0.38 * nrow(legend_df) + 0.3)
+    )
+}
+
+export_cacna2d1_shape_legend = function() {
+    legend_df = tibble(
+        risk_trait = c("none", "MDD", "substance", "MDD + substance"),
+        label = c("No listed risk", "MDD risk", "Substance risk", "MDD + substance risk"),
+        shape = c(21, 24, 23, 22),
+        y = rev(seq_along(risk_trait))
     )
 
-    tibble(
-        network_suid = NA_real_,
-        title = "TF target network CACNA2D1 risk component edge legend",
-        style_name = NA_character_,
-        pdf_path = pdf_path
+    plot = ggplot(legend_df, aes(x = 0, y = y)) +
+        geom_point(aes(shape = risk_trait), size = 6, fill = "white", color = "black", stroke = 1.2) +
+        geom_text(aes(x = 0.22, label = label), hjust = 0, size = 5, fontface = "bold") +
+        scale_shape_manual(values = stats::setNames(legend_df$shape, legend_df$risk_trait)) +
+        coord_cartesian(xlim = c(-0.1, 1.5), ylim = c(0.5, nrow(legend_df) + 0.5), expand = FALSE) +
+        theme_void() +
+        theme(legend.position = "none")
+
+    save_legend_pdf(
+        plot,
+        "TF target network CACNA2D1 risk component node shape legend",
+        "TF_target_network_CACNA2D1_risk_component_node_shape_legend",
+        width = 3.6,
+        height = 2.0
+    )
+}
+
+export_cacna2d1_edge_size_legend = function() {
+    component_edges = make_cacna2d1_risk_component()
+    edge_values = range(component_edges$coef, na.rm = TRUE)
+    legend_df = tibble(
+        label = c("Lower coef", "Higher coef"),
+        linewidth = c(1.2, 4.0),
+        y = c(2, 1)
+    )
+
+    plot = ggplot(legend_df) +
+        geom_segment(
+            aes(x = 0, xend = 0.55, y = y, yend = y, linewidth = linewidth),
+            arrow = grid::arrow(length = grid::unit(0.18, "inches"), type = "closed"),
+            color = "grey25",
+            lineend = "round"
+        ) +
+        geom_text(
+            aes(x = 0.72, y = y, label = label),
+            hjust = 0,
+            size = 5,
+            fontface = "bold"
+        ) +
+        scale_linewidth_identity() +
+        coord_cartesian(xlim = c(-0.05, 2.0), ylim = c(0.5, 2.5), expand = FALSE) +
+        labs(subtitle = sprintf("coef range: %.2f-%.2f", edge_values[1], edge_values[2])) +
+        theme_void() +
+        theme(plot.subtitle = element_text(size = 10, hjust = 0.02))
+
+    save_legend_pdf(
+        plot,
+        "TF target network CACNA2D1 risk component edge width legend",
+        "TF_target_network_CACNA2D1_risk_component_edge_width_legend",
+        width = 3.6,
+        height = 1.35
+    )
+}
+
+export_cacna2d1_node_size_legend = function() {
+    component_nodes = build_nodes(make_cacna2d1_risk_component()) |>
+        mutate(
+            node_size = scales::rescale(
+                node_size,
+                to = c(280, 620),
+                from = range(node_size, na.rm = TRUE)
+            ) |>
+                replace_na(500)
+        )
+    size_values = range(component_nodes$mean_expr, na.rm = TRUE)
+    legend_df = tibble(
+        label = c("Lower expression", "Higher expression"),
+        size = c(7, 12.5),
+        y = c(2, 1)
+    )
+
+    plot = ggplot(legend_df, aes(x = 0, y = y)) +
+        geom_point(aes(size = size), shape = 21, fill = "grey85", color = "black", stroke = 1.1) +
+        geom_text(aes(x = 0.25, label = label), hjust = 0, size = 5, fontface = "bold") +
+        scale_size_identity() +
+        coord_cartesian(xlim = c(-0.15, 2.0), ylim = c(0.5, 2.5), expand = FALSE) +
+        labs(subtitle = sprintf("mean expression range: %.2f-%.2f", size_values[1], size_values[2])) +
+        theme_void() +
+        theme(plot.subtitle = element_text(size = 10, hjust = 0.02))
+
+    save_legend_pdf(
+        plot,
+        "TF target network CACNA2D1 risk component node size legend",
+        "TF_target_network_CACNA2D1_risk_component_node_size_legend",
+        width = 3.6,
+        height = 1.35
     )
 }
 
@@ -794,6 +919,9 @@ bind_rows(
         }),
     create_cacna2d1_risk_component_network(),
     export_cacna2d1_edge_legend(),
+    export_cacna2d1_shape_legend(),
+    export_cacna2d1_edge_size_legend(),
+    export_cacna2d1_node_size_legend(),
     tf_targets |>
         split(~ cell_type) |>
         imap(function(cell_type_targets, cell_type_name) {
