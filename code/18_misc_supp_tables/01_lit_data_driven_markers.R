@@ -6,7 +6,7 @@ marker_script = here(
     "code", "04_DiffExpr_Clustering_seurat", "remote_DGE_marker_gene_lists.R"
 )
 out_path = here(
-    "code", "18_misc_supp_tables", "01_lit_data_driven_markers",
+    "processed-data", "18_misc_supp_tables", "01_lit_data_driven_markers",
     "lit_data_driven_markers.csv"
 )
 
