@@ -270,9 +270,6 @@ save_plot(plt_cluster_max_donor, "cluster_max_donor_proportion_boxplot.pdf")
 
 ########################################################################
 ## Experimental and exploratory plots
-##
-## These plots were developed to explore objective-looking metrics that might
-## support k30 r2. They should be reviewed before being treated as final outputs.
 ########################################################################
 
 silhouette_cluster_summary <- silhouette_data |>
