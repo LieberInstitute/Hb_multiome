@@ -10,6 +10,7 @@ csv_files = list.files(
     pattern = '^S([3-9]|[0-9]{2}).*_summary\\.csv$',
     full.names = TRUE
 )
+id_map_path = here('raw-data', 'sample_id_map.csv')
 out_path = here(
     'processed-data', '18_misc_supp_tables', '02_cellranger_arc_metrics',
     'cellranger_arc_metrics.csv'
@@ -43,7 +44,18 @@ wet_bench_df = tibble(
 
 dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
 
-metric_df = lapply(csv_files, read_csv) |>
-    bind_rows()
+metric_df = lapply(
+        csv_files, function(x) read_csv(x, show_col_types = FALSE)
+    ) |>
+    bind_rows() |>
+    dplyr::rename(sample_id_2 = `Sample ID`) |>
+    left_join(
+        read_csv(id_map_path, show_col_types = FALSE) |>
+            dplyr::rename(`Sample ID` = sample_id_1),
+        by = "sample_id_2"
+    ) |>
+    select(-sample_id_2) |>
+    left_join(wet_bench_df, by = 'donor') |>
+    relocate(donor, `Sample ID`)
 
 session_info()
