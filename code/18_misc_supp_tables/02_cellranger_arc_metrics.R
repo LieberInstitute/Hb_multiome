@@ -1,7 +1,13 @@
 library(here)
 library(tidyverse)
 library(sessioninfo)
+library(Seurat)
+library(Signac)
 
+seur_path = here(
+    'processed-data', '03_pseudobulking', 'cellrangerARC_reanalyze',
+    'seurat.norm_counts_ARCr_harmony_atac_rna_QCed.rds'
+)
 csv_files = list.files(
     here(
         'processed-data' , 'cellrangerARC_summary_rpts',
@@ -44,7 +50,12 @@ wet_bench_df = tibble(
 
 dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
 
-metric_df = lapply(
+seur = readRDS(seur_path)
+seur_df = seur[[]] |>
+    count(orig.ident) |>
+    dplyr::rename(`Sample ID` = orig.ident, num_cells_post_QC = n)
+
+lapply(
         csv_files, function(x) read_csv(x, show_col_types = FALSE)
     ) |>
     bind_rows() |>
@@ -56,6 +67,8 @@ metric_df = lapply(
     ) |>
     select(-sample_id_2) |>
     left_join(wet_bench_df, by = 'donor') |>
-    relocate(donor, `Sample ID`)
+    left_join(seur_df, by = 'Sample ID') |>
+    relocate(donor, num_cells_post_QC, `Sample ID`) |>
+    write_csv(out_path)
 
 session_info()
