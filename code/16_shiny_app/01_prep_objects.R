@@ -168,6 +168,25 @@ trio_df = read_parquet_duckdb(trio_path, prudence = "stingy") |>
     arrange(trio_level, mid_cluster, trio_p_adj, trio_coef) |>
     write_csv(file.path(out_dir, "trios.csv.gz"))
 
+#   Average (log-normalized) RNA expression per gene, within each cell type,
+#   for annotating the gene and TF in each trio
+rna_data_mat = seur[['RNA']]$data
+avg_rna_expr = sapply(levels(seur$mid_cluster), function(ct) {
+    cells = rownames(seur@meta.data)[seur$mid_cluster == ct]
+    if (length(cells) == 0) return(rep(NA_real_, nrow(rna_data_mat)))
+    Matrix::rowMeans(rna_data_mat[, cells, drop = FALSE])
+})
+rownames(avg_rna_expr) = rownames(rna_data_mat)
+
+get_avg_expr = function(gene, mid_cluster) {
+    row_idx = match(gene, rownames(avg_rna_expr))
+    col_idx = match(as.character(mid_cluster), colnames(avg_rna_expr))
+    ifelse(
+        is.na(row_idx) | is.na(col_idx), NA_real_,
+        avg_rna_expr[cbind(row_idx, col_idx)]
+    )
+}
+
 #   Alternative export: wide form preserving both level-1 and level-2 stats.
 #   Intersect trios have all four columns populated; non-intersect trios have
 #   NAs in stats for one of the trio levels. This version is for a supplemental
@@ -189,6 +208,10 @@ read_parquet_duckdb(trio_path, prudence = "stingy") |>
         names_from = trio_level,
         values_from = c(trio_coef, trio_p_adj),
         names_glue = "{.value}_lvl{trio_level}"
+    ) |>
+    mutate(
+        gene_avg_expr = get_avg_expr(gene, mid_cluster),
+        TF_avg_expr = get_avg_expr(TF, mid_cluster)
     ) |>
     arrange(mid_cluster, trio_p_adj_lvl1, trio_coef_lvl1) |>
     select(-c(is_intersect, is_unique_intersect, is_top_TF)) |>
