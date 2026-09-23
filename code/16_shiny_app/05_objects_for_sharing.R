@@ -35,9 +35,6 @@ dir.create(out_dir, showWarnings = FALSE)
 
 seur = qs_read(cell_in_path)
 
-message("Original Seurat object size: ")
-print(obj_size(seur))
-
 #   We have a huge number of ambiguously named dimensional reductions, and some
 #   are on outdated data. Keep only harmonized reductions. Among these, keep the
 #   raw reductions used for RNA and ATAC (PCA and LSI, respectively) and
