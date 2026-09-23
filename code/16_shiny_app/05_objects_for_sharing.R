@@ -20,13 +20,14 @@ peak_path = here(
     'macs3_peaks.csv.gz'
 )
 gtf_path = '/dcs04/lieber/lcolladotor/annotationFiles_LIBD001/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0/genes/genes.gtf.gz'
+out_dir = here('processed-data', '16_shiny_app', '05_objects_for_sharing')
 metadata_drop_cols = c(
     'high.tss', 'blacklist_fraction', 'blacklist_ratio', 'pct_reads_in_peaks',
     'cluster_ann', 'merged_cluster', 'mid_cluster', 'nucleosome_group'
 )
 cell_map_path = here('raw-data', 'cell_type_map.csv')
 
-metacell_seur = qs_read(metacell_in_path)
+dir.create(out_dir, showWarnings = FALSE)
 
 ################################################################################
 #   Clean up dimensional reductions
@@ -91,7 +92,14 @@ seur[['ATAC']][[]]$peak_called_in = tibble(
             select(peak_id, peak_called_in),
         by = "peak_id"
     ) |>
-    pull(peak_called_in)
+    pull(peak_called_in) |>
+    #   'peak_called_in' is a comma-separated list of old cell-type names;
+    #   map each element to its new name before rejoining
+    map_chr(
+        ~ str_split(.x, ",")[[1]] |>
+            (\(x) dplyr::coalesce(unname(rename_map[x]), x))() |>
+            paste(collapse = ",")
+    )
 
 #   There are also genes with no expression, which we don't need
 keep_genes <- rownames(seur[['RNA']])[
@@ -100,7 +108,7 @@ keep_genes <- rownames(seur[['RNA']])[
 seur[["RNA"]] <- subset(seur[["RNA"]], features = keep_genes)
 
 ################################################################################
-#   Clean up rowData() and issues with gene names
+#   Clean up (Seurat's equivalent of) rowData() and issues with gene names
 ################################################################################
 
 #   For the iSEE app, we want ENSEMBL IDs, gene symbols, and additional
@@ -132,7 +140,7 @@ gtf_ensembls_by_symbol <- gtf_symbol_ensembl |>
     summarise(gene_ids = list(gene_id), .groups = "drop") |>
     deframe()
 
-original_rownames    <- rownames(sce)
+original_rownames    <- rownames(seur[['RNA']])
 times_symbol_seen    <- integer(0)   # named counter: ENSEMBL IDs assigned per symbol so far
 resolved_symbols     <- character(length(original_rownames))
 resolved_ensembl_ids <- character(length(original_rownames))
@@ -156,7 +164,7 @@ for (row_idx in seq_along(original_rownames)) {
 }
 
 #   Join full GTF metadata by gene_id (unique), avoiding the non-unique gene_name
-rowData(sce) <- tibble(
+new_row_data <- tibble(
         gene_id = resolved_ensembl_ids, gene_name = resolved_symbols,
     ) |>
     left_join(
@@ -164,14 +172,22 @@ rowData(sce) <- tibble(
         by = "gene_id"
     ) |>
     select(where(~!all(is.na(.x)))) |>
-    DataFrame()
+    as.data.frame()
+rownames(new_row_data) <- original_rownames
 
-rownames(sce) = uniquifyFeatureNames(
-    rowData(sce)$gene_id, rowData(sce)$gene_name
-)
+new_rownames = uniquifyFeatureNames(new_row_data$gene_id, new_row_data$gene_name)
 
 #   Probably also makes sense to use this as the rownames for the Seurat object
 #   as well (and rowData)
 stopifnot(identical(original_rownames, rownames(seur[['RNA']])))
-rownames(seur[['RNA']]) = rownames(sce)
-seur[['RNA']]@meta.data = rowData(sce) |> as.data.frame()
+rownames(new_row_data) <- new_rownames
+rownames(seur[['RNA']]) = new_rownames
+seur[['RNA']]@meta.data = new_row_data
+
+saveRDS(seur, file.path(out_dir, "seur_cell_snMultiome_habenula_atlas.rds"))
+
+################################################################################
+#   asdasdads
+################################################################################
+
+metacell_seur = qs_read(metacell_in_path)
