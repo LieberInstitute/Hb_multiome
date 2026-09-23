@@ -187,7 +187,70 @@ seur[['RNA']]@meta.data = new_row_data
 saveRDS(seur, file.path(out_dir, "seur_cell_snMultiome_habenula_atlas.rds"))
 
 ################################################################################
-#   asdasdads
+#   Clean up metacell Seurat object analogously
 ################################################################################
 
 metacell_seur = qs_read(metacell_in_path)
+
+#   Global metadata has the same old-cell-type-name issue, including in the
+#   rownames themselves (of the form "<old_cell_type>_metacell_<N>")
+old_prefixes <- str_remove(rownames(metacell_seur@meta.data), "_metacell_\\d+$")
+metacell_suffixes <- str_extract(rownames(metacell_seur@meta.data), "_metacell_\\d+$")
+stopifnot(!anyNA(old_prefixes), !anyNA(metacell_suffixes))
+stopifnot(all(old_prefixes %in% names(rename_map)))
+
+#   Renaming cells (rather than assigning rownames(meta.data) directly) keeps
+#   the meta.data rownames and assay colnames in sync
+metacell_seur <- RenameCells(
+    metacell_seur,
+    new.names = paste0(unname(rename_map[old_prefixes]), metacell_suffixes)
+)
+#   mid_cluster is a factor; recoding it directly with recode-style logic
+#   would silently coerce it to character, so remap the levels instead
+levels(metacell_seur@meta.data$mid_cluster) <- dplyr::coalesce(
+    unname(rename_map[levels(metacell_seur@meta.data$mid_cluster)]),
+    levels(metacell_seur@meta.data$mid_cluster)
+)
+
+#   'orig.ident' has the same old-name issue, but is additionally coarser
+#   than the cell-level fine-grained grouping (it collapses
+#   Inhib_LHb_4.1/Inhib_LHb_4.2 into "Inhib"). The rowname-derived prefix is
+#   the correct, fine-grained source of truth
+metacell_seur@meta.data <- metacell_seur@meta.data |>
+    mutate(orig.ident = factor(unname(rename_map[old_prefixes])))
+
+#   rowData for the RNA assay is currently empty; populate it to match the
+#   cell-level object, since the metacell RNA features are a subset of the
+#   cell-level RNA features. Metacell RNA rownames still use the *original*
+#   (pre-fix) gene symbols, so match against those, then relabel with the
+#   final, uniquified gene names used in the cell-level object
+match_idx_rna <- match(rownames(metacell_seur[['RNA']]), original_rownames)
+stopifnot(!anyNA(match_idx_rna))
+
+rownames(metacell_seur[['RNA']]) <- new_rownames[match_idx_rna]
+metacell_seur[['RNA']][[]] <- new_row_data[match_idx_rna, ]
+
+#   Add 'peak_called_in' metadata column to the ATAC assay, as with the
+#   cell-level object
+metacell_seur[['ATAC']][[]]$peak_called_in <- tibble(
+        peak_id = rownames(metacell_seur[['ATAC']])
+    ) |>
+    left_join(
+        read_csv(peak_path, show_col_types = FALSE) |>
+            mutate(peak_id = sprintf("%s-%d-%d", seqnames, start, end)) |>
+            select(peak_id, peak_called_in),
+        by = "peak_id"
+    ) |>
+    pull(peak_called_in) |>
+    map_chr(
+        ~ str_split(.x, ",")[[1]] |>
+            (\(x) dplyr::coalesce(unname(rename_map[x]), x))() |>
+            paste(collapse = ",")
+    )
+
+saveRDS(
+    metacell_seur,
+    file.path(out_dir, "seur_metacell_snMultiome_habenula_atlas.rds")
+)
+
+session_info()
