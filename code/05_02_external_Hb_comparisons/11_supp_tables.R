@@ -8,7 +8,9 @@ library(here)
 here::here()
 
 
-
+#Path for new data generated
+new_data_path = here('processed-data', '05_02_external_Hb_comparisons','11_supp_tables')
+if (!dir.exists(new_data_path)) dir.create(new_data_path)
 
 
 #Path to the Yalcinbas pilot data
@@ -23,11 +25,6 @@ wallace_03_data_path = here('processed-data', '05_02_external_Hb_comparisons', '
 
 hashikawa_path = '/dcs04/lieber/lcolladotor/pilotHb_LIBD001/Roche_Habenula/processed-data/09_cross_species_analysis/Hashikawa_data'
 hashikawa_data_path = here('processed-data','05_02_external_Hb_comparisons','04_wallace_hashikawa_mouse')
-
-#Path for new data generated
-new_data_path = here('processed-data', '05_02_external_Hb_comparisons','11_supp_tables')
-if (!dir.exists(new_data_path)) dir.create(new_data_path)
-
 
 
 #This is the same multiome SCE as before, but with the refined annotations added in
@@ -201,6 +198,41 @@ hashikawa_meta[1:10, ]
 
 #Save the metadata df as a csv file
 write.csv(hashikawa_meta, paste0(new_data_path, '/hashikawa_mouse_annotations.csv'), row.names = TRUE)
+
+
+########################
+#
+# And now the top 50 marker gene sets
+#
+########################
+
+
+#Human markers
+deconvo_marker_path = here('processed-data','05_03_annotation_adjustments','14_deconvoBuddies_markers')
+#marker_stats_MeanRatio = readRDS(file = paste0(deconvo_marker_path, '/marker_stats_MeanRatio.rds'))
+marker_stats_1vAll = readRDS(file = paste0(deconvo_marker_path, '/marker_stats_1vAll.rds'))
+#marker_stats = readRDS(file = paste0(deconvo_marker_path, '/marker_stats_combo.rds'))
+
+top_1vsAll_marker_df = marker_stats_1vAll %>% group_by(cellType.target) %>% filter(std.logFC.rank <= 50)
+top_1vsAll_marker_df
+
+#top_1vsAll_marker_df = marker_stats_MeanRatio %>% group_by(cellType.target) %>% filter(MeanRatio.rank <= 50)
+
+#top_1vsAll_marker_df = marker_stats %>% group_by(cellType.target) %>% filter(MeanRatio.rank <= 50)
+
+
+dup_genes = top_1vsAll_marker_df$gene[which(duplicated(top_1vsAll_marker_df$gene))]
+#For each duplicate, assign it to the cell-type with the better (minimum) rank
+keep_dups = top_1vsAll_marker_df %>% filter(gene %in% dup_genes) %>% group_by(gene) %>% filter(std.logFC.rank == min(std.logFC.rank))
+top_1vsAll_marker_df = top_1vsAll_marker_df %>% filter(!gene %in% dup_genes)
+top_1vsAll_marker_df = rbind(top_1vsAll_marker_df, keep_dups)
+top_1vsAll_marker_df = top_1vsAll_marker_df %>% arrange(cellType.target)
+
+top_1vsAll_marker_df %>% group_by(cellType.target) %>% summarise(n = n())
+
+write.csv(top_1vsAll_marker_df, paste0(new_data_path, '/top_50_marker_genes.csv'), row.names = FALSE)
+
+
 
 
 
