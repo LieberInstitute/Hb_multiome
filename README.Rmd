@@ -1,0 +1,55 @@
+# Hb_multiome
+
+
+
+Welcome to the Hb_multiome project! Here you will find all code used to analyze the data generated as part of the manuscript [Manuscript name].  
+
+There are 2 GitHub repos associated with this study.
+They are: 
+1. [Hb_Multiome](https://github.com/LieberInstitute/Hb_multiome)
+2. [Habenula_Visium](https://github.com/LieberInstitute/Habenula_Visium)
+
+
+## Study Design  
+
+[Study Design here]
+[often graphical abstract]
+
+## Citing our work
+
+Please cite this [(manuscript](link) if you use
+data from this project.
+
+Below is the citation in [`BibTeX`](http://www.bibtex.org/) format.
+
+
+## Interactive Websites
+
+All of these interactive websites are powered by open source software,
+namely:  
+
+- 🔍 [`samui`](http://dx.doi.org/10.1017/S2633903X2300017X)  
+- 👀 [`iSEE`](https://doi.org/10.12688%2Ff1000research.14966.1)  
+
+We provide the following interactive websites, organized by dataset with
+software labeled by emojis:  
+
+- Pseudobulk
+  - 👀 [if needed](link)
+- Shiny App
+  - 🔍 [Visium shiny app](link)
+- Samui
+  - 🔍 [Samui Visium:](link)
+
+
+
+## Data Access
+Zenodo Archive for this project can be found at [doi](link). Project data was also uploaded to the NeMO and can be found at [accession](link).
+
+## Contact
+
+We value public questions, as they allow other users to learn from the
+answers. If you have any questions, please ask them at
+[LieberInstitute/Hb_multiome/issues](https://github.com/LieberInstitute/Hb_multiome/issues)
+and refrain from emailing us. Thank you again for your interest in our
+work!
