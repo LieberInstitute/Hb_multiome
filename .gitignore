@@ -16,14 +16,6 @@ plots/02_merge_seurats/trainning_samples_S4S5S6/
 processed-data/05_Clustering_ARCr/02_Hb_celltypes_from_seurat_reanalyze_v3/old_leiden_r1_Feb11/
 processed-data/05_Clustering_ARCr/02_Hb_celltypes_from_seurat_reanalyze_v3/old_leiden_r2_Feb28/
 
-# scattterd plots using links filtered by CC and logFC - we decided to continue the analysis with all links found (not filtered)
-plots/06_peak_calling/14_exploratory_pb_peak_scores_MACS2/old_links_ct_filted_CC02_FDR02/
-# Exploratory Heatmaps & Peak Score Folders Stored Locally Only - Before Pseudobulk Assasys
-plots/06_peak_calling/07_exploratory_heatmaps/
-plots/06_peak_calling/08_exploratory_peak_scores_MACS2/
-plots/06_peak_calling/10_compare_link_peak_gene_distributions_MACS2/
-
-
 # cellranger arc files 
 #code/cellranger/logs/
 code/cellranger/__*.mro
