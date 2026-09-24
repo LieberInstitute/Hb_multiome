@@ -43,7 +43,4 @@ processed-data/**/*.rds
 processed-data/**/*.RDS
 processed-data/08_spatial_registration_vs_multiome_snRNA-seq/
 
-# better to check file size before adding the sub-dir living here:
-processed-data/06_peak_calling/
-
 .Rproj.user
