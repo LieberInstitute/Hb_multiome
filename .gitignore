@@ -2,7 +2,6 @@
 **/logs/
 **/tmp/
 **/old_scripts/
-**/old/
 **/recycler/
 **/*.log
 **/*.rds
