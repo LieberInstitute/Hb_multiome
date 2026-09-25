@@ -160,6 +160,8 @@ spatialLIBD::vis_clus(
 
 <img src="img/fetch_hd-1.png" alt="" width="100%" />
 
+<a href="https://interactive.libd.org/Habenula_Visium_HD_Shiny/"><img src="http://research.libd.org/Hb_multiome/img/fetch_hd-1.png" width="800px" align="center" /></a>
+
 ## Contact
 
 We value public questions, as they allow other users to learn from the
