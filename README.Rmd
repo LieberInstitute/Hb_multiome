@@ -84,7 +84,7 @@ We provide access to the following R objects, named by the `type` argument provi
 - **`habenula_atlas_snMultiome_seurat_metacell`**: The snMultiome metacell-level data as a `Seurat` object.
 
 For example, let's check out the Visium HD cell-level data:
-```{r 'fetch_hd', message = FALSE, fig.height = 8, fig.width = 9}
+```{r 'fetch_hd', message = FALSE, fig.height = 8, fig.width = 9, eval = FALSE}
 #   Retrieve the SpatialExperiment object
 spe <- spatialLIBD::fetch_data(type = "habenula_atlas_HD_spe_cell")
 

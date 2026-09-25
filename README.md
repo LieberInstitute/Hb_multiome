@@ -134,20 +134,6 @@ spe <- spatialLIBD::fetch_data(type = "habenula_atlas_HD_spe_cell")
 
 #   This is a SpatialExperiment object
 print(spe)
-#> class: SpatialExperiment 
-#> dim: 17708 287325 
-#> metadata(0):
-#> assays(2): counts logcounts
-#> rownames(17708): ENSG00000187634 ENSG00000188976 ... ENSG00000198695 ENSG00000198727
-#> rowData names(7): source type ... gene_type gene_search
-#> colnames(287325): 1_H1-W369TJK_D1_9090 2_H1-W369TJK_D1_9090 ... 65739_H1-6FX4YN3_D1_9902
-#>   65740_H1-6FX4YN3_D1_9902
-#> colData names(18): key sample_id ... cell_type cell_type_colors
-#> reducedDimNames(2): PCA UMAP
-#> mainExpName: NULL
-#> altExpNames(0):
-#> spatialCoords names(2) : pxl_col_in_fullres pxl_row_in_fullres
-#> imgData names(4): sample_id image_id data scaleFactor
 
 #   Plot the cell types spatially
 spatialLIBD::vis_clus(
@@ -157,8 +143,6 @@ spatialLIBD::vis_clus(
     #   Make points in legend more visible
     guides(fill = guide_legend(override.aes = list(size = 5)))
 ```
-
-<img src="img/fetch_hd-1.png" alt="" width="100%" />
 
 <a href="https://interactive.libd.org/Habenula_Visium_HD_Shiny/"><img src="http://research.libd.org/Hb_multiome/img/fetch_hd-1.png" width="800px" align="center" /></a>
 
