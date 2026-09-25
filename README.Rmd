@@ -1,11 +1,13 @@
 ---
-title: habenula_atlas
+title: Habenula Atlas Project
 output:
   github_document:
     html_preview: true
   html_document:
     toc: true
     toc_flot: true
+    includes:
+      in_header: header.html
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -17,9 +19,12 @@ knitr::opts_chunk$set(
     fig.path = "img/",
     out.width = "100%"
 )
+
+library(spatialLIBD)
+library(ggplot2)
 ```
 
-Welcome to the Habenula Atlas project! Here you will find all code used to analyze the data generated as part of the manuscript [Manuscript name].
+Welcome to the Habenula Atlas project! Here you will find all code used to analyze the data generated as part of our manuscript (TODO).
 
 In this project we studied spatially resolved transcriptomics and single-nucleus multiomic (ATAC + RNA) data from the habenula of postmortem human brain samples from a total of 13 neurotypical controls. We generated data from multiple assays:
 
@@ -40,11 +45,11 @@ There are 2 GitHub repos associated with this study. They are:
 
 **Multi-omic mapping of the human Hb**. (**A**) A schematic showing the cutting scheme to allow for smFISH/RNAscope, VisiumHD, and snMultiome. The Hb was scored out to minimize thalamic contamination (N=12). (**B**) snMultiome schematic showing that the assay allows for profiling of both the transcriptome and epigenome from the same nuclei (n=10). (**C**) VisiumHD schematic showcasing the subcellular resolution that can be achieved using this spatial transcriptomic technique (n=5). (**D**) A visual representation of the biological questions this study sought to answer. (**D.a.**) Cross talk between the medial and lateral portions of the Hb. (**D.b.**) Transcription factors and which genes are impacted (**D.c.**) Which cell types are at highest risk in disease states. (**D.d.**) Locating inhibitory neurons within the Hb, particularly in the LHb. (**D.e.**) Cell-to-cell communication within the Hb. (**D.f.**) Cell type distribution in the Hb. (**D.g.**) Neuron-glia interactions in the Hb. (**E**) Brain slab illustration that depicts the landmark structures used during dissection (C - caudate, SP - segmented putamen, LGN - lateral geniculate nucleus, SN - substantial nigra, Th - thalamus) and the location of the LHb and MHb and an approximation of the brain blocks that were dissected out. Medial (M), dorsal (D), and anterior (A) directions are shown by the respective arrows. (**F**) A brain block that contained Hb, confirmed by RNAscope. (**F.a.**) Brain block with the Hb demarcated in a red dashed line. (**F.b-e.**) Single channel images of the probe panel used to locate the Hb, TAC3, GPR151, POU4F1, and MBP were used together to identify, generally the Hb (POU4F1) , the MHb (TAC3), LHb (GPR151), and the surrounding white matter (MBP). In (F.e.) the boundaries of the MHb and LHb are drawn. The insets for (E.b-e.) are zoom-ins of the body of the Hb. (**G**) VisiumHD of the same donor shown in E. (**G.a.**) The small image to the left shows the whole 6x6 mm array, with the dashed line showing the section that is shown at a larger scale to the right. The right image in (G.a.) is the eosin staining that was completed during VisiumHD with boundaries of the MHb and LHb that were also in (F.e.). (**G.b-e.**) VisiumHD expression for the same marker genes that were used to confirm the presence of Hb via RNAscope in (E.b-e.). (**H**) A UMAP of the gene expression/RNA data achieved from snMultiome. (**I**) A UMAP of the ATAC data from snMultiome. (**J**) A UMAP of the integrated RNA and ATAC clusters. (**K**) Broad marker genes for the clusters yielded, where the intensity of the color and size of the spot denote the expression of the respective gene. 
 
-## Citing our work
+## Citing Our Work
 
-Please cite this [manuscript](link) if you use data from this project.
+Please cite our manuscript (TODO) if you use data from this project.
 
-Below is the citation in [`BibTeX`](http://www.bibtex.org/) format. TODO: R chunk
+Below is the citation in [`BibTeX`](http://www.bibtex.org/) format. TODO
 
 ## Interactive Websites
 
@@ -65,9 +70,35 @@ software labeled by emojis:
 
 ## Data Access
 
-The Zenodo Archive for this project can be found at [doi](link). Project data was also uploaded to the [NeMO](https://nemoarchive.org/) and can be found [here](link).
+The Zenodo Archive for this project can be found here (TODO). Project data was also uploaded to the [NeMO](https://nemoarchive.org/) and can be found here (TODO).
 
-TODO: explanations about using `spatialLIBD::fetch_data()` and which objects we're hosting
+The major R objects for each analysis are also available through `spatialLIBD::fetch_data()`.
+We provide access to the following R objects, named by the `type` argument provided to
+`spatialLIBD::fetch_data()`:
+
+- **`habenula_atlas_HD_spe_cell`**: The Visium HD cell-level data as a `SpatialExperiment`.
+- **`habenula_atlas_HD_spe_cell_pseudobulk`**: The same data pseudobulked by cell type.
+- **`habenula_atlas_visium_spe`**: The Visium H&E spot-level data as a `SpatialExperiment`.
+- **`habenula_atlas_visium_spe_pseudobulk`**: The same data pseudobulked by `k = 9` cluster.
+- **`habenula_atlas_snMultiome_seurat_cell`**: The snMultiome cell-level data as a `Seurat` object.
+- **`habenula_atlas_snMultiome_seurat_metacell`**: The snMultiome metacell-level data as a `Seurat` object.
+
+For example, let's check out the Visium HD cell-level data:
+```{r 'fetch_hd', message = FALSE, fig.height = 8, fig.width = 9}
+#   Retrieve the SpatialExperiment object
+spe <- spatialLIBD::fetch_data(type = "habenula_atlas_HD_spe_cell")
+
+#   This is a SpatialExperiment object
+print(spe)
+
+#   Plot the cell types spatially
+spatialLIBD::vis_clus(
+        spe, sampleid = 'Br9090_1', clustervar = 'cell_type',
+        is_stitched = TRUE, spatial = FALSE
+    ) +
+    #   Make points in legend more visible
+    guides(fill = guide_legend(override.aes = list(size = 5)))
+```
 
 ## Contact
 
