@@ -63,18 +63,17 @@ namely:
 We provide the following interactive websites, organized by dataset with
 software labeled by emojis:  
 
-- 🔍 [snMultiome](https://interactive.libd.org/Habenula_multiome/)
-- 🔭 [Visium H&E](https://interactive.libd.org/Habenula_Visium/)
-- 👀 [Visium HD pseudobulked by cell type](https://interactive.libd.org/Habenula_Visium_HD_pb/)
-- 🔭 [Visium HD: cell-level](https://interactive.libd.org/Habenula_Visium_HD_Shiny/)
+- 🔍 [snMultiome](https://interactive.libd.org/Habenula_multiome/). Here you can explore the cell-level multiome data, visualize peak-gene-transcription-factor trios computed with a metacell-level object (metacells and trios computed by `TRIPOD`), and view differentially accessible regions (DARs) computed from the snATAC-seq data.
+- 🔭 [Visium H&E](https://interactive.libd.org/Habenula_Visium/). Here you can explore the spot-level Visium data, as well as view markers + enrichment statistics for data pseudobulked by preliminary `k = 9` clusters computed with `PRECAST`.
+- 👀 [Visium HD pseudobulked by cell type](https://interactive.libd.org/Habenula_Visium_HD_pb/). This app is better suited for quickly exploring how genes globally vary across cell types from the manuscript.
+- 🔭 [Visium HD: cell-level](https://interactive.libd.org/Habenula_Visium_HD_Shiny/). This app allows you to spatially explore the cell-level Visium HD data including clusters + cell types, QC variables, and more.
 
 ## Data Access
 
 The Zenodo Archive for this project can be found here (TODO). Project data was also uploaded to the [NeMO](https://nemoarchive.org/) and can be found here (TODO).
 
-The major R objects for each analysis are also available through `spatialLIBD::fetch_data()`.
-We provide access to the following R objects, named by the `type` argument provided to
-`spatialLIBD::fetch_data()`:
+The major R objects for each analysis are also available through `spatialLIBD::fetch_data()`
+as of `spatialLIBD` version `1.25.4`. We provide access to the following R objects, named by the `type` argument provided to `spatialLIBD::fetch_data()`:
 
 - **`habenula_atlas_HD_spe_cell`**: The Visium HD cell-level data as a `SpatialExperiment`.
 - **`habenula_atlas_HD_spe_cell_pseudobulk`**: The same data pseudobulked by cell type.
@@ -85,6 +84,9 @@ We provide access to the following R objects, named by the `type` argument provi
 
 For example, let's check out the Visium HD cell-level data:
 ```{r 'fetch_hd', message = FALSE, fig.height = 8, fig.width = 9, eval = FALSE}
+## Check that you have a recent version of spatialLIBD installed
+stopifnot(packageVersion("spatialLIBD") >= "1.25.4")
+
 #   Retrieve the SpatialExperiment object
 spe <- spatialLIBD::fetch_data(type = "habenula_atlas_HD_spe_cell")
 
