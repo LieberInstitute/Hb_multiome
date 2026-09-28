@@ -586,7 +586,7 @@ p_bubble_paper_markers = get_bubble_plot_sce(all_mouse_sce , custom_markers,
 p_bubble_paper_markers
 
 ggsave(p_bubble_paper_markers[[2]], filename = paste0(plot_path, '/wallace_markers_for_meta_annot_bubble.pdf'), device = 'pdf', 
-width = 8, height = 4)
+width = 10, height = 6)
 
 
 
@@ -647,7 +647,7 @@ p_bubble_paper_markers = get_bubble_plot_sce(hashikawa_sce_sub , custom_markers,
 p_bubble_paper_markers
 
 ggsave(p_bubble_paper_markers[[2]], filename = paste0(plot_path, '/hashikawa_markers_for_meta_annot_bubble.pdf'), device = 'pdf', 
-width = 8, height = 4)
+width = 10, height = 8)
 
 
 
