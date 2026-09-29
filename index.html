@@ -488,7 +488,7 @@ was also uploaded to the <a href="https://nemoarchive.org/">NeMO</a> and
 can be found here (TODO).</p>
 <p>The major R objects for each analysis are also available through
 <code>spatialLIBD::fetch_data()</code> as of <code>spatialLIBD</code>
-version <code>1.25.4</code>. We provide access to the following R
+version <code>1.25.5</code>. We provide access to the following R
 objects, named by the <code>type</code> argument provided to
 <code>spatialLIBD::fetch_data()</code>:</p>
 <ul>
@@ -507,7 +507,7 @@ The snMultiome metacell-level data as a <code>Seurat</code> object.</li>
 </ul>
 <p>For example, let’s check out the Visium HD cell-level data:</p>
 <pre class="r"><code>## Check that you have a recent version of spatialLIBD installed
-stopifnot(packageVersion(&quot;spatialLIBD&quot;) &gt;= &quot;1.25.4&quot;)
+stopifnot(packageVersion(&quot;spatialLIBD&quot;) &gt;= &quot;1.25.5&quot;)
 
 #   Retrieve the SpatialExperiment object
 spe &lt;- spatialLIBD::fetch_data(type = &quot;habenula_atlas_HD_spe_cell&quot;)
