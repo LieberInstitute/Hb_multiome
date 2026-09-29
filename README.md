@@ -124,7 +124,7 @@ uploaded to the [NeMO](https://nemoarchive.org/) and can be found here
 (TODO).
 
 The major R objects for each analysis are also available through
-`spatialLIBD::fetch_data()` as of `spatialLIBD` version `1.25.4`. We
+`spatialLIBD::fetch_data()` as of `spatialLIBD` version `1.25.5`. We
 provide access to the following R objects, named by the `type` argument
 provided to `spatialLIBD::fetch_data()`:
 
@@ -145,7 +145,7 @@ For example, let’s check out the Visium HD cell-level data:
 
 ``` r
 ## Check that you have a recent version of spatialLIBD installed
-stopifnot(packageVersion("spatialLIBD") >= "1.25.4")
+stopifnot(packageVersion("spatialLIBD") >= "1.25.5")
 
 #   Retrieve the SpatialExperiment object
 spe <- spatialLIBD::fetch_data(type = "habenula_atlas_HD_spe_cell")
