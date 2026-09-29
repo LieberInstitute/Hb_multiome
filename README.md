@@ -1,9 +1,9 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23019505.svg)](https://doi.org/10.5281/zenodo.23019505)
-
 Habenula Atlas Project
 ================
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23019505.svg)](https://doi.org/10.5281/zenodo.23019505)
 
 Welcome to the Habenula Atlas project! Here you will find all code used
 to analyze the data generated as part of our manuscript (TODO).
@@ -118,9 +118,10 @@ software labeled by emojis:
 
 ## Data Access
 
-The Zenodo Archive for this project can be found here (TODO). Project
-data was also uploaded to the [NeMO](https://nemoarchive.org/) and can
-be found here (TODO).
+The Zenodo Archive for this project can be found
+[here](https://doi.org/10.5281/zenodo.23019505). Project data was also
+uploaded to the [NeMO](https://nemoarchive.org/) and can be found here
+(TODO).
 
 The major R objects for each analysis are also available through
 `spatialLIBD::fetch_data()` as of `spatialLIBD` version `1.25.4`. We

@@ -24,6 +24,8 @@ library(spatialLIBD)
 library(ggplot2)
 ```
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23019505.svg)](https://doi.org/10.5281/zenodo.23019505)
+
 Welcome to the Habenula Atlas project! Here you will find all code used to analyze the data generated as part of our manuscript (TODO).
 
 In this project we studied spatially resolved transcriptomics and single-nucleus multiomic (ATAC + RNA) data from the habenula of postmortem human brain samples from a total of 13 neurotypical controls. We generated data from multiple assays:
@@ -70,7 +72,7 @@ software labeled by emojis:
 
 ## Data Access
 
-The Zenodo Archive for this project can be found here (TODO). Project data was also uploaded to the [NeMO](https://nemoarchive.org/) and can be found here (TODO).
+The Zenodo Archive for this project can be found [here](https://doi.org/10.5281/zenodo.23019505). Project data was also uploaded to the [NeMO](https://nemoarchive.org/) and can be found here (TODO).
 
 The major R objects for each analysis are also available through `spatialLIBD::fetch_data()`
 as of `spatialLIBD` version `1.25.4`. We provide access to the following R objects, named by the `type` argument provided to `spatialLIBD::fetch_data()`:
