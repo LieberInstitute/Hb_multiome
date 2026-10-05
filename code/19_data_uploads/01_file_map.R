@@ -4,6 +4,7 @@
 library(tidyverse)
 library(here)
 library(sessioninfo)
+library(spatialLIBD)
 
 visium_repo_dir = '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Habenula_Visium'
 multiome_map_path = here('raw-data', 'sample_id_map.csv')
@@ -103,5 +104,34 @@ hd_image_df = read_table(
         file_path = file.path(hd_image_dir, paste0(image_id, '.tif')) |>
             normalizePath(),
         open_access = TRUE
+    ) |>
+    select(donor, sample_id, library_id, file_path, open_access)
+
+################################################################################
+#   Visium H&E data
+################################################################################
+
+spe = fetch_data('habenula_atlas_visium_spe')
+
+#-------------------------------------------------------------------------------
+#   FASTQs
+#-------------------------------------------------------------------------------
+
+he_fastq = list.files(
+    hd_fastq_dir, pattern = 'fastq.gz$', full.names = TRUE, recursive = TRUE
+)
+
+he_fastq_df = tibble(file_path = he_fastq) |>
+    mutate(sample_id = basename(dirname(file_path))) |>
+    filter(sample_id %in% unique(spe$sample_id)) |>
+    left_join(
+        distinct(tibble(donor = spe$brain_id, sample_id = spe$sample_id)),
+        by = 'sample_id'
+    ) |>
+    mutate(
+        sample_id = sub('_[ABCD]1$', '', sample_id),
+        library_id = paste('lib', sample_id, sep = '_'),
+        file_path = normalizePath(file_path),
+        open_access = FALSE
     ) |>
     select(donor, sample_id, library_id, file_path, open_access)
