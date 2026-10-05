@@ -137,4 +137,63 @@ subject_df = file_map |>
         lifetime_diagnosis,
         overdose_death
     )
-    
+
+sample_df = file_map |>
+    distinct(sample_id, donor) |>
+    dplyr::rename(sample_name = sample_id, subject_name = donor) |>
+    mutate(
+        sample_source = TODO_var,
+        sample_source_id = sample_name,
+        subject_event_name = TODO_var,
+        project_short_name = TODO_var,
+        lab = 'Maynard',
+        sample_type = 'individual',
+        parent_sample_name = NA,
+        anatomical_site = 'UBERON:0001904', # habenula
+        sample_storage_length = NA,
+        sample_comments = NA
+    ) |>
+    select(
+        sample_name,
+        sample_source,
+        sample_source_id,
+        subject_name,
+        subject_event_name,
+        project_short_name,
+        lab,
+        sample_type,
+        parent_sample_name,
+        anatomical_site,
+        sample_storage_length,
+        sample_comments
+    )
+
+library_df = file_map |>
+    distinct(library_id, sample_id) |>
+    dplyr::rename(library_name = library_id, parent_name = sample_id) |>
+    mutate(
+        library_aliquot_name = TODO_var,
+        library_type = 'individual',
+        technique = TODO_var,
+        subspecimen_type = TODO_var,
+        project_short_name = TODO_var,
+        lab = 'Maynard',
+        parent_type = 'sample',
+        library_demultiplexing = NA,
+        library_batch = NA,
+        library_comments = NA
+    ) |>
+    select(
+        library_name,
+        library_aliquot_name,
+        library_type,
+        technique,
+        subspecimen_type,
+        project_short_name,
+        lab,
+        parent_name,
+        parent_type,
+        library_demultiplexing,
+        library_batch,
+        library_comments
+    )
