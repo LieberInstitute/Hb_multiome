@@ -15,6 +15,7 @@ hd_image_dir = here(visium_repo_dir, 'raw-data', 'images', 'vis-hd')
 hd_image_info_path = here(
     visium_repo_dir, 'code', '01_spaceranger', 'all_hd_samples_10_2025.txt'
 )
+he_image_dir = here(visium_repo_dir, 'raw-data', 'images')
 
 demo_path = here(
     visium_repo_dir, 'processed-data', '14_supp_tables', 'donor_demographics.csv'
@@ -133,5 +134,24 @@ he_fastq_df = tibble(file_path = he_fastq) |>
         library_id = paste('lib', sample_id, sep = '_'),
         file_path = normalizePath(file_path),
         open_access = FALSE
+    ) |>
+    select(donor, sample_id, library_id, file_path, open_access)
+
+#-------------------------------------------------------------------------------
+#   Images
+#-------------------------------------------------------------------------------
+
+he_image_df = tibble(sample_id = unique(he_fastq_df$sample_id)) |>
+    mutate(
+        file_path = normalizePath(
+            file.path(he_image_dir, paste0(sample_id, '.tif'))
+        ),
+        open_access = TRUE
+    ) |>
+    left_join(
+        he_fastq_df |>
+            select(donor, sample_id, library_id) |>
+            distinct(),
+        by = 'sample_id'
     ) |>
     select(donor, sample_id, library_id, file_path, open_access)
