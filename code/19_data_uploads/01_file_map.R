@@ -5,9 +5,14 @@ library(tidyverse)
 library(here)
 library(sessioninfo)
 
+visium_repo_dir = '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Habenula_Visium'
 multiome_map_path = here('raw-data', 'sample_id_map.csv')
 multiome_fastq_dir1 = here('raw-data', 'FASTQ_2024')
 multiome_fastq_dir2 = here('raw-data', 'FASTQ_2024_data_package2')
+hd_fastq_dir = here(visium_repo_dir, 'raw-data', 'fastqs')
+demo_path = here(
+    visium_repo_dir, 'processed-data', '14_supp_tables', 'donor_demographics.csv'
+)
 
 multiome_map_df = read_csv(multiome_map_path, show_col_types = FALSE)
 
@@ -37,8 +42,27 @@ multiome_fastq_df = tibble(file_path = multiome_fastq) |>
     left_join(multiome_map_df, by = c('sample_id' = 'sample_id_1')) |>
     mutate(
         sample_id = sub('_r$', '', sample_id),
-        file_path = normalizePath(file_path)
+        file_path = normalizePath(file_path),
+        open_access = FALSE
     ) |>
-    select(donor, sample_id, library_id, file_path)
+    select(donor, sample_id, library_id, file_path, open_access)
 
+hd_fastq = list.files(
+    hd_fastq_dir, pattern = 'fastq.gz$', full.names = TRUE, recursive = TRUE
+)
 
+hd_fastq_df = tibble(file_path = hd_fastq) |>
+    filter(
+        grepl('[AD]1_[0-9]{4}', file_path),
+        !grepl('[AD]1_(9037|8518)', file_path)
+    ) |>
+    mutate(
+        donor = sprintf(
+            'Br%s', str_extract(file_path, '[AD]1_([0-9]{4})', group = 1)
+        ),
+        sample_id = donor,
+        library_id = paste('lib', donor, sep = '_'),
+        file_path = normalizePath(file_path),
+        open_access = FALSE
+    ) |>
+    select(donor, sample_id, library_id, file_path, open_access)
