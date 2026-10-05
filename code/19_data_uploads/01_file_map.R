@@ -16,10 +16,11 @@ hd_image_info_path = here(
     visium_repo_dir, 'code', '01_spaceranger', 'all_hd_samples_10_2025.txt'
 )
 he_image_dir = here(visium_repo_dir, 'raw-data', 'images')
-
-demo_path = here(
-    visium_repo_dir, 'processed-data', '14_supp_tables', 'donor_demographics.csv'
+out_path = here(
+    'processed-data', '19_data_uploads', '01_file_map', 'map.csv'
 )
+
+dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
 
 ################################################################################
 #   Multiome data
@@ -155,3 +156,10 @@ he_image_df = tibble(sample_id = unique(he_fastq_df$sample_id)) |>
         by = 'sample_id'
     ) |>
     select(donor, sample_id, library_id, file_path, open_access)
+
+rbind(
+        multiome_fastq_df, hd_fastq_df, hd_image_df, he_fastq_df, he_image_df
+    ) |>
+    write_csv(out_path)
+
+session_info()
