@@ -26,7 +26,7 @@ library(ggplot2)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23019505.svg)](https://doi.org/10.5281/zenodo.23019505)
 
-Welcome to the Habenula Atlas project! Here you will find all code used to analyze the data generated as part of our manuscript (TODO).
+Welcome to the Habenula Atlas project! Here you will find all code used to analyze the data generated as part of our manuscript, which is currently preprinted [here](https://doi.org/10.64898/2026.09.30.755667).
 
 In this project we studied spatially resolved transcriptomics and single-nucleus multiomic (ATAC + RNA) data from the habenula of postmortem human brain samples from a total of 13 neurotypical controls. We generated data from multiple assays:
 
@@ -49,9 +49,23 @@ There are 2 GitHub repos associated with this study. They are:
 
 ## Citing Our Work
 
-Please cite our manuscript (TODO) if you use data from this project.
+Please cite our [manuscript](https://doi.org/10.64898/2026.09.30.755667) if you use data from this project.
 
-Below is the citation in [`BibTeX`](http://www.bibtex.org/) format. TODO
+Below is the citation in [`BibTeX`](http://www.bibtex.org/) format.
+
+```
+@article {Montgomery2026.09.30.755667,
+	author = {Montgomery, Kelsey D. and Werner, Jonathan M. and Eagles, Nicholas J. and Liu, Chunyu and Cardinault, Cynthia S. and Bach, Svitlana V. and Chandra, Atharv and Zhang, Ruth and Maguire, Sarah E. and Divecha, Heena R. and Deep-Soboslay, Amy and Miller, Ryan A. and Huuki-Myers, Louise A. and Bharadwaj, Rahul A. and Kleinman, Joel E. and Hyde, Thomas M. and Maher, Brion S. and Collado-Torres, Leonardo and Maynard, Kristen R.},
+	title = {Multi-omic spatial mapping of the human habenula defines the molecular and anatomical organization of medial and lateral subregions},
+	elocation-id = {2026.09.30.755667},
+	year = {2026},
+	doi = {10.64898/2026.09.30.755667},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2026/10/02/2026.09.30.755667},
+	eprint = {https://www.biorxiv.org/content/early/2026/10/02/2026.09.30.755667.full.pdf},
+	journal = {bioRxiv}
+}
+```
 
 ## Interactive Websites
 
