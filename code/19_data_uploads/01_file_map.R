@@ -10,11 +10,24 @@ multiome_map_path = here('raw-data', 'sample_id_map.csv')
 multiome_fastq_dir1 = here('raw-data', 'FASTQ_2024')
 multiome_fastq_dir2 = here('raw-data', 'FASTQ_2024_data_package2')
 hd_fastq_dir = here(visium_repo_dir, 'raw-data', 'fastqs')
+hd_image_dir = here(visium_repo_dir, 'raw-data', 'images', 'vis-hd')
+hd_image_info_path = here(
+    visium_repo_dir, 'code', '01_spaceranger', 'all_hd_samples_10_2025.txt'
+)
+
 demo_path = here(
     visium_repo_dir, 'processed-data', '14_supp_tables', 'donor_demographics.csv'
 )
 
+################################################################################
+#   Multiome data
+################################################################################
+
 multiome_map_df = read_csv(multiome_map_path, show_col_types = FALSE)
+
+#-------------------------------------------------------------------------------
+#   FASTQs
+#-------------------------------------------------------------------------------
 
 multiome_fastq = c(
     list.files(
@@ -47,6 +60,14 @@ multiome_fastq_df = tibble(file_path = multiome_fastq) |>
     ) |>
     select(donor, sample_id, library_id, file_path, open_access)
 
+################################################################################
+#   Visium HD data
+################################################################################
+
+#-------------------------------------------------------------------------------
+#   FASTQs
+#-------------------------------------------------------------------------------
+
 hd_fastq = list.files(
     hd_fastq_dir, pattern = 'fastq.gz$', full.names = TRUE, recursive = TRUE
 )
@@ -64,5 +85,23 @@ hd_fastq_df = tibble(file_path = hd_fastq) |>
         library_id = paste('lib', donor, sep = '_'),
         file_path = normalizePath(file_path),
         open_access = FALSE
+    ) |>
+    select(donor, sample_id, library_id, file_path, open_access)
+
+#-------------------------------------------------------------------------------
+#   Images
+#-------------------------------------------------------------------------------
+
+hd_image_df = read_table(
+        hd_image_info_path, show_col_types = FALSE,
+        col_names = c('sample_id', 'image_id')
+    ) |>
+    mutate(
+        donor = sprintf('Br%s', str_extract(sample_id, '[0-9]{4}$')),
+        sample_id = donor,
+        library_id = paste('lib', donor, sep = '_'),
+        file_path = file.path(hd_image_dir, paste0(image_id, '.tif')) |>
+            normalizePath(),
+        open_access = TRUE
     ) |>
     select(donor, sample_id, library_id, file_path, open_access)
