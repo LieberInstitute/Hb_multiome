@@ -134,8 +134,9 @@ software labeled by emojis:
 
 The Zenodo Archive for this project can be found
 [here](https://doi.org/10.5281/zenodo.23019505). Project data was also
-uploaded to the [NeMO](https://nemoarchive.org/) and can be found here
-(TODO).
+uploaded to the [NeMO](https://nemoarchive.org/) and can be found
+[here](https://assets.nemoarchive.org/col-av55so6) (collection
+`nemo:col-av55so6`).
 
 The major R objects for each analysis are also available through
 `spatialLIBD::fetch_data()` as of `spatialLIBD` version `1.25.5`. We
