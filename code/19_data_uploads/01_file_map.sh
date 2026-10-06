@@ -3,7 +3,7 @@
 #SBATCH --mem=10G
 #SBATCH --job-name=01_file_map
 #SBATCH -c 1
-#SBATCH -t 1-00:00:00
+#SBATCH -t 20-00:00:00
 #SBATCH -o ../../processed-data/19_data_uploads/logs/01_file_map.txt
 #SBATCH -e ../../processed-data/19_data_uploads/logs/01_file_map.txt
 

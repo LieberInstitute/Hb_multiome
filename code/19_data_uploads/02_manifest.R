@@ -210,7 +210,7 @@ library_df = file_map |>
     )
 
 file_df = file_map |>
-    select(file_path, open_access, technique) |>
+    select(file_path, open_access, technique, md5_checksum) |>
     mutate(
         program = 'SCORCH',
         file_name = basename(file_path),
@@ -236,8 +236,7 @@ file_df = file_map |>
         access = ifelse(open_access, 'open', 'restricted'),
         data_use_condition = 'DUO:0000004',
         data_use_specific_limit = NA,
-        cohort_id = TODO_var,
-        md5_checksum = tools::md5sum(file_path),
+        cohort_id = TODO_var, # Need to be given a value from NeMO people
         pipeline_name = NA,
         pipeline_rrid = NA,
         pipeline_version = NA,

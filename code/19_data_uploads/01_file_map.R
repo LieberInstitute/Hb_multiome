@@ -167,6 +167,7 @@ he_image_df = tibble(sample_id = unique(he_fastq_df$sample_id)) |>
 rbind(
         multiome_fastq_df, hd_fastq_df, hd_image_df, he_fastq_df, he_image_df
     ) |>
+    mutate(md5_checksum = tools::md5sum(file_path)) |>
     write_csv(out_path)
 
 session_info()
