@@ -26,7 +26,7 @@ subject_df = file_map |>
     distinct(donor) |>
     dplyr::rename(subject_name = donor) |>
     mutate(
-        subject_source = TODO_var,
+        subject_source = TODO_var, # Need to be given a value from NeMO people
         subject_source_id = subject_name,
         subject_source_catalog_number = NA,
         subject_type = 'individual',
@@ -34,9 +34,9 @@ subject_df = file_map |>
         strain_subspecies_name = NA,
         subject_genotype = NA,
         grant_number = 'R01DA055823',
-        grant_name = TODO_var,
-        project_short_name = TODO_var,
-        cohort_id = TODO_var,
+        grant_name = TODO_var,  # Need to be given a value from NeMO people
+        project_short_name = TODO_var,  # Need to be given a value from NeMO people
+        cohort_id = TODO_var,  # Need to be given a value from NeMO people
         metadata_access = 'open',
         controlled_access_fields = NA,
         additional_assays = NA,
@@ -46,7 +46,7 @@ subject_df = file_map |>
         time_of_death = 'not_known',
         autopsy_year = NA,
         transgender = 'no',
-        ethnicity = TODO_var,
+        ethnicity = TODO_var, # Do we have this info?
         cause_of_death = NA,
         viral_status = 'presumed_none',
         hiv_strain = NA,
@@ -61,21 +61,21 @@ subject_df = file_map |>
         months_since_last_plasma_viral_measurement = 'not_known',
         tox_history_amp = 'negative',
         tox_history_bar = 'negative',
-        tox_history_bzo = TODO_var,
+        tox_history_bzo = ifelse(donor == 'Br9017', 'positive', 'negative'),
         tox_history_bup = 'negative',
         tox_history_thc = 'negative',
         tox_history_coc = 'negative',
         tox_history_mtd = 'negative',
         tox_history_met = 'negative',
-        tox_history_opi = TODO_var,
+        tox_history_opi = ifelse(donor == 'Br9902', 'not_known', 'negative'),
         tox_history_oxy = 'negative',
         tox_history_pcp = 'negative',
         tox_history_tca = 'negative',
         tox_history_comments = NA,
         postmortem_toxicology_nms = NA,
         postmortem_toxicology_nsu = NA,
-        diagnosis_within_two_years_of_death = 'Medical record review: No Substance Use Disorders',
-        lifetime_diagnosis = 'Medical record review: No Substance Use Disorders',
+        diagnosis_within_two_years_of_death = 'Medical record review: No Substance Use Disorders', # verify this internally
+        lifetime_diagnosis = 'Medical record review: No Substance Use Disorders', # verify this internally
         overdose_death = 'no'
     ) |>
     left_join(demo_df, by = 'subject_name') |>
@@ -139,13 +139,15 @@ subject_df = file_map |>
     )
 
 sample_df = file_map |>
-    distinct(sample_id, donor) |>
-    dplyr::rename(sample_name = sample_id, subject_name = donor) |>
+    distinct(sample_id, donor, technique) |>
+    dplyr::rename(
+        sample_name = sample_id, subject_name = donor,
+        subject_event_name = technique
+    ) |>
     mutate(
-        sample_source = TODO_var,
+        sample_source = TODO_var, # Need to be given a value from NeMO people
         sample_source_id = sample_name,
-        subject_event_name = TODO_var,
-        project_short_name = TODO_var,
+        project_short_name = TODO_var, # Need to be given a value from NeMO people
         lab = 'Maynard',
         sample_type = 'individual',
         parent_sample_name = NA,
@@ -169,14 +171,13 @@ sample_df = file_map |>
     )
 
 library_df = file_map |>
-    distinct(library_id, sample_id) |>
+    distinct(library_id, sample_id, technique) |>
     dplyr::rename(library_name = library_id, parent_name = sample_id) |>
     mutate(
-        library_aliquot_name = TODO_var,
+        library_aliquot_name = TODO_var, # ask this internally
         library_type = 'individual',
-        technique = TODO_var,
-        subspecimen_type = TODO_var,
-        project_short_name = TODO_var,
+        subspecimen_type = TODO_var, # Actually TODO but I have the info 
+        project_short_name = TODO_var, # Need to be given a value from NeMO people
         lab = 'Maynard',
         parent_type = 'sample',
         library_demultiplexing = NA,
@@ -199,18 +200,17 @@ library_df = file_map |>
     )
 
 file_df = file_map |>
-    select(file_path, open_access) |>
+    select(file_path, open_access, technique) |>
     mutate(
         program = 'SCORCH',
         file_name = basename(file_path),
         summary_file = FALSE,
-        library_aliquot_name = TODO_var,
-        technique = TODO_var,
+        library_aliquot_name = TODO_var, # ask this internally
         grant_number = 'R01DA055823',
-        grant_name = TODO_var,
-        project_short_name = TODO_var,
+        grant_name = TODO_var, # Need to be given a value from NeMO people
+        project_short_name = TODO_var, # Need to be given a value from NeMO people
         lab = 'Maynard',
-        data_type = TODO_var,
+        data_type = TODO_var, # ask this internally
         file_derived_from = NA,
         species = 'NCBI:txid9606',
         file_format = str_extract(file_name, '\\.(fastq|tif)(\\.gz)?$', group = 1),
@@ -238,4 +238,33 @@ file_df = file_map |>
         sequencing_batch = NA,
         file_comments = NA
     ) |>
-    select(-c(file_path, open_access))
+    select(
+        program,
+        file_name,
+        summary_file,
+        library_aliquot_name,
+        technique,
+        grant_number,
+        grant_name,
+        project_short_name,
+        lab,
+        data_type,
+        file_derived_from,
+        species,
+        file_format,
+        data_subtype,
+        access,
+        data_use_condition,
+        data_use_specific_limit,
+        cohort_id,
+        md5_checksum,
+        pipeline_name,
+        pipeline_rrid,
+        pipeline_version,
+        pipeline_container_url,
+        data_type_specific_tool,
+        genome_build,
+        gene_set_release,
+        sequencing_batch,
+        file_comments
+    )
