@@ -215,7 +215,7 @@ flat_path = file.path(flat_dir, file_map$file_name)
 #   Symlinks are recreated from scratch on every run to reflect the latest
 #   'file_path' targets
 unlink(flat_path)
-file.symlink(file_map$file_path, flat_path)
+all(file.symlink(file_map$file_path, flat_path))
 
 file_map |>
     #   Use the (already absolute) symlink paths as-is: normalizePath() would

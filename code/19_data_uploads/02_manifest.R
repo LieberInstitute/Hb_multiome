@@ -3,18 +3,24 @@ library(here)
 library(openxlsx)
 library(sessioninfo)
 
+access_type = c('open', 'restricted')[
+    as.integer(Sys.getenv('SLURM_ARRAY_TASK_ID'))
+]
+
 file_map_path = here(
     'processed-data', '19_data_uploads', '01_file_map', 'map.csv'
 )
 out_path = here(
-    'processed-data', '19_data_uploads', '02_manifest', 'manifest.xlsx'
+    'processed-data', '19_data_uploads', '02_manifest',
+    sprintf('manifest_%s.xlsx', access_type)
 )
 demo_path = '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Habenula_Visium/processed-data/14_supp_tables/donor_demographics.csv'
 TODO_var = 'whatever'
 
 dir.create(dirname(out_path), showWarnings = FALSE)
 
-file_map = read_csv(file_map_path, show_col_types = FALSE)
+file_map = read_csv(file_map_path, show_col_types = FALSE) |>
+    filter(open_access == (access_type == 'open'))
 
 demo_df = read_csv(demo_path, show_col_types = FALSE) |>
     dplyr::rename(
@@ -85,6 +91,7 @@ subject_df = file_map |>
         overdose_death = 'no'
     ) |>
     left_join(demo_df, by = 'subject_name') |>
+    mutate(sex = ifelse(sex == 'M', 'male', 'female')) |>
     select(
         subject_name,
         subject_source,
@@ -145,15 +152,12 @@ subject_df = file_map |>
     )
 
 sample_df = file_map |>
-    mutate(technique = sub(';.*$', '', technique)) |>
-    distinct(sample_id, donor, technique) |>
-    dplyr::rename(
-        sample_name = sample_id, subject_name = donor,
-        subject_event_name = technique
-    ) |>
+    distinct(sample_id, donor) |>
+    dplyr::rename(sample_name = sample_id, subject_name = donor) |>
     mutate(
         sample_source = TODO_var, # Need to be given a value from NeMO people
         sample_source_id = sample_name,
+        subject_event_name = 'postmortem',
         project_short_name = TODO_var, # Need to be given a value from NeMO people
         lab = 'Maynard',
         sample_type = 'individual',
@@ -214,13 +218,13 @@ file_df = file_map |>
     mutate(
         program = 'SCORCH',
         file_name = basename(file_path),
-        summary_file = FALSE,
+        summary_file = 'no',
         library_aliquot_name = TODO_var, # ask this internally
         grant_number = 'R01DA055823',
         grant_name = TODO_var, # Need to be given a value from NeMO people
         project_short_name = TODO_var, # Need to be given a value from NeMO people
         lab = 'Maynard',
-        data_type = TODO_var, # ask this internally
+        data_type = 'sequence_reads', # isn't true for images!
         file_derived_from = NA,
         species = 'NCBI:txid9606',
         file_format = str_extract(file_name, '\\.(fastq|tif)(\\.gz)?$', group = 1),
@@ -277,8 +281,6 @@ file_df = file_map |>
         sequencing_batch,
         file_comments
     )
-
-dir.create(dirname(out_path), showWarnings = FALSE, recursive = TRUE)
 
 write.xlsx(
     list(
