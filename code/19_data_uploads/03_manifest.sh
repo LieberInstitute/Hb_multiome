@@ -1,11 +1,12 @@
 #!/bin/bash
 #SBATCH -p katun
 #SBATCH --mem=10G
-#SBATCH --job-name=02_manifest
+#SBATCH --job-name=03_manifest
 #SBATCH -c 1
 #SBATCH -t 1-00:00:00
-#SBATCH -o ../../processed-data/19_data_uploads/logs/02_manifest.txt
-#SBATCH -e ../../processed-data/19_data_uploads/logs/02_manifest.txt
+#SBATCH -o ../../processed-data/19_data_uploads/logs/03_manifest_%a.txt
+#SBATCH -e ../../processed-data/19_data_uploads/logs/03_manifest_%a.txt
+#SBATCH --array=1-2%2
 
 set -e
 
@@ -26,7 +27,7 @@ module load conda_R/4.6
 module list
 
 ## Edit with your job command
-Rscript 02_manifest.R
+Rscript 03_manifest.R
 
 echo "**** Job ends ****"
 date

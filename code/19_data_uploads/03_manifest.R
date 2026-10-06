@@ -11,7 +11,7 @@ file_map_path = here(
     'processed-data', '19_data_uploads', '01_file_map', 'map.csv'
 )
 out_path = here(
-    'processed-data', '19_data_uploads', '02_manifest',
+    'processed-data', '19_data_uploads', '03_manifest',
     sprintf('manifest_%s.xlsx', access_type)
 )
 demo_path = '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Habenula_Visium/processed-data/14_supp_tables/donor_demographics.csv'
