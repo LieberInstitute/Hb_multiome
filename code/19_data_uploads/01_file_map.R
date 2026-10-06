@@ -19,8 +19,10 @@ he_image_dir = here(visium_repo_dir, 'raw-data', 'images')
 out_path = here(
     'processed-data', '19_data_uploads', '01_file_map', 'map.csv'
 )
+flat_dir = here('processed-data', '19_data_uploads', '01_file_map', 'fastq_flat')
 
 dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+dir.create(flat_dir, recursive = TRUE, showWarnings = FALSE)
 
 ################################################################################
 #   Multiome data
@@ -58,6 +60,7 @@ multiome_fastq_df = tibble(file_path = multiome_fastq) |>
     left_join(multiome_map_df, by = c('sample_id' = 'sample_id_1')) |>
     mutate(
         sample_id = sub('_r$', '', sample_id),
+        file_name = basename(file_path),
         file_path = normalizePath(file_path),
         open_access = FALSE,
         technique = ifelse(
@@ -65,7 +68,10 @@ multiome_fastq_df = tibble(file_path = multiome_fastq) |>
             '10X Genomics Multiome;RNAseq', '10X Genomics Multiome;ATAC-seq'
         )
     ) |>
-    select(donor, sample_id, library_id, file_path, open_access, technique)
+    select(
+        donor, sample_id, library_id, file_path, file_name, open_access,
+        technique
+    )
 
 ################################################################################
 #   Visium HD data
@@ -90,11 +96,22 @@ hd_fastq_df = tibble(file_path = hd_fastq) |>
         ),
         sample_id = donor,
         library_id = paste('lib', donor, sep = '_'),
+        #   The symlink names (not the resolved targets) already encode a
+        #   lane-renumbering scheme that disambiguates reads coming from
+        #   multiple flow cells for the same library (e.g. lanes 1-6 from one
+        #   flow cell, lane 7 from a second flow cell reusing lane 1's file).
+        #   Resolving symlinks before building 'file_name' would collapse that
+        #   distinction and reintroduce basename collisions, so keep the
+        #   symlink's own basename and only resolve the path for reading data
+        file_name = basename(file_path),
         file_path = normalizePath(file_path),
         open_access = FALSE,
         technique = '10X Genomics Visium HD probe-based'
     ) |>
-    select(donor, sample_id, library_id, file_path, open_access, technique)
+    select(
+        donor, sample_id, library_id, file_path, file_name, open_access,
+        technique
+    )
 
 #-------------------------------------------------------------------------------
 #   Images
@@ -110,10 +127,14 @@ hd_image_df = read_table(
         library_id = paste('lib', donor, sep = '_'),
         file_path = file.path(hd_image_dir, paste0(image_id, '.tif')) |>
             normalizePath(),
+        file_name = basename(file_path),
         open_access = TRUE,
         technique = '10X Genomics Visium HD probe-based'
     ) |>
-    select(donor, sample_id, library_id, file_path, open_access, technique)
+    select(
+        donor, sample_id, library_id, file_path, file_name, open_access,
+        technique
+    )
 
 ################################################################################
 #   Visium H&E data
@@ -130,6 +151,11 @@ he_fastq = list.files(
 )
 
 he_fastq_df = tibble(file_path = he_fastq) |>
+    #   Exclude the superseded first-run FASTQs living under '1strun/': these
+    #   are duplicates of the (currently accepted) top-level run for sample
+    #   V13B23-285 and would otherwise pass the sample_id filter below, since
+    #   basename(dirname(.)) ignores the '1strun' path component
+    filter(!grepl('/1strun/', file_path)) |>
     mutate(sample_id = basename(dirname(file_path))) |>
     filter(sample_id %in% unique(spe$sample_id)) |>
     left_join(
@@ -139,11 +165,15 @@ he_fastq_df = tibble(file_path = he_fastq) |>
     mutate(
         sample_id = sub('_[ABCD]1$', '', sample_id),
         library_id = paste('lib', sample_id, sep = '_'),
+        file_name = basename(file_path),
         file_path = normalizePath(file_path),
         open_access = FALSE,
         technique = '10X Genomics Visium probe-based'
     ) |>
-    select(donor, sample_id, library_id, file_path, open_access, technique)
+    select(
+        donor, sample_id, library_id, file_path, file_name, open_access,
+        technique
+    )
 
 #-------------------------------------------------------------------------------
 #   Images
@@ -154,6 +184,7 @@ he_image_df = tibble(sample_id = unique(he_fastq_df$sample_id)) |>
         file_path = normalizePath(
             file.path(he_image_dir, paste0(sample_id, '.tif'))
         ),
+        file_name = basename(file_path),
         open_access = TRUE
     ) |>
     left_join(
@@ -162,11 +193,35 @@ he_image_df = tibble(sample_id = unique(he_fastq_df$sample_id)) |>
             distinct(),
         by = 'sample_id'
     ) |>
-    select(donor, sample_id, library_id, file_path, open_access, technique)
+    select(
+        donor, sample_id, library_id, file_path, file_name, open_access,
+        technique
+    )
 
-rbind(
-        multiome_fastq_df, hd_fastq_df, hd_image_df, he_fastq_df, he_image_df
-    ) |>
+################################################################################
+#   Flatten into a single directory of uniquely-named symlinks
+################################################################################
+
+file_map = rbind(
+    multiome_fastq_df, hd_fastq_df, hd_image_df, he_fastq_df, he_image_df
+)
+
+stopifnot(
+    'file_name is not unique across the full file map' =
+        !any(duplicated(file_map$file_name))
+)
+
+flat_path = file.path(flat_dir, file_map$file_name)
+#   Symlinks are recreated from scratch on every run to reflect the latest
+#   'file_path' targets
+unlink(flat_path)
+file.symlink(file_map$file_path, flat_path)
+
+file_map |>
+    #   Use the (already absolute) symlink paths as-is: normalizePath() would
+    #   resolve the symlinks and defeat the point of flattening
+    mutate(file_path = flat_path) |>
+    select(-file_name) |>
     mutate(md5_checksum = tools::md5sum(file_path)) |>
     write_csv(out_path)
 
