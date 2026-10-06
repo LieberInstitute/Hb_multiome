@@ -1,12 +1,18 @@
 library(tidyverse)
 library(here)
+library(openxlsx)
 library(sessioninfo)
 
 file_map_path = here(
     'processed-data', '19_data_uploads', '01_file_map', 'map.csv'
 )
+out_path = here(
+    'processed-data', '19_data_uploads', '02_manifest', 'manifest.xlsx'
+)
 demo_path = '/dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Habenula_Visium/processed-data/14_supp_tables/donor_demographics.csv'
 TODO_var = 'whatever'
+
+dir.create(dirname(out_path), showWarnings = FALSE)
 
 file_map = read_csv(file_map_path, show_col_types = FALSE)
 
@@ -16,8 +22,8 @@ demo_df = read_csv(demo_path, show_col_types = FALSE) |>
     ) |>
     mutate(
         race = case_when(
-            race == 'European' ~ 'White',
-            race == 'African' ~ 'Black_or_African_American',
+            ancestry == 'European' ~ 'White',
+            ancestry == 'African' ~ 'Black_or_African_American',
             TRUE ~ NA_character_
         )
     )
@@ -61,13 +67,13 @@ subject_df = file_map |>
         months_since_last_plasma_viral_measurement = 'not_known',
         tox_history_amp = 'negative',
         tox_history_bar = 'negative',
-        tox_history_bzo = ifelse(donor == 'Br9017', 'positive', 'negative'),
+        tox_history_bzo = ifelse(subject_name == 'Br9017', 'positive', 'negative'),
         tox_history_bup = 'negative',
         tox_history_thc = 'negative',
         tox_history_coc = 'negative',
         tox_history_mtd = 'negative',
         tox_history_met = 'negative',
-        tox_history_opi = ifelse(donor == 'Br9902', 'not_known', 'negative'),
+        tox_history_opi = ifelse(subject_name == 'Br9902', 'not_known', 'negative'),
         tox_history_oxy = 'negative',
         tox_history_pcp = 'negative',
         tox_history_tca = 'negative',
@@ -139,6 +145,7 @@ subject_df = file_map |>
     )
 
 sample_df = file_map |>
+    mutate(technique = sub(';.*$', '', technique)) |>
     distinct(sample_id, donor, technique) |>
     dplyr::rename(
         sample_name = sample_id, subject_name = donor,
@@ -176,7 +183,10 @@ library_df = file_map |>
     mutate(
         library_aliquot_name = TODO_var, # ask this internally
         library_type = 'individual',
-        subspecimen_type = TODO_var, # Actually TODO but I have the info 
+        subspecimen_type = case_when(
+            str_detect(technique, 'Multiome') ~ 'nuclei',
+            str_detect(technique, 'Visium') ~ 'bulk'
+        ),
         project_short_name = TODO_var, # Need to be given a value from NeMO people
         lab = 'Maynard',
         parent_type = 'sample',
@@ -268,3 +278,17 @@ file_df = file_map |>
         sequencing_batch,
         file_comments
     )
+
+dir.create(dirname(out_path), showWarnings = FALSE, recursive = TRUE)
+
+write.xlsx(
+    list(
+        subject = subject_df,
+        sample = sample_df,
+        library = library_df,
+        file = file_df
+    ),
+    file = out_path
+)
+
+session_info()
