@@ -59,9 +59,13 @@ multiome_fastq_df = tibble(file_path = multiome_fastq) |>
     mutate(
         sample_id = sub('_r$', '', sample_id),
         file_path = normalizePath(file_path),
-        open_access = FALSE
+        open_access = FALSE,
+        technique = ifelse(
+            str_detect(file_path, 'GEX'),
+            '10X Genomics Multiome;RNAseq', '10X Genomics Multiome;ATAC-seq'
+        )
     ) |>
-    select(donor, sample_id, library_id, file_path, open_access)
+    select(donor, sample_id, library_id, file_path, open_access, technique)
 
 ################################################################################
 #   Visium HD data
@@ -87,9 +91,10 @@ hd_fastq_df = tibble(file_path = hd_fastq) |>
         sample_id = donor,
         library_id = paste('lib', donor, sep = '_'),
         file_path = normalizePath(file_path),
-        open_access = FALSE
+        open_access = FALSE,
+        technique = '10X Genomics Visium HD probe-based'
     ) |>
-    select(donor, sample_id, library_id, file_path, open_access)
+    select(donor, sample_id, library_id, file_path, open_access, technique)
 
 #-------------------------------------------------------------------------------
 #   Images
@@ -105,9 +110,10 @@ hd_image_df = read_table(
         library_id = paste('lib', donor, sep = '_'),
         file_path = file.path(hd_image_dir, paste0(image_id, '.tif')) |>
             normalizePath(),
-        open_access = TRUE
+        open_access = TRUE,
+        technique = '10X Genomics Visium HD probe-based'
     ) |>
-    select(donor, sample_id, library_id, file_path, open_access)
+    select(donor, sample_id, library_id, file_path, open_access, technique)
 
 ################################################################################
 #   Visium H&E data
@@ -134,9 +140,10 @@ he_fastq_df = tibble(file_path = he_fastq) |>
         sample_id = sub('_[ABCD]1$', '', sample_id),
         library_id = paste('lib', sample_id, sep = '_'),
         file_path = normalizePath(file_path),
-        open_access = FALSE
+        open_access = FALSE,
+        technique = '10X Genomics Visium probe-based'
     ) |>
-    select(donor, sample_id, library_id, file_path, open_access)
+    select(donor, sample_id, library_id, file_path, open_access, technique)
 
 #-------------------------------------------------------------------------------
 #   Images
@@ -151,11 +158,11 @@ he_image_df = tibble(sample_id = unique(he_fastq_df$sample_id)) |>
     ) |>
     left_join(
         he_fastq_df |>
-            select(donor, sample_id, library_id) |>
+            select(donor, sample_id, library_id, technique) |>
             distinct(),
         by = 'sample_id'
     ) |>
-    select(donor, sample_id, library_id, file_path, open_access)
+    select(donor, sample_id, library_id, file_path, open_access, technique)
 
 rbind(
         multiome_fastq_df, hd_fastq_df, hd_image_df, he_fastq_df, he_image_df

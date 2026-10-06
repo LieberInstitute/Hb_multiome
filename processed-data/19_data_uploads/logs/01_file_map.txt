@@ -1,10 +1,10 @@
 **** Job starts ****
-Mon Oct  5 03:41:46 PM EDT 2026
+Tue Oct  6 10:30:58 AM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 36167136
+Job id: 36181143
 Job name: 01_file_map
-Node name: compute-178
+Node name: compute-168
 Task id: 
 Unloading conda_R/4.6
 Loading conda_R/4.6
@@ -158,7 +158,7 @@ The following objects are masked from ‘package:matrixStats’:
 
     anyMissing, rowMedians
 
-2026-10-05 15:42:03.439891 loading file /users/neagles/.cache/R/BiocFileCache/38f8004d0e3c67_spe_visium_habenula_atlas.rds%3Frlkey%3Dr6cstcrfnd020dhlhjymk60bi%26st%3Dqlriuki9%26dl%3D1
+2026-10-06 10:31:14.825357 loading file /users/neagles/.cache/R/BiocFileCache/38f8004d0e3c67_spe_visium_habenula_atlas.rds%3Frlkey%3Dr6cstcrfnd020dhlhjymk60bi%26st%3Dqlriuki9%26dl%3D1
 ─ Session info ───────────────────────────────────────────────────────────────
  setting  value
  version  R version 4.6.1 Patched (2026-08-26 r90448)
@@ -169,7 +169,7 @@ The following objects are masked from ‘package:matrixStats’:
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-10-05
+ date     2026-10-06
  pandoc   3.10.2 @ /jhpce/shared/community/core/conda_R/4.6/bin/pandoc
  quarto   1.10.18 @ /users/neagles/.positron-server/bin/467ff390dd8b4ffc8972ebb84d9e05a1fd5a4fe2/quarto/bin/quarto
 
@@ -334,4 +334,4 @@ The following objects are masked from ‘package:matrixStats’:
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Mon Oct  5 03:42:51 PM EDT 2026
+Tue Oct  6 10:32:03 AM EDT 2026
