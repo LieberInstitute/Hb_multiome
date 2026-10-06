@@ -61,7 +61,7 @@ multiome_fastq_df = tibble(file_path = multiome_fastq) |>
         file_path = normalizePath(file_path),
         open_access = FALSE,
         technique = ifelse(
-            str_detect(file_path, 'GEX'),
+            str_detect(library_id, 'GEX'),
             '10X Genomics Multiome;RNAseq', '10X Genomics Multiome;ATAC-seq'
         )
     ) |>
