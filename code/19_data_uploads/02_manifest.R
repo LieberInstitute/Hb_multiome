@@ -197,3 +197,45 @@ library_df = file_map |>
         library_batch,
         library_comments
     )
+
+file_df = file_map |>
+    select(file_path, open_access) |>
+    mutate(
+        program = 'SCORCH',
+        file_name = basename(file_path),
+        summary_file = FALSE,
+        library_aliquot_name = TODO_var,
+        technique = TODO_var,
+        grant_number = 'R01DA055823',
+        grant_name = TODO_var,
+        project_short_name = TODO_var,
+        lab = 'Maynard',
+        data_type = TODO_var,
+        file_derived_from = NA,
+        species = 'NCBI:txid9606',
+        file_format = str_extract(file_name, '\\.(fastq|tif)(\\.gz)?$', group = 1),
+        data_subtype = case_when(
+            str_detect(file_name, '_R1_[0-9]+\\.fastq') ~ 'r1_fastq',
+            str_detect(file_name, '_R2_[0-9]+\\.fastq') ~ 'r2_fastq',
+            str_detect(file_name, '_R3_[0-9]+\\.fastq') ~ 'r3_fastq',
+            str_detect(file_name, '_I1_[0-9]+\\.fastq') ~ 'index1_fastq',
+            str_detect(file_name, '_I2_[0-9]+\\.fastq') ~ 'index2_fastq',
+            str_detect(file_name, '\\.tif') ~ 'tif',
+            TRUE ~ NA_character_
+        ),
+        access = ifelse(open_access, 'open', 'restricted'),
+        data_use_condition = 'DUO:0000004',
+        data_use_specific_limit = NA,
+        cohort_id = TODO_var,
+        md5_checksum = tools::md5sum(file_path),
+        pipeline_name = NA,
+        pipeline_rrid = NA,
+        pipeline_version = NA,
+        pipeline_container_url = NA,
+        data_type_specific_tool = NA,
+        genome_build = 'GRCh38',
+        gene_set_release = NA,
+        sequencing_batch = NA,
+        file_comments = NA
+    ) |>
+    select(-c(file_path, open_access))
