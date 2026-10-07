@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p katun
-#SBATCH --mem=10G
+#SBATCH --mem=30G
 #SBATCH --job-name=02_processed_data
 #SBATCH -c 1
 #SBATCH -t 2-00:00:00
