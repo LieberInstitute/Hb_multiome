@@ -27,11 +27,15 @@ TODO_var = '[needs_a_value]'
 
 dir.create(dirname(out_path), showWarnings = FALSE)
 
-raw_map = read_csv(raw_map_path, show_col_types = FALSE)
-processed_map = read_csv(processed_map_path, show_col_types = FALSE)
+raw_map = read_csv(raw_map_path, show_col_types = FALSE) |>
+    mutate(library_aliquot_name = paste0(library_id, '_1'))
+processed_map = read_csv(processed_map_path, show_col_types = FALSE) |>
+    mutate(library_aliquot_name = NA)
 
 file_map = raw_map |>
-    select(file_path, technique, open_access, md5_checksum) |>
+    select(
+        file_path, technique, library_aliquot_name, open_access, md5_checksum
+    ) |>
     bind_rows(processed_map) |>
     filter(open_access == (access_type == 'open'))
 
@@ -227,12 +231,10 @@ library_df = raw_map |>
     )
 
 file_df = file_map |>
-    select(file_path, open_access, technique, md5_checksum) |>
     mutate(
         program = 'SCORCH',
         file_name = basename(file_path),
         summary_file = 'no',
-        library_aliquot_name = TODO_var, # NeMO people will answer a question about this
         grant_number = 'R01DA055823',
         grant_name = 'R01DA055823_maynard', # Need to be given a value from NeMO people
         project_short_name = TODO_var, # Need to be given a value from NeMO people
@@ -273,7 +275,7 @@ file_df = file_map |>
         pipeline_version = NA,
         pipeline_container_url = NA,
         data_type_specific_tool = NA,
-        genome_build = 'GRCh38',
+        genome_build = NA,
         gene_set_release = NA,
         sequencing_batch = NA,
         file_comments = NA
