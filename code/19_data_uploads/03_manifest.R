@@ -280,11 +280,11 @@ file_df = file_map |>
         file_comments = case_when(
             str_detect(file_name, '\\.rds$') & str_detect(file_name, '_spe') ~ sprintf(
                 "R object is a SpatialExperiment (v1.18.1) and can alternatively be retrieved with spatialLIBD::fetch_data('%s') from spatialLIBD >= 1.25.5.",
-                str_replace_all(file_name, '^habenula_atlas_|\\.rds$', '')
+                str_replace(file_name, '\\.rds$', '')
             ),
             str_detect(file_name, '\\.rds$') & str_detect(file_name, '_seurat_') ~ sprintf(
                 "R object is a Seurat (v5.3.0) object and can alternatively be retrieved with spatialLIBD::fetch_data('%s') from spatialLIBD >= 1.25.5.",
-                str_replace_all(file_name, '^habenula_atlas_|\\.rds$', '')
+                str_replace(file_name, '\\.rds$', '')
             ),
             TRUE ~ NA
         )
