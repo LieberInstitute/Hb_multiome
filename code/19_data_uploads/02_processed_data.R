@@ -46,8 +46,8 @@ rds_processed_df = fetch_object_names |>
     mutate(
         file_name = basename(file_path),
         technique = case_when(
-            str_detect(object_name, 'HD') ~ '10X Genomics Visium HD probe-based',
-            str_detect(object_name, 'visium') ~ '10X Genomics Visium probe-based',
+            str_detect(object_name, 'HD') ~ '10X Genomics Visium-HD; RNAseq_probe',
+            str_detect(object_name, 'visium') ~ '10X Genomics Visium; RNAseq_probe',
             str_detect(object_name, 'snMultiome') ~ '10X Genomics Multiome;RNAseq'
         )
     )
@@ -96,7 +96,7 @@ hd_processed_df = hd_processed_paths |>
     mutate(
         file_path = normalizePath(file_path),
         file_name = paste(donor, basename(file_path), sep = '_'),
-        technique = '10X Genomics Visium HD probe-based'
+        technique = '10X Genomics Visium-HD; RNAseq_probe'
     )
 
 #-------------------------------------------------------------------------------
@@ -138,7 +138,7 @@ he_processed_df = he_processed_paths |>
         #   deduplication: each donor has 4 capture areas, so donor alone
         #   isn't a unique prefix
         file_name = paste(capture_area, basename(file_path), sep = '_'),
-        technique = '10X Genomics Visium probe-based'
+        technique = '10X Genomics Visium; RNAseq_probe'
     )
 
 ################################################################################
