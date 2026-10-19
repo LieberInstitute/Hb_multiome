@@ -106,7 +106,7 @@ hd_fastq_df = tibble(file_path = hd_fastq) |>
         file_name = basename(file_path),
         file_path = normalizePath(file_path),
         open_access = FALSE,
-        technique = '10X Genomics Visium HD probe-based'
+        technique = '10X Genomics Visium-HD; RNAseq_probe'
     ) |>
     select(
         donor, sample_id, library_id, file_path, file_name, open_access,
@@ -129,7 +129,7 @@ hd_image_df = read_table(
             normalizePath(),
         file_name = basename(file_path),
         open_access = TRUE,
-        technique = '10X Genomics Visium HD probe-based'
+        technique = '10X Genomics Visium-HD; RNAseq_probe'
     ) |>
     select(
         donor, sample_id, library_id, file_path, file_name, open_access,
@@ -168,7 +168,7 @@ he_fastq_df = tibble(file_path = he_fastq) |>
         file_name = basename(file_path),
         file_path = normalizePath(file_path),
         open_access = FALSE,
-        technique = '10X Genomics Visium probe-based'
+        technique = '10X Genomics Visium; RNAseq_probe'
     ) |>
     select(
         donor, sample_id, library_id, file_path, file_name, open_access,
