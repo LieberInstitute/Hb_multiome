@@ -23,7 +23,6 @@ data_subtype_opts = c(
     'scalefactors_json', 'tissue_hires_image', 'tissue_lowres_image',
     'per_barcode_metrics', 'spatial_enrichment'
 )
-TODO_var = '[needs_a_value]'
 
 dir.create(dirname(out_path), showWarnings = FALSE)
 
@@ -55,7 +54,7 @@ subject_df = raw_map |>
     distinct(donor) |>
     dplyr::rename(subject_name = donor) |>
     mutate(
-        subject_source = TODO_var, # Need to be given a value from NeMO people
+        subject_source = 'Liber_Institute',
         subject_source_id = subject_name,
         subject_source_catalog_number = NA,
         subject_type = 'individual',
@@ -63,9 +62,9 @@ subject_df = raw_map |>
         strain_subspecies_name = NA,
         subject_genotype = NA,
         grant_number = 'R01DA055823',
-        grant_name = 'R01DA055823_maynard',  # Need to be given a value from NeMO people
-        project_short_name = TODO_var,  # Need to be given a value from NeMO people
-        cohort_id = TODO_var,  # Need to be given a value from NeMO people
+        grant_name = 'R01DA055823_maynard',
+        project_short_name = 'scorch_multimodal_human_habenula_maynard',
+        cohort_id = 'scorch-placeholder',  # Need to be given a permanent value from NeMO people
         metadata_access = 'open',
         controlled_access_fields = NA,
         additional_assays = NA,
@@ -172,11 +171,11 @@ sample_df = raw_map |>
     distinct(sample_id, donor) |>
     dplyr::rename(sample_name = sample_id, subject_name = donor) |>
     mutate(
-        sample_source = TODO_var, # Need to be given a value from NeMO people
+        sample_source = 'Liber_Institute',
         sample_source_id = sample_name,
         subject_event_name = 'postmortem',
-        project_short_name = TODO_var, # Need to be given a value from NeMO people
-        lab = 'Maynard',
+        project_short_name = 'scorch_multimodal_human_habenula_maynard',
+        lab = 'maynard',
         sample_type = 'individual',
         parent_sample_name = NA,
         anatomical_site = 'UBERON:0001904', # habenula
@@ -208,8 +207,8 @@ library_df = raw_map |>
             str_detect(technique, 'Multiome') ~ 'nuclei',
             str_detect(technique, 'Visium') ~ 'bulk'
         ),
-        project_short_name = TODO_var, # Need to be given a value from NeMO people
-        lab = 'Maynard',
+        project_short_name = 'scorch_multimodal_human_habenula_maynard',
+        lab = 'maynard',
         parent_type = 'sample',
         library_demultiplexing = NA,
         library_batch = NA,
@@ -236,9 +235,9 @@ file_df = file_map |>
         file_name = basename(file_path),
         summary_file = 'no',
         grant_number = 'R01DA055823',
-        grant_name = 'R01DA055823_maynard', # Need to be given a value from NeMO people
-        project_short_name = TODO_var, # Need to be given a value from NeMO people
-        lab = 'Maynard',
+        grant_name = 'R01DA055823_maynard',
+        project_short_name = 'scorch_multimodal_human_habenula_maynard',
+        lab = 'maynard',
         data_type = case_when(
             str_detect(file_name, '\\.fastq') ~ 'sequence_reads',
             str_detect(file_name, '\\.(tiff|jpg|png)$') ~ 'image',
@@ -267,9 +266,9 @@ file_df = file_map |>
             )
         ),
         access = ifelse(open_access, 'open', 'restricted'),
-        data_use_condition = 'DUO:0000004',
+        data_use_condition = 'DUO:0000042',
         data_use_specific_limit = NA,
-        cohort_id = TODO_var, # Need to be given a value from NeMO people
+        cohort_id = 'scorch-placeholder', # Need to be given a permanent value from NeMO people
         pipeline_name = NA,
         pipeline_rrid = NA,
         pipeline_version = NA,
@@ -278,7 +277,17 @@ file_df = file_map |>
         genome_build = NA,
         gene_set_release = NA,
         sequencing_batch = NA,
-        file_comments = NA
+        file_comments = case_when(
+            str_detect(file_name, '\\.rds$') & str_detect(file_name, '_spe') ~ sprintf(
+                "R object is a SpatialExperiment (v1.18.1) and can alternatively be retrieved with spatialLIBD::fetch_data('%s') from spatialLIBD >= 1.25.5.",
+                str_replace_all(file_name, '^habenula_atlas_|\\.rds$', '')
+            ),
+            str_detect(file_name, '\\.rds$') & str_detect(file_name, '_seurat_') ~ sprintf(
+                "R object is a Seurat (v5.3.0) object and can alternatively be retrieved with spatialLIBD::fetch_data('%s') from spatialLIBD >= 1.25.5.",
+                str_replace_all(file_name, '^habenula_atlas_|\\.rds$', '')
+            ),
+            TRUE ~ NA
+        )
     ) |>
     select(
         program,
