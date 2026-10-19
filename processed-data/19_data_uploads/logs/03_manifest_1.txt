@@ -1,10 +1,10 @@
 **** Job starts ****
-Mon Oct 19 03:50:18 PM EDT 2026
+Mon Oct 19 03:58:17 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 36490409
+Job id: 36490535
 Job name: 03_manifest
-Node name: compute-169
+Node name: compute-100
 Task id: 1
 Unloading conda_R/4.6
 Loading conda_R/4.6
@@ -92,4 +92,4 @@ here() starts at /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Mon Oct 19 03:50:23 PM EDT 2026
+Mon Oct 19 03:58:26 PM EDT 2026
