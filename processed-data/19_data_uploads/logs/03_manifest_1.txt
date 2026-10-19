@@ -1,10 +1,10 @@
 **** Job starts ****
-Fri Oct  9 02:16:19 PM EDT 2026
+Mon Oct 19 03:10:52 PM EDT 2026
 **** JHPCE info ****
 User: neagles
-Job id: 36265070
+Job id: 36488195
 Job name: 03_manifest
-Node name: compute-168
+Node name: compute-169
 Task id: 1
 Unloading conda_R/4.6
 Loading conda_R/4.6
@@ -36,9 +36,9 @@ here() starts at /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome
  collate  en_US.UTF-8
  ctype    en_US.UTF-8
  tz       US/Eastern
- date     2026-10-09
+ date     2026-10-19
  pandoc   3.10.2 @ /jhpce/shared/community/core/conda_R/4.6/bin/pandoc
- quarto   1.10.18 @ /users/neagles/.positron-server/bin/467ff390dd8b4ffc8972ebb84d9e05a1fd5a4fe2/quarto/bin/quarto
+ quarto   1.10.18 @ /users/neagles/.positron-server/bin/73a7e19ea8bdd7783066391a2db086c6bec55ae9/quarto/bin/quarto
 
 ─ Packages ───────────────────────────────────────────────────────────────────
  package      * version date (UTC) lib source
@@ -92,4 +92,4 @@ here() starts at /dcs04/lieber/lcolladotor/Habenula_R01_LIBD4270/Hb_multiome
 
 ──────────────────────────────────────────────────────────────────────────────
 **** Job ends ****
-Fri Oct  9 02:16:23 PM EDT 2026
+Mon Oct 19 03:10:57 PM EDT 2026

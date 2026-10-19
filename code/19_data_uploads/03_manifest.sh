@@ -6,7 +6,7 @@
 #SBATCH -t 1-00:00:00
 #SBATCH -o ../../processed-data/19_data_uploads/logs/03_manifest_%a.txt
 #SBATCH -e ../../processed-data/19_data_uploads/logs/03_manifest_%a.txt
-#SBATCH --array=2
+#SBATCH --array=1
 
 set -e
 
