@@ -35,6 +35,15 @@ ascp \
     $repo_dir/processed-data/19_data_uploads/01_file_map/fastq_flat \
     neagles7-restricted@aspera.nemoarchive.org:pj9kyrd/
 
+touch DONE
+ascp \
+    -l 1000M \
+    -k 2 \
+    -QT \
+    DONE \
+    neagles7-restricted@aspera.nemoarchive.org:pj9kyrd/
+rm -f DONE
+
 echo "**** Job ends ****"
 date
 
