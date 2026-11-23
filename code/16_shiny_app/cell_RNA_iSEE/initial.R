@@ -77,7 +77,7 @@ initial[["ComplexHeatmapPlot1"]] <- new(
     "ComplexHeatmapPlot",
     Assay = "logcounts",
     CustomRows = TRUE,
-    CustomRowsText = "MME\nGPR149\nMMRN1\nCRYM\nANKRD18B\nMYOZ3\nIPCEF1\nPLEKHD1\nTMEM52\nECEL1\nSLC22A6\nTHBD\nZNF710\nHOXD1\nCOL20A1",
+    CustomRowsText = "PDE11A\nGABRA2\nRET\nFGF10\nMSC-AS1\nAC114316.1\nSIK2\nGRM8\nSLC32A1\nCCBE1\nLINC02253\nTNC\nNDUFA4L2\nAC020718.1\nAPBB1IP\nSLC5A11\nAC004852.2",
     ClusterRows = FALSE,
     ClusterRowsDistance = "spearman",
     ClusterRowsMethod = "ward.D2",
