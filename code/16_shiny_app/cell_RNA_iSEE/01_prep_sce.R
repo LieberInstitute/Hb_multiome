@@ -57,7 +57,10 @@ stopifnot(!any(is.na(sce$mid_cluster_colors)))
 #   Match Seurat's SCE conversion, retaining all cell embeddings.
 for (reduction_name in Reductions(seur)) {
     embedding = Embeddings(seur[[reduction_name]])
-    stopifnot(identical(rownames(embedding), colnames(sce)))
+    stopifnot(
+        identical(as.vector(rownames(embedding)), as.vector(colnames(sce)))
+    )
+    rownames(embedding) = colnames(sce)
     reducedDim(sce, reduction_name) = embedding
 }
 
