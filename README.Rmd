@@ -80,6 +80,7 @@ We provide the following interactive websites, organized by dataset with
 software labeled by emojis:  
 
 - 🔍 [snMultiome](https://interactive.libd.org/Habenula_multiome/). Here you can explore the cell-level multiome data, visualize peak-gene-transcription-factor trios computed with a metacell-level object (metacells and trios computed by `TRIPOD`), and view differentially accessible regions (DARs) computed from the snATAC-seq data.
+- 👀 [snMultiome, cell-level, RNA only](https://interactive.libd.org/habenula_multiome_cell/). Here you can primarily visualize gene expression of individual cells, by cell type or other discrete variables.
 - 🔭 [Visium H&E](https://interactive.libd.org/Habenula_Visium/). Here you can explore the spot-level Visium data, as well as view markers + enrichment statistics for data pseudobulked by preliminary `k = 9` clusters computed with `PRECAST`.
 - 👀 [Visium HD pseudobulked by cell type](https://interactive.libd.org/Habenula_Visium_HD_pb/). This app is better suited for quickly exploring how genes globally vary across cell types from the manuscript.
 - 🔭 [Visium HD: cell-level](https://interactive.libd.org/Habenula_Visium_HD_Shiny/). This app allows you to spatially explore the cell-level Visium HD data including clusters + cell types, QC variables, and more.
