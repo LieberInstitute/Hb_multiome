@@ -1,5 +1,5 @@
-
-# Habenula Atlas Project
+Habenula Atlas Project
+================
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
@@ -117,6 +117,10 @@ software labeled by emojis:
   object (metacells and trios computed by `TRIPOD`), and view
   differentially accessible regions (DARs) computed from the snATAC-seq
   data.
+- 👀 [snMultiome, cell-level, RNA
+  only](https://interactive.libd.org/habenula_multiome_cell/). Here you
+  can primarily visualize gene expression of individual cells, by cell
+  type or other discrete variables.
 - 🔭 [Visium H&E](https://interactive.libd.org/Habenula_Visium/). Here
   you can explore the spot-level Visium data, as well as view markers +
   enrichment statistics for data pseudobulked by preliminary `k = 9`
